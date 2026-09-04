@@ -1,0 +1,15 @@
+{
+  "name": "@shippingco/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "HTTP API for the operator console — not yet implemented, see README.md",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

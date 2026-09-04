@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Versions used by more than one workspace package are pinned here rather than repeated.
+# A dependency is added to this catalogue only after it has been checked for known
+# advisories and for supply-chain signals: publisher, age, install scripts and how many
+# packages it drags in with it.
+catalog:
+  typescript: 5.9.3
+  '@types/node': 20.19.43

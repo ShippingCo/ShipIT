@@ -1,0 +1,78 @@
+/* ============================================================
+   Tailwind layer — the bridge between the shadcn / 21st.dev
+   component vocabulary and ShippingCo's M3 tokens.
+   ============================================================
+
+   Read tokens.css first: it is the source of truth. Nothing here invents a colour.
+   Every variable below is one of those tokens restated as the HSL triplet that
+   shadcn components expect, so a component pulled straight from the 21st catalog
+   comes out wearing this app's palette — white surfaces, one hairline, royal blue —
+   with no per-component overriding.
+
+   Loaded LAST in main.jsx so utilities can win, and harmless to the existing CSS
+   because preflight is disabled in tailwind.config.js.
+*/
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The single piece of preflight shadcn actually depends on.
+   Without it the `border` utility sets a width against an initial style of `none`
+   and renders nothing at all. Safe to apply globally: every form control in
+   components.css declares its own border through a class, so nothing in the existing
+   UI is relying on a user-agent default here. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: hsl(var(--border));
+  }
+}
+
+:root {
+  /* ---- Surfaces ----
+     White is the only background colour in this app, so every shadcn surface role —
+     page, card, popover, muted, secondary — resolves to the same white. Separation
+     comes from --border and spacing, exactly as it does in the M3 layer. */
+  --background: 0 0% 100%;              /* --md-background  #ffffff */
+  --foreground: 221 39% 11%;            /* --md-on-surface  #111827 */
+  --card: 0 0% 100%;
+  --card-foreground: 221 39% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 221 39% 11%;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 217 13% 40%;  /* --md-on-surface-variant  #5a6474 */
+  --muted: 0 0% 100%;
+  --muted-foreground: 217 13% 40%;
+
+  /* ---- Brand ---- */
+  --primary: 221 83% 53%;               /* --md-primary  #2563eb */
+  --primary-foreground: 0 0% 100%;
+
+  /* ---- Interaction ----
+     `accent` is what shadcn paints on hover and for the active row of a menu. It is
+     the one non-white fill allowed here, and only because tokens.css already carves
+     out transient feedback as an exception to the white-only rule. This is
+     --state-hover composited over white; it must never be used as a resting fill. */
+  --accent: 220 13% 96%;                /* rgba(16,24,40,.04) over white */
+  --accent-foreground: 221 39% 11%;
+
+  /* ---- Outcome colours ---- */
+  --destructive: 3 71% 41%;             /* --md-error    #b3261e */
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 68% 25%;               /* --md-success  #146c2e */
+  --success-foreground: 0 0% 100%;
+  --warning: 33 100% 28%;               /* --md-warning  #8f5000 */
+  --warning-foreground: 0 0% 100%;
+
+  /* ---- Line and focus ---- */
+  --border: 218 17% 91%;                /* --md-outline-variant  #e3e6eb — THE hairline */
+  --input: 218 17% 91%;
+  --ring: 221 83% 53%;                  /* focus ring matches base.css :focus-visible */
+
+  /* Matches --shape-md, so imported cards share the M3 shape scale. */
+  --radius: 12px;
+}

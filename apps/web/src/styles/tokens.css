@@ -1,0 +1,126 @@
+/* ============================================================
+   ShippingCo — Material Design 3 token system
+   Seed: brand blue · Light scheme · Blue-tinted neutrals
+   ============================================================ */
+
+:root {
+  /* ---- Primary (royal blue) ---- */
+  --md-primary: #2563eb;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #d3e3fd;
+  --md-on-primary-container: #041e49;
+  --md-primary-hover: #1d4ed8;
+
+  /* ---- Secondary (steel blue) ---- */
+  --md-secondary: #4b5563;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #f3f4f6;
+  --md-on-secondary-container: #374151;
+
+  /* ---- Tertiary (sky blue) ---- */
+  --md-tertiary: #00639b;
+  --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #c2e7ff;
+  --md-on-tertiary-container: #001d35;
+
+  /* ---- Error ---- */
+  --md-error: #b3261e;
+  --md-on-error: #ffffff;
+  --md-error-container: #f9dedc;
+  --md-on-error-container: #410e0b;
+
+  /* ---- Semantic extensions (harmonized to scheme) ---- */
+  --md-success: #146c2e;
+  --md-success-container: #c9f0d3;
+  --md-on-success-container: #052d12;
+  --md-warning: #8f5000;
+  --md-warning-strong: #f79009;
+  --md-warning-container: #ffe2c2;
+  --md-on-warning-container: #4a2b00;
+
+  /* ---- Surfaces ----
+     White is the ONLY background colour in this app. Every surface — page canvas,
+     cards, tiles, icon containers, dialogs — is #ffffff. Hierarchy comes from 1px
+     hairline borders and spacing, never from grey fills. */
+  --md-surface: #ffffff;
+  --md-surface-dim: #ffffff;
+  --md-background: #ffffff;
+  --md-surface-lowest: #ffffff;
+  --md-surface-low: #ffffff;
+  --md-surface-c: #ffffff;
+  --md-surface-high: #ffffff;
+  --md-surface-highest: #ffffff;
+  --md-on-surface: #111827;
+  --md-on-surface-variant: #5a6474;
+  --md-outline: #98a2b3;
+  /* THE stroke. Every border in the app is 1px of this colour — cards, inputs,
+     chips, buttons, icon frames, dividers, table rules. Do not introduce a second
+     border colour or a second width; emphasis comes from ink and space, not strokes. */
+  --md-outline-variant: #e3e6eb;
+
+  /* Transient interaction feedback only — never a resting background. */
+  --state-hover: rgba(16, 24, 40, 0.04);
+  --state-press: rgba(16, 24, 40, 0.08);
+  /* Neutral track for progress/meters, which need a visible unfilled portion. */
+  --track: #eef0f3;
+  --md-inverse-surface: #111827;
+  --md-inverse-on-surface: #f9fafb;
+  --md-inverse-primary: #aac7fa;
+
+  /* ---- Scrim ---- */
+  --md-scrim: rgba(16, 24, 40, 0.5);
+
+  /* ---- Shape scale ---- */
+  --shape-xs: 4px;
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 24px;
+  --shape-xxl: 28px;
+  --shape-full: 999px;
+
+  /* ---- Elevation ---- */
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
+  --elev-2: 0 4px 14px -2px rgba(16, 24, 40, 0.09), 0 2px 5px -2px rgba(16, 24, 40, 0.05);
+  --elev-3: 0 18px 44px -10px rgba(16, 24, 40, 0.18), 0 6px 12px -6px rgba(16, 24, 40, 0.07);
+
+  /* ---- Motion ---- */
+  --ease-emph: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-s: 120ms;
+  --dur-m: 220ms;
+  --dur-l: 380ms;
+
+  /* ---- Layout ---- */
+  --drawer-w: 264px;
+  --topbar-h: 64px;
+}
+
+/* Status → token mapping (single source of truth for pills).
+   Deliberately restrained: most states are NEUTRAL. Colour is spent only where the
+   state demands an action or reports an outcome — out for delivery, delivered,
+   delayed, failed, returning. Everything else is a plain outlined label. */
+:root {
+  --status-neutral-bg: #ffffff;
+  --status-neutral-fg: var(--md-on-surface-variant);
+
+  --status-booked-bg: var(--status-neutral-bg);
+  --status-booked-fg: var(--status-neutral-fg);
+  --status-checked_in-bg: var(--status-neutral-bg);
+  --status-checked_in-fg: var(--status-neutral-fg);
+  --status-dispatched-bg: var(--status-neutral-bg);
+  --status-dispatched-fg: var(--status-neutral-fg);
+  --status-in_transit-bg: var(--status-neutral-bg);
+  --status-in_transit-fg: var(--status-neutral-fg);
+
+  --status-out_for_delivery-bg: var(--md-warning-container);
+  --status-out_for_delivery-fg: var(--md-on-warning-container);
+  --status-delivered-bg: var(--md-success-container);
+  --status-delivered-fg: var(--md-on-success-container);
+  --status-delayed-bg: var(--md-error-container);
+  --status-delayed-fg: var(--md-on-error-container);
+  --status-failed_attempt-bg: var(--md-error-container);
+  --status-failed_attempt-fg: var(--md-on-error-container);
+  --status-rto-bg: var(--md-warning-container);
+  --status-rto-fg: var(--md-on-warning-container);
+}

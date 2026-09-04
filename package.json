@@ -1,0 +1,21 @@
+{
+  "name": "shippingco",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "ShippingCo — customer connection layer for Indian SMB couriers (WhatsApp automation)",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=20.15"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @shippingco/web dev",
+    "build": "pnpm --filter @shippingco/web build",
+    "preview": "pnpm --filter @shippingco/web preview",
+    "test": "pnpm --filter @shippingco/web test",
+    "typecheck": "pnpm -r --parallel typecheck"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

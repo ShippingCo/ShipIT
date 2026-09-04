@@ -1,0 +1,18 @@
+{
+  "name": "@shippingco/db",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Postgres connection pool and SQL migrations",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

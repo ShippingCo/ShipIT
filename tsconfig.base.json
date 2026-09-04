@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  /*
+    Compiler options shared by every workspace package. Nothing is compiled from this
+    file — each package extends it and adds its own `lib`, `types` and `include`.
+
+    `moduleResolution: bundler` is the correct mode for anything Vite builds, and it is
+    also what lets imports stay extensionless. `isolatedModules` is not optional: esbuild
+    and SWC compile one file at a time and cannot see across module boundaries, so this
+    catches the constructs they would silently get wrong.
+  */
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true
+  }
+}

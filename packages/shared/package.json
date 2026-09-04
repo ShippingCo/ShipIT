@@ -1,0 +1,17 @@
+{
+  "name": "@shippingco/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Domain types, constants and business rules shared by the web app and the API",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

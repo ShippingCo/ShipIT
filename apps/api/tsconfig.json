@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "moduleResolution": "bundler",
+
+    /*
+      Unlike the web app this is new code with nothing to migrate, so it runs fully
+      strict from the first line — including the two checks the web app has not reached
+      yet. Server code touching money, OTPs and customer phone numbers is exactly where
+      an implicit `any` costs the most.
+    */
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}
