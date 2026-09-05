@@ -113,3 +113,14 @@ prototype it is the easiest way to show it to someone.
 A prototype, not a production system. `localStorage` is the only persistence, so
 clearing site data resets everything; the app offers a "restore demo data" action in
 Settings for exactly that reason.
+
+## Production roadmap and contribution workflow
+
+**Prototype v0 — completed before production milestones.** The implementation-ready
+production plan lives in [docs/ROADMAP.md](docs/ROADMAP.md) and the linked
+[GitHub issue index](docs/ISSUE_INDEX.md). M0–M7 lead to a safe first-franchise pilot;
+M8 is post-MVP commercialization. Start from [CONTRIBUTING.md](CONTRIBUTING.md)
+and follow the dedicated issue branch → reviewed PR → merge → pull-main workflow.
+See [prototype migration](docs/PROTOTYPE_TO_PRODUCTION.md) for preserved behavior
+and intentional security changes. Product implementation has not started as part of
+this planning setup.

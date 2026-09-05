@@ -11,3 +11,6 @@ dist/
 
 # Logs
 pnpm-debug.log*
+
+# Local package-manager cache
+.pnpm-store/

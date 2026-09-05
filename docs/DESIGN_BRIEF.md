@@ -1,3 +1,5 @@
+> Historical prototype design record. Prototype v0 is completed before production milestones. Old no-Git instructions, machine commands, bug lists, market figures and provider/legal assumptions below are superseded by CONTRIBUTING.md, docs/ENGINEERING_WORKFLOW.md and the current GitHub issue. Preserve useful current UX; do not execute old work packages as a new backlog.
+
 # ShippingCo — Product & Design Specification v1
 
 **For:** the opencode agent working in `D:\ShippingCo`
