@@ -25,4 +25,4 @@ ShipIT strengthens these patterns for sibling-franchise isolation, money/tax sna
 
 ## Draft audit
 
-80 issues across nine milestones, no duplicate titles or circular/missing dependencies. M0 has two initially ready issues. Every M0–M7 item is an ancestor of the pilot release gate; M8 is never its prerequisite. Each issue includes tailored rules, acceptance tests, security/ownership, failure handling and full branch→PR→merge→pull-main workflow. Full issue bodies live on GitHub, not duplicated in roadmap docs.
+82 issues across nine milestones, no duplicate titles or circular/missing dependencies. M0 has two initially ready issues. Every M0–M7 item is an ancestor of the pilot release gate; M8 is never its prerequisite. Each issue includes tailored rules, acceptance tests, security/ownership, failure handling and full branch→PR→merge→pull-main workflow. Full issue bodies live on GitHub, not duplicated in roadmap docs.

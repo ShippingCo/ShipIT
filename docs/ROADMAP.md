@@ -20,13 +20,13 @@ The production destination is React → ShipIT API → domain services + Postgre
 | M5 — Courier Integrations & Pricing | 8 | Provide carrier-agnostic manual/file/live integration paths and reviewed rate imports without depending on any carrier API being available. |
 | M6 — Reporting, Compliance & Operations | 7 | Make financial, operational, messaging and compliance reports reconcile to persistent authoritative records. |
 | M7 — Production Readiness & Pilot | 9 | Qualify and operate a first real franchise pilot with tested recovery, monitoring, privacy lifecycle and release evidence. |
-| M8 — Commercial SaaS & Scale | 5 | POST-MVP / FUTURE COMMERCIALIZATION: enable paid SaaS and controlled larger-organization deployment after pilot learning. |
+| M8 — Commercial SaaS & Scale | 7 | POST-MVP / FUTURE COMMERCIALIZATION: enable paid SaaS and controlled larger-organization deployment after pilot learning. |
 
 ## Backlog and start order
 
 [Issue index](ISSUE_INDEX.md) contains the compact linked map; the full acceptance/security/test/DoD contracts live in [GitHub issues](https://github.com/ShippingCo/ShipIT/issues). Do not implement from an issue title alone.
 
-Initial ready work: PLAN-01 **Ratify production architecture, MVP boundaries and decision records** and PLAN-04 **Add reproducible CI quality gates and lint baseline**. Architecture is the recommended first issue; it has no prerequisite and establishes the decisions other domains require. CI/lint can proceed independently. All other issues initially wait on explicit prerequisites, including M8's pilot gate.
+Initial ready work: [#2](https://github.com/ShippingCo/ShipIT/issues/2) **Ratify production architecture, MVP boundaries and decision records** and [#5](https://github.com/ShippingCo/ShipIT/issues/5) **Add reproducible CI quality gates and lint baseline**. Architecture is the recommended first issue; it has no prerequisite and establishes the decisions other domains require. CI/lint can proceed independently. All other issues initially wait on explicit prerequisites, including M8's pilot gate.
 
 ## Dependency structure
 

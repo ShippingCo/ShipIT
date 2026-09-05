@@ -24,6 +24,6 @@ for name in required:
         assert (ROOT / name).parent.joinpath(target).exists(), f"Broken local link: {name}: {target}"
 index = (ROOT / "docs/ISSUE_INDEX.md").read_text()
 rows = [line for line in index.splitlines() if line.startswith("| PLAN-") or re.match(r"\| \[#[0-9]+\]", line)]
-assert len(rows) == 80, f"Expected 80 initial planned issues, found {len(rows)}; revise roadmap intentionally if scope changes"
-assert len(set(rows)) == 80
-print("Planning checks passed: required files, workflow, nine milestones, 80 issue rows, fences and local links.")
+assert len(rows) == 82, f"Expected 82 initial planned issues, found {len(rows)}; revise roadmap intentionally if scope changes"
+assert len(set(rows)) == 82
+print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, fences and local links.")
