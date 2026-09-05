@@ -1,0 +1,38 @@
+name: Engineering checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: engineering-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    name: Planning and prototype checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.34.5
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate planning files
+        run: python3 scripts/validate_planning.py
+      - name: Test prototype
+        run: pnpm test
+      - name: Typecheck all packages
+        run: pnpm typecheck
+      - name: Production bundle
+        run: pnpm build
+      - name: Application lint baseline status
+        run: echo "Application lint is not configured yet. The M0 quality-gate issue must add it before product implementation; this is not a lint pass."
