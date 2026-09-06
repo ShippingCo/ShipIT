@@ -19,6 +19,17 @@
 | `MiscPages.tsx` settings/escalations | M4 staff handoff; M6 versioned settings | Replace hardcoded callback promises with actual staffing policy and audited configuration. |
 | `test/app.test.tsx` | M0 regression map; per-domain security/integration/browser tests | Preserve useful regressions; deliberately replace unsafe prototype expectations. |
 
+## Architecture contract
+
+Use the [production architecture](architecture/README.md),
+[authoritative walkthroughs](architecture/runtime-sequences.md),
+[ADRs](adr/README.md) and [decision gates](architecture/open-decisions.md) to interpret
+this evidence. In particular, route events coordinate parcel changes through owning
+services; delivery approves proof and completion atomically; messaging records transport
+outcomes without changing operational truth. Existing prototype type comments suggesting
+whole-record/shared OTP migration do not supersede these boundaries. #7 still owns the
+exhaustive store-export/caller inventory and regression disposition.
+
 ## Cutover discipline
 
 1. Ratify owning domain, public contracts, tenancy and intentional business-rule changes.

@@ -3,6 +3,10 @@ from pathlib import Path
 import re
 ROOT = Path(__file__).resolve().parents[1]
 required = ["CONTRIBUTING.md", "SECURITY.md", "docs/ROADMAP.md", "docs/ISSUE_INDEX.md", "docs/ENGINEERING_WORKFLOW.md", "docs/PROTOTYPE_TO_PRODUCTION.md", ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/implementation.md", ".github/ISSUE_TEMPLATE/bug.md", ".github/ISSUE_TEMPLATE/research.md", ".github/ISSUE_TEMPLATE/security-infrastructure.md"]
+required.extend(["README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
+# Architecture/ADR documents use the same fence/link validation as existing planning.
+required.extend(str(path.relative_to(ROOT)) for folder in ("docs/architecture", "docs/adr")
+                for path in sorted((ROOT / folder).glob("*.md")))
 for name in required:
     assert (ROOT / name).is_file(), f"Missing {name}"
 roadmap = (ROOT / "docs/ROADMAP.md").read_text()
@@ -26,4 +30,4 @@ index = (ROOT / "docs/ISSUE_INDEX.md").read_text()
 rows = [line for line in index.splitlines() if line.startswith("| PLAN-") or re.match(r"\| \[#[0-9]+\]", line)]
 assert len(rows) == 82, f"Expected 82 initial planned issues, found {len(rows)}; revise roadmap intentionally if scope changes"
 assert len(set(rows)) == 82
-print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, fences and local links.")
+print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences and local links.")
