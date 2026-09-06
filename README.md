@@ -37,7 +37,7 @@ apps/
   web/        the React app — operator console and the simulated customer WhatsApp view
   api/        HTTP API. Structure only; nothing implemented yet (see its README)
 packages/
-  shared/     domain types, constants and business rules both sides must agree on
+  shared/     public DTOs, browser-safe constants and pure non-secret functions
   db/         Postgres pool and SQL migrations
 docs/         design brief and working notes
 ```
@@ -74,8 +74,9 @@ prototype it is the easiest way to show it to someone.
   stays off while the last untyped component props are annotated — see
   `apps/web/tsconfig.json`.
 - **`src/data/types.ts` is the domain model.** Parcels, lots, routes, the money, the
-  WhatsApp conversation. Everything else is written against it. It is also the first
-  draft of the Postgres schema, and it moves to `packages/shared` when that work starts.
+  WhatsApp conversation. Everything else is written against it. It is migration evidence
+  for the production model. Only browser-safe DTOs and pure non-secret functions belong
+  in `packages/shared`; whole records and OTP fields do not move there.
 - **Two component layers that coexist.** `src/components/m3/` is a hand-written Material
   Design 3 set — the app's own vocabulary. `src/components/ui/` holds shadcn/21st.dev
   components, unmodified from the registry so they can be regenerated.
@@ -124,3 +125,9 @@ and follow the dedicated issue branch → reviewed PR → merge → pull-main wo
 See [prototype migration](docs/PROTOTYPE_TO_PRODUCTION.md) for preserved behavior
 and intentional security changes. Product implementation has not started as part of
 this planning setup.
+
+Production architecture: [overview and ownership](docs/architecture/README.md),
+[runtime diagrams](docs/architecture/runtime-sequences.md), [ADRs](docs/adr/README.md),
+[pilot/commercial gates](docs/architecture/pilot-boundaries.md), and
+[open decisions](docs/architecture/open-decisions.md). These are planned boundaries,
+submitted for issue #2 review; production services remain unimplemented.

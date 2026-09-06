@@ -22,3 +22,11 @@ forward: a mistake is corrected by a new migration, never by editing one that ha
 already been applied to a database somewhere.
 
 Empty until the schema is agreed.
+
+Production contract: [ADR 0001](../../docs/adr/0001-raw-sql-and-postgresql-access.md)
+and [transactional outbox](../../docs/adr/0004-durable-events-and-transactional-outbox.md).
+The planned transaction helper retains one connection through commit/rollback and passes
+it to participating module SQL helpers. Domain-specific SQL stays with its owning API
+module; this package owns infrastructure and internal row types, never browser exports.
+Issue #10 implements infrastructure/migration mechanics; domain migrations follow their
+own prerequisites. No schema or dependencies are added by issue #2.

@@ -9,9 +9,9 @@ shape of the backend is settled before the schema discussion rather than during 
 - **Fastify** — small, fast, first-class TypeScript, and JSON-schema validation built in
   rather than bolted on. A WhatsApp webhook receiver plus a REST API is exactly its
   shape.
-- **Raw SQL over `pg`, migrated with `node-pg-migrate`** — no ORM. Migrations are plain
-  SQL files you can read, review and edit, which matters for a schema that has to model
-  real courier operations. The pool and the migrations live in `packages/db`.
+- **Raw SQL over `pg`, migrated with `node-pg-migrate`** — no ORM. Migrations contain
+  inspectable SQL. Correct applied migrations with new forward migrations rather than
+  editing them. The pool and the migrations live in `packages/db`.
 
 Neither dependency is installed yet. Each will be checked for advisories and
 supply-chain signals before it is added.
@@ -41,10 +41,19 @@ The seam here is the **domain**, not the layer. With raw SQL there is no ORM bou
 organise around, so everything about bookings — the route, its schema, its SQL — sits in
 one folder. Features arrive by domain, so the code is filed by domain.
 
-## What has to be decided before any of this is written
+## Production architecture contract
 
-The schema. The rules currently live in `apps/web/src/data/store.js`, which fuses three
-separate things together: the seed dataset, `localStorage` persistence, and the actual
-business logic (docket numbering, status transitions, OTP verification, payment ageing).
-Splitting that is the next conversation — the rules move to `packages/shared`, the
-persistence is replaced by SQL here, and the web app gets a thin client.
+Read the [architecture index](../../docs/architecture/README.md),
+[ownership and trust boundaries](../../docs/architecture/system-context.md), and
+[ADRs](../../docs/adr/README.md). Existing module directories are scaffolds; additional
+module paths and worker composition are planned conventions, not implemented code.
+
+The prototype rules live in `apps/web/src/data/store.ts`. Server-owned commands and
+secret-dependent proof/authorization stay in API modules. Only public DTOs and pure
+non-secret functions may move to shared. Read SQL and internal write helpers live in
+`queries.ts`; read entry points do not mutate, and only owning services invoke writes
+with the caller's transaction. Routes parse HTTP and map responses, not business rules.
+
+Schema, detailed role/state contracts and policy values remain gated by
+[the open decision register](../../docs/architecture/open-decisions.md). Issue #2 does
+not install Fastify, auth, database dependencies, workers or provider integrations.
