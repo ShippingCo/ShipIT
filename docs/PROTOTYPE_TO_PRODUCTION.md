@@ -30,6 +30,13 @@ outcomes without changing operational truth. Existing prototype type comments su
 whole-record/shared OTP migration do not supersede these boundaries. #7 still owns the
 exhaustive store-export/caller inventory and regression disposition.
 
+## Canonical Booking/Parcel decision
+
+Issue #3 defines [one Booking → one or more Parcels from day one](architecture/domain-contract.md),
+with parcel-level global dockets/custody/lifecycle and franchise-private customers. See the
+[complete Booking field mapping and 16 intentional differences](architecture/prototype-domain-mapping.md).
+These contracts replace the original one-parcel suggestion; no browser records are migrated here.
+
 ## Cutover discipline
 
 1. Ratify owning domain, public contracts, tenancy and intentional business-rule changes.

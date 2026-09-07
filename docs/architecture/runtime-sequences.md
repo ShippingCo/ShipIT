@@ -64,8 +64,8 @@ sequenceDiagram
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Staff submits create booking | Booking service, using auth/membership policy | Current identity, O/F grants, referenced resources, request fingerprint | None before validation | No business write yet | Deny or validation error; no browser fallback |
 | 2 | Create/link customer if required | Customers service, called by Booking | Scoped customer match policy | Customer only if needed | Same booking transaction; owning fact if changed | Foreign reference/ambiguous match fails under D03 |
-| 3 | Calculate and save booking | Booking service, using Pricing's approved calculation | Effective rates/settings, jurisdiction and command key | Booking/docket and immutable charges/tax snapshot | Same transaction; `booking.created` | Unknown jurisdiction or conflict does not silently select tax |
-| 4 | Initialize parcel | Parcels service, called by Booking | Validated booking and #3 cardinality | Parcel initial lifecycle/ETA/timeline | Same transaction; correlated fact catalogued by #4 | No fabricated ETA; partial creation rolls back |
+| 3 | Calculate and save booking | Booking service, using Pricing's approved calculation | Effective rates/settings, jurisdiction and command key | Booking and immutable charges/tax snapshot (Parcels owns each global docket) | Same transaction; `booking.created` | Unknown jurisdiction or conflict does not silently select tax |
+| 4 | Initialize one or more parcels | Parcels service, called by Booking | Validated booking and #3 cardinality | Each Parcel docket, initial lifecycle/ETA/timeline | Same transaction; correlated fact catalogued by #4 | No fabricated ETA; partial creation rolls back |
 | 5 | Establish obligation/record actual Paid collection | Payments service, called by Booking | Gross snapshot and explicit collection intent | Obligation, append-only ledger entry when collected | Same transaction; payment fact when applicable | Duplicate key cannot double collect; To-Pay has no automatic collection |
 | 6 | Capture issued receipt facts | Receipts service, called by Booking | Saved booking, business snapshot and payment facts | Immutable receipt snapshot | Same transaction | Snapshot failure rolls back issue of booking/receipt as a unit |
 | 7 | Finalize result and business fact | Booking service coordinates; Audit owns append format; producer owns outbox fact | Transaction results | Idempotent result, safe audit and event | COMMIT all or ROLLBACK all | HTTP timeout after commit: same scoped key/fingerprint retrieves original result after current authorization |
@@ -140,6 +140,7 @@ rate-limited intent identity and cannot repeat the original ETA change.
 
 ```mermaid
 sequenceDiagram
+    actor Dispatcher
     actor Agent as Delivery agent
     participant API as Fastify API
     participant Delivery as Deliveries service
@@ -147,7 +148,7 @@ sequenceDiagram
     participant DB as PostgreSQL and outbox
     participant Messaging as Worker and Messaging
     participant Provider
-    Agent->>API: Authorized start delivery command
+    Dispatcher->>API: Authorized start delivery and agent assignment
     API->>Delivery: Trusted scope and validated intent
     Delivery->>DB: BEGIN, create protected challenge and resend payload
     Delivery->>Parcels: Trusted out-for-delivery transition, same transaction
@@ -189,7 +190,8 @@ persistence of parcel lifecycle and accepts that transition only through its int
 trusted delivery entry point. This is one transaction, not two independently callable
 public steps. Failed-attempt/RTO lifecycle policy is owned by Parcels (#24), with delivery
 challenge invalidation coordinated through Deliveries where necessary. Exact transitions
-and roles are D01/D02. Payment collection always requires Payments' separate authorized,
+and roles are defined by [#3 lifecycle](parcel-lifecycle.md) and [matrix](authorization-contract.md):
+dispatcher starts/retries delivery; the assigned delivery_agent submits completion proof. Payment collection always requires Payments' separate authorized,
 idempotent command; delivery alone leaves To-Pay outstanding. Exceptional proof requires
 approved role, reason, evidence and audit and is labelled exceptional, never OTP-verified.
 

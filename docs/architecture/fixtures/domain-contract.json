@@ -1,0 +1,611 @@
+{
+  "synthetic_only": true,
+  "organizations": {
+    "A": "00000000-0000-4000-8000-000000000001",
+    "B": "00000000-0000-4000-8000-000000000002"
+  },
+  "franchises": {
+    "A1": {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "org": "A"
+    },
+    "A2": {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "org": "A"
+    },
+    "B1": {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "org": "B"
+    }
+  },
+  "resources": {
+    "bk1": {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "org": "A",
+      "franchise": "A1",
+      "kind": "booking"
+    },
+    "bk2": {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "org": "A",
+      "franchise": "A2",
+      "kind": "booking"
+    },
+    "bkb": {
+      "id": "00000000-0000-4000-8000-000000000103",
+      "org": "B",
+      "franchise": "B1",
+      "kind": "booking"
+    },
+    "c1": {
+      "id": "00000000-0000-4000-8000-000000000201",
+      "org": "A",
+      "franchise": "A1",
+      "kind": "customer"
+    },
+    "c2": {
+      "id": "00000000-0000-4000-8000-000000000202",
+      "org": "A",
+      "franchise": "A2",
+      "kind": "customer"
+    },
+    "p1": {
+      "id": "00000000-0000-4000-8000-000000000301",
+      "org": "A",
+      "franchise": "A1",
+      "kind": "parcel",
+      "booking": "bk1",
+      "docket": "SYN-SHIPIT-000001",
+      "custodian": "A2",
+      "agent": "agent2"
+    },
+    "p2": {
+      "id": "00000000-0000-4000-8000-000000000302",
+      "org": "A",
+      "franchise": "A1",
+      "kind": "parcel",
+      "booking": "bk1",
+      "docket": "SYN-SHIPIT-000002",
+      "custodian": "A1"
+    },
+    "pb": {
+      "id": "00000000-0000-4000-8000-000000000303",
+      "org": "B",
+      "franchise": "B1",
+      "kind": "parcel",
+      "booking": "bkb",
+      "docket": "SYN-SHIPIT-000003",
+      "custodian": "B1"
+    },
+    "finance1": {
+      "id": "00000000-0000-4000-8000-000000000401",
+      "org": "A",
+      "franchise": "A1",
+      "kind": "finance"
+    }
+  },
+  "access_cases": [
+    {
+      "id": "C01",
+      "description": "A1 operator searches unrelated A2 booking",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000501",
+      "resource": "bk2",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C02",
+      "description": "A1 operator guesses B1 booking UUID",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000502",
+      "resource": "bkb",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C03",
+      "description": "Org A admin reads A1 booking",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000503",
+      "resource": "bk1",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 200,
+      "expected_projection": "organization_audit"
+    },
+    {
+      "id": "C04",
+      "description": "Org A admin reads A2 customer for verification",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000504",
+      "resource": "c2",
+      "rule": "R05",
+      "visibility_rule": "R05",
+      "expected_status": 200,
+      "expected_projection": "verification",
+      "verification": true
+    },
+    {
+      "id": "C05",
+      "description": "Org A admin cancels visible A2 booking",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000505",
+      "resource": "bk2",
+      "rule": "W02",
+      "visibility_rule": "R06",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C06",
+      "description": "A2 operator processes A1-owned parcel in custody",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "00000000-0000-4000-8000-000000000506",
+      "resource": "p1",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 200,
+      "expected_projection": "shipment"
+    },
+    {
+      "id": "C07",
+      "description": "A2 tries A1 customer history via custodial parcel",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "00000000-0000-4000-8000-000000000507",
+      "resource": "c1",
+      "rule": "R05",
+      "visibility_rule": "R05",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C08",
+      "description": "Agent reads currently assigned parcel",
+      "role": "delivery_agent",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "agent2",
+      "resource": "p1",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 200,
+      "expected_projection": "delivery"
+    },
+    {
+      "id": "C09",
+      "description": "Agent guesses unassigned parcel at same org",
+      "role": "delivery_agent",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "agent2",
+      "resource": "p2",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C10",
+      "description": "Accountant exports own GST report",
+      "role": "accountant",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000510",
+      "resource": "finance1",
+      "rule": "E03",
+      "visibility_rule": "R25",
+      "expected_status": 200,
+      "expected_projection": "finance"
+    },
+    {
+      "id": "C11",
+      "description": "Accountant attempts customer export through known own franchise report endpoint",
+      "role": "accountant",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000511",
+      "resource": "finance1",
+      "rule": "E02",
+      "visibility_rule": "R25",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C12",
+      "description": "read_only edits visible own booking",
+      "role": "read_only",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000512",
+      "resource": "bk1",
+      "rule": "W01",
+      "visibility_rule": "R06",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C13",
+      "description": "Valid foreign globally unique docket does not grant access",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000513",
+      "resource": "pb",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 404,
+      "expected_projection": "none",
+      "lookup": "SYN-SHIPIT-000003"
+    },
+    {
+      "id": "C14",
+      "description": "Unauthenticated known docket lookup",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000514",
+      "resource": "p2",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 401,
+      "expected_projection": "none",
+      "authenticated": false
+    },
+    {
+      "id": "C15",
+      "description": "Revoked membership cannot read own booking",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000515",
+      "resource": "bk1",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none",
+      "membership": false
+    },
+    {
+      "id": "C16",
+      "description": "Unknown UUID matches foreign denial",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000516",
+      "resource": "unknown",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none",
+      "lookup": "00000000-0000-4000-8000-000000000999"
+    },
+    {
+      "id": "C17",
+      "description": "Agent attempts handover without grant",
+      "role": "delivery_agent",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "agent2",
+      "resource": "p1",
+      "rule": "W16",
+      "visibility_rule": "R07",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C18",
+      "description": "Agent attempts scoped handover with explicit grant",
+      "role": "delivery_agent",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "agent2",
+      "resource": "p1",
+      "rule": "W16",
+      "visibility_rule": "R07",
+      "expected_status": 200,
+      "expected_projection": "command",
+      "transfer_grant": true
+    },
+    {
+      "id": "C19",
+      "description": "Org admin cannot export own-org booking records",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000519",
+      "resource": "bk2",
+      "rule": "E01",
+      "visibility_rule": "R06",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C20",
+      "description": "Org admin cannot read B1 despite admin title",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000520",
+      "resource": "bkb",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C21",
+      "description": "read_only reads own booking basic details",
+      "role": "read_only",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000521",
+      "resource": "bk1",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 200,
+      "expected_projection": "basic_booking"
+    },
+    {
+      "id": "C22",
+      "description": "Custody of one child does not reveal other child",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "00000000-0000-4000-8000-000000000522",
+      "resource": "p2",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C23",
+      "description": "Custody does not unlock parent commercial booking",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "00000000-0000-4000-8000-000000000523",
+      "resource": "bk1",
+      "rule": "R06",
+      "visibility_rule": "R06",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C24",
+      "description": "Franchise admin exports own operations",
+      "role": "franchise_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000524",
+      "resource": "bk1",
+      "rule": "E01",
+      "visibility_rule": "R06",
+      "expected_status": 200,
+      "expected_projection": "own_franchise"
+    },
+    {
+      "id": "C25",
+      "description": "Accountant cannot dispatch parcel",
+      "role": "accountant",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000525",
+      "resource": "p2",
+      "rule": "W08",
+      "visibility_rule": "R07",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C26",
+      "description": "Org admin edits visible sibling booking",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000526",
+      "resource": "bk2",
+      "rule": "W01",
+      "visibility_rule": "R06",
+      "expected_status": 403,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C27",
+      "description": "Org admin customer browse without verification purpose",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "actor": "00000000-0000-4000-8000-000000000527",
+      "resource": "c2",
+      "rule": "R05",
+      "visibility_rule": "R05",
+      "expected_status": 404,
+      "expected_projection": "none"
+    },
+    {
+      "id": "C28",
+      "description": "read_only views custodial parcel with basic operational projection",
+      "role": "read_only",
+      "org": "A",
+      "franchise": "A2",
+      "actor": "00000000-0000-4000-8000-000000000528",
+      "resource": "p1",
+      "rule": "R07",
+      "visibility_rule": "R07",
+      "expected_status": 200,
+      "expected_projection": "basic_shipment"
+    }
+  ],
+  "money_cases": [
+    {
+      "paise": 12549,
+      "rounded": 12500,
+      "adjustment": -49
+    },
+    {
+      "paise": 12550,
+      "rounded": 12600,
+      "adjustment": 50
+    },
+    {
+      "paise": 12551,
+      "rounded": 12600,
+      "adjustment": 49
+    },
+    {
+      "paise": 0,
+      "rounded": 0,
+      "adjustment": 0
+    }
+  ],
+  "cancellation_cases": [
+    {
+      "id": "B01",
+      "children": [
+        {
+          "status": "booked",
+          "ever_moved": false
+        },
+        {
+          "status": "checked_in",
+          "ever_moved": false
+        }
+      ],
+      "allowed": true
+    },
+    {
+      "id": "B02",
+      "children": [
+        {
+          "status": "booked",
+          "ever_moved": false
+        },
+        {
+          "status": "in_transit",
+          "ever_moved": true
+        }
+      ],
+      "allowed": false
+    },
+    {
+      "id": "B03",
+      "children": [
+        {
+          "status": "checked_in",
+          "ever_moved": true
+        }
+      ],
+      "allowed": false
+    }
+  ],
+  "hold_cases": [
+    {
+      "id": "H01",
+      "held_at": "2026-09-11T10:00:00Z",
+      "open_weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "holidays": [],
+      "deadline": "2026-09-15T18:30:00Z"
+    },
+    {
+      "id": "H02",
+      "held_at": "2026-09-11T10:00:00Z",
+      "open_weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "holidays": [
+        "2026-09-14"
+      ],
+      "deadline": "2026-09-16T18:30:00Z"
+    }
+  ],
+  "adoption_cases": [
+    {
+      "id": "M01",
+      "franchise_approval": true,
+      "receiving_approval": false,
+      "unresolved": [],
+      "same_plan": true,
+      "eligible": false
+    },
+    {
+      "id": "M02",
+      "franchise_approval": true,
+      "receiving_approval": true,
+      "unresolved": [
+        "legacy_docket_alias"
+      ],
+      "same_plan": true,
+      "eligible": false
+    },
+    {
+      "id": "M03",
+      "franchise_approval": true,
+      "receiving_approval": true,
+      "unresolved": [
+        "customer_ownership_conflict"
+      ],
+      "same_plan": true,
+      "eligible": false
+    },
+    {
+      "id": "M04",
+      "franchise_approval": true,
+      "receiving_approval": true,
+      "unresolved": [],
+      "same_plan": false,
+      "eligible": false
+    },
+    {
+      "id": "M05",
+      "franchise_approval": true,
+      "receiving_approval": true,
+      "unresolved": [],
+      "same_plan": true,
+      "eligible": true
+    }
+  ],
+  "hold_boundary_cases": [
+    {
+      "now": "2026-09-15T18:29:59Z",
+      "deadline": "2026-09-15T18:30:00Z",
+      "collection_eligible": true,
+      "rto_time_eligible": false
+    },
+    {
+      "now": "2026-09-15T18:30:00Z",
+      "deadline": "2026-09-15T18:30:00Z",
+      "collection_eligible": false,
+      "rto_time_eligible": true
+    }
+  ]
+}

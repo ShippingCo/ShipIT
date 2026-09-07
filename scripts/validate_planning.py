@@ -1,6 +1,7 @@
 """Validate tracked planning contracts without adding a runtime dependency."""
 from pathlib import Path
 import re
+import runpy
 ROOT = Path(__file__).resolve().parents[1]
 required = ["CONTRIBUTING.md", "SECURITY.md", "docs/ROADMAP.md", "docs/ISSUE_INDEX.md", "docs/ENGINEERING_WORKFLOW.md", "docs/PROTOTYPE_TO_PRODUCTION.md", ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/implementation.md", ".github/ISSUE_TEMPLATE/bug.md", ".github/ISSUE_TEMPLATE/research.md", ".github/ISSUE_TEMPLATE/security-infrastructure.md"]
 required.extend(["README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
@@ -30,4 +31,6 @@ index = (ROOT / "docs/ISSUE_INDEX.md").read_text()
 rows = [line for line in index.splitlines() if line.startswith("| PLAN-") or re.match(r"\| \[#[0-9]+\]", line)]
 assert len(rows) == 82, f"Expected 82 initial planned issues, found {len(rows)}; revise roadmap intentionally if scope changes"
 assert len(set(rows)) == 82
+# The #3 document model runs in CI through this existing planning entry point.
+runpy.run_path(str(ROOT / "scripts/validate_domain_contract.py"), run_name="__main__")
 print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences and local links.")
