@@ -9,7 +9,7 @@ GitHub's dependency graph. Closing #2 alone does not make every listed issue rea
 
 ADRs 0001–0005 are the merged #2 constraints (PR #85). The project owner's approved
 #3 execution requirements are recorded in [ADR 0006](../adr/0006-domain-ownership-and-authorization.md).
-RESOLVED below means a documented #3 contract, effective on that PR's acceptance/merge;
+PR #86 has now merged #3. RESOLVED below means an accepted contractual decision;
 it does not mean downstream implementation is complete. Other rows remain OPEN unless
 explicitly marked PARTIAL. No vendor, statutory policy or runtime behavior is inferred.
 
@@ -18,8 +18,8 @@ explicitly marked PARTIAL. No vendor, statutory policy or runtime behavior is in
 | D01 | Canonical entities, cardinality, docket scope and permitted transitions | [Domain](domain-contract.md), [complete lifecycle](parcel-lifecycle.md), [ADR 0006](../adr/0006-domain-ownership-and-authorization.md): multi-parcel from day one, global parcel dockets, custody distinct from ownership; all approved states/roles/guards | #3 / domain architecture | #3 PR acceptance; implementation gates remain with owners below | #4, #12, #19, #22, #24, #79 | RESOLVED contract |
 | D02 | Complete role/action/resource/scope policy | [70-row matrix](authorization-contract.md) and [synthetic denials](domain-scenarios.md); seven roles, explicit exports, grantable agent transfer, declared org reads; unapproved actions denied | #3 / tenancy; #14 implements memberships/grants | #3 PR acceptance; #14 permission mechanics before implementation | #6, #12, #14, #15, #17, #42 | RESOLVED policy; implementation outstanding |
 | D03 | Franchise customer ownership versus normalization/matching/merge mechanics | [Customer isolation](domain-contract.md#customer-isolation-and-field-boundaries) resolved: no implicit sibling/global directory; custody is shipment-only. Matching keys, ambiguous matches, merge/retention mechanics remain unapproved | #3 / ownership; #19 / customers with #72 / privacy | Ownership at #3 acceptance; matching/merge before #19 implementation | #19, #22, #46, #49 | PARTIAL: ownership resolved, matching/merge OPEN |
-| D04 | What are exact API/error/pagination schemas, event catalog, compatibility rules, stale/gap policy, idempotency fingerprint/scope/retention and expired-key semantics? | [#3 domain](domain-contract.md) fixes docket scope/UTC semantics; ADR 0004 fixes architecture, not final wire fields; #4 owns catalog and ordering | #4 / API and events | M0 #4 acceptance, before contract consumers | #9, #10, #11, #16, #22, #24, #28, #35, #37, #40, #53 | OPEN |
-| D05 | What lease duration, retry/backoff bounds, fairness, poison/redrive and consumer deduplication mechanics satisfy durability? | PG outbox required; no broker/library selected. Uncertain provider acceptance must not be blindly resent | #35 / outbox with #39 / messaging | #4 defines invariants; #35 design before worker implementation, #39 before outbound queue | #35, #39, #40, #41, #45 | OPEN |
+| D04 | Exact API/error/pagination schemas, event catalog/compatibility/stale/gap policy, idempotency scope/fingerprint/retention/expiry | [ADR 0007](../adr/0007-api-event-idempotency-contracts.md), [API](api-contract.md), [events](event-contract.md), [idempotency](idempotency-contract.md), [synthetic evidence](api-event-verification.md); all #4 contract directions specified; endpoint implementation remains downstream | #4 / API and events | #4 approved merge makes this RESOLVED contract; before consumers | #9, #10, #11, #16, #22, #24, #28, #35, #37, #40, #53 | PENDING ACCEPTANCE; RESOLVED contract on approved #4 merge |
+| D05 | Concrete lease duration, retry/backoff, concurrency/polling, fairness, poison/redrive and consumer deduplication persistence mechanics | [#4 invariants](event-contract.md) define logical identity, quarantine/uncertainty and atomic source/outbox; no operational constants, queue or implementation selected | #35 / outbox; #39 / messaging; #40 / consumer dedupe | #35 worker design, #39 processing, #40 persistence before respective implementations | #35, #39, #40, #41, #45 | OPEN |
 | D06 | What money rounding, tax jurisdiction/rate authority, collection/reversal and e-way/retention policies are approved? | [#3 money contract](domain-contract.md#money-docket-and-time-invariants) resolves integer paise and final rupee rounding (.50 up), separate adjustment; #8/#21/#29 still own tax precision/allocation, partial collections, credits and reversal reconciliation | #8 / money and compliance with #21 / tax and #29 / payments | M0 #8 acceptance; policy verification before domain implementation | #20, #21, #22, #29, #30, #32, #62, #63, #67 | PARTIAL: #3 money boundary resolved; remaining policy OPEN |
 | D07 | What challenge lifetime, attempts, cooldown, resend replacement and exceptional-proof eligibility/evidence are permitted? | [#3 lifecycle](parcel-lifecycle.md) fixes two physical attempts, hold/RTO/reversal role boundaries; #42 requires keyed verifier, encrypted short-lived resend payload, atomic completion; no staff reveal, no reset-by-resend | #8 / proof policy and #42 / deliveries | Policy in #8; detailed security design before #42 implementation | #24, #42, #43, #45 | OPEN |
 | D08 | What identity/session mechanism, secret lifecycle, CSRF/proxy boundaries and data retention/deletion rules meet threats? | #6 owns environment/threat control matrix; #13 auth; #8/#72 privacy. No auth library or statutory retention value accepted here | #6 / security, #13 / auth, #8 and #72 / privacy | Threat decisions in #6; retention policy in #8; mechanics before relevant implementation | #9, #11, #13, #31, #36, #51, #68, #69, #72, #73 | OPEN |
@@ -43,6 +43,16 @@ explicitly marked PARTIAL. No vendor, statutory policy or runtime behavior is in
 
 These are downstream implementation/policy gates, not additional prerequisites preventing
 the #3 documentary contract. Missing lint (#5) is unavailable, not passed; see [verification](domain-verification.md) for merge-policy limits.
+
+## Issue #4 acceptance and remaining gates
+
+D04 is fully specified for review; it becomes RESOLVED contract only when the #4 PR is
+accepted/merged. [Verification](api-event-verification.md) maps all nine acceptance criteria.
+This does not close D05 or claim endpoint/worker implementation. #9/#23 own cursor integrity
+encoding/lifetime and detailed projections; #22/#24/#28/#29 own expired-command reconciliation
+queries, full feature DTOs and longer sensitive replay retention where needed. #12/#22 own
+global docket allocation/layout; #4 fixes scalar normalization only. Business policies
+already deferred to #8/#21/#29/#42/#66/#72 stay open. Lint baseline remains #5.
 
 ## Resolving a row
 

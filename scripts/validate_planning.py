@@ -33,4 +33,6 @@ assert len(rows) == 82, f"Expected 82 initial planned issues, found {len(rows)};
 assert len(set(rows)) == 82
 # The #3 document model runs in CI through this existing planning entry point.
 runpy.run_path(str(ROOT / "scripts/validate_domain_contract.py"), run_name="__main__")
+# The #4 bounded API/event model uses the same existing CI entry point.
+runpy.run_path(str(ROOT / "scripts/validate_api_event_contract.py"), run_name="__main__")
 print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences and local links.")

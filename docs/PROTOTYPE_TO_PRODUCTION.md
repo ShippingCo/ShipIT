@@ -37,6 +37,18 @@ with parcel-level global dockets/custody/lifecycle and franchise-private custome
 [complete Booking field mapping and 16 intentional differences](architecture/prototype-domain-mapping.md).
 These contracts replace the original one-parcel suggestion; no browser records are migrated here.
 
+## API/event/replay differences (Issue #4)
+
+[API](architecture/api-contract.md), [events](architecture/event-contract.md) and
+[idempotency](architecture/idempotency-contract.md) replace browser mutation authority:
+server errors are safe and scoped; frontend `queueMsg` cannot trigger production side
+effects; providers run after committed server business/audit/result/outbox persistence.
+Same-intent replay never repeats logical effects. Authoritative aggregate revisions control
+ordering, not browser timestamps or UI labels. Events use canonical #3 attempt/collection/
+correction facts; sensitive customer/provider/proof content stays behind protected references,
+never copied from prototype records into general envelopes. Request/response/row/event DTOs
+are separate. No prototype UI or test is changed here.
+
 ## Cutover discipline
 
 1. Ratify owning domain, public contracts, tenancy and intentional business-rule changes.
