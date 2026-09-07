@@ -91,9 +91,8 @@ with a shared transaction; they never write its records directly.
 | Reports | `reports` (read owner; no source mutation) | PG scoped source facts/snapshots | reports; permitted totals/rows/export only | No ledger or delivery changes |
 | Audit | `audit` append interface | PG; trusted O/F/actor/action references | audit; explicitly permitted safe evidence | Incident/compliance review, no secret-bearing payloads |
 
-Booking and parcel have distinct conceptual identities; #3 resolves pilot cardinality
-and docket uniqueness before affected schema work (D01). One parcel per booking is a
-candidate in #3, not a completed schema decision. Custody and lot/route relationships
+The [#3 canonical contract](domain-contract.md) resolves D01 as one Booking with one
+or more Parcels from day one and a globally unique docket for each Parcel. Custody and lot/route relationships
 never silently change the ownership path. Commercial adoption is separately gated #79.
 
 ## Tenancy scenarios
@@ -109,12 +108,12 @@ membership atomically. No carrier enrollment or shared customer directory is req
 | A1 staff guesses an A2 ID, searches its docket or exports its rows | Deny without explicit organization scope; do not leak existence, counts or nested records |
 | Any A role requests B1 data | Deny, including `org_admin`; same carrier/phone does not grant access |
 | `read_only` submits any mutation | Deny, even for an otherwise visible resource |
-| Configuration/destructive action | Require appropriate `org_admin` or `franchise_admin` scope and explicit action grant; reason/audit where required; deny until #3/#8 defines the action |
+| Configuration/destructive action | Require the exact [#3 matrix](authorization-contract.md) role/scope and state guard; org_admin has no implicit operational/configuration grant; reason/audit where required |
 | Role revoked or session ended | Next protected request and job authorization re-evaluates current authority; no stale browser grants |
 
 Recognized role names from #3 are `org_admin`, `franchise_admin`, `operator`,
-`dispatcher`, `delivery_agent`, `accountant`, `read_only`. The exact resource/action
-matrix is D02, not invented here. Frontend filtering is never authorization. Apply
+`dispatcher`, `delivery_agent`, `accountant`, `read_only`. The [#3 authorization matrix](authorization-contract.md) resolves D02 policy;
+unspecified actions remain denied. Frontend filtering is never authorization. Apply
 server scope to reads, writes, nested references, exports, file access, aggregates,
 background jobs and provider installations. Missing identity → 401; forbidden action
 on visible data → 403; foreign/unknown resource → uniform 404, as required by #3.
