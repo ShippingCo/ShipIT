@@ -1,0 +1,752 @@
+{
+  "synthetic_only": true,
+  "contract_version": 1,
+  "pagination": {
+    "default_limit": 50,
+    "max_limit": 100,
+    "min_limit": 1,
+    "sort": [
+      "created_at DESC",
+      "id DESC"
+    ]
+  },
+  "retention_seconds": 86400,
+  "events": [
+    {
+      "event_type": "booking.created",
+      "producer": "bookings",
+      "aggregate": "booking",
+      "transitions": [
+        "T01"
+      ],
+      "committed_state": "Parent commercial/customer snapshots and every child Parcel committed atomically",
+      "schema_version": 1,
+      "payload": {
+        "parcel_set_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "reports"
+      ],
+      "consumer_effect": "Booking confirmation intent; scoped commercial projection",
+      "forbidden_authority": "No child lifecycle writes or automatic payment collection",
+      "ordering": "M/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.booked",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T01"
+      ],
+      "committed_state": "This child has a unique global docket, booked state and awaiting_intake custody",
+      "schema_version": 1,
+      "payload": {
+        "booking_id": "reference"
+      },
+      "consumers": [
+        "reports",
+        "timeline"
+      ],
+      "consumer_effect": "Per-parcel initial projection; no separate booking confirmation",
+      "forbidden_authority": "No duplicate parent confirmation or customer-directory traversal",
+      "ordering": "P/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.checked_in",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T02"
+      ],
+      "committed_state": "Physical intake receipt and initial office/hub custody committed; parent active",
+      "schema_version": 1,
+      "payload": {
+        "receipt_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe received-at-office intent and timeline",
+      "forbidden_authority": "No inferred dispatch or independent custody transfer",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.dispatched",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T03"
+      ],
+      "committed_state": "Validated manifest, physical release, route_dispatch custody and permanent movement committed",
+      "schema_version": 1,
+      "payload": {
+        "manifest_id": "reference",
+        "dispatch_evidence_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe dispatch intent and timeline",
+      "forbidden_authority": "No carrier acceptance claim or ETA/lifecycle mutation",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.in_transit",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T04"
+      ],
+      "committed_state": "Authorized movement evidence and in_transit state committed; route custody retained",
+      "schema_version": 1,
+      "payload": {
+        "route_id": "reference",
+        "movement_evidence_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe journey intent and timeline",
+      "forbidden_authority": "No sibling handover or delivery assignment from a route label",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.attempt_started",
+      "producer": "deliveries",
+      "aggregate": "parcel",
+      "transitions": [
+        "T05"
+      ],
+      "committed_state": "Parcels committed out_for_delivery with accepted assignment/handover; Deliveries committed one active attempt and protected challenge",
+      "schema_version": 1,
+      "payload": {
+        "attempt_id": "reference",
+        "assignment_id": "reference",
+        "challenge_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Restricted challenge-send intent and safe progress projection",
+      "forbidden_authority": "No plaintext challenge in envelope or consumer-created attempt/state",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.completed",
+      "producer": "deliveries",
+      "aggregate": "parcel",
+      "transitions": [
+        "T06"
+      ],
+      "committed_state": "Deliveries accepted proof and consumed challenge; Parcels committed delivered and recipient handover, closing assignment/attempt",
+      "schema_version": 1,
+      "payload": {
+        "attempt_id": "reference",
+        "proof_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline",
+        "reports"
+      ],
+      "consumer_effect": "Safe completion intent and scoped delivered projection",
+      "forbidden_authority": "No payment settlement or proof reuse",
+      "ordering": "M/H/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.attempt_failed",
+      "producer": "deliveries",
+      "aggregate": "parcel",
+      "transitions": [
+        "T07"
+      ],
+      "committed_state": "Deliveries ended attempt and invalidated challenge once; Parcels committed failed_attempt/count under lifecycle guards",
+      "schema_version": 1,
+      "payload": {
+        "attempt_id": "reference",
+        "failure_reason": "failure_reason"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe unsuccessful-attempt intent and timeline",
+      "forbidden_authority": "No automatic retry, RTO, payment write or raw reason narrative",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.retry_started",
+      "producer": "deliveries",
+      "aggregate": "parcel",
+      "transitions": [
+        "T08"
+      ],
+      "committed_state": "Second/final attempt and fresh protected challenge committed with reconciled assignment/custody and out_for_delivery state",
+      "schema_version": 1,
+      "payload": {
+        "attempt_id": "reference",
+        "prior_attempt_id": "reference",
+        "assignment_id": "reference",
+        "challenge_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Restricted second-attempt intent and timeline",
+      "forbidden_authority": "No third physical attempt or reset of first-attempt evidence",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.held_at_office",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T09"
+      ],
+      "committed_state": "Authorized physical receipt, office custody and pinned collection clock committed; assignment closed",
+      "schema_version": 1,
+      "payload": {
+        "receipt_ref": "reference",
+        "calendar_ref": "reference",
+        "collection_deadline": "instant"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe collection-availability intent and timeline",
+      "forbidden_authority": "No invented business calendar, automatic RTO or hold extension",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.collected",
+      "producer": "deliveries",
+      "aggregate": "parcel",
+      "transitions": [
+        "T10"
+      ],
+      "committed_state": "Approved in-window collection proof accepted; Parcels committed delivered/recipient handover and closed office assignment",
+      "schema_version": 1,
+      "payload": {
+        "proof_ref": "reference",
+        "collection_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline",
+        "reports"
+      ],
+      "consumer_effect": "Safe collected intent and projection",
+      "forbidden_authority": "No third doorstep attempt or payment collection",
+      "ordering": "M/H/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "parcel.rto_approved",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T11",
+        "T12"
+      ],
+      "committed_state": "Responsible franchise_admin approved eligible reason-driven return with safe evidence and accountable return plan; forward work invalidated",
+      "schema_version": 1,
+      "payload": {
+        "approval_ref": "reference",
+        "eligibility_ref": "reference",
+        "return_plan_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline"
+      ],
+      "consumer_effect": "Safe return-initiated intent and timeline",
+      "forbidden_authority": "No physical-return-completed claim or refund",
+      "ordering": "M/H",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "delivery.reversed",
+      "producer": "parcels",
+      "aggregate": "parcel",
+      "transitions": [
+        "T13"
+      ],
+      "committed_state": "Owning franchise_admin correction, recovered physical receipt and new hold clock committed; original delivery retained and reconciliation obligation appended",
+      "schema_version": 1,
+      "payload": {
+        "original_delivery_event_id": "reference",
+        "correction_ref": "reference",
+        "receipt_ref": "reference",
+        "calendar_ref": "reference",
+        "collection_deadline": "instant",
+        "reconciliation_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "timeline",
+        "reports",
+        "payments_reconciliation"
+      ],
+      "consumer_effect": "Safe correction intent; append history and reconciliation work reference",
+      "forbidden_authority": "No erased delivery/ledger, automatic refund or attempt reset",
+      "ordering": "M/H/R",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "route.departed",
+      "producer": "routes",
+      "aggregate": "route",
+      "transitions": [
+        "route"
+      ],
+      "committed_state": "Authorized typed departure evidence and validated frozen membership committed; any Parcel state effect passed its own role/transition guards",
+      "schema_version": 1,
+      "payload": {
+        "manifest_ref": "reference",
+        "affected_set_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "reports"
+      ],
+      "consumer_effect": "Safe per-affected-parcel route update intents and route projection",
+      "forbidden_authority": "No automatic Parcel transit bypass or carrier acceptance claim",
+      "ordering": "M/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "route.delayed",
+      "producer": "routes",
+      "aggregate": "route",
+      "transitions": [
+        "route"
+      ],
+      "committed_state": "Typed delay, distinct frozen affected set, updated/skipped outcomes and eligible Parcels ETA changes committed atomically",
+      "schema_version": 1,
+      "payload": {
+        "affected_set_ref": "reference",
+        "outcome_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "reports"
+      ],
+      "consumer_effect": "Per-parcel delay intents from committed affected set; scoped route projection",
+      "forbidden_authority": "No asynchronous consumer ETA changes or terminal-parcel regression",
+      "ordering": "M/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "route.arrived",
+      "producer": "routes",
+      "aggregate": "route",
+      "transitions": [
+        "route"
+      ],
+      "committed_state": "Authorized typed route arrival and physical observation committed; affected membership validated",
+      "schema_version": 1,
+      "payload": {
+        "manifest_ref": "reference",
+        "affected_set_ref": "reference"
+      },
+      "consumers": [
+        "messaging",
+        "reports"
+      ],
+      "consumer_effect": "Safe route arrival update intents and projection",
+      "forbidden_authority": "No recipient delivery/proof or sibling custody grant",
+      "ordering": "M/P",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "payment.settled",
+      "producer": "payments",
+      "aggregate": "payment_obligation",
+      "transitions": [
+        "payment"
+      ],
+      "committed_state": "Authoritative append-only collection evidence satisfies the Booking obligation under approved finance policy; no delivery inferred",
+      "schema_version": 1,
+      "payload": {
+        "booking_id": "reference",
+        "settlement_ref": "reference"
+      },
+      "consumers": [
+        "reports",
+        "receipts"
+      ],
+      "consumer_effect": "Scoped finance projection/receipt reconciliation under owning policy",
+      "forbidden_authority": "No parcel delivery, automatic receipt reissue or invented refund/partial-allocation policy",
+      "ordering": "P/R",
+      "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    }
+  ],
+  "command": {
+    "principal_type": "user",
+    "principal_id": "actor_synthetic_operator",
+    "organization_id": "A",
+    "franchise_id": "A1",
+    "operation_id": "api.v1.bookings.create",
+    "idempotency_key": "key_synthetic_01",
+    "resource_ids": {},
+    "content_type": "application/json",
+    "query": {},
+    "body": {
+      "customer_id": "customer_synthetic_01",
+      "parcels": [
+        {
+          "client_reference": "piece_synthetic_a",
+          "weight_grams": 1000
+        },
+        {
+          "client_reference": "piece_synthetic_b",
+          "weight_grams": 2000
+        }
+      ]
+    },
+    "correlation_id": "cor_synthetic_01"
+  },
+  "result": {
+    "status": 201,
+    "body": {
+      "id": "booking_synthetic_01",
+      "version": 1,
+      "parcels": [
+        {
+          "id": "par_synthetic_01",
+          "docket": "SYN-SHIPIT-000001",
+          "status": "booked",
+          "version": 1
+        },
+        {
+          "id": "par_synthetic_02",
+          "docket": "SYN-SHIPIT-000002",
+          "status": "booked",
+          "version": 1
+        }
+      ]
+    }
+  },
+  "fake_clock": {
+    "committed_at": "2026-09-07T03:30:00Z",
+    "before_expiry": "2026-09-08T03:29:59Z",
+    "at_expiry": "2026-09-08T03:30:00Z",
+    "after_expiry": "2026-09-08T03:30:01Z"
+  },
+  "envelope": {
+    "event_id": "evt_synthetic_dispatch",
+    "event_type": "parcel.dispatched",
+    "schema_version": 1,
+    "organization_id": "00000000-0000-4000-8000-000000000001",
+    "franchise_id": "00000000-0000-4000-8000-000000000011",
+    "aggregate_type": "parcel",
+    "aggregate_id": "00000000-0000-4000-8000-000000000301",
+    "aggregate_version": 4,
+    "occurred_at": "2026-09-07T03:30:00Z",
+    "actor": {
+      "type": "user",
+      "id": "actor_synthetic_operator"
+    },
+    "correlation_id": "cor_synthetic_01",
+    "causation_id": "cmd_synthetic_dispatch",
+    "command_id": "cmd_synthetic_dispatch",
+    "payload": {
+      "manifest_id": "man_synthetic_01",
+      "dispatch_evidence_ref": "evidence_synthetic_01"
+    }
+  },
+  "access_cases": [
+    {
+      "id": "A01",
+      "actor": "actor_synthetic_operator",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "membership": true,
+      "action": "replay",
+      "expected": 201
+    },
+    {
+      "id": "A02",
+      "actor": "actor_synthetic_operator",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "membership": true,
+      "action": "replay",
+      "expected": 404
+    },
+    {
+      "id": "A03",
+      "actor": "actor_synthetic_operator",
+      "role": "operator",
+      "org": "B",
+      "franchise": "B1",
+      "membership": true,
+      "action": "replay",
+      "expected": 404
+    },
+    {
+      "id": "A04",
+      "actor": "actor_synthetic_operator",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "membership": false,
+      "action": "replay",
+      "expected": 404
+    },
+    {
+      "id": "A05",
+      "actor": "actor_synthetic_operator",
+      "role": "read_only",
+      "org": "A",
+      "franchise": "A1",
+      "membership": true,
+      "action": "replay",
+      "expected": 403
+    },
+    {
+      "id": "A06",
+      "actor": "actor_synthetic_admin",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A2",
+      "membership": true,
+      "action": "read",
+      "expected": 200
+    },
+    {
+      "id": "A07",
+      "actor": "actor_synthetic_admin",
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A2",
+      "membership": true,
+      "action": "mutate",
+      "expected": 403
+    },
+    {
+      "id": "A08",
+      "actor": "actor_synthetic_admin",
+      "role": "org_admin",
+      "org": "B",
+      "franchise": "B1",
+      "membership": true,
+      "action": "read",
+      "expected": 404
+    },
+    {
+      "id": "A09",
+      "actor": "actor_synthetic_other",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "membership": true,
+      "action": "replay",
+      "expected": 404
+    },
+    {
+      "id": "A10",
+      "actor": "actor_synthetic_operator",
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "membership": true,
+      "authenticated": false,
+      "action": "replay",
+      "expected": 401
+    }
+  ],
+  "consumer_cases": [
+    {
+      "id": "E01",
+      "policy": "M",
+      "start": 5,
+      "versions": [
+        6,
+        6
+      ],
+      "event_ids": [
+        "evt_synthetic_6",
+        "evt_synthetic_6"
+      ],
+      "schemas": [
+        1,
+        1
+      ],
+      "expected": [
+        "applied",
+        "duplicate"
+      ],
+      "effects": 1,
+      "final_version": 6
+    },
+    {
+      "id": "E02",
+      "policy": "M",
+      "start": 5,
+      "versions": [
+        7,
+        6
+      ],
+      "event_ids": [
+        "evt_synthetic_7",
+        "evt_synthetic_6"
+      ],
+      "schemas": [
+        1,
+        1
+      ],
+      "expected": [
+        "applied",
+        "skipped_stale"
+      ],
+      "effects": 1,
+      "final_version": 7
+    },
+    {
+      "id": "E03",
+      "policy": "H",
+      "start": 5,
+      "versions": [
+        7
+      ],
+      "event_ids": [
+        "evt_synthetic_7"
+      ],
+      "schemas": [
+        1
+      ],
+      "expected": [
+        "reconcile_gap"
+      ],
+      "effects": 0,
+      "final_version": 5
+    },
+    {
+      "id": "E04",
+      "policy": "M",
+      "start": 5,
+      "versions": [
+        6
+      ],
+      "event_ids": [
+        "evt_synthetic_6"
+      ],
+      "schemas": [
+        99
+      ],
+      "expected": [
+        "quarantine_schema"
+      ],
+      "effects": 0,
+      "final_version": 5
+    },
+    {
+      "id": "E05",
+      "policy": "P",
+      "start": 5,
+      "versions": [
+        7,
+        6
+      ],
+      "event_ids": [
+        "evt_synthetic_7",
+        "evt_synthetic_6"
+      ],
+      "schemas": [
+        1,
+        1
+      ],
+      "expected": [
+        "applied",
+        "skipped_stale"
+      ],
+      "effects": 0,
+      "final_version": 7
+    },
+    {
+      "id": "E06",
+      "policy": "H",
+      "start": 5,
+      "versions": [
+        7,
+        6,
+        7
+      ],
+      "event_ids": [
+        "evt_synthetic_7",
+        "evt_synthetic_6",
+        "evt_synthetic_7"
+      ],
+      "schemas": [
+        1,
+        1,
+        1
+      ],
+      "expected": [
+        "reconcile_gap",
+        "applied",
+        "applied"
+      ],
+      "effects": 0,
+      "final_version": 7
+    },
+    {
+      "id": "E07",
+      "policy": "R",
+      "start": 5,
+      "versions": [
+        7
+      ],
+      "event_ids": [
+        "evt_synthetic_7"
+      ],
+      "schemas": [
+        1
+      ],
+      "expected": [
+        "reconcile_gap"
+      ],
+      "effects": 0,
+      "final_version": 5
+    },
+    {
+      "id": "E08",
+      "policy": "M",
+      "start": 5,
+      "versions": [
+        6
+      ],
+      "event_ids": [
+        "evt_synthetic_6"
+      ],
+      "schemas": [
+        2
+      ],
+      "expected": [
+        "quarantine_schema"
+      ],
+      "effects": 0,
+      "final_version": 5
+    }
+  ]
+}
