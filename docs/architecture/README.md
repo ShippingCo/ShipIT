@@ -7,7 +7,8 @@ Issue #2 was closed by merged [PR #85](https://github.com/ShippingCo/ShipIT/pull
 commit `256512a725c56c5c0e0fa180253add5ac20a69d0`. ADRs 0001–0005 are the merged
 architecture constraints. [ADR 0006](../adr/0006-domain-ownership-and-authorization.md)
 records the merged #3 business-policy refinements from [PR #86](https://github.com/ShippingCo/ShipIT/pull/86).
-[ADR 0007](../adr/0007-api-event-idempotency-contracts.md) submits #4 wire/event/replay refinements for acceptance.
+[ADR 0007](../adr/0007-api-event-idempotency-contracts.md) records merged #4 wire/event/replay refinements.
+[ADR 0008](../adr/0008-environment-secrets-and-security-baseline.md) proposes #6 environment, secret and threat controls.
 All production components described here are **planned**, unless explicitly identified
 as existing. No API, schema, authentication, outbox, worker, or provider integration
 is implemented by this issue.
@@ -26,6 +27,7 @@ is implemented by this issue.
 10. [Prototype field mapping](prototype-domain-mapping.md), [synthetic scenarios](domain-scenarios.md) and [Issue #3 verification](domain-verification.md).
 11. [API v1/error/pagination](api-contract.md), [internal event catalog/ordering](event-contract.md) and [idempotency/timeout/expiry](idempotency-contract.md).
 12. [Issue #4 tabletop scenarios](api-event-scenarios.md) and [acceptance/validation evidence](api-event-verification.md).
+13. [Configuration/environment contract](configuration-contract.md), [security threat model](security-threat-model.md) and [Issue #6 verification](security-verification.md).
 
 ## Existing evidence and precedence
 
