@@ -2,7 +2,7 @@
 
 [Architecture index](README.md) · [Domain and custody](domain-contract.md) · [State commands](parcel-lifecycle.md) · [Synthetic assertions](domain-scenarios.md)
 
-Issue #3 / v1. Server-side authorization is authoritative; frontend filters are not
+Issue #3 / v1, amended by [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) for Issue #8 W37–W40. Server-side authorization is authoritative; frontend filters are not
 security. This is a closed permission contract, not production RBAC middleware. No role
 inherits another role. All seven columns apply independently. Multiple roles require
 explicit memberships; org_admin is not a superuser. Future additions require a reviewed
@@ -159,6 +159,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W34 | Customer delete/merge, consent override, raw ledger/receipt/audit edit, arbitrary outbox redrive, direct org ownership edit | - | - | - | - | - | - | - |
 | W35 | Organization configuration or org-wide membership escalation | - | - | - | - | - | - | - |
 | W36 | Export generation job | - | F | - | - | - | F | - |
+| W37 | Resolve draft tax jurisdiction using approved rule/evidence | - | F | - | - | - | - | - |
+| W38 | Delivery challenge resend/replacement request under proof policy | - | - | - | - | A | - | - |
+| W39 | Exceptional delivery proof request with evidence | - | - | - | - | A | - | - |
+| W40 | Independently approve exceptional proof; current responsible custody required | - | F,C | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -186,7 +190,7 @@ W28 cannot cancel/dispatch indirectly; service tools must authorize the underlyi
 For **every R01–R30 resource**, action classes are: list; detail/read; export; create;
 mutate/edit; cancel/destructive; state transition; operational job; custody transfer;
 configuration. Reads are exhaustively R01–R30, exports E01–E04, and permitted staff commands
-W01–W36. **Every other resource/action/role combination is explicitly denied.** Thus no
+W01–W40. **Every other resource/action/role combination is explicitly denied.** Thus no
 missing mutation column implies a future permission. This includes private reports (read
 sources, never mutate them), issued receipts (no direct create/edit; owning transaction),
 audit/outbox/proof internals (owner-service append only), and organization-wide config
@@ -198,8 +202,8 @@ organization access. Likewise producer-owned internal audit/outbox/receipt/chall
 writes and verified callbacks use narrowly declared service authority, not a fictitious
 staff role. Background workers process trusted source scopes and cannot promote a denied
 staff intent. #4/#16/#35 define those internal interfaces; no new job infrastructure here.
-Organization creation/destruction, privacy deletion/merge (#19/#72), proof resend/exception
-(#8/#42) and organization administration (#14/#17/#66) require their own reviewed command
+Organization creation/destruction, privacy deletion/merge (#19/#72), and organization
+administration (#14/#17/#66) require their own reviewed command
 policies. They are denied by default now, not an accidental broad grant or claim of implementation.
 
 ## Scope and error decisions
@@ -222,3 +226,14 @@ Object visibility and field visibility are independent. A known booking does not
 all child IDs; a known parcel does not authorize its customer's ID. Unknown and foreign
 objects share response shape/status; #6/#15 verify timing/search/count/cache leakage too.
 Reauthorize nested resources, export execution/download, attachments, retries and jobs.
+
+## Issue 8 policy refinements
+
+[Money/tax/proof/privacy contract](money-tax-proof-privacy-contract.md) governs W27 and W37–W40.
+W37 resolves only own-franchise draft facts against approved tax evidence, never arbitrary
+rate overrides. W38 preserves expiry, lineage failure and resend budgets; no secret retrieval.
+W39 does not complete delivery. W40 requires current responsible franchise/custody, independent
+approver identity, evidence and unchanged assignment/attempt versions; an owning franchise
+without current responsibility cannot approve remote custody. W11 still owns agent completion
+under T06/T10. None of these actions settles payment. W34 remains denied: #72 must review
+privacy deletion/hold actions before implementing them. Safe reads never expose secret material.

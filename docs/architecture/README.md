@@ -8,7 +8,7 @@ commit `256512a725c56c5c0e0fa180253add5ac20a69d0`. ADRs 0001–0005 are the merg
 architecture constraints. [ADR 0006](../adr/0006-domain-ownership-and-authorization.md)
 records the merged #3 business-policy refinements from [PR #86](https://github.com/ShippingCo/ShipIT/pull/86).
 [ADR 0007](../adr/0007-api-event-idempotency-contracts.md) records merged #4 wire/event/replay refinements.
-[ADR 0008](../adr/0008-environment-secrets-and-security-baseline.md) proposes #6 environment, secret and threat controls.
+[ADR 0008](../adr/0008-environment-secrets-and-security-baseline.md) records merged #6 environment, secret and threat controls.
 All production components described here are **planned**, unless explicitly identified
 as existing. No API, schema, authentication, outbox, worker, or provider integration
 is implemented by this issue.
@@ -29,6 +29,8 @@ is implemented by this issue.
 12. [Issue #4 tabletop scenarios](api-event-scenarios.md) and [acceptance/validation evidence](api-event-verification.md).
 13. [Configuration/environment contract](configuration-contract.md), [security threat model](security-threat-model.md) and [Issue #6 verification](security-verification.md).
 14. [Issue #7 frontend migration contract](frontend-migration-contract.md), [complete behavior and regression inventory](prototype-migration-inventory.md), and [verification](prototype-migration-verification.md).
+
+15. [Issue #8 money/tax/proof/privacy contract](money-tax-proof-privacy-contract.md), [authoritative sources](policy-sources.md), [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md), and [verification](issue-8-verification.md).
 
 ## Existing evidence and precedence
 

@@ -53,3 +53,14 @@ and [safe logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_
 Meta's published [Private Processing threat-model approach](https://engineering.fb.com/2025/04/29/security/whatsapp-private-processing-ai-tools/)
 supports defining assets and trust boundaries before implementation and requiring independent
 security scrutiny. ShipIT adopts that process principle, not Meta's system design.
+
+## Issue 8 policy refinement
+
+[ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) and the
+[policy contract](money-tax-proof-privacy-contract.md) refine T01/T04/T06/T10: tax
+configuration/resolution is own-franchise W27/W37; challenge replacement cannot reset
+lineage budgets; W40 proof approval requires independent identity, current custody and
+protected evidence. No employee retrieval or OTP/verifier telemetry is permitted.
+Field-scoped holds cannot become cross-tenant access or indefinite profile retention.
+The [Issue #8 planning evidence](issue-8-verification.md) checks synthetic boundaries only;
+#14/#15/#21/#31/#42/#72 must verify real authorization, races and cleanup before production.

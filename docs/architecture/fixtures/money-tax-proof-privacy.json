@@ -1,0 +1,754 @@
+{
+  "synthetic_only": true,
+  "policy_version": "issue-8-v1",
+  "rate_notice": "TEST rates only; not legally applicable GST rates",
+  "challenge_policy": {
+    "validity_seconds": 600,
+    "max_failures": 5,
+    "cooldown_seconds": 60,
+    "max_resends": 3
+  },
+  "tax_configs": {
+    "TEST_A": {
+      "effective_from": "2026-09-08T00:00:00Z",
+      "effective_to": "2026-09-09T00:00:00Z",
+      "rates": {
+        "TEST_CGST": [
+          1,
+          40
+        ],
+        "TEST_SGST": [
+          1,
+          40
+        ]
+      }
+    },
+    "TEST_B": {
+      "effective_from": "2026-09-09T00:00:00Z",
+      "effective_to": "2026-09-10T00:00:00Z",
+      "rates": {
+        "TEST_CGST": [
+          1,
+          20
+        ],
+        "TEST_SGST": [
+          1,
+          20
+        ]
+      }
+    }
+  },
+  "money_cases": [
+    {
+      "id": "M01",
+      "jurisdiction": "intra",
+      "basis_paise": 10101,
+      "rates": {
+        "TEST_CGST": [
+          1,
+          20
+        ],
+        "TEST_SGST": [
+          1,
+          20
+        ]
+      },
+      "expected": {
+        "components": {
+          "TEST_CGST": 505,
+          "TEST_SGST": 505
+        },
+        "tax_paise": 1010,
+        "unrounded_paise": 11111,
+        "adjustment_paise": -11,
+        "final_paise": 11100
+      }
+    },
+    {
+      "id": "M02",
+      "jurisdiction": "intra",
+      "basis_paise": 10101,
+      "rates": {
+        "TEST_CGST": [
+          1,
+          40
+        ],
+        "TEST_SGST": [
+          1,
+          40
+        ]
+      },
+      "expected": {
+        "components": {
+          "TEST_CGST": 253,
+          "TEST_SGST": 252
+        },
+        "tax_paise": 505,
+        "unrounded_paise": 10606,
+        "adjustment_paise": -6,
+        "final_paise": 10600
+      }
+    },
+    {
+      "id": "M03",
+      "jurisdiction": "inter",
+      "basis_paise": 10101,
+      "rates": {
+        "TEST_IGST": [
+          1,
+          20
+        ]
+      },
+      "expected": {
+        "components": {
+          "TEST_IGST": 505
+        },
+        "tax_paise": 505,
+        "unrounded_paise": 10606,
+        "adjustment_paise": -6,
+        "final_paise": 10600
+      }
+    },
+    {
+      "id": "M04",
+      "jurisdiction": "intra",
+      "basis_paise": 10101,
+      "rates": {},
+      "expected": {
+        "components": {},
+        "tax_paise": 0,
+        "unrounded_paise": 10101,
+        "adjustment_paise": -1,
+        "final_paise": 10100
+      }
+    },
+    {
+      "id": "M05",
+      "jurisdiction": "unknown",
+      "basis_paise": 10101,
+      "rates": {},
+      "expected": {
+        "outcome": "resolution_required",
+        "confirmed": false
+      }
+    }
+  ],
+  "rounding_boundaries": [
+    {
+      "unrounded_paise": 12549,
+      "final_paise": 12500,
+      "adjustment_paise": -49
+    },
+    {
+      "unrounded_paise": 12550,
+      "final_paise": 12600,
+      "adjustment_paise": 50
+    },
+    {
+      "unrounded_paise": 12551,
+      "final_paise": 12600,
+      "adjustment_paise": 49
+    }
+  ],
+  "snapshot_case": {
+    "id": "M07",
+    "booking_id": "TEST_BOOKING_A",
+    "confirmed_at": "2026-09-08T12:00:00Z",
+    "next_booking_at": "2026-09-09T00:00:00Z",
+    "old_version": "TEST_A",
+    "new_version": "TEST_B",
+    "old_case": "M02",
+    "new_case": "M01",
+    "historical_unchanged": true
+  },
+  "challenge_traces": [
+    {
+      "id": "C01",
+      "steps": [
+        {
+          "t": 59,
+          "action": "resend",
+          "expected": "cooldown"
+        },
+        {
+          "t": 60,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 119,
+          "action": "resend",
+          "expected": "cooldown"
+        },
+        {
+          "t": 120,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 180,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 240,
+          "action": "resend",
+          "expected": "resend_limit"
+        },
+        {
+          "t": 599,
+          "action": "verify",
+          "expected": "completed",
+          "version": 1,
+          "correct": true
+        },
+        {
+          "t": 599,
+          "action": "verify",
+          "expected": "consumed",
+          "version": 1,
+          "correct": true
+        }
+      ],
+      "final": {
+        "failures": 0,
+        "resends": 3,
+        "version": 1,
+        "expires_at": 600,
+        "physical_attempts": 1,
+        "secret_present": false,
+        "proof_method": "otp_verified",
+        "settled": false
+      }
+    },
+    {
+      "id": "C02",
+      "steps": [
+        {
+          "t": 600,
+          "action": "verify",
+          "expected": "expired",
+          "version": 1,
+          "correct": true
+        },
+        {
+          "t": 600,
+          "action": "replace",
+          "expected": "replaced"
+        },
+        {
+          "t": 601,
+          "action": "verify",
+          "expected": "superseded",
+          "version": 1,
+          "correct": true
+        },
+        {
+          "t": 601,
+          "action": "verify",
+          "expected": "completed",
+          "version": 2,
+          "correct": true
+        }
+      ],
+      "final": {
+        "failures": 0,
+        "resends": 1,
+        "version": 2,
+        "expires_at": 1200,
+        "physical_attempts": 1,
+        "secret_present": false,
+        "proof_method": "otp_verified",
+        "settled": false
+      }
+    },
+    {
+      "id": "C03",
+      "steps": [
+        {
+          "t": 1,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 2,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 3,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 4,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 5,
+          "action": "verify",
+          "expected": "locked",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 6,
+          "action": "verify",
+          "expected": "locked",
+          "version": 1,
+          "correct": true
+        },
+        {
+          "t": 600,
+          "action": "replace",
+          "expected": "locked"
+        }
+      ],
+      "final": {
+        "failures": 5,
+        "resends": 0,
+        "version": 1,
+        "expires_at": 600,
+        "physical_attempts": 1,
+        "secret_present": false,
+        "proof_method": null,
+        "settled": false
+      }
+    },
+    {
+      "id": "C04",
+      "steps": [
+        {
+          "t": 1,
+          "action": "verify",
+          "expected": "foreign",
+          "version": 1,
+          "correct": true,
+          "foreign": true
+        },
+        {
+          "t": 2,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 600,
+          "action": "replace",
+          "expected": "replaced"
+        },
+        {
+          "t": 601,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 2,
+          "correct": false
+        },
+        {
+          "t": 602,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 2,
+          "correct": false
+        },
+        {
+          "t": 603,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 2,
+          "correct": false
+        },
+        {
+          "t": 604,
+          "action": "verify",
+          "expected": "locked",
+          "version": 2,
+          "correct": false
+        }
+      ],
+      "final": {
+        "failures": 5,
+        "resends": 1,
+        "version": 2,
+        "expires_at": 1200,
+        "physical_attempts": 1,
+        "secret_present": false,
+        "proof_method": null,
+        "settled": false
+      }
+    },
+    {
+      "id": "C05",
+      "steps": [
+        {
+          "t": 1,
+          "action": "verify",
+          "expected": "wrong",
+          "version": 1,
+          "correct": false
+        },
+        {
+          "t": 60,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 120,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 180,
+          "action": "resend",
+          "expected": "resent"
+        },
+        {
+          "t": 600,
+          "action": "replace",
+          "expected": "resend_limit"
+        }
+      ],
+      "final": {
+        "failures": 1,
+        "resends": 3,
+        "version": 1,
+        "expires_at": 600,
+        "physical_attempts": 1,
+        "secret_present": false,
+        "proof_method": null,
+        "settled": false
+      }
+    }
+  ],
+  "scope_cases": [
+    {"action": "W27", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W27", "role": "franchise_admin", "scope": "own", "expected": true},
+    {"action": "W27", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W27", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W27", "role": "delivery_agent", "scope": "own", "expected": false},
+    {"action": "W27", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W27", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W27", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W27", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W27", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "franchise_admin", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "delivery_agent", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W27", "role": "read_only", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W37", "role": "franchise_admin", "scope": "own", "expected": true},
+    {"action": "W37", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W37", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W37", "role": "delivery_agent", "scope": "own", "expected": false},
+    {"action": "W37", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W37", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W37", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W37", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W37", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "franchise_admin", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "delivery_agent", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W37", "role": "read_only", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W38", "role": "franchise_admin", "scope": "own", "expected": false},
+    {"action": "W38", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W38", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W38", "role": "delivery_agent", "scope": "own", "expected": true},
+    {"action": "W38", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W38", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W38", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W38", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W38", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "franchise_admin", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "delivery_agent", "scope": "custody", "expected": true},
+    {"action": "W38", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W38", "role": "read_only", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W39", "role": "franchise_admin", "scope": "own", "expected": false},
+    {"action": "W39", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W39", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W39", "role": "delivery_agent", "scope": "own", "expected": true},
+    {"action": "W39", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W39", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W39", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W39", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W39", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "franchise_admin", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "delivery_agent", "scope": "custody", "expected": true},
+    {"action": "W39", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W39", "role": "read_only", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W40", "role": "franchise_admin", "scope": "own", "expected": true},
+    {"action": "W40", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W40", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W40", "role": "delivery_agent", "scope": "own", "expected": false},
+    {"action": "W40", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W40", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W40", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W40", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W40", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "franchise_admin", "scope": "custody", "expected": true},
+    {"action": "W40", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "delivery_agent", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W40", "role": "read_only", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "org_admin", "scope": "own", "expected": false},
+    {"action": "W34", "role": "franchise_admin", "scope": "own", "expected": false},
+    {"action": "W34", "role": "operator", "scope": "own", "expected": false},
+    {"action": "W34", "role": "dispatcher", "scope": "own", "expected": false},
+    {"action": "W34", "role": "delivery_agent", "scope": "own", "expected": false},
+    {"action": "W34", "role": "accountant", "scope": "own", "expected": false},
+    {"action": "W34", "role": "read_only", "scope": "own", "expected": false},
+    {"action": "W34", "role": "org_admin", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "franchise_admin", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "operator", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "dispatcher", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "delivery_agent", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "accountant", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "read_only", "scope": "sibling", "expected": false},
+    {"action": "W34", "role": "org_admin", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "franchise_admin", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "operator", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "dispatcher", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "delivery_agent", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "accountant", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "read_only", "scope": "foreign", "expected": false},
+    {"action": "W34", "role": "org_admin", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "franchise_admin", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "operator", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "dispatcher", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "delivery_agent", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "accountant", "scope": "custody", "expected": false},
+    {"action": "W34", "role": "read_only", "scope": "custody", "expected": false}
+  ],
+  "exceptions": [
+    {
+      "id": "X01",
+      "requester": "TEST_AGENT",
+      "approver": "TEST_ADMIN",
+      "role": "franchise_admin",
+      "scope": "own",
+      "present": true,
+      "evidence_ref": "TEST_EVIDENCE",
+      "reason": "recipient_channel_unavailable",
+      "expected": true
+    },
+    {
+      "id": "X02",
+      "requester": "TEST_AGENT",
+      "approver": "TEST_AGENT",
+      "role": "franchise_admin",
+      "scope": "own",
+      "present": true,
+      "evidence_ref": "TEST_EVIDENCE",
+      "reason": "recipient_channel_unavailable",
+      "expected": false
+    },
+    {
+      "id": "X03",
+      "requester": "TEST_AGENT",
+      "approver": "TEST_ADMIN",
+      "role": "franchise_admin",
+      "scope": "own",
+      "present": false,
+      "evidence_ref": "TEST_EVIDENCE",
+      "reason": "customer_unavailable",
+      "expected": false
+    },
+    {
+      "id": "X04",
+      "requester": "TEST_AGENT",
+      "approver": "TEST_ADMIN",
+      "role": "franchise_admin",
+      "scope": "own",
+      "present": true,
+      "evidence_ref": null,
+      "reason": "provider_unavailable",
+      "expected": false
+    },
+    {
+      "id": "X05",
+      "requester": "TEST_AGENT",
+      "approver": "TEST_ADMIN",
+      "role": "franchise_admin",
+      "scope": "foreign",
+      "present": true,
+      "evidence_ref": "TEST_EVIDENCE",
+      "reason": "provider_unavailable",
+      "expected": false
+    }
+  ],
+  "retention_classes": [
+    "customer_profile_contact",
+    "booking_shipment_snapshots",
+    "finance_tax_receipts",
+    "delivery_proof_evidence",
+    "challenge_material",
+    "audit_security_metadata",
+    "messaging_provider_records",
+    "attachments"
+  ],
+  "privacy_cases": [
+    {
+      "id": "P01",
+      "fields": [
+        {
+          "field": "optional_profile_notes",
+          "purpose_active": false,
+          "mandatory_period_active": false,
+          "hold": false,
+          "expected": "eligible"
+        },
+        {
+          "field": "shipment_contact",
+          "purpose_active": true,
+          "mandatory_period_active": false,
+          "hold": false,
+          "expected": "retain"
+        },
+        {
+          "field": "invoice_identity",
+          "purpose_active": false,
+          "mandatory_period_active": true,
+          "hold": false,
+          "expected": "retain"
+        },
+        {
+          "field": "dues_reference",
+          "purpose_active": true,
+          "mandatory_period_active": false,
+          "hold": false,
+          "expected": "retain"
+        },
+        {
+          "field": "disputed_proof",
+          "purpose_active": false,
+          "mandatory_period_active": false,
+          "hold": true,
+          "expected": "retain"
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "fields": [
+        {
+          "field": "unrelated_attachment",
+          "purpose_active": false,
+          "mandatory_period_active": false,
+          "hold": false,
+          "expected": "eligible"
+        }
+      ]
+    },
+    {
+      "id": "P03",
+      "fields": [
+        {
+          "field": "security_case_metadata",
+          "purpose_active": false,
+          "mandatory_period_active": false,
+          "hold": true,
+          "expected": "retain"
+        }
+      ]
+    }
+  ],
+  "eway_cases": [
+    {
+      "id": "E01",
+      "provenance": "shippingco_estimate",
+      "estimated_valid_until": "2026-09-10T00:00:00Z",
+      "official_valid_until": null,
+      "source_ref": null,
+      "label": "ShippingCo estimate \u2014 verify on the government portal"
+    },
+    {
+      "id": "E02",
+      "provenance": "unverified_external",
+      "estimated_valid_until": null,
+      "official_valid_until": "2026-09-11T18:30:00Z",
+      "source_ref": "TEST_EXTERNAL_DOCUMENT",
+      "label": "Externally supplied validity \u2014 unverified"
+    }
+  ]
+}

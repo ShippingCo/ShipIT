@@ -66,3 +66,12 @@ are separate. No prototype UI or test is changed here.
 No automatic production import of `shippingco_v1`, `setu_courier_v2` or existing phone personas. If a real migration is later required, give it a dedicated issue with authorization, dry run, validation, provenance, tenant ownership mapping, retention and reconciliation.
 
 OTP plaintext, `otpUsed`, `revealOTP`, unrestricted `confirmDelivered`, unknown-city intra-state tax fallback and title-derived route state are prototype limitations, not invariants to preserve. The production backlog explicitly owns each replacement. Legal rates/thresholds/retention and current vendor messaging terms must be verified by the responsible implementation issue; historical design-note market claims are not production authority.
+
+## Issue #8 policy ratification
+
+[Money/tax/proof/privacy policy](architecture/money-tax-proof-privacy-contract.md) fixes the
+production replacements: unknown jurisdiction blocks confirmation (#21); W27 effective local
+config cannot recalculate confirmed snapshots; no staff OTP reveal or secret history (#42);
+e-way distance-derived validity is a labelled ShippingCo estimate, separate from external
+provenance (#32/#67). Existing prototype GST/OTP/e-way tests remain fictional UX evidence;
+they do not verify these future controls. #7 inventory and #18 isolation still apply.
