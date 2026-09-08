@@ -57,3 +57,10 @@ with the caller's transaction. Routes parse HTTP and map responses, not business
 Schema, detailed role/state contracts and policy values remain gated by
 [the open decision register](../../docs/architecture/open-decisions.md). Issue #2 does
 not install Fastify, auth, database dependencies, workers or provider integrations.
+
+## Test harness
+
+[Testing contract](../../docs/architecture/testing-contract.md) defines future `buildServer` injection,
+unit/API/provider/worker paths and reusable `@shippingco/testkit` dev-only helpers.
+`pnpm test:unit` runs the current harness; no Fastify server or injection suite exists yet.
+Issue #11 activates API tests and #10 activates real PostgreSQL testing.

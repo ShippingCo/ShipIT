@@ -49,7 +49,7 @@ jobs:
       - name: Typecheck all packages
         if: matrix.check == 'types'
         run: pnpm typecheck
-      - name: Test prototype
+      - name: Test harness and prototype
         if: matrix.check == 'tests'
         run: pnpm test
       - name: Production bundle

@@ -134,3 +134,39 @@ test('legacy hook exceptions remain narrow, explained and counted', () => {
   }
   assert.equal(total, 8);
 });
+
+test('normal tests include testkit and web while frontend remains independent', () => {
+  const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+  assert.equal(manifest.scripts.test, 'pnpm test:unit && pnpm test:web');
+  assert.equal(manifest.scripts['test:unit'], 'pnpm --filter @shippingco/testkit test');
+  assert.equal(manifest.scripts['test:web'], 'pnpm --filter @shippingco/web test');
+  assert.match(manifest.scripts.quality, /pnpm test &&/);
+  assert.equal(JSON.parse(readFileSync('apps/web/package.json', 'utf8')).scripts.test, 'vitest run');
+  for (const folder of ['apps', 'packages']) {
+    for (const name of readdirSync(folder)) {
+      const path = `${folder}/${name}/package.json`;
+      const pkg = JSON.parse(readFileSync(path, 'utf8'));
+      for (const kind of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+        assert.equal(pkg[kind]?.['@shippingco/testkit'], undefined, `${path}: testkit must be development-only`);
+      }
+    }
+  }
+});
+
+test('production imports of test fixtures are rejected but test files can use them', async () => {
+  const eslint = new ESLint({ overrideConfig: {
+    languageOptions: { parserOptions: { projectService: false, project: false } },
+    rules: { '@typescript-eslint/no-floating-promises': 'off', '@typescript-eslint/no-misused-promises': 'off' },
+  } });
+  for (const filePath of ['apps/web/src/probe.ts', 'apps/api/src/probe.ts', 'packages/shared/src/probe.ts', 'packages/db/src/probe.ts']) {
+    for (const target of ['@shippingco/testkit', '../../../packages/testkit/src/index.ts', './test/helper.ts']) {
+      const [result] = await eslint.lintText(`import '${target}';`, { filePath });
+      assert.ok(result.messages.some(m => m.ruleId === 'no-restricted-imports'), filePath);
+      assert.equal(result.messages.some(m => m.fatal), false);
+    }
+  }
+  for (const filePath of ['apps/api/src/probe.test.ts', 'apps/web/src/test/helper.ts']) {
+    const [result] = await eslint.lintText("import '@shippingco/testkit';", { filePath });
+    assert.equal(result.messages.length, 0);
+  }
+});

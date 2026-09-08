@@ -32,6 +32,8 @@ is implemented by this issue.
 
 15. [Issue #8 money/tax/proof/privacy contract](money-tax-proof-privacy-contract.md), [authoritative sources](policy-sources.md), [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md), and [verification](issue-8-verification.md).
 
+16. [Testing layers, fixtures, failure injection and M1 activation — Issue #9](testing-contract.md), with [acceptance evidence](issue-9-verification.md).
+
 ## Existing evidence and precedence
 
 The workspace contains React/Vite screens, the browser [store](../../apps/web/src/data/store.ts),

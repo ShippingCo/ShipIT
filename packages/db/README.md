@@ -30,3 +30,14 @@ it to participating module SQL helpers. Domain-specific SQL stays with its ownin
 module; this package owns infrastructure and internal row types, never browser exports.
 Issue #10 implements infrastructure/migration mechanics; domain migrations follow their
 own prerequisites. No schema or dependencies are added by issue #2.
+
+## Test activation — Issue #10
+
+Real PostgreSQL integration testing is intentionally not active until Issue #10.
+`pnpm test:db` currently exits nonzero with `DB_TEST_RUNTIME_NOT_ACTIVE`.
+Follow the [testing contract activation checklist](../../docs/architecture/testing-contract.md#database-isolation-cleanup-and-issue-10-activation-checklist)
+for the pool, transactions, migrations/locking, real CI service, required failure behavior,
+per-worker disposable DBs and cleanup. Tests invoke `validateTestDatabaseConfig` before
+connecting or resetting. They require `TEST_DATABASE_URL` and `TEST_DATABASE_IDENTITY`;
+the planned application connection configuration above is never a test fallback.
+No schema, pg or migration runtime is installed by #9.
