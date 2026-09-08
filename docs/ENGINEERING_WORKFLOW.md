@@ -47,12 +47,15 @@ Use Node 22.23.2, pnpm 10.34.5 and Python 3.12.14. The version files and package
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm quality
+pnpm check:migrations
+pnpm db:local quality
 # Optional full controlled-failure drill in a disposable checkout:
-pnpm verify:gates
+pnpm db:local verify:gates
 ```
 
-Historical baseline: 23 frontend tests, four workspace typechecks and build passed. Issue #5 adds real lint and gate-verification tests. Existing React `act(...)` warnings remain visible. The required final check keeps the name `Planning and prototype checks` and accepts only successful results from all five matrix jobs. Remote CI/protection verification is still required after pushing; local passing results are not GitHub merge approval.
+`db:local` starts a pinned disposable PostgreSQL container with generated credentials and removes it after the command. Docker must be running. With an independently provisioned, guarded test database, run `pnpm quality` / `pnpm verify:gates` directly. Full M1 quality requires real PostgreSQL; `pnpm test:unit` and `pnpm test:web` remain independently runnable.
+
+Historical baseline: 23 frontend tests, four workspace typechecks and build passed. Issue #5 added real lint and gate-verification tests. Existing React `act(...)` warnings remain visible. The required final check keeps the name `Planning and prototype checks` and accepts only successful results from all five matrix jobs **and** the PostgreSQL integration job. CI also requires `check:migrations`, which compares released migration files with Git history and rejects edits, deletion or renaming; corrections are new forward migrations. Remote CI/protection verification is still required after pushing; local passing results are not GitHub merge approval.
 
 Use real PostgreSQL/runtime roles for tenant constraints and transactions once M1 activates them. Use fake clocks for expiry and dates, signed synthetic webhooks, fake providers, and fault injection for commit/ack/timeout boundaries. Browser tests cover meaningful workflows, keyboard/focus and intentional prototype regressions. No real customer sends or production credentials in CI.
 
@@ -103,6 +106,8 @@ Review outcome evidence, dependency closure, negative authorization cases and re
 
 Use the [Issue #9 testing contract](architecture/testing-contract.md) to choose applicable
 unit, DB, API, contract, worker and browser tests. `pnpm test` now includes the harness
-and frontend; `pnpm test:web` remains independent. Issue #10 activates the currently
-failing `pnpm test:db` command and required real PostgreSQL CI, including failure when
-its database dependency is missing. No M0 SQL/API integration success is claimed.
+and frontend; `pnpm test:web` remains independent. Issue #10 activates `pnpm test:db`
+and required real PostgreSQL CI. Missing or unsafe configuration, unavailable PostgreSQL,
+an empty required suite, test failure or cleanup failure returns nonzero. See
+[Issue #10 verification](architecture/issue-10-verification.md) for persistence,
+transaction, migration and privilege evidence. API integration remains Issue #11.

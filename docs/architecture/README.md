@@ -33,14 +33,17 @@ is implemented by this issue.
 15. [Issue #8 money/tax/proof/privacy contract](money-tax-proof-privacy-contract.md), [authoritative sources](policy-sources.md), [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md), and [verification](issue-8-verification.md).
 
 16. [Testing layers, fixtures, failure injection and M1 activation — Issue #9](testing-contract.md), with [acceptance evidence](issue-9-verification.md).
+17. [Implemented PostgreSQL infrastructure — Issue #10](../../packages/db/README.md), [dependency review](issue-10-dependency-review.md), and [acceptance evidence](issue-10-verification.md).
 
 ## Existing evidence and precedence
 
 The workspace contains React/Vite screens, the browser [store](../../apps/web/src/data/store.ts),
 [prototype types](../../apps/web/src/data/types.ts), [message templates](../../apps/web/src/data/messages.ts),
 [deterministic bot](../../apps/web/src/data/bot.ts), and [frontend tests](../../apps/web/src/test/app.test.tsx).
-The API, DB and shared entry points export empty modules. Only the web package has
-runtime dependencies. Existing API module folders contain `.gitkeep` files; proposed
+The API and shared entry points remain scaffolds. Issue #10 adds DB runtime dependencies
+and reusable pool, query, transaction, migration and readiness functions; its sole production
+migration creates an empty infrastructure schema, without domain tables.
+Existing API module folders contain `.gitkeep` files; proposed
 paths below are conventions for later implementation, not links to nonexistent code.
 
 [API](../../apps/api/README.md) and [DB](../../packages/db/README.md) already select

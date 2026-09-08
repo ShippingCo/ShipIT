@@ -14,16 +14,19 @@
     "build": "pnpm --filter @shippingco/web build",
     "preview": "pnpm --filter @shippingco/web preview",
     "test": "pnpm test:unit && pnpm test:web",
-    "test:unit": "pnpm --filter @shippingco/testkit test",
+    "test:unit": "pnpm --filter @shippingco/testkit test && pnpm --filter @shippingco/db test:unit",
     "test:web": "pnpm --filter @shippingco/web test",
     "test:db": "node scripts/test-database.mjs",
     "typecheck": "pnpm -r --parallel typecheck",
     "lint": "eslint apps packages scripts eslint.config.mjs --max-warnings 0",
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "check:planning": "node scripts/run-planning.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "test:quality": "node --test scripts/quality.test.mjs",
     "verify:gates": "node scripts/verify-gates.mjs",
-    "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm test:db && pnpm build",
+    "db:local": "node scripts/with-test-postgres.mjs",
+    "db:migrate": "pnpm --filter @shippingco/db migrate"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

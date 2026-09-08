@@ -8,11 +8,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --experimental-strip-types --test src/*.test.ts",
+    "migrate": "node --experimental-strip-types src/migrate-cli.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "pg": "8.23.0",
+    "node-pg-migrate": "9.0.0"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@types/pg": "8.23.1",
+    "@shippingco/testkit": "workspace:*"
   }
 }
