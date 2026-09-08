@@ -43,6 +43,7 @@ export interface SparklineProps {
 }
 
 export function Sparkline({ values, width = 240, height = 40, tone }: SparklineProps) {
+  const id = React.useId();
   const nums = (values || []).map((v) => Number(v) || 0);
   if (nums.length < 2) return null;
 
@@ -59,7 +60,6 @@ export function Sparkline({ values, width = 240, height = 40, tone }: SparklineP
   const line = smoothPath(points);
   const area = `${line} L ${width} ${height} L 0 ${height} Z`;
   const last = points[points.length - 1];
-  const id = React.useId();
 
   return (
     <svg

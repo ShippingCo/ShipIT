@@ -11,7 +11,7 @@ git checkout -b issue-<number>-<short-scope>
 # implement only the issue scope; add/update relevant tests
 pnpm test
 pnpm typecheck
-pnpm lint  # introduced by the M0 lint-baseline issue; missing is not passing
+pnpm lint
 pnpm build
 git add <reviewed-paths>
 git commit -m "Describe the specific outcome"
@@ -26,6 +26,6 @@ git branch -d issue-<number>-<short-scope>
 
 Preserve unrelated/uncommitted work before switching branches. Never use reset/force-push to erase another person's work. No feature development directly on main. Start the next issue from newly pulled main.
 
-The current root scripts are test, typecheck and build. This setup adds planning validation/CI; the M0 quality-gate issue owns installing/configuring the application linter. Until then, report lint as unavailable, never green. All product implementation depends on that baseline. No product functionality is implemented by the planning setup.
+Run `pnpm quality` with the exact toolchain in [quality checks](docs/QUALITY_CHECKS.md). It runs planning, tooling tests, lint, typecheck, tests and build. `pnpm verify:gates` proves controlled failures in a disposable checkout. See the guide for legacy exceptions and required GitHub check rollout. Never push when the user has reserved permission for a later review.
 
 Security-sensitive findings belong in [private security reporting](https://github.com/ShippingCo/ShipIT/security/advisories/new), not public issue bodies. Use fictional fixtures and sanitized evidence. See [SECURITY.md](SECURITY.md).

@@ -6,16 +6,29 @@
   "description": "ShippingCo — customer connection layer for Indian SMB couriers (WhatsApp automation)",
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=20.15"
+    "node": "22.23.2",
+    "pnpm": "10.34.5"
   },
   "scripts": {
     "dev": "pnpm --filter @shippingco/web dev",
     "build": "pnpm --filter @shippingco/web build",
     "preview": "pnpm --filter @shippingco/web preview",
     "test": "pnpm --filter @shippingco/web test",
-    "typecheck": "pnpm -r --parallel typecheck"
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "eslint apps packages scripts eslint.config.mjs --max-warnings 0",
+    "check:toolchain": "node scripts/check-toolchain.mjs",
+    "check:planning": "node scripts/run-planning.mjs",
+    "test:quality": "node --test scripts/quality.test.mjs",
+    "verify:gates": "node scripts/verify-gates.mjs",
+    "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
-    "typescript": "catalog:"
+    "@eslint/js": "10.0.1",
+    "eslint": "10.10.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "16.5.0",
+    "typescript": "catalog:",
+    "typescript-eslint": "8.68.0",
+    "yaml": "2.8.3"
   }
 }

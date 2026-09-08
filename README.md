@@ -49,17 +49,19 @@ but neither dependency is installed yet.
 
 ## Running it
 
-Requires Node 20+ and [pnpm](https://pnpm.io) 10+.
+Requires Node **22.23.2**, [pnpm](https://pnpm.io) **10.34.5** and Python **3.12.14** for quality checks. See [quality setup and verification](docs/QUALITY_CHECKS.md).
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile --ignore-scripts
 pnpm dev          # http://localhost:5173
 ```
 
 ```bash
 pnpm build        # single-file bundle into apps/web/dist/
 pnpm preview      # serve the built bundle
-pnpm test         # 23 tests
+pnpm test         # prototype and lint regression tests
+pnpm lint         # source and tooling correctness checks
+pnpm quality      # complete local quality gate
 pnpm typecheck    # every workspace package
 ```
 

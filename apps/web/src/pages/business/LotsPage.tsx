@@ -8,7 +8,7 @@ import { Dialog, ConfirmDialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
 import { useDB } from '../../context/AppContext';
 import type { Booking, Lot } from '../../data/types';
-import { db, createLot, deleteLot, assignToLot, bookingsOfLot, routeOfLot, ungroupedParcels, pendingDestinations, queueMsg, fmtMoney, fmtDT, grossOf } from '../../data/store';
+import { createLot, deleteLot, assignToLot, bookingsOfLot, routeOfLot, ungroupedParcels, pendingDestinations, queueMsg, fmtMoney, fmtDT, grossOf } from '../../data/store';
 
 export default function LotsPage() {
   const data = useDB();
@@ -206,6 +206,7 @@ function CreateLotDialog({ open, onClose, onCreated }) {
     if (!open) return;
     const first = dests[0]?.city || '';
     setCity(first); setNote(''); setRouteId(''); setTouchedName(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- L04: initialize on opening without resetting user edits; see docs/QUALITY_CHECKS.md and issue #7.
   }, [open]);
 
   /* Picking a city selects its loose parcels and names the lot — both overridable. */
@@ -216,7 +217,7 @@ function CreateLotDialog({ open, onClose, onCreated }) {
       const day = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
       setName(city ? `${city} · ${day}` : '');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- L06: city selection controls defaults while preserving manual parcel selections; see docs/QUALITY_CHECKS.md and issue #7.
   }, [city, open]);
 
   if (!open) return null;

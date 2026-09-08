@@ -58,7 +58,7 @@ function download(name, rowsCsv, biz, label, toast) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const csv = [[`${biz.name} — ${name} — ${label}`], [`GSTIN: ${biz.gstin || '-'}`], [], ...rowsCsv]
     .map((r) => r.map(esc).join(',')).join('\n');
-  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -80,6 +80,7 @@ function ReportsIndex() {
   const nav = useNavigate();
   const [period, setPeriod] = useState('month');
   const win = useMemo(() => windowFor(period), [period]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- L01: data invalidates mutable demo-store reads; see docs/QUALITY_CHECKS.md and issue #7.
   const rep = useMemo(() => reportFor(win.from, win.to), [data, win]);
 
   const failed = rep.rows.filter((b) => ['failed_attempt', 'rto'].includes(b.status)).length;
@@ -131,13 +132,14 @@ function ReportDetail({ id }: { id: string }) {
 
   const meta = REPORTS.find((r) => r.id === id) ?? REPORTS[0]!;
   const win = useMemo(() => windowFor(period), [period]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- L01: data invalidates mutable demo-store reads; see docs/QUALITY_CHECKS.md and issue #7.
   const rep = useMemo(() => reportFor(win.from, win.to), [data, win]);
   const mode = GST_MODES.find((m) => m.value === (data.business.gstMode || 'courier18')) || GST_MODES[0];
 
   const money = (n: number) => fmtMoney(Math.round(n));
 
   /* --- per-report chart + columns --- */
-  let chart: React.ReactNode = null;
+  let chart: React.ReactNode;
   let columns: Array<Column<DataRow>> = [];
   let rows: DataRow[] = asRows(rep.rows);
 

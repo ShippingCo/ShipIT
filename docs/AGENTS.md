@@ -10,7 +10,7 @@ React/TypeScript/Vite operator and fictional WhatsApp demo live in `apps/web`. A
 
 Start every issue from `git checkout main` and `git pull origin main`, then `issue-<number>-<short-scope>`. Implement the agreed issue only, add/update relevant tests, run checks, push and open a linked PR. Verify CI/review before merge. After merge check out/pull main and clean completed branches. Preserve unrelated work; never code features directly on main. Do the work directly unless the user explicitly authorizes delegation.
 
-Use the shell/platform actually present. Current repository scripts: `pnpm test`, `pnpm typecheck`, `pnpm build`; planning validator: `python3 scripts/validate_planning.py`. Application lint is introduced by its M0 baseline issue; never describe its current absence as a pass. Report warnings and failures honestly. Read the issue's test requirements, not a stale fixed test count.
+Use the shell/platform actually present and the exact Node/pnpm/Python versions in [quality checks](QUALITY_CHECKS.md). Run `pnpm quality`; use `pnpm verify:gates` for isolated failure drills. Keep documented exceptions narrow and report actual failures/warnings. Respect explicit user permission boundaries for pushing even when the ordinary workflow calls for a PR.
 
 ## Product and design
 
