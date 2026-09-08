@@ -35,4 +35,5 @@ assert len(set(rows)) == 82
 runpy.run_path(str(ROOT / "scripts/validate_domain_contract.py"), run_name="__main__")
 # The #4 bounded API/event model uses the same existing CI entry point.
 runpy.run_path(str(ROOT / "scripts/validate_api_event_contract.py"), run_name="__main__")
-print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences and local links.")
+runpy.run_path(str(ROOT / "scripts/validate_security_contract.py"), run_name="__main__")
+print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences, local links and security contract.")

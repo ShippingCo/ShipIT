@@ -1,0 +1,41 @@
+{
+  "synthetic_only": true,
+  "environments": [
+    {"name":"developer","data":"synthetic_only","database_identity":"db_developer","messaging_identity":"msg_fake_developer","storage_identity":"storage_developer","production_access":false},
+    {"name":"demo","data":"synthetic_only","database_identity":"db_demo","messaging_identity":"msg_fake_demo","storage_identity":"storage_demo","production_access":false},
+    {"name":"staging","data":"approved_test","database_identity":"db_staging","messaging_identity":"msg_test_staging","storage_identity":"storage_staging","production_access":false},
+    {"name":"production","data":"approved_production","database_identity":"db_production","messaging_identity":"msg_production","storage_identity":"storage_production","production_access":true}
+  ],
+  "configuration": [
+    {"name":"VITE_API_BASE_URL","class":"browser_public","consumer":"web","source":"deployment_config","required_in":["developer","demo","staging","production"],"owner_issue":11},
+    {"name":"VITE_APP_VERSION","class":"browser_public","consumer":"web","source":"build_metadata","required_in":["demo","staging","production"],"owner_issue":11},
+    {"name":"NODE_ENV","class":"server_config","consumer":"api_worker","source":"deployment_config","required_in":["developer","demo","staging","production"],"owner_issue":11},
+    {"name":"PORT","class":"server_config","consumer":"api","source":"deployment_config","required_in":["developer","demo","staging","production"],"owner_issue":11},
+    {"name":"LOG_LEVEL","class":"server_config","consumer":"api_worker","source":"deployment_config","required_in":["developer","demo","staging","production"],"owner_issue":11},
+    {"name":"ALLOWED_ORIGINS","class":"server_config","consumer":"api","source":"deployment_config","required_in":["demo","staging","production"],"owner_issue":13},
+    {"name":"TRUSTED_PROXY_HOPS","class":"server_config","consumer":"api","source":"deployment_config","required_in":["staging","production"],"owner_issue":13},
+    {"name":"DATABASE_SECRET_REF","class":"secret_reference","consumer":"api_worker","source":"managed_secret_store","required_in":["developer","demo","staging","production"],"owner_issue":11},
+    {"name":"SESSION_SIGNING_KEY_REF","class":"secret_reference","consumer":"api","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":13},
+    {"name":"OTP_PEPPER_REF","class":"secret_reference","consumer":"api","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":42},
+    {"name":"WHATSAPP_ACCESS_TOKEN_REF","class":"secret_reference","consumer":"worker","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":36},
+    {"name":"WHATSAPP_APP_SECRET_REF","class":"secret_reference","consumer":"api","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":36},
+    {"name":"WHATSAPP_VERIFY_TOKEN_REF","class":"secret_reference","consumer":"api","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":36},
+    {"name":"STORAGE_CREDENTIAL_REF","class":"secret_reference","consumer":"api_worker","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":31},
+    {"name":"CARRIER_CREDENTIAL_REF","class":"secret_reference","consumer":"worker","source":"managed_secret_store","required_in":["staging","production"],"owner_issue":56}
+  ],
+  "prohibited_log_fields": ["password","access_token","refresh_token","provider_token","cookie","authorization_header","otp","otp_verifier","otp_pepper","database_url","signing_key","private_key","full_address","raw_provider_payload","attachment_body","carrier_credential","secret_value"],
+  "rotation": {"phases":["create","overlap","canary","verify","rollout","disable_old","observe","revoke","destroy"],"failed_rollout":"return_to_valid_old_version_without_restoring_a_compromised_version"},
+  "incident": {"fake_leaked_whatsapp_token":["report_privately","revoke","pause_unsafe_sends","replace","canary","investigate_safe_audit","remove_exposure","notify_owners","add_prevention"]},
+  "threats": [
+    {"id":"T01","name":"tenant_idor","stride":"elevation","controls":["server_membership_scope","tenant_scoped_sql","uniform_404"],"detection":["safe_denied_access_audit"],"verification":["foreign_franchise_integration"],"owner_issues":[14,15],"release_blocker":true,"residual_risk":"authorized_insider"},
+    {"id":"T02","name":"forged_webhook","stride":"spoofing","controls":["raw_body_signature","provider_install_binding","freshness"],"detection":["signature_failure_metric"],"verification":["invalid_signature_no_effect"],"owner_issues":[36],"release_blocker":true,"residual_risk":"provider_compromise"},
+    {"id":"T03","name":"webhook_replay","stride":"tampering","controls":["bounded_freshness","atomic_provider_event_dedupe"],"detection":["replay_metric"],"verification":["concurrent_duplicate_one_effect","restart_duplicate_one_effect"],"owner_issues":[36,40],"release_blocker":true,"residual_risk":"provider_identity_collision"},
+    {"id":"T04","name":"otp_theft_guess_replay","stride":"spoofing","controls":["keyed_verifier","short_lifetime","attempt_cooldown_limits","atomic_one_time_consume","no_staff_reveal"],"detection":["challenge_limit_audit"],"verification":["wrong_expired_replayed_concurrent_challenge"],"owner_issues":[13,42],"release_blocker":true,"residual_risk":"phone_number_takeover"},
+    {"id":"T05","name":"sql_injection","stride":"tampering","controls":["parameterized_values","identifier_allowlist","least_privilege_db_role"],"detection":["controlled_query_error_metric"],"verification":["injection_corpus"],"owner_issues":[11,15],"release_blocker":true,"residual_risk":"driver_or_database_flaw"},
+    {"id":"T06","name":"message_abuse","stride":"denial_of_service","controls":["scoped_commands","rate_limits","consent_templates","idempotency","spend_circuit_breaker"],"detection":["queue_depth_and_provider_error_alert"],"verification":["burst_and_replay"],"owner_issues":[36,38,39],"release_blocker":true,"residual_risk":"distributed_abuse"},
+    {"id":"T07","name":"session_theft","stride":"spoofing","controls":["secure_cookie","rotation","bounded_lifetime","server_revocation","csrf_origin_checks"],"detection":["safe_session_anomaly_audit"],"verification":["stolen_expired_revoked_csrf"],"owner_issues":[13],"release_blocker":true,"residual_risk":"compromised_device"},
+    {"id":"T08","name":"secret_exposure","stride":"information_disclosure","controls":["managed_references","workload_identity","secret_scanning","redaction"],"detection":["secret_scan_and_access_audit"],"verification":["fake_secret_and_bundle_scan","leak_drill"],"owner_issues":[11,68,73],"release_blocker":true,"residual_risk":"third_party_compromise"},
+    {"id":"T09","name":"unsafe_private_upload","stride":"information_disclosure","controls":["private_object","authorized_reference","validation_quarantine","short_lived_access","retention_delete"],"detection":["quarantine_and_access_audit"],"verification":["foreign_malicious_expired_deleted_revoked"],"owner_issues":[31,72],"release_blocker":true,"residual_risk":"novel_malware"},
+    {"id":"T10","name":"audit_gap","stride":"repudiation","controls":["append_only_safe_audit","correlation"],"detection":["audit_continuity_alert"],"verification":["audit_completeness_and_tamper"],"owner_issues":[13,15,73],"release_blocker":true,"residual_risk":"audit_platform_failure"}
+  ]
+}

@@ -5,7 +5,8 @@
 ADRs 0001–0005 are the merged issue #2 baseline from
 [PR #85](https://github.com/ShippingCo/ShipIT/pull/85), merged 2026-09-06. Their original
 submission-status text is retained as historical evidence. ADR 0006 was merged through
-[PR #86](https://github.com/ShippingCo/ShipIT/pull/86). ADR 0007 is submitted through the Issue #4 PR;
+[PR #86](https://github.com/ShippingCo/ShipIT/pull/86). ADR 0007 was merged through
+[PR #87](https://github.com/ShippingCo/ShipIT/pull/87). ADR 0008 is proposed by Issue #6;
 these documents do not claim completed production features. Acceptance
 is recorded by the approved and merged PR; superseding a decision requires a new reviewed ADR with migration cost.
 
@@ -18,6 +19,7 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 | [0005](0005-external-provider-adapter-interfaces.md) | Application-owned provider ports, normalized outcomes and manual/file capability |
 | [0006](0006-domain-ownership-and-authorization.md) | Canonical Booking/Parcel, organization/franchise, custody, authorization, state, money/time/docket and adoption contracts |
 | [0007](0007-api-event-idempotency-contracts.md) | API v1/errors/cursors, scoped canonical idempotency, immutable event catalog, compatibility, ordering and replay contracts; refines ADR 0004 |
+| [0008](0008-environment-secrets-and-security-baseline.md) | Isolated environments, public/server/secret configuration classes, rotation, prohibited logs and threat-to-test ownership gates |
 
 Detailed policy questions have an [owner and gate](../architecture/open-decisions.md).
 No ADR here accepts additional auth, queue, hosting, provider or ORM dependencies.
