@@ -80,6 +80,8 @@ try {
     run('type-rejection', ['typecheck'], /TS2322/));
   withFile('apps/web/src/test/quality-probe.test.ts', 'import { it, expect } from "vitest"; it("quality gate intentional failure", () => { expect(1).toBe(2); });\n', () =>
     run('test-rejection', ['test'], /AssertionError: expected 1 to be 2/));
+  withFile('packages/testkit/src/quality-probe.test.ts', 'import assert from "node:assert/strict"; import test from "node:test"; await test("testkit gate intentional failure", () => { assert.fail("TESTKIT_GATE_SENTINEL"); });\n', () =>
+    run('testkit-rejection', ['test'], /TESTKIT_GATE_SENTINEL/));
   const index = readFileSync(join(project, 'apps/web/index.html'), 'utf8');
   withFile('apps/web/index.html', index + '\n<script type="module" src="/src/__quality_missing__.tsx"></script>\n', () =>
     run('build-rejection', ['build'], /__quality_missing__/));

@@ -98,3 +98,11 @@ Use real PostgreSQL/runtime roles for tenant constraints and transactions once M
 ## Milestone review
 
 Review outcome evidence, dependency closure, negative authorization cases and representative failure recovery. A milestone is complete only when its exit criteria are demonstrated. Security defects affecting tenant isolation, money, proof or durable work block pilot. M7 re-verifies controls that earlier issues already implement. M8 commercialization is not an MVP requirement.
+
+## Testing layers and M1 activation
+
+Use the [Issue #9 testing contract](architecture/testing-contract.md) to choose applicable
+unit, DB, API, contract, worker and browser tests. `pnpm test` now includes the harness
+and frontend; `pnpm test:web` remains independent. Issue #10 activates the currently
+failing `pnpm test:db` command and required real PostgreSQL CI, including failure when
+its database dependency is missing. No M0 SQL/API integration success is claimed.

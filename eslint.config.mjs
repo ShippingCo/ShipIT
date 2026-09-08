@@ -22,6 +22,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/**/*.{ts,tsx}', 'packages/db/**/*.ts', 'packages/shared/**/*.ts'],
+    ignores: ['**/*.test.{ts,tsx}', '**/test/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        group: ['@shippingco/testkit', '@shippingco/testkit/**', '**/testkit/**', '**/test/**', '**/*.test.*'],
+        message: 'Test-only helpers must not enter production modules or browser bundles.',
+      }] }],
+    },
+  },
+  {
     files: ['apps/web/src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': hooks },

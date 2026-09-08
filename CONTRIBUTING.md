@@ -29,3 +29,7 @@ Preserve unrelated/uncommitted work before switching branches. Never use reset/f
 Run `pnpm quality` with the exact toolchain in [quality checks](docs/QUALITY_CHECKS.md). It runs planning, tooling tests, lint, typecheck, tests and build. `pnpm verify:gates` proves controlled failures in a disposable checkout. See the guide for legacy exceptions and required GitHub check rollout. Never push when the user has reserved permission for a later review.
 
 Security-sensitive findings belong in [private security reporting](https://github.com/ShippingCo/ShipIT/security/advisories/new), not public issue bodies. Use fictional fixtures and sanitized evidence. See [SECURITY.md](SECURITY.md).
+
+See the [testing contract](docs/architecture/testing-contract.md) for fixture APIs, applicable
+test layers and the Issue #10 PostgreSQL activation checklist. `pnpm test:web` runs the
+frontend independently; `pnpm test:unit` runs the shared harness.

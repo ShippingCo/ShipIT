@@ -79,3 +79,14 @@ for gradual rollout, rollback, disable-before-destroy, and repeatable rotation; 
 [GitHub's OIDC guidance](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-cloud-providers)
 for short-lived deployment identity. The selected deployment platform must demonstrate
 equivalent controls; these links do not select a vendor.
+
+## Dedicated test process configuration — Issue #9
+
+The [testing contract](testing-contract.md#fail-closed-database-configuration) adds test-only
+`NODE_ENV=test`, `TEST_DATABASE_URL` and `TEST_DATABASE_IDENTITY` (`db_test` or worker suffix).
+This is isolated disposable test infrastructure, separate from the four application modes
+and identities above. No application `DATABASE_SECRET_REF`/`DATABASE_URL` fallback is permitted.
+A pure guard requires a test name, approved host and test identity, with production/staging
+host/identity denials taking precedence. #10 binds identities to actual isolated resources
+and activates PostgreSQL CI; #68 maintains production inventory/network separation.
+Never log the URL or resolved configuration.

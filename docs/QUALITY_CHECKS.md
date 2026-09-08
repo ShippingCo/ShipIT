@@ -31,7 +31,7 @@ pnpm quality
 ```
 
 `pnpm quality` runs, in order: toolchain verification, tooling tests, planning and
-domain validators, lint, all workspace typechecks, prototype tests, and web build.
+domain validators, lint, all workspace typechecks, testkit and prototype tests, and web build.
 It stops on a failed command. Individual commands are available for faster iteration:
 
 ```sh
@@ -184,3 +184,19 @@ References: [ESLint configuration](https://eslint.org/docs/latest/use/configure/
 [router return types](https://reactrouter.com/api/hooks/useNavigate#return-type-augmentation),
 [GitHub required checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks),
 [GitHub security](https://docs.github.com/en/actions/reference/security/secure-use).
+
+## Issue #9 harness inclusion
+
+[Testing contract](architecture/testing-contract.md) owns layer selection, deterministic
+fixtures, fake clocks/providers, failure boundaries and the database activation checklist.
+`pnpm test` runs `pnpm test:unit` (Node testkit) then `pnpm test:web` (Vitest frontend).
+`pnpm --filter @shippingco/web test` remains independently runnable without PostgreSQL.
+The existing CI tests matrix job now requires both suites; its final required name is unchanged.
+Testkit is a dev-only workspace using existing catalog TypeScript/Node types: no new
+third-party package, version, lifecycle script or runtime dependency. The lockfile adds
+only its importer. Lint restricts production imports and tooling tests check manifests.
+
+Real PostgreSQL integration testing is intentionally not active until Issue #10.
+`pnpm test:db` is an explicit nonzero activation diagnostic in M0. It is not included in
+M0 quality and cannot pretend to pass a missing DB suite. #10 must replace it with real
+PostgreSQL tests and make their CI result required, including missing-dependency failures.
