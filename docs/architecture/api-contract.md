@@ -64,13 +64,17 @@ minimized server evidence. Never echo a supplied key or invalid value.
 | 401 | UNAUTHENTICATED | Missing/invalid identity; no private output |
 | 403 | ACTION_FORBIDDEN | Denied action on legitimately visible data, or private collection context with absent membership |
 | 404 | RESOURCE_NOT_FOUND | Identical safe message/shape for unknown or foreign private resources/nested IDs; never name the foreign tenant |
+| 408 | REQUEST_TIMEOUT | HTTP transport request deadline exceeded; reconnect and retain command identity |
 | 409 | VERSION_CONFLICT | Authorized new command has stale expected revision; query current truth before a new deliberate command |
 | 409 | PARCEL_STATE_CONFLICT | Authorized command conflicts with current lifecycle/custody/attempt state |
 | 409 | IDEMPOTENCY_CONFLICT | Same scoped key has different canonical intent; never return original result or fingerprint |
 | 409 | IDEMPOTENCY_IN_PROGRESS | Same intent is still unresolved; retry same key/body, never execute concurrently |
+| 413 | PAYLOAD_TOO_LARGE | Request body exceeds the explicit byte limit; reduce payload |
 | 415 | UNSUPPORTED_MEDIA_TYPE | Command body is not supported JSON media type |
 | 422 | VALIDATION_FAILED | Parseable input fails schema/semantic validation, including missing key/version, wrong type, unknown field or limit outside 1..100 |
 | 422 | CURSOR_INVALID | Invalid/tampered/expired or query-incompatible cursor; generic message, restart authorized query |
+| 429 | RATE_LIMITED | Request budget exceeded; obey Retry-After, retain command identity |
+| 431 | HEADERS_TOO_LARGE | HTTP headers exceed the server transport bound; reduce headers |
 | 500 | INTERNAL_ERROR | Generic unexpected failure; commit may be uncertain, retry same key/body |
 | 503 | TEMPORARILY_UNAVAILABLE | Temporary service failure; do not infer no commit, retain same key/body |
 
@@ -151,3 +155,28 @@ After a lost response, retain and retry the **same key and request**, including 
 version. Check replay before reapplying state/precondition guards; otherwise a successful
 first command would incorrectly conflict with its own new version. See [timeout and
 expiry reconciliation](idempotency-contract.md) and [tenant scenarios](api-event-scenarios.md).
+
+
+## Implemented framework boundary — Issue #11
+
+Health paths are the explicit unversioned infrastructure exceptions to `/api/v1`:
+`GET /health/live` returns 200 with `status: alive` without DB access; `GET /health/ready`
+returns 200 with `status: ready` or the public 503 envelope. Product routes remain downstream.
+Every request has a server-generated UUID in `x-request-id`; errors use that exact value
+as `correlation_id`. Incoming correlation/identity headers grant no authority.
+
+Framework additions ratified here are 408 `REQUEST_TIMEOUT`, 413 `PAYLOAD_TOO_LARGE`,
+429 `RATE_LIMITED` and 431 `HEADERS_TOO_LARGE`. Transport parser failures use the
+same safe envelope and server correlation header before Fastify request hooks exist.
+Unknown routes use 404 `RESOURCE_NOT_FOUND`; unexpected errors use 500 `INTERNAL_ERROR`.
+Only validation failures (422) include safe schema field/code details; root or unknown
+properties use `$`, never the submitted property name. Native schema validation rejects
+unknown fields without coercing values or inserting defaults.
+
+Bodies support only application/json with optional UTF-8 charset, a 262,144-byte inclusive
+limit, strict UTF-8, no duplicate decoded keys at any depth, at most 64 nested containers,
+no prototype/constructor keys and no nonfinite JSON numbers. Invalid JSON/parser cases
+return 400 without input excerpts. Unsupported body media returns 415. Endpoint authors
+must keep unknown-property rejection and safe schema paths; attachments need separate
+bounded upload contracts. The [API guide](../../apps/api/README.md) owns operational
+CORS/proxy/rate/logging/shutdown details. CORS and rate limits are not authorization.

@@ -64,3 +64,20 @@ protected evidence. No employee retrieval or OTP/verifier telemetry is permitted
 Field-scoped holds cannot become cross-tenant access or indefinite profile retention.
 The [Issue #8 planning evidence](issue-8-verification.md) checks synthetic boundaries only;
 #14/#15/#21/#31/#42/#72 must verify real authorization, races and cleanup before production.
+
+## Issue #11 HTTP infrastructure boundary
+
+Public entry points now include liveness/readiness and Fastify request parsing. They
+expose no tenant records or identity authority. T08 controls are implemented with
+field/code-only startup errors, safe public error envelopes, explicit log serializers
+and synthetic credential/PII exclusion assertions. JSON syntax, decoded duplicate keys,
+UTF-8, nesting, schema and byte limits reject input before test command handlers.
+Malformed URL/HTTP parser errors also receive redacted correlated responses.
+
+Exact-origin CORS, explicit trusted proxy addresses plus bounded hops, and the official
+per-process rate limiter constrain the boundary. None grants authentication or tenant
+scope. Health is rate-exempt; #68/#74 must supply edge/network controls and tune capacity,
+including traffic rejected before framework hooks. T05 retains the existing parameterized
+DB interface; #11 introduces no domain SQL. T01/T04/T07/T10's real authorization, session,
+OTP and audit implementations remain downstream. The developer-only secret resolver
+cannot activate in hosted modes; #68 still owns managed-store workload identity.

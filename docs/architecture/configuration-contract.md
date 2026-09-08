@@ -29,9 +29,9 @@ or authorization policy. Shared packages may contain public DTOs and pure rules 
 
 ## Startup and ownership
 
-Issue #11 owns one future server configuration module, planned as `apps/api/src/env.ts`. It
-will parse the process environment once, return immutable typed configuration, reject unknown
-deployment modes, and stop startup on invalid input. Feature modules receive only the values
+Issue #11 implements `apps/api/src/env.ts`. It
+parses the process environment once, returns immutable typed configuration, rejects unknown
+deployment modes, and stops startup on invalid input. Feature modules receive only the values
 they need. Tests may inject a complete synthetic configuration object.
 
 Issue #10 supplies the server-only `@shippingco/db` configuration boundary. Its caller
@@ -118,3 +118,50 @@ The full `quality` command requires DB tests, while `test:web` remains independe
 #68 maintains production inventory/network separation; a syntactically allowed hostname
 alone cannot prove DNS destination or authorize access to a deployment database.
 Never log the URL, resolved configuration, raw SQL error or generated credential.
+
+
+## API runtime configuration — Issue #11
+
+One application deployment variable, `NODE_ENV`, maps `development` → developer,
+`demo` → demo, `staging` → staging, `production` → production. No `SHIPIT_ENVIRONMENT`
+is read by the API; that existing variable belongs solely to the separate migration
+operator command. `test` remains the dedicated guarded test process mode. API tests inject
+a synthetic config directly instead of altering global environment.
+
+| Field | Accepted values / requirement |
+| --- | --- |
+| NODE_ENV | Required; exactly development, demo, staging, production |
+| HOST | Required explicit IPv4/IPv6 listen address; tests use 127.0.0.1 |
+| PORT | Required canonical decimal integer 1–65535; injected network tests alone use 0 |
+| LOG_LEVEL | Required fatal/error/warn/info/debug/trace/silent |
+| ALLOWED_ORIGINS | Required 1–32 comma-separated, distinct canonical HTTP(S) origins; surrounding list whitespace is trimmed |
+| TRUSTED_PROXY_HOPS | Required canonical integer 0–5; 0 trusts no forwarding headers |
+| TRUSTED_PROXY_ADDRESSES | Required iff hops >0; comma-separated exact IPv4/IPv6 proxy IPs, at most 16; no networks, wildcards or hostnames |
+| DATABASE_SECRET_REF | Required opaque reference, 1–512 characters: letters/digits plus `_./:@-`, begins alphanumeric, no `://`; hosted versions pinned by resolver contract |
+| DATABASE_TLS_MODE | Required disable/verify-full; staging/production require verify-full |
+| DATABASE_CA_PEM | Optional trusted PEM CA only with verify-full; otherwise system roots |
+| LOCAL_DATABASE_URL | Developer-only resolved synthetic credential; only with local:database; never browser/public configuration |
+
+Origin values must equal their canonical URL origin: no credentials, path (including
+trailing slash), query, fragment, wildcard, default-port spelling or URL normalization.
+HTTP is allowed only for developer localhost/127.0.0.1/[::1]. Demo/staging/production
+require HTTPS. Exact CORS matching grants no authentication or tenant authorization.
+
+Fastify 5.12.3's security refinement rejects numeric-only proxy trust. The API therefore
+requires **both** explicit trusted peer addresses and the configured maximum hop count;
+an unapproved immediate peer cannot supply trusted forwarded metadata. IPv4-mapped
+socket addresses normalize to IPv4 for matching. Deployment #68 must enforce the proxy
+network boundary and header overwrite policy; IP never substitutes for authentication.
+
+`SecretResolver` is an injected managed-store adapter with kind, async resolution and
+AbortSignal. #68 selects vendor, workload identity and version-pin validation. Runtime
+secret resolution has a 10 s deadline, errors remain redacted, and resolved values stay
+in protected process memory. The developer CLI permits only `local:database`, loopback
+host, database `shipit_developer`, login `db_developer`, nonempty password and no URL
+options/fragment. It cannot activate in demo/staging/production; those deployments must
+supply a managed adapter to `startRuntime`. This is an explicit deployment prerequisite,
+not a production environment-secret fallback.
+
+Validation reports only field plus REQUIRED/INVALID_FORMAT/OUT_OF_RANGE/INCONSISTENT.
+No missing or malformed security setting receives an invented fallback. Code-owned
+HTTP, JSON, rate and shutdown limits are documented in the [API operating guide](../../apps/api/README.md).

@@ -1,9 +1,10 @@
-# Testing contract — Issues 9 and 10
+# Testing contract — Issues 9–11
 
 [Architecture](README.md) · [Issue 9 history](issue-9-verification.md) · [Testkit](../../packages/testkit/README.md) · [Quality](../QUALITY_CHECKS.md)
 
 Issue #9 established the shared test infrastructure; #10 activates real PostgreSQL
-pool, transaction and migration tests. Fastify, auth, business endpoints/domain tables,
+pool, transaction and migration tests. #11 activates Fastify injection and API/DB
+compatibility. Auth, business endpoints/domain tables,
 provider adapters and workers remain with their implementation issues. The original
 M0 acceptance evidence remains historical; current PostgreSQL coverage is described below.
 
@@ -16,8 +17,8 @@ implemented security/transaction boundary cannot be dismissed as an optional lay
 | Layer | Responsibility | Placement and runner |
 | --- | --- | --- |
 | Unit | Pure calculations, state guards, authorization helpers, validation, mapping and deterministic business rules; no DB/providers | Testkit and DB use Node `src/*.test.ts`; future owning API/shared application tests reuse Vitest |
-| Database integration | Real SQL semantics, constraints, indexes/query plans, transactions, locks, migrations, concurrency, tenant persistence | Active Node tests in `packages/db/test/integration/`; future domain SQL cases in `apps/api/test/database/`. Real PostgreSQL only |
-| API/service integration | HTTP validation, safe errors, then auth/authorization, tenant isolation, state transitions, idempotency and transaction outcomes as implemented | Planned `apps/api/test/integration/`; Fastify injection with Vitest; #11 and feature owners activate |
+| Database integration | Real SQL semantics, constraints, indexes/query plans, transactions, locks, migrations, concurrency, tenant persistence | Active Node tests in `packages/db/test/integration/`; API runtime restart/outage case in `apps/api/test/database/`; future domain SQL cases share that path. Real PostgreSQL only |
+| API/service integration | HTTP validation, safe errors, then auth/authorization, tenant isolation, state transitions, idempotency and transaction outcomes as implemented | Active `apps/api/test/integration/`; Fastify injection with pinned Vitest via `pnpm test:api` |
 | Contract | Provider ports, raw-byte webhook signatures, schemas/compatibility, callback parsing, retries | Planned owning `apps/api/src/modules/<domain>/test/contract/`; synthetic provider ports, Vitest; no production accounts |
 | Worker | Retries, leases, duplicates, stale/gap/poison events, crashes, recovery and uncertain provider acceptance | Planned `apps/api/test/worker/`; Vitest with controlled clock/provider; real DB when durable/concurrent behavior is under test |
 | Browser | User-visible flows, accessibility, keyboard/focus and important UI/backend boundaries | Existing `apps/web/src/test/` uses Vitest/Testing Library in jsdom; real browser journeys belong in future `apps/web/test/browser/` when required. jsdom is not a real browser |
@@ -34,9 +35,10 @@ application TypeScript/React. PostgreSQL dependencies are recorded in the
 | Command | Current behavior |
 | --- | --- |
 | `pnpm test:unit` | Executes testkit and DB unit tests; no external services |
+| `pnpm test:api` | API configuration/security/lifecycle tests using Vitest injection and synthetic dependencies |
 | `pnpm test:web` or `pnpm --filter @shippingco/web test` | Existing standalone frontend tests; no PostgreSQL needed |
-| `pnpm test` | Testkit/DB unit tests, then frontend; any failure fails the command |
-| `pnpm test:db` | Runs 17 required real PostgreSQL integration cases; guarded bootstrap configuration required |
+| `pnpm test` | Testkit/DB unit tests, API injection, then frontend; any failure fails the command |
+| `pnpm test:db` | Runs 17 DB plus 1 API real PostgreSQL integration cases; guarded bootstrap configuration required |
 | `pnpm db:local test:db` | Creates the pinned disposable PostgreSQL service, supplies generated bootstrap configuration, runs integration tests and cleans up |
 | `pnpm test:quality` | 10 tooling tests, including final CI gate, migration immutability, container lifecycle and import boundaries |
 | `pnpm quality` | Exact toolchain, tooling tests, planning checks, lint, all workspace typechecks, `pnpm test`, required `pnpm test:db`, build |
@@ -122,10 +124,9 @@ try {
 ```
 
 This is a **future example**, not an executable API test. `apps/api/src/index.ts` owns
-startup/listening/signals; future `server.ts` exports `buildServer(dependencies)` and
+startup/listening/signals; `server.ts` exports `buildServer(dependencies)` and
 starts no port. Tests close server/pools in teardown. Inject clock/providers/config and
-later DB dependencies. No TCP port unless testing actual network behavior. #11 selects
-concrete dependency types while implementing Fastify; #13/#14 add real auth/memberships.
+DB dependencies. No TCP port unless testing actual network behavior. #11 implements these infrastructure types; #13/#14 add real auth/memberships.
 Assert persisted facts and forbidden effects as well as status codes. Compare known
 foreign and nonexistent IDs so IDOR denial does not disclose existence.
 
@@ -267,3 +268,23 @@ failure and replay evidence. No M0 harness test certifies these future implement
 Cursor integrity/lifetime and API compatibility support windows remain #23/feature rollout
 decisions: #9 defines tamper, expiry, scope-change and old-reader test responsibilities,
 without inventing a cursor implementation or retirement interval before those features exist.
+
+
+## Issue #11 API activation
+
+`pnpm test:api` runs Vitest 3.2.6 in Node with `apps/api/test/integration/**/*.test.ts`.
+Normal `pnpm test` now requires unit → API → frontend suites; CI's tests matrix inherits
+that command. Only real listener/shutdown/signal cases bind loopback ephemeral ports.
+Test-only probes are manually registered in test composition, excluded by production
+import rules. Configuration, fake DB and log sink are injected; no global env mutation.
+Subprocess startup tests pass a synthetic child environment.
+
+`pnpm test:db` additionally discovers `apps/api/test/database/*.test.ts` and runs it through
+the existing guarded Node DB reporter after the DB infrastructure suite. Both groups
+must execute nonempty, passing, non-skipped tests. The same registry and exact cleanup
+cover both. The API case proves real readiness/outage/recovery and synthetic persistence
+after closing/rebuilding server and runtime pool. The required PostgreSQL CI job/final
+gate remain intact. No business endpoint, auth or tenant authorization is claimed.
+
+The [Issue #11 verification](issue-11-verification.md) maps each acceptance criterion.
+Alpha-1/Alpha-2/Beta-1 fixtures stay available to #12/#13/#14 and later domain tests.

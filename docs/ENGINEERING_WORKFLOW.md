@@ -110,4 +110,19 @@ and frontend; `pnpm test:web` remains independent. Issue #10 activates `pnpm tes
 and required real PostgreSQL CI. Missing or unsafe configuration, unavailable PostgreSQL,
 an empty required suite, test failure or cleanup failure returns nonzero. See
 [Issue #10 verification](architecture/issue-10-verification.md) for persistence,
-transaction, migration and privilege evidence. API integration remains Issue #11.
+transaction, migration and privilege evidence. Issue #11 activates API injection and real DB compatibility tests.
+
+
+## Issue #11 API boundary checks
+
+`pnpm test:api` activates the pinned Vitest API suite in normal tests/quality/CI;
+`pnpm build` now checks the erasable TypeScript API before building the frontend.
+`pnpm test:db` requires both the existing 17 DB cases and the API real PostgreSQL
+restart/outage case. The required final gate still depends on PostgreSQL integration.
+`pnpm test:web` remains runnable with all DB/API configuration absent.
+`pnpm db:local verify:gates` adds an intentional API test failure drill to the existing
+21 stages. No existing PostgreSQL drill or enforcement is removed.
+See [Issue #11 verification](architecture/issue-11-verification.md) and
+[API operating guide](../apps/api/README.md) for exact policy and acceptance evidence.
+Issue #11 delivery stops with the PR open for independent external review; merge,
+issue closure, downstream unblocking and branch cleanup require later authorization.

@@ -3,13 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "HTTP API for the operator console — not yet implemented, see README.md",
+  "description": "Validated Fastify HTTP boundary and PostgreSQL runtime composition",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start": "node --experimental-strip-types src/index.ts",
+    "test": "vitest run",
+    "build": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@shippingco/db": "workspace:*",
+    "fastify": "5.12.3",
+    "@fastify/cors": "11.3.0",
+    "@fastify/rate-limit": "11.2.0"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@shippingco/testkit": "workspace:*"
   }
 }
