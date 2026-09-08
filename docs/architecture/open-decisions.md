@@ -16,7 +16,7 @@ explicitly marked PARTIAL. No vendor, statutory policy or runtime behavior is in
 | ID | Precise question | Current evidence / constraint | Owner | Must resolve before | Blocks issue(s) | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | D01 | Canonical entities, cardinality, docket scope and permitted transitions | [Domain](domain-contract.md), [complete lifecycle](parcel-lifecycle.md), [ADR 0006](../adr/0006-domain-ownership-and-authorization.md): multi-parcel from day one, global parcel dockets, custody distinct from ownership; all approved states/roles/guards | #3 / domain architecture | #3 PR acceptance; implementation gates remain with owners below | #4, #12, #19, #22, #24, #79 | RESOLVED contract |
-| D02 | Complete role/action/resource/scope policy | [74-row matrix](authorization-contract.md) and [synthetic denials](domain-scenarios.md); seven roles, explicit exports, grantable agent transfer, declared org reads; unapproved actions denied | #3 / tenancy; #14 implements memberships/grants | #3 PR acceptance; #14 permission mechanics before implementation | #6, #12, #14, #15, #17, #42 | RESOLVED policy; implementation outstanding |
+| D02 | Complete role/action/resource/scope policy | [75-row matrix](authorization-contract.md) and [synthetic denials](domain-scenarios.md); seven roles, explicit exports, grantable agent transfer, declared org reads; [Issue #12 W41 amendment](../adr/0010-organization-franchise-tenancy.md) submitted for review; unapproved actions denied | #3 / tenancy; #12 / bounded lifecycle amendment; #14 implements memberships/grants | #3 policy accepted; W41 requires #12 reviewed merge; #14 permission mechanics before production exposure | #6, #12, #14, #15, #17, #42 | RESOLVED baseline policy; W41 pending #12 acceptance; implementation outstanding |
 | D03 | Franchise customer ownership versus normalization/matching/merge mechanics | [Customer isolation](domain-contract.md#customer-isolation-and-field-boundaries) resolved: no implicit sibling/global directory; custody is shipment-only. Matching keys, ambiguous matches, merge/retention mechanics remain unapproved | #3 / ownership; #19 / customers with #72 / privacy | Ownership at #3 acceptance; matching/merge before #19 implementation | #19, #22, #46, #49 | PARTIAL: ownership resolved, matching/merge OPEN |
 | D04 | Exact API/error/pagination schemas, event catalog/compatibility/stale/gap policy, idempotency scope/fingerprint/retention/expiry | [ADR 0007](../adr/0007-api-event-idempotency-contracts.md), [API](api-contract.md), [events](event-contract.md), [idempotency](idempotency-contract.md), [synthetic evidence](api-event-verification.md); #4 merged in PR #87; endpoint implementation remains downstream | #4 / API and events | Contract resolved; before consumers | #9, #10, #11, #16, #22, #24, #28, #35, #37, #40, #53 | RESOLVED contract; implementation outstanding |
 | D05 | Concrete lease duration, retry/backoff, concurrency/polling, fairness, poison/redrive and consumer deduplication persistence mechanics | [#4 invariants](event-contract.md) define logical identity, quarantine/uncertainty and atomic source/outbox; no operational constants, queue or implementation selected | #35 / outbox; #39 / messaging; #40 / consumer dedupe | #35 worker design, #39 processing, #40 persistence before respective implementations | #35, #39, #40, #41, #45 | OPEN |
@@ -70,3 +70,13 @@ reviewed actions to the closed matrix without changing seven roles. D06/D07 and 
 privacy portion of D08 advance on accepted merge. The [source register](policy-sources.md)
 records current evidence and qualified validation gates; no statutory rate, blanket retention
 period, authentication/session mechanism or production implementation is certified.
+
+## Issue 12 tenancy amendment boundary
+
+[ADR 0010](../adr/0010-organization-franchise-tenancy.md) records the minimal `active` /
+`disabled` root lifecycle and W41's explicit target-franchise lifecycle authority. It
+adds no generic Organization member action and leaves W29, W34 and W35 restrictions
+intact. The persistence/locking/privilege implementation does not resolve #13 identity,
+#14 membership/grants, #15 product-wide tenant-context enforcement, #16 durable audit,
+#17 authenticated onboarding or #79 adoption. W41 is submitted for external review;
+neither this document nor the open PR satisfies a downstream merged prerequisite.

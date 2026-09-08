@@ -4,7 +4,13 @@ import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError }
 
 const errors = {
   MALFORMED_REQUEST: [400, 'Request syntax is invalid.'],
+  UNAUTHENTICATED: [401, 'Authentication is required.'],
+  ACTION_FORBIDDEN: [403, 'Action is not permitted.'],
   RESOURCE_NOT_FOUND: [404, 'Resource not found.'],
+  VERSION_CONFLICT: [409, 'Resource version has changed.'],
+  FRANCHISE_CODE_CONFLICT: [409, 'Franchise code is already in use in this organization.'],
+  FRANCHISE_DISABLED: [409, 'Franchise is disabled for operational writes.'],
+  ORGANIZATION_DISABLED: [409, 'Organization is disabled for operational writes.'],
   REQUEST_TIMEOUT: [408, 'Request did not complete within the permitted time.'],
   HEADERS_TOO_LARGE: [431, 'Request headers exceed the permitted size.'],
   PAYLOAD_TOO_LARGE: [413, 'Request body exceeds the permitted size.'],

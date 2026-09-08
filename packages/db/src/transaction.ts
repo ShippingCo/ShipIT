@@ -1,11 +1,26 @@
 import { DatabaseError, databaseError } from './errors.ts';
 import type { DatabasePool, QueryExecutor } from './pool.ts';
-export async function withTransaction<T>(pool: DatabasePool, work: (tx: QueryExecutor) => Promise<T>): Promise<T> {
+
+const transactionBrand: unique symbol = Symbol('TransactionExecutor');
+const activeTransactions = new WeakSet<QueryExecutor>();
+
+/** Only withTransaction can create this executor; it expires before commit. */
+export interface TransactionExecutor extends QueryExecutor {
+  readonly [transactionBrand]: true;
+}
+
+/** Fail closed when a lock-dependent primitive receives a pool or expired tx. */
+export function assertActiveTransaction(executor: QueryExecutor): asserts executor is TransactionExecutor {
+  if (!activeTransactions.has(executor)) throw new DatabaseError('DB_TRANSACTION_FAILED');
+}
+
+export async function withTransaction<T>(pool: DatabasePool, work: (tx: TransactionExecutor) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   let phase: 'begin' | 'work' | 'commit' = 'begin';
   let active = true;
   let discard = false;
-  const tx: QueryExecutor = {
+  const tx: TransactionExecutor = {
+    [transactionBrand]: true,
     query: (sql, params) => {
       if (!active) return Promise.reject(new DatabaseError('DB_CLOSED'));
       return client.query(sql, params);
@@ -14,8 +29,10 @@ export async function withTransaction<T>(pool: DatabasePool, work: (tx: QueryExe
   try {
     await client.query('BEGIN');
     phase = 'work';
+    activeTransactions.add(tx);
     const result = await work(tx);
     active = false;
+    activeTransactions.delete(tx);
     phase = 'commit';
     const committed = await client.query('COMMIT');
     if (committed.command !== 'COMMIT') {
@@ -25,6 +42,7 @@ export async function withTransaction<T>(pool: DatabasePool, work: (tx: QueryExe
     return result;
   } catch (error) {
     active = false;
+    activeTransactions.delete(tx);
     try { await client.query('ROLLBACK'); }
     catch {
       discard = true;
@@ -38,6 +56,7 @@ export async function withTransaction<T>(pool: DatabasePool, work: (tx: QueryExe
     throw databaseError(error, 'DB_TRANSACTION_FAILED');
   } finally {
     active = false;
+    activeTransactions.delete(tx);
     client.release(discard);
   }
 }

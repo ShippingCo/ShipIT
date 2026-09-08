@@ -49,6 +49,10 @@ The transaction query seam expires after completion. Failed commit acknowledgeme
 returns `DB_COMMIT_UNCERTAIN`; no automatic retry occurs. A failed rollback returns
 `DB_ROLLBACK_FAILED`, and failed/uncertain connections are discarded. Future mutation
 reconciliation follows the [idempotency contract](../../docs/architecture/idempotency-contract.md).
+`withTransaction` provides a branded `TransactionExecutor`. Lock-dependent domain
+primitives also call `assertActiveTransaction(tx)` to reject a pool, ordinary lease,
+copied executor or completed transaction. This is a transaction-lifetime guarantee;
+it does not establish tenant authorization or prevent arbitrary caller SQL.
 
 ## Configuration and limits
 
@@ -93,9 +97,10 @@ query timeout. Tests use their guarded runner instead of this operator CLI.
 positive migration count for integration testing; normal operation uses
 [`migrations/`](migrations/). The result is `{ applied: number }`.
 
-The only infrastructure migration currently creates the neutral `shipit` schema
-and revokes PUBLIC access. The library ledger is `shipit_migrations.pgmigrations`.
-There are no production domain tables. Migration effects and ledger entries advance
+The released infrastructure migration creates the neutral `shipit` schema and
+revokes PUBLIC access. Issue #12 adds only `shipit.organizations` and
+`shipit.franchises`; domain SQL remains in the API tenancy module. The library ledger
+is `shipit_migrations.pgmigrations`. Migration effects and ledger entries advance
 together in one transaction. The library's PostgreSQL advisory lock
 `7241865325823964` rejects a concurrent migrator immediately with
 `DB_MIGRATION_LOCKED`; it is released on completion, failure or connection close.
@@ -113,7 +118,47 @@ bootstrap privileges are confined to disposable test provisioning; the migration
 owns the database and schema. The runtime role is a non-owner with required connection/schema/DML
 grants and no superuser, role-creation, database-creation or RLS-bypass privileges.
 The test harness verifies this separation against PostgreSQL. The library does not
-provision production roles or grant future domain-table access; #68 owns deployment.
+provision production roles; #68 owns deployment. Role names are never embedded in
+migration files.
+
+## Tenancy roots and runtime access
+
+Every franchise has one immutable `organization_id`. A standalone shop is one
+organization and one franchise; an organization may own several franchises. Both
+tables use application-generated UUID IDs, trimmed business `display_name` values
+of 1–120 Unicode code points with no ASCII control characters, lifecycle
+`active | disabled`, positive integer `version` defaulting to 1, and UTC
+`created_at`, `updated_at`, `lifecycle_changed_at` instants. Timestamp defaults and
+service updates use millisecond precision so safe ISO DTOs roundtrip pagination
+boundaries exactly. Franchises additionally have an immutable canonical ASCII
+`franchise_code` matching `[A-Z][A-Z0-9_]{0,31}`. Invalid codes are rejected without
+automatic case or punctuation normalization.
+
+The organization FK uses `ON DELETE RESTRICT`. The franchise candidate key
+`UNIQUE (organization_id, id)` supports future private children with
+`FOREIGN KEY (organization_id, franchise_id) REFERENCES shipit.franchises
+(organization_id, id)`. `UNIQUE (organization_id, franchise_code)` permits the same
+code in unrelated organizations. These unique indexes serve scoped identity/code
+lookups; `(organization_id, created_at, id)` serves ascending deterministic lists
+and its leading organization column also indexes FK ownership paths.
+
+The guarded disposable provisioner exposes `prepareTenancy()` to apply migrations
+and grant the generated runtime identity exactly:
+
+- `USAGE` on schema `shipit`;
+- `SELECT, INSERT` on both tenancy tables;
+- column-level `UPDATE (display_name, lifecycle, version, updated_at,
+  lifecycle_changed_at)` on both tables.
+
+Deployment provisioning must apply these same explicit grants to its securely
+resolved runtime role, without table-level UPDATE, DELETE, TRUNCATE, DDL, ownership
+or role-management privileges. The runtime role cannot change IDs, original creation
+time, organization ownership or franchise code. Immutable-identity triggers also
+reject ordinary owner SQL updates to those columns; controlled adoption is deferred
+to #79. Migration owners remain privileged administrators and are never application
+credentials. Disabling preserves rows and historical authorized reads; the API
+tenancy guard serializes operational writes with lifecycle administration. Durable
+audit and product-wide tenant enforcement remain with #16 and #15.
 
 ## Local and CI testing
 
@@ -161,9 +206,13 @@ raw driver messages, causes, SQL, parameters and credentials are removed. Codes 
 `DB_CLOSED`, `DB_TRANSACTION_FAILED`, `DB_COMMIT_UNCERTAIN`, `DB_ROLLBACK_FAILED`,
 `DB_MIGRATION_FAILED`, `DB_MIGRATION_LOCKED` and `DB_SHUTDOWN_FAILED`.
 
-Real integration tests cover migrations, two competing processes, transaction
+Real integration tests cover fresh/upgrade/repeated tenancy migrations, ownership
+and code constraints, a disposable child composite FK, runtime privileges,
+immutable identity triggers, transaction lifetime, two competing migration processes, transaction
 commit/rollback/release, restart persistence, parameter binding, runtime privileges,
 pool exhaustion, statement timeouts, outage recovery and exact cleanup. Synthetic
-fixture tables exist only in disposable databases. These tests do not establish
-tenant authorization, production TLS deployment, domain persistence, auth, workers or
-provider behavior; those remain with their owning downstream issues.
+fixture tables exist only in disposable databases. Tenancy service tests use the
+same real PostgreSQL provisioner and the existing Alpha/Beta testkit fixture graph.
+These tests do not establish production TLS deployment, authentication, membership
+RBAC, product-wide tenant enforcement, durable audit, workers or provider behavior;
+those remain with their owning downstream issues.

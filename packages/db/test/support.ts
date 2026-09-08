@@ -147,6 +147,7 @@ export interface DisposableDatabase {
     statementTimeoutMs?: number; queryTimeoutMs?: number }): DatabasePool;
   ownerPool(): DatabasePool;
   migrate(options?: { dir?: string; count?: number }): Promise<{ applied: number }>;
+  prepareTenancy(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
   terminateBackend(pid: number): Promise<void>;
@@ -199,6 +200,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       return trackedPool(configuration(resource.migrationRole, migrationPassword));
     },
     async migrate(options) { validate(); return runMigrations(handle.migrationConfig(), options); },
+    async prepareTenancy() {
+      validate();
+      await handle.migrate();
+      const owner = handle.ownerPool();
+      try {
+        await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT, INSERT ON shipit.organizations, shipit.franchises TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE (display_name, lifecycle, version, updated_at, lifecycle_changed_at)
+          ON shipit.organizations, shipit.franchises TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); pools.delete(owner); }
+    },
     async prepareFixtures() {
       validate();
       await handle.migrate();

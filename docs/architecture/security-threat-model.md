@@ -81,3 +81,17 @@ including traffic rejected before framework hooks. T05 retains the existing para
 DB interface; #11 introduces no domain SQL. T01/T04/T07/T10's real authorization, session,
 OTP and audit implementations remain downstream. The developer-only secret resolver
 cannot activate in hosted modes; #68 still owns managed-store workload identity.
+
+## Issue #12 tenancy roots
+
+T01/T05 now have scoped Organization/Franchise services, parameterized ownership SQL,
+composite parent keys, immutable ordinary ownership and runtime column privileges.
+Trusted action approvals are injected server-side; request tenant/role/header claims
+cannot establish them. Private routes remain unregistered until #13/#14 and the owning
+activation gates. Real PostgreSQL tests exercise valid sibling/foreign IDs, scoped page
+metadata, direct runtime reparent/delete attempts and disable/write races.
+
+T10 receives a safe typed post-commit audit notification seam only. It has neither
+transactional durability nor replay persistence: notification failure may follow a
+committed mutation. #16 integration is required before production route activation.
+No new user role, customer directory, credential store or adoption path is introduced.

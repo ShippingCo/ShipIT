@@ -259,3 +259,15 @@ See [Issue #11 verification](architecture/issue-11-verification.md) and
 [API operating guide](../apps/api/README.md) for exact policy and acceptance evidence.
 Issue #11 delivery stops with the PR open for independent external review; merge,
 issue closure, downstream unblocking and branch cleanup require later authorization.
+
+## Issue #12 tenancy checks
+
+The required API suite now includes strict tenancy input/DTO/authorization-seam cases
+and confirms normal production composition exposes no private tenant routes. The real
+PostgreSQL suite adds tenancy schema/privilege/ownership constraints, service scope,
+version and duplicate races, transaction rollback, disable/write lock ordering and
+restart persistence. Existing API, PostgreSQL and final required gates are preserved.
+Use the same `pnpm db:local quality`, `pnpm db:local verify:gates` and
+`pnpm check:migrations` commands; the infrastructure migration remains unchanged.
+See [Issue #12 verification](architecture/issue-12-verification.md) for exact results and
+the explicit external-review boundary: leave its PR open and branch retained.
