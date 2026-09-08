@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 36)]:
+    for prefix, count in [("R", 30), ("E", 4), ("W", 40)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -196,7 +196,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 70 matrix rows, 28 synthetic access/projection cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 74 matrix rows, 28 synthetic access/projection cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":
