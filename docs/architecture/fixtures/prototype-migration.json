@@ -1,0 +1,1782 @@
+{
+  "synthetic_only": true,
+  "baseline": "36ce6d3",
+  "inventory": {
+    "exports": [
+      "CITIES",
+      "DEFAULT_BUSINESS",
+      "EWAY_KM_PER_DAY",
+      "EWAY_THRESHOLD",
+      "EXCEPTION_STATUSES",
+      "FAILURE_REASONS",
+      "GST_MODES",
+      "MAX_ATTEMPTS",
+      "OTP_MAX_ATTEMPTS",
+      "RTO_WINDOW_HOURS",
+      "STATE_OF_CITY",
+      "STATUS_FLOW",
+      "STATUS_LABEL",
+      "Store",
+      "activeDelayFor",
+      "addBooking",
+      "allCustomers",
+      "assignToLot",
+      "attachToRoute",
+      "bookingsByPhone",
+      "bookingsOfLot",
+      "bookingsOfRoute",
+      "confirmDelivered",
+      "createLot",
+      "createRoute",
+      "db",
+      "deleteLot",
+      "esc",
+      "estimateEtaDays",
+      "ewayList",
+      "ewayState",
+      "ewayValidDays",
+      "financialYear",
+      "findBooking",
+      "findByDocket",
+      "fmtDT",
+      "fmtMoney",
+      "getSnapshot",
+      "grossOf",
+      "gstRate",
+      "logBotTurn",
+      "lotById",
+      "markAllBizSeen",
+      "markFailedAttempt",
+      "markRTO",
+      "nextDocket",
+      "normPhone",
+      "openEscalations",
+      "peekDocket",
+      "pendingDestinations",
+      "placeOfSupply",
+      "postRouteEvent",
+      "prettyPhone",
+      "queueMsg",
+      "reachSummary",
+      "recordPayment",
+      "recoveryQueue",
+      "replyWindow",
+      "reportFor",
+      "resendDelayAlert",
+      "resendDeliveryOTP",
+      "resetDemo",
+      "resolveEscalation",
+      "revealOTP",
+      "routeById",
+      "routeOfLot",
+      "save",
+      "setEwayBill",
+      "stateOfCity",
+      "subscribe",
+      "suggestFreight",
+      "taxOn",
+      "toPaySummary",
+      "uid",
+      "ungroupedParcels",
+      "updateBusiness",
+      "updateStatus",
+      "verifyDeliveryOTP",
+      "waFmt"
+    ],
+    "store_members": [
+      "EWAY_KM_PER_DAY",
+      "STATE_OF_CITY",
+      "activeDelayFor",
+      "addBooking",
+      "allCustomers",
+      "assignToLot",
+      "attachToRoute",
+      "bookingsByPhone",
+      "bookingsOfLot",
+      "bookingsOfRoute",
+      "confirmDelivered",
+      "createLot",
+      "createRoute",
+      "db",
+      "deleteLot",
+      "esc",
+      "estimateEtaDays",
+      "ewayList",
+      "ewayState",
+      "ewayValidDays",
+      "financialYear",
+      "findBooking",
+      "findByDocket",
+      "fmtDT",
+      "fmtMoney",
+      "getSnapshot",
+      "grossOf",
+      "gstRate",
+      "load",
+      "logBotTurn",
+      "lotById",
+      "markAllBizSeen",
+      "markFailedAttempt",
+      "markRTO",
+      "nextDocket",
+      "normPhone",
+      "openEscalations",
+      "peekDocket",
+      "pendingDestinations",
+      "placeOfSupply",
+      "postRouteEvent",
+      "prettyPhone",
+      "queueMsg",
+      "reachSummary",
+      "recordPayment",
+      "recoveryQueue",
+      "replyWindow",
+      "reportFor",
+      "resendDelayAlert",
+      "resendDeliveryOTP",
+      "resetDemo",
+      "resolveEscalation",
+      "revealOTP",
+      "routeById",
+      "routeOfLot",
+      "save",
+      "setEwayBill",
+      "stateOfCity",
+      "subscribe",
+      "suggestFreight",
+      "taxOn",
+      "toPaySummary",
+      "ungroupedParcels",
+      "updateBusiness",
+      "updateStatus",
+      "verifyDeliveryOTP",
+      "waFmt"
+    ],
+    "consumers": [
+      "apps/web/src/App.tsx",
+      "apps/web/src/components/CommandPalette.tsx",
+      "apps/web/src/components/m3/Journey.tsx",
+      "apps/web/src/context/AppContext.tsx",
+      "apps/web/src/data/bot.ts",
+      "apps/web/src/data/store.ts",
+      "apps/web/src/main.tsx",
+      "apps/web/src/pages/CustomerWhatsApp.tsx",
+      "apps/web/src/pages/Launcher.tsx",
+      "apps/web/src/pages/business/BusinessShell.tsx",
+      "apps/web/src/pages/business/Dashboard.tsx",
+      "apps/web/src/pages/business/EwayPage.tsx",
+      "apps/web/src/pages/business/LotsPage.tsx",
+      "apps/web/src/pages/business/MiscPages.tsx",
+      "apps/web/src/pages/business/NewBookingPage.tsx",
+      "apps/web/src/pages/business/PackagesPage.tsx",
+      "apps/web/src/pages/business/ReportsPage.tsx",
+      "apps/web/src/pages/business/RoutesPage.tsx",
+      "apps/web/src/test/app.test.tsx",
+      "apps/web/src/test/setup.ts",
+      "apps/web/src/utils/receipt.ts"
+    ],
+    "fingerprints": {
+      "apps/web/src/App.tsx": "2c687632fb5fafb0ff2cd0936f65ddbff3f174478fb25b3b2ec46094e4a6ddab",
+      "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
+      "apps/web/src/components/m3/Controls.tsx": "2fc205e1a8d3604569f3e81da35d73fbb7e8c51383505ba8786acc5f51f34c10",
+      "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
+      "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
+      "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
+      "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
+      "apps/web/src/data/store.ts": "5f8b0a0fab9db61f2fab8ee40ad9f7b86462d01246bf34b804a83786bfaad022",
+      "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
+      "apps/web/src/main.tsx": "5605ec5cd89de6bfd64a7210fab53beb3313159933818cbee4622c581794ec2c",
+      "apps/web/src/pages/CustomerWhatsApp.tsx": "c3954742b222ea63cf3184a916527449ac9edc048dda8fa1a75bc0f4a627dc6b",
+      "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
+      "apps/web/src/pages/business/BusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
+      "apps/web/src/pages/business/Dashboard.tsx": "26d98d1b095cecd4590cbbf77f7a06c1fab8247c94bf2c9a78e478bb79b5b448",
+      "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
+      "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
+      "apps/web/src/pages/business/MiscPages.tsx": "e29360b8189ab907debf28bfc6919171aeb6f9b80219d07752b2970a4fd21fe9",
+      "apps/web/src/pages/business/NewBookingPage.tsx": "7802ebd7677b6cd698551f74fc2ba2fa309c42145ba20116a909bbb316b29107",
+      "apps/web/src/pages/business/PackagesPage.tsx": "ba25681f56d9b51ebee6a56c419e65cdb702a81a8389fdacd0d2c9df88eeafc8",
+      "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
+      "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
+      "apps/web/src/test/app.test.tsx": "7ebb04ea7a7bf8623ce7dd496365a92cbbdf3fdb3666b00e3572263b4bcf0f61",
+      "apps/web/src/test/setup.ts": "6b17cf72d6ac4dc944f0cc6bff9d1db4f032a1ff51f14ecbb8aa0c591034393a",
+      "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7",
+      "apps/web/src/utils/receipt.ts": "2bcad0e9d719240eb051d31c33e2535842295ccdfdfbe2ed7338f6536aefddd5"
+    },
+    "imports": {
+      "apps/web/src/App.tsx": [
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { AppProvider } from './context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { ToastProvider } from './components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/pages/Launcher.tsx",
+          "syntax": "import Launcher from './pages/Launcher';"
+        },
+        {
+          "target": "apps/web/src/pages/business/BusinessShell.tsx",
+          "syntax": "import BusinessShell from './pages/business/BusinessShell';"
+        },
+        {
+          "target": "apps/web/src/pages/CustomerWhatsApp.tsx",
+          "syntax": "import CustomerWhatsApp from './pages/CustomerWhatsApp';"
+        }
+      ],
+      "apps/web/src/components/CommandPalette.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { IconTile } from './m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { StatusPill } from './m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { prettyPhone } from '../data/store';"
+        }
+      ],
+      "apps/web/src/components/m3/Journey.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym, cx } from './Icon';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { STATUS_FLOW } from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { ParcelStatus, TimelineEntry } from '../../data/types';"
+        }
+      ],
+      "apps/web/src/context/AppContext.tsx": [
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { subscribe, getSnapshot } from '../data/store';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Database } from '../data/types';"
+        }
+      ],
+      "apps/web/src/data/bot.ts": [
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  db, save, bookingsByPhone, findByDocket, activeDelayFor, logBotTurn,\n  fmtMoney, fmtDT, STATUS_LABEL, grossOf } from './store';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking, Chat, ChatSender, DispatchRoute, RouteEvent } from './types';"
+        }
+      ],
+      "apps/web/src/data/store.ts": [
+        {
+          "target": "apps/web/src/data/messages.ts",
+          "syntax": "import { msg } from './messages';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type {\n  Booking, Business, Chat, CityTotal, Database,\n  DispatchRoute, Escalation, EwayRecord, GstModeOption, Lot, MessageLang, NewBookingInput,\n  NewRouteInput, OtpResult, ParcelStatus, RateTotal, ReachSummary,\n  RecoveryItem, ReplyWindow, Report, RouteEvent, ServiceType, SupplyKind, Tax, TimelineEntry,\n} from './types';"
+        }
+      ],
+      "apps/web/src/main.tsx": [
+        {
+          "target": "apps/web/src/App.tsx",
+          "syntax": "import App from './App';"
+        }
+      ],
+      "apps/web/src/pages/CustomerWhatsApp.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { db, allCustomers, prettyPhone, waFmt, esc } from '../data/store';"
+        },
+        {
+          "target": "apps/web/src/data/bot.ts",
+          "syntax": "import { ensureChat, pushChat, botReply, welcomeText } from '../data/bot';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../context/AppContext';"
+        }
+      ],
+      "apps/web/src/pages/Launcher.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { ConfirmDialog } from '../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { resetDemo } from '../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/BusinessShell.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Fab } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/pages/business/Dashboard.tsx",
+          "syntax": "import Dashboard from './Dashboard';"
+        },
+        {
+          "target": "apps/web/src/pages/business/NewBookingPage.tsx",
+          "syntax": "import NewBookingPage from './NewBookingPage';"
+        },
+        {
+          "target": "apps/web/src/pages/business/PackagesPage.tsx",
+          "syntax": "import PackagesPage from './PackagesPage';"
+        },
+        {
+          "target": "apps/web/src/pages/business/LotsPage.tsx",
+          "syntax": "import LotsPage from './LotsPage';"
+        },
+        {
+          "target": "apps/web/src/pages/business/RoutesPage.tsx",
+          "syntax": "import RoutesPage from './RoutesPage';"
+        },
+        {
+          "target": "apps/web/src/pages/business/MiscPages.tsx",
+          "syntax": "import { ReceiptsPage, AutomationFeedPage, SettingsPage } from './MiscPages';"
+        },
+        {
+          "target": "apps/web/src/pages/business/ReportsPage.tsx",
+          "syntax": "import ReportsPage from './ReportsPage';"
+        },
+        {
+          "target": "apps/web/src/pages/business/EwayPage.tsx",
+          "syntax": "import EwayPage from './EwayPage';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/components/CommandPalette.tsx",
+          "syntax": "import CommandPalette, { useCommandPalette } from '../../components/CommandPalette';"
+        }
+      ],
+      "apps/web/src/pages/business/Dashboard.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Meter.tsx",
+          "syntax": "import { Ring } from '../../components/m3/Meter';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Kpi.tsx",
+          "syntax": "import { KpiCard } from '../../components/m3/Kpi';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  bookingsOfRoute, activeDelayFor, toPaySummary, reachSummary, openEscalations,\n  recoveryQueue, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/EwayPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { FilterChips, IconTile } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { Dialog } from '../../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/components/m3/DataTable.tsx",
+          "syntax": "import DataTable from '../../components/m3/DataTable';"
+        },
+        {
+          "target": "apps/web/src/components/m3/DataTable.tsx",
+          "syntax": "import type { Column } from '../../components/m3/DataTable';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  ewayList, setEwayBill, ewayState, ewayValidDays, EWAY_THRESHOLD,\n  financialYear, fmtMoney, fmtDT, STATUS_LABEL,\n} from '../../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/LotsPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField, TextArea, SelectField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button, IconButton, Checkbox } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState, StatusPill } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { IconTile } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { Dialog, ConfirmDialog } from '../../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking, Lot } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { createLot, deleteLot, assignToLot, bookingsOfLot, routeOfLot, ungroupedParcels, pendingDestinations, queueMsg, fmtMoney, fmtDT, grossOf } from '../../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/MiscPages.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField, SelectField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { ConfirmDialog } from '../../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { db, fmtMoney, fmtDT, waFmt, markAllBizSeen, updateBusiness, resetDemo, openEscalations, resolveEscalation, replyWindow, prettyPhone, grossOf } from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/utils/receipt.ts",
+          "syntax": "import { printReceipt } from '../../utils/receipt';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import type { CustomRange, DatePreset } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/utils/image.ts",
+          "syntax": "import { downscaleImage } from '../../utils/image';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { SearchBar, FilterChips, DateFilter, dateWindow } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/data/messages.ts",
+          "syntax": "import { LANGS } from '../../data/messages';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { GST_MODES } from '../../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/NewBookingPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField, SelectField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button, SegmentedControl } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  addBooking, bookingsByPhone, normPhone, estimateEtaDays, suggestFreight,\n  fmtMoney, CITIES, EWAY_THRESHOLD, taxOn, gstRate, peekDocket, findByDocket, placeOfSupply,\n} from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Attachment, Booking } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { PaymentMode, ServiceType } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Journey.tsx",
+          "syntax": "import type { Step } from '../../components/m3/Journey';"
+        },
+        {
+          "target": "apps/web/src/utils/receipt.ts",
+          "syntax": "import { printReceipt } from '../../utils/receipt';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { AttachmentPicker } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Journey.tsx",
+          "syntax": "import { StepTrack } from '../../components/m3/Journey';"
+        }
+      ],
+      "apps/web/src/pages/business/PackagesPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField, TextArea, SelectField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button, Checkbox } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, StatusPill, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Journey.tsx",
+          "syntax": "import { Journey } from '../../components/m3/Journey';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { Dialog } from '../../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { updateStatus, verifyDeliveryOTP, confirmDelivered, assignToLot, queueMsg, activeDelayFor, recordPayment, resendDeliveryOTP, revealOTP, markFailedAttempt, markRTO, FAILURE_REASONS, OTP_MAX_ATTEMPTS, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/utils/receipt.ts",
+          "syntax": "import { printReceipt } from '../../utils/receipt';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { SearchBar, FilterChips, DateFilter, dateWindow } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking, ParcelStatus } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import type { CustomRange, DatePreset } from '../../components/m3/Controls';"
+        }
+      ],
+      "apps/web/src/pages/business/ReportsPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState, StatusPill } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Controls.tsx",
+          "syntax": "import { FilterChips, IconTile } from '../../components/m3/Controls';"
+        },
+        {
+          "target": "apps/web/src/components/m3/DataTable.tsx",
+          "syntax": "import DataTable from '../../components/m3/DataTable';"
+        },
+        {
+          "target": "apps/web/src/components/m3/DataTable.tsx",
+          "syntax": "import type { Column, DataRow } from '../../components/m3/DataTable';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  reportFor, financialYear, GST_MODES, grossOf, activeDelayFor,\n  fmtMoney, fmtDT, prettyPhone, STATUS_LABEL, STATE_OF_CITY,\n} from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking, CityTotal, ParcelStatus, RateTotal } from '../../data/types';"
+        }
+      ],
+      "apps/web/src/pages/business/RoutesPage.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import { TextField, SelectField } from '../../components/m3/Input';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button, Checkbox } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Dialog.tsx",
+          "syntax": "import { Dialog } from '../../components/m3/Dialog';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { useToast } from '../../components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  createRoute, postRouteEvent, attachToRoute, bookingsOfRoute, queueMsg,\n  fmtDT,\n} from '../../data/store';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { RouteEventKind } from '../../data/types';"
+        }
+      ],
+      "apps/web/src/test/app.test.tsx": [
+        {
+          "target": "apps/web/src/App.tsx",
+          "syntax": "import App from '../App';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import('../data/store')"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import('../data/store')"
+        }
+      ],
+      "apps/web/src/test/setup.ts": [
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { resetDemo } from '../data/store';"
+        }
+      ],
+      "apps/web/src/utils/receipt.ts": [
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import { findByDocket, db, fmtMoney, fmtDT, esc, grossOf } from '../data/store';"
+        }
+      ]
+    },
+    "routes": [
+      {
+        "file": "apps/web/src/App.tsx",
+        "declaration": "<Route path=\"/\" element={<Launcher />} />"
+      },
+      {
+        "file": "apps/web/src/App.tsx",
+        "declaration": "<Route path=\"/business/*\" element={<BusinessShell />} />"
+      },
+      {
+        "file": "apps/web/src/App.tsx",
+        "declaration": "<Route path=\"/customer\" element={<CustomerWhatsApp />} />"
+      },
+      {
+        "file": "apps/web/src/App.tsx",
+        "declaration": "<Route path=\"*\" element={<Navigate to=\"/\" replace />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route index element={<Dashboard />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"booking\" element={<NewBookingPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"packages\" element={<PackagesPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"lots\" element={<LotsPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"routes\" element={<RoutesPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"feed\" element={<AutomationFeedPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"receipts\" element={<ReceiptsPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"reports\" element={<ReportsPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"reports/:id\" element={<ReportsPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"eway\" element={<EwayPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"settings\" element={<SettingsPage />} />"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "declaration": "<Route path=\"*\" element={<Navigate to=\"/business\" replace />} />"
+      }
+    ],
+    "tests": [
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "store seeds itself before first render even with empty localStorage",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "heals corrupted persisted state",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "renders both entry cards",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "renders the three headline numbers, dispatch board and ledger",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "route %s renders",
+        "cases": "[\n    ['/business/booking', 'Booking summary'],\n    ['/business/packages', 'SBC104201'],\n    ['/business/lots', 'Mumbai Metro Batch'],\n    ['/business/routes', 'RT-102'],\n    ['/business/feed', 'Sent automatically'],\n    ['/business/receipts', 'Reprint'],\n    ['/business/settings', 'Demo data'],\n    ['/business/reports', 'Sales register'],\n    ['/business/reports/gst', 'GST summary'],\n    ['/business/eway', /Consignments over/],\n  ]"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "creates a booking; packages list updates live",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "advances status reactively inside open dialog; verifies delivery OTP",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "creates a lot via dialog",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "reports delay from UI; affected customers notified",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "depart event cascades parcel statuses + notifications",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "lists queued outbound messages",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "persona auto-selected, bot replies, proactive outbox lands in chat",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "splits CGST + SGST intra-state and charges IGST inter-state",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "e-way record stores Part-B vehicle and validity by distance",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lint-regressions.test.tsx",
+        "name": "can change between empty and populated series without changing hook order",
+        "cases": null
+      }
+    ],
+    "effects": [
+      {
+        "file": "apps/web/src/components/CommandPalette.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/m3/Controls.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/m3/Controls.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/m3/Controls.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/m3/Dialog.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/m3/Icon.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/components/m3/Snackbar.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/components/m3/Snackbar.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/context/AppContext.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/data/store.ts",
+        "kind": "localStorage.removeItem"
+      },
+      {
+        "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
+        "kind": "setInterval"
+      },
+      {
+        "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/pages/business/MiscPages.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/pages/business/ReportsPage.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/setup.ts",
+        "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/utils/receipt.ts",
+        "kind": "setTimeout"
+      }
+    ]
+  },
+  "groups": {
+    "demo": {
+      "disposition": "demo_only",
+      "owners": [
+        18,
+        75
+      ],
+      "rules": [
+        "docs/architecture/frontend-migration-contract.md"
+      ],
+      "current": "Global mutable browser database, seed/reset/load, local counters and persona selection.",
+      "target": "Fictional adapter only; production cannot import it or expose reset; separate storage and environment.",
+      "verification": "Production entry graph excludes demo mutations; reset has zero production I/O; no automatic legacy import.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "seam": {
+      "disposition": "replace",
+      "owners": [
+        13,
+        17,
+        18
+      ],
+      "rules": [
+        "docs/architecture/frontend-migration-contract.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "AppProvider subscribes to the complete mutable database and the shell exposes prototype screens.",
+      "target": "Domain-specific async interfaces, scope-keyed caches and separate production/demo composition; unavailable workflows stay unavailable.",
+      "verification": "Production graph has no demo initializer; logout/scope generation discards late responses and recovery cannot cross users.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "presentation": {
+      "disposition": "preserve",
+      "owners": [
+        18,
+        33,
+        34
+      ],
+      "rules": [
+        "docs/architecture/frontend-migration-contract.md"
+      ],
+      "current": "Money/phone/date labels, escaping and display constants are mixed with the store.",
+      "target": "Extract only browser-safe presentation helpers when a consumer migrates; preserve accessible layout and escaping; UTC instants use approved Kolkata display.",
+      "verification": "User-visible formatting/escaping and keyboard/print regressions; pure helpers cannot import mutable store.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "customers": {
+      "disposition": "replace",
+      "owners": [
+        19,
+        23,
+        33
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "Phone lookup scans all browser bookings; customer identities and shipment parties are conflated.",
+      "target": "Own-franchise customer query and explicit sender/recipient snapshots; phone/docket is a selector, never identity.",
+      "verification": "Own-franchise lookup permitted; sibling directory and unrelated organization denied; preserve optional repeat-fill without overwriting entered fields.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "booking": {
+      "disposition": "replace",
+      "owners": [
+        22,
+        23,
+        30,
+        33
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md",
+        "docs/architecture/idempotency-contract.md"
+      ],
+      "current": "One browser record combines Booking/Parcel and local docket allocation; synchronous save reports message sent.",
+      "target": "One Booking with one or more Parcels, globally allocated child dockets, atomic server facts and optional issued receipt retrieval; messaging outcome separate.",
+      "verification": "One booking/all children after timeout retry and reload; no partial commit; no automatic print; notification outage leaves saved booking intact.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "pricing": {
+      "disposition": "replace",
+      "owners": [
+        8,
+        20,
+        21,
+        33
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md"
+      ],
+      "current": "City heuristics, floating-point tax, default GST mode and unknown-city intra-state fallback.",
+      "target": "Server-approved rate/jurisdiction snapshots, paise and one final rounding adjustment; unresolved tax and unknown ETA stay explicit.",
+      "verification": "Unknown jurisdiction cannot silently produce a tax decision; preserve suggestion/variance UX; approved snapshot totals reconcile.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "parcels": {
+      "disposition": "replace",
+      "owners": [
+        23,
+        24,
+        25,
+        34
+      ],
+      "rules": [
+        "docs/architecture/parcel-lifecycle.md",
+        "docs/architecture/authorization-contract.md",
+        "docs/architecture/idempotency-contract.md"
+      ],
+      "current": "Arbitrary status changes, simple STATUS_FLOW and browser timeline.",
+      "target": "Typed authorized commands and current versions; canonical lifecycle, ownership/custody and safe projections.",
+      "verification": "No booked-to-dispatched shortcut; wrong actor/scope/stale revision denied; query/replay cannot reveal foreign data.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "proof": {
+      "disposition": "replace",
+      "owners": [
+        8,
+        42,
+        43
+      ],
+      "rules": [
+        "docs/architecture/parcel-lifecycle.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "Browser OTP generation/verification/reveal and unrestricted delivered confirmation.",
+      "target": "Deliveries performs atomic verify-and-complete for assigned agent; no public OTP/verifier/reveal; policy values remain #8/#42.",
+      "verification": "Wrong/expired/replayed proof and concurrent completion; no plaintext proof in DTO/cache/log; delivery does not settle payment.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "recovery": {
+      "disposition": "replace",
+      "owners": [
+        8,
+        24,
+        42,
+        66
+      ],
+      "rules": [
+        "docs/architecture/parcel-lifecycle.md"
+      ],
+      "current": "Three-attempt and 72-hour browser recovery assumptions.",
+      "target": "Two physical attempts maximum; two approved business dates for office collection; admin-approved RTO; immutable reversal history.",
+      "verification": "Fake-clock deadline boundaries, missing calendar blocked, no retry resets, no automatic RTO approval.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "lots": {
+      "disposition": "replace",
+      "owners": [
+        26,
+        27,
+        34
+      ],
+      "rules": [
+        "docs/architecture/authorization-contract.md",
+        "docs/architecture/domain-contract.md"
+      ],
+      "current": "Lot membership refers to bookings; deletion automatically clears memberships and route references.",
+      "target": "Parcel membership; preserve safe removal workflow under W04/W06; empty/unexecuted and no blocking history; archival details owned by #26/#27.",
+      "verification": "Authorized removal of eligible membership; denied non-admin destruction and active/referenced deletion; no lost parcel or route history.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "routes": {
+      "disposition": "replace",
+      "owners": [
+        27,
+        28,
+        34,
+        41
+      ],
+      "rules": [
+        "docs/architecture/parcel-lifecycle.md",
+        "docs/architecture/idempotency-contract.md"
+      ],
+      "current": "Union of direct/lot bookings deduplicated; title-derived state and repeated additive ETA effects.",
+      "target": "Typed events with frozen unique eligible Parcel set, bounded atomic ETA/state effects; notification fanout after commit.",
+      "verification": "Direct-plus-lot overlap affects once; repeated command changes ETA once; delivered/RTO excluded; reminder never shifts ETA.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "payments": {
+      "disposition": "replace",
+      "owners": [
+        8,
+        29,
+        33,
+        34,
+        63
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md",
+        "docs/architecture/idempotency-contract.md"
+      ],
+      "current": "Mutable paid/settled booleans and browser To-Pay summaries.",
+      "target": "Independent append-only payment facts and derived settlement in paise; no delivery-driven collection.",
+      "verification": "Concurrent/retried collection singular; original receipt/ledger facts retained; gross collectible totals reconcile.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "messaging": {
+      "disposition": "replace",
+      "owners": [
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        44
+      ],
+      "rules": [
+        "docs/architecture/idempotency-contract.md",
+        "docs/architecture/event-contract.md"
+      ],
+      "current": "Browser queueMsg and read/seen markers simulate outbound transport.",
+      "target": "Committed outbox, worker/provider outcomes, consent at send time and honest pending/accepted/delivered/uncertain states; no client send authority.",
+      "verification": "Outage after booking, replay fanout, revoked consent, duplicate callbacks; one logical intent does not claim exactly-once external delivery.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "assistant": {
+      "disposition": "replace",
+      "owners": [
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "rules": [
+        "docs/architecture/authorization-contract.md",
+        "docs/adr/0003-server-authority-and-tenant-enforcement.md"
+      ],
+      "current": "Phone persona, direct chat/consent mutations and deterministic bot replies from the global store.",
+      "target": "Verified customer context and scoped deterministic tools; demo persona remains fictional; language interpretation has no operational authority.",
+      "verification": "Foreign docket denied; consent checked; no invented ETA/price/confirmed pickup; escalation reflects actual acceptance.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "settings": {
+      "disposition": "replace",
+      "owners": [
+        17,
+        66
+      ],
+      "rules": [
+        "docs/architecture/authorization-contract.md",
+        "docs/architecture/domain-contract.md"
+      ],
+      "current": "One Business object accepts arbitrary patch and drives historical output.",
+      "target": "Scoped versioned settings with allowed admin commands; issued receipts/prices remain immutable.",
+      "verification": "Unauthorized changes denied; old receipt unchanged after branding/tax setting edit; cache purged on scope change.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "reports": {
+      "disposition": "replace",
+      "owners": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        67
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "Browser totals, full-row exports and inclusive/browser-local date boundaries.",
+      "target": "Scoped server queries and safe exports using Kolkata half-open ranges and ledger/snapshot reconciliation.",
+      "verification": "Filtered totals and CSV agree; formula-safe export; read_only export denial follows matrix; boundary and foreign-scope tests.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "eway": {
+      "disposition": "replace",
+      "owners": [
+        8,
+        32,
+        34,
+        67
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md"
+      ],
+      "current": "Browser threshold/distance timer presented as e-way validity.",
+      "target": "Externally issued record with provenance; estimates distinguished from official validity; law/coverage owned by #8/#32.",
+      "verification": "Preserve separate navigation and vehicle entry; no browser timer asserted as government validity; unknown policy blocked.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "receipts": {
+      "disposition": "replace",
+      "owners": [
+        30,
+        33
+      ],
+      "rules": [
+        "docs/architecture/domain-contract.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "Receipt reads mutable booking/business and recomputes ETA at print time.",
+      "target": "Preserve optional print/layout/escaping using an authorized immutable issued snapshot.",
+      "verification": "No automatic print; reprint content stable after settings/time changes; denied foreign receipt.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    },
+    "attachments": {
+      "disposition": "replace",
+      "owners": [
+        31,
+        33,
+        42,
+        72
+      ],
+      "rules": [
+        "docs/architecture/security-threat-model.md",
+        "docs/architecture/authorization-contract.md"
+      ],
+      "current": "Image helper and picker create inline browser data URLs.",
+      "target": "Private validated/quarantined storage with scoped attachment references and approved retention; input UX retained.",
+      "verification": "Foreign download denied; rejected upload cannot become usable attachment; logout drops object URLs and previews.",
+      "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
+    }
+  },
+  "exports": {
+    "DEFAULT_BUSINESS": "demo",
+    "getSnapshot": "demo",
+    "subscribe": "demo",
+    "db": "demo",
+    "save": "demo",
+    "uid": "demo",
+    "nextDocket": "demo",
+    "peekDocket": "demo",
+    "resetDemo": "demo",
+    "Store": "demo",
+    "load": "demo",
+    "CITIES": "presentation",
+    "STATUS_LABEL": "presentation",
+    "normPhone": "presentation",
+    "prettyPhone": "presentation",
+    "fmtMoney": "presentation",
+    "fmtDT": "presentation",
+    "esc": "presentation",
+    "waFmt": "presentation",
+    "GST_MODES": "pricing",
+    "STATE_OF_CITY": "pricing",
+    "stateOfCity": "pricing",
+    "placeOfSupply": "pricing",
+    "estimateEtaDays": "pricing",
+    "suggestFreight": "pricing",
+    "taxOn": "pricing",
+    "gstRate": "pricing",
+    "bookingsByPhone": "customers",
+    "allCustomers": "customers",
+    "findBooking": "booking",
+    "findByDocket": "booking",
+    "addBooking": "booking",
+    "STATUS_FLOW": "parcels",
+    "EXCEPTION_STATUSES": "parcels",
+    "FAILURE_REASONS": "parcels",
+    "updateStatus": "parcels",
+    "markFailedAttempt": "parcels",
+    "markRTO": "parcels",
+    "resendDeliveryOTP": "proof",
+    "OTP_MAX_ATTEMPTS": "proof",
+    "verifyDeliveryOTP": "proof",
+    "revealOTP": "proof",
+    "confirmDelivered": "proof",
+    "recordPayment": "payments",
+    "toPaySummary": "payments",
+    "grossOf": "payments",
+    "lotById": "lots",
+    "bookingsOfLot": "lots",
+    "createLot": "lots",
+    "ungroupedParcels": "lots",
+    "pendingDestinations": "lots",
+    "deleteLot": "lots",
+    "assignToLot": "lots",
+    "routeById": "routes",
+    "routeOfLot": "routes",
+    "bookingsOfRoute": "routes",
+    "activeDelayFor": "routes",
+    "createRoute": "routes",
+    "postRouteEvent": "routes",
+    "attachToRoute": "routes",
+    "resendDelayAlert": "messaging",
+    "queueMsg": "messaging",
+    "reachSummary": "messaging",
+    "markAllBizSeen": "messaging",
+    "replyWindow": "messaging",
+    "logBotTurn": "assistant",
+    "openEscalations": "assistant",
+    "resolveEscalation": "assistant",
+    "updateBusiness": "settings",
+    "reportFor": "reports",
+    "financialYear": "reports",
+    "EWAY_THRESHOLD": "eway",
+    "ewayList": "eway",
+    "EWAY_KM_PER_DAY": "eway",
+    "ewayValidDays": "eway",
+    "setEwayBill": "eway",
+    "ewayState": "eway",
+    "RTO_WINDOW_HOURS": "recovery",
+    "MAX_ATTEMPTS": "recovery",
+    "recoveryQueue": "recovery"
+  },
+  "callers": {
+    "apps/web/src/App.tsx": [
+      "seam"
+    ],
+    "apps/web/src/components/CommandPalette.tsx": [
+      "presentation"
+    ],
+    "apps/web/src/components/m3/Journey.tsx": [
+      "presentation"
+    ],
+    "apps/web/src/context/AppContext.tsx": [
+      "seam"
+    ],
+    "apps/web/src/data/bot.ts": [
+      "assistant",
+      "messaging",
+      "demo"
+    ],
+    "apps/web/src/data/store.ts": [
+      "demo",
+      "seam",
+      "presentation",
+      "customers",
+      "booking",
+      "pricing",
+      "parcels",
+      "proof",
+      "recovery",
+      "lots",
+      "routes",
+      "payments",
+      "messaging",
+      "assistant",
+      "settings",
+      "reports",
+      "eway",
+      "receipts",
+      "attachments"
+    ],
+    "apps/web/src/main.tsx": [
+      "seam"
+    ],
+    "apps/web/src/pages/CustomerWhatsApp.tsx": [
+      "assistant",
+      "messaging",
+      "demo"
+    ],
+    "apps/web/src/pages/Launcher.tsx": [
+      "demo"
+    ],
+    "apps/web/src/pages/business/BusinessShell.tsx": [
+      "seam"
+    ],
+    "apps/web/src/pages/business/Dashboard.tsx": [
+      "reports",
+      "routes",
+      "payments",
+      "recovery"
+    ],
+    "apps/web/src/pages/business/EwayPage.tsx": [
+      "eway"
+    ],
+    "apps/web/src/pages/business/LotsPage.tsx": [
+      "lots",
+      "messaging"
+    ],
+    "apps/web/src/pages/business/MiscPages.tsx": [
+      "settings",
+      "receipts",
+      "messaging",
+      "assistant"
+    ],
+    "apps/web/src/pages/business/NewBookingPage.tsx": [
+      "booking",
+      "customers",
+      "pricing",
+      "attachments",
+      "receipts"
+    ],
+    "apps/web/src/pages/business/PackagesPage.tsx": [
+      "parcels",
+      "proof",
+      "payments",
+      "lots",
+      "recovery"
+    ],
+    "apps/web/src/pages/business/ReportsPage.tsx": [
+      "reports"
+    ],
+    "apps/web/src/pages/business/RoutesPage.tsx": [
+      "routes",
+      "messaging"
+    ],
+    "apps/web/src/test/app.test.tsx": [
+      "demo",
+      "booking",
+      "proof",
+      "routes",
+      "reports",
+      "eway"
+    ],
+    "apps/web/src/test/setup.ts": [
+      "demo",
+      "booking",
+      "proof",
+      "routes",
+      "reports",
+      "eway"
+    ],
+    "apps/web/src/utils/receipt.ts": [
+      "receipts"
+    ]
+  },
+  "regressions": [
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "store seeds itself before first render even with empty localStorage",
+      "cases": null,
+      "group": "demo",
+      "disposition": "demo_only",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "heals corrupted persisted state",
+      "cases": null,
+      "group": "demo",
+      "disposition": "demo_only",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "renders both entry cards",
+      "cases": null,
+      "group": "demo",
+      "disposition": "demo_only",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "renders the three headline numbers, dispatch board and ledger",
+      "cases": null,
+      "group": "reports",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "route %s renders",
+      "cases": "[\n    ['/business/booking', 'Booking summary'],\n    ['/business/packages', 'SBC104201'],\n    ['/business/lots', 'Mumbai Metro Batch'],\n    ['/business/routes', 'RT-102'],\n    ['/business/feed', 'Sent automatically'],\n    ['/business/receipts', 'Reprint'],\n    ['/business/settings', 'Demo data'],\n    ['/business/reports', 'Sales register'],\n    ['/business/reports/gst', 'GST summary'],\n    ['/business/eway', /Consignments over/],\n  ]",
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "creates a booking; packages list updates live",
+      "cases": null,
+      "group": "booking",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "advances status reactively inside open dialog; verifies delivery OTP",
+      "cases": null,
+      "group": "proof",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "creates a lot via dialog",
+      "cases": null,
+      "group": "lots",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "reports delay from UI; affected customers notified",
+      "cases": null,
+      "group": "routes",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "depart event cascades parcel statuses + notifications",
+      "cases": null,
+      "group": "routes",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "lists queued outbound messages",
+      "cases": null,
+      "group": "messaging",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "persona auto-selected, bot replies, proactive outbox lands in chat",
+      "cases": null,
+      "group": "assistant",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "splits CGST + SGST intra-state and charges IGST inter-state",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "e-way record stores Part-B vehicle and validity by distance",
+      "cases": null,
+      "group": "eway",
+      "disposition": "replace",
+      "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/lint-regressions.test.tsx",
+      "name": "can change between empty and populated series without changing hook order",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    }
+  ],
+  "safety": {
+    "no_production_local_writes": true,
+    "no_automatic_import": true,
+    "demo_reset_unavailable": true,
+    "late_scope_response_discarded": true,
+    "uncertain_retry_same_intent": true,
+    "no_otp_persistence": true
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "group": "booking",
+      "given": "Fictional authorized A1 operator and one customer with two parcel inputs",
+      "when": "Submit booking, lose response, retry same key/body, reload",
+      "then": "One Booking and two child dockets; server result recovered, optional print only; never a local booking"
+    },
+    {
+      "id": "S02",
+      "group": "customers",
+      "given": "A1 customer shares phone text with A2 customer",
+      "when": "A1 operator requests repeat lookup",
+      "then": "Only A1 relationship suggested; B1 and sibling directory requests denied; phone is not identity"
+    },
+    {
+      "id": "S03",
+      "group": "receipts",
+      "given": "Issued receipt and explicit print choice",
+      "when": "Advance clock and change current settings, then reprint",
+      "then": "Original issued facts retained; no auto-print on create or retry; no foreign receipt access"
+    },
+    {
+      "id": "S04",
+      "group": "lots",
+      "given": "Empty/unexecuted lot with no blocking references and separate active lot",
+      "when": "Authorized admin removes eligible lot; operator attempts destruction of active lot",
+      "then": "Eligible removal succeeds safely; active/non-admin destruction denied; W04 membership removal distinct from W06"
+    },
+    {
+      "id": "S05",
+      "group": "routes",
+      "given": "Parcel P appears directly and through a lot; Q is delivered and R is RTO; P ETA at fake instant t",
+      "when": "Submit one four-hour delay twice with same command identity",
+      "then": "P ETA t+4h once; Q/R unchanged; one logical notification intent; new reminder does not shift ETA"
+    },
+    {
+      "id": "S06",
+      "group": "booking",
+      "given": "Production API unreachable and booking form populated",
+      "when": "Submit or reload with uncertain prior submission",
+      "then": "No local success, seeding or fallback; same intent reconciled; unresolved result blocks new automatic command"
+    },
+    {
+      "id": "S07",
+      "group": "proof",
+      "given": "Assigned delivery agent with active fictional challenge reference",
+      "when": "Submit proof and concurrently replay, without storing plaintext fixture proof",
+      "then": "One server completion; no OTP/verifier in public DTO/cache/log and no payment side effect"
+    },
+    {
+      "id": "S08",
+      "group": "pricing",
+      "given": "Unknown destination jurisdiction and incomplete approved policy",
+      "when": "Request final quote",
+      "then": "Explicit validation/policy blocker, never silent intra-state/default freight or invented ETA"
+    },
+    {
+      "id": "S09",
+      "group": "demo",
+      "given": "Production dependency graph and separately isolated demo",
+      "when": "Attempt reset or legacy browser import in production",
+      "then": "No production reset capability or automatic import; demo reset only changes fictional state"
+    },
+    {
+      "id": "S10",
+      "group": "customers",
+      "given": "Request for A1 outstanding when actor switches to A2 or logs out",
+      "when": "Old response arrives after cache purge",
+      "then": "Old response discarded using scope generation; old lists, receipt previews and object URLs stay cleared"
+    },
+    {
+      "id": "S11",
+      "group": "messaging",
+      "given": "Booking committed with outbox fact; provider unavailable or acceptance uncertain",
+      "when": "Process notification and retry/reconcile",
+      "then": "Booking remains saved; message pending/failed/uncertain shown truthfully; no blind uncertain resend"
+    },
+    {
+      "id": "S12",
+      "group": "reports",
+      "given": "Org A administrator, franchise staff, read_only, and unrelated B1; fake Kolkata boundary instants",
+      "when": "Read permitted projections and request exports",
+      "then": "Only explicitly allowed own-org/own-franchise projections; export roles enforced; half-open totals reconcile without mutations"
+    }
+  ]
+}
