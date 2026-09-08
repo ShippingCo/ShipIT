@@ -22,6 +22,7 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 | [0007](0007-api-event-idempotency-contracts.md) | API v1/errors/cursors, scoped canonical idempotency, immutable event catalog, compatibility, ordering and replay contracts; refines ADR 0004 |
 | [0008](0008-environment-secrets-and-security-baseline.md) | Isolated environments, public/server/secret configuration classes, rotation, prohibited logs and threat-to-test ownership gates |
 | [0009](0009-money-tax-proof-and-privacy-policy.md) | Money/tax snapshots, challenge and exceptional proof, field retention and e-way provenance; narrow W37–W40 amendment |
+| [0010](0010-organization-franchise-tenancy.md) | Organization/Franchise persistence, active/disabled lifecycle, explicit W41 franchise administration, ownership/privilege/concurrency defenses; submitted through Issue #12 |
 
 [Issue #8 owning contract](../architecture/money-tax-proof-privacy-contract.md).
 

@@ -2,7 +2,7 @@
 
 [Architecture index](README.md) · [Domain and custody](domain-contract.md) · [State commands](parcel-lifecycle.md) · [Synthetic assertions](domain-scenarios.md)
 
-Issue #3 / v1, amended by [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) for Issue #8 W37–W40. Server-side authorization is authoritative; frontend filters are not
+Issue #3 / v1, amended by [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) for Issue #8 W37–W40 and [ADR 0010](../adr/0010-organization-franchise-tenancy.md) for Issue #12 W41. Server-side authorization is authoritative; frontend filters are not
 security. This is a closed permission contract, not production RBAC middleware. No role
 inherits another role. All seven columns apply independently. Multiple roles require
 explicit memberships; org_admin is not a superuser. Future additions require a reviewed
@@ -163,6 +163,7 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W38 | Delivery challenge resend/replacement request under proof policy | - | - | - | - | A | - | - |
 | W39 | Exceptional delivery proof request with evidence | - | - | - | - | A | - | - |
 | W40 | Independently approve exceptional proof; current responsible custody required | - | F,C | - | - | - | - | - |
+| W41 | Franchise lifecycle disable/reactivate with explicit target grant | F | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -190,7 +191,7 @@ W28 cannot cancel/dispatch indirectly; service tools must authorize the underlyi
 For **every R01–R30 resource**, action classes are: list; detail/read; export; create;
 mutate/edit; cancel/destructive; state transition; operational job; custody transfer;
 configuration. Reads are exhaustively R01–R30, exports E01–E04, and permitted staff commands
-W01–W40. **Every other resource/action/role combination is explicitly denied.** Thus no
+W01–W41. **Every other resource/action/role combination is explicitly denied.** Thus no
 missing mutation column implies a future permission. This includes private reports (read
 sources, never mutate them), issued receipts (no direct create/edit; owning transaction),
 audit/outbox/proof internals (owner-service append only), and organization-wide config
@@ -202,9 +203,10 @@ organization access. Likewise producer-owned internal audit/outbox/receipt/chall
 writes and verified callbacks use narrowly declared service authority, not a fictitious
 staff role. Background workers process trusted source scopes and cannot promote a denied
 staff intent. #4/#16/#35 define those internal interfaces; no new job infrastructure here.
-Organization creation/destruction, privacy deletion/merge (#19/#72), and organization
-administration (#14/#17/#66) require their own reviewed command
-policies. They are denied by default now, not an accidental broad grant or claim of implementation.
+Issue #12 supplies the internal Organization/initial-Franchise bootstrap and bounded
+Organization administration described below. Ordinary member Organization creation,
+destruction or administration, and privacy deletion/merge (#19/#72), still require their
+own reviewed command policies. Internal capabilities are not additional staff grants.
 
 ## Scope and error decisions
 
@@ -237,3 +239,57 @@ approver identity, evidence and unchanged assignment/attempt versions; an owning
 without current responsibility cannot approve remote custody. W11 still owns agent completion
 under T06/T10. None of these actions settles payment. W34 remains denied: #72 must review
 privacy deletion/hold actions before implementing them. Safe reads never expose secret material.
+
+## Issue 12 tenancy administration amendment
+
+W41 is the exact `franchise.lifecycle.manage` action. Its F cell means an explicitly
+approved target franchise within the actor's own organization, resolved by the trusted
+authorization seam. An org_admin needs a current, explicit W41 grant for that franchise;
+the O read scope or the role name alone does not grant lifecycle administration. A
+franchise_admin is limited to their own approved F. Neither cell grants sibling access
+to ordinary franchise staff or any access to another organization. Grant storage,
+membership revalidation and revocation remain #14; Issue #12 tests inject trusted
+synthetic approvals and do not implement those mechanisms.
+
+The two permitted transitions are `active` → `disabled` and `disabled` → `active`.
+Each requires the current `expected_version`, the exact action grant and respectively
+`administrative_disable` or `administrative_reactivate` as a controlled reason code.
+The audit seam receives actor/reference, trusted ownership, old/new state,
+expected/committed version, reason, UTC time and correlation reference as evidence.
+No free-form request body, business name or personal information belongs in the fact.
+A same-state request with a current, accepted `expected_version` is a no-op: it changes
+no version or timestamp and produces no successful lifecycle-change fact. A stale
+accepted version conflicts even for a same-state request. The Issue #12 storage ceiling
+and accepted version range are documented in the domain/API contracts. Reactivation restores lifecycle eligibility only; it
+does not restore revoked grants, create memberships or authorize operational commands.
+
+The org_admin grant lets the organization explicitly delegate stopping/recovering a
+location without granting operations. The franchise_admin grant lets a standalone
+shop stop/recover its own location. W41 grants no booking operations, customer or
+payment access, exports, membership escalation, organization configuration, franchise
+creation, adoption/reparenting or cross-organization access. W34 and W35 remain entirely
+denied. W29 remains franchise_admin F only: Issue #12 implements an explicit
+`franchise.profile.update` display-name command with `expected_version` and the safe
+audit reason `profile_correction`; both its target Franchise and parent Organization
+must be active. W29 cannot mutate lifecycle, ownership or the stable franchise code,
+and it does not activate downstream settings configuration. W41 recovery can operate
+while either root is disabled; reactivating a Franchise under a disabled Organization
+still leaves operational writes blocked until approved internal Organization recovery.
+
+The read seam actions are `organization.profile.read` (R01),
+`franchise.profile.read` and `franchise.profile.list` (R02). Their existing role/scope
+and projection restrictions remain mandatory, including finance-minimum and assigned
+location limits. Approved list scope is server-owned and enters the SQL predicate;
+client `organization_id`, franchise sets and role claims cannot widen it. Disabled
+roots remain readable under current approved scope, with the same safe DTO projection.
+
+Organization creation, atomic Organization + initial Franchise bootstrap, additional
+Franchise creation, and bounded Organization profile/lifecycle administration are
+internal domain capabilities for future coordinators. They require explicitly injected
+service authority with an actor reference, never a staff role or browser claim. They
+create no identity/membership and expose no generic public onboarding. W35 grants none
+of these. Normal production HTTP composition registers no private tenancy routes before
+#13/#14; #17 owns authenticated onboarding and its idempotent membership transaction.
+The Issue #12 audit seam is a post-commit notification, which can fail after the mutation
+commits or be lost on process crash. It supplies no durable delivery/retry guarantee.
+Durable transactional audit persistence (#16) is required before private route activation.

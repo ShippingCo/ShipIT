@@ -288,3 +288,29 @@ gate remain intact. No business endpoint, auth or tenant authorization is claime
 
 The [Issue #11 verification](issue-11-verification.md) maps each acceptance criterion.
 Alpha-1/Alpha-2/Beta-1 fixtures stay available to #12/#13/#14 and later domain tests.
+
+## Issue #12 tenancy activation
+
+The canonical testkit Organization Alpha / Alpha-1 / Alpha-2 and Organization Beta /
+Beta-1 now seed real tenancy roots without changing their semantic fixture types.
+`packages/db/test/integration/tenancy-structure.test.ts` proves the actual parent FK,
+scoped identifier checks, composite ownership candidate key, immutable root ownership,
+runtime privileges and index shape. Disposable child tables exist only in a test schema;
+no downstream production table is introduced. Migration tests cover fresh install,
+pre-tenancy upgrade, preserved state and repeat no-op using the real migration files.
+
+`apps/api/test/database/tenancy.test.ts` exercises the real service through trusted
+synthetic approvals and test-only Fastify injection. Cases cover own/sibling/foreign/
+unknown/disabled scope, permitted keyset lists and page metadata, duplicate/version
+races, transaction rollback, outage, persistence across server/pool reconstruction,
+safe audit facts and operational-write/disable ordering. Races use real separate
+connections and observe PostgreSQL lock waits before releasing the blocking transaction.
+`test/integration/tenancy.test.ts` covers fail-closed route exposure, strict validation,
+scope forgery, controlled errors, capability refusal and explicit safe DTO projection.
+
+All DB assertions remain required under `pnpm test:db` / `pnpm db:local test:db` and
+the PostgreSQL CI/final gates. Service-free `pnpm test:api` remains part of normal tests;
+`pnpm test:web` remains independently runnable with backend variables removed.
+[Issue #12 verification](issue-12-verification.md) records final commands and results.
+These tests do not claim real login, membership/RBAC, #15's product-wide context,
+durable #16 audit or future business-record enforcement.

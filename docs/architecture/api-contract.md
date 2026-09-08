@@ -66,6 +66,9 @@ minimized server evidence. Never echo a supplied key or invalid value.
 | 404 | RESOURCE_NOT_FOUND | Identical safe message/shape for unknown or foreign private resources/nested IDs; never name the foreign tenant |
 | 408 | REQUEST_TIMEOUT | HTTP transport request deadline exceeded; reconnect and retain command identity |
 | 409 | VERSION_CONFLICT | Authorized new command has stale expected revision; query current truth before a new deliberate command |
+| 409 | FRANCHISE_CODE_CONFLICT | Authorized internal tenant creation conflicts with an existing code in the approved Organization; choose another canonical code |
+| 409 | FRANCHISE_DISABLED | The authorized target Franchise is disabled; new operational writes are unavailable until an approved lifecycle recovery |
+| 409 | ORGANIZATION_DISABLED | The authorized target Organization is disabled; new operational writes are unavailable until approved internal recovery |
 | 409 | PARCEL_STATE_CONFLICT | Authorized command conflicts with current lifecycle/custody/attempt state |
 | 409 | IDEMPOTENCY_CONFLICT | Same scoped key has different canonical intent; never return original result or fingerprint |
 | 409 | IDEMPOTENCY_IN_PROGRESS | Same intent is still unresolved; retry same key/body, never execute concurrently |
@@ -155,6 +158,54 @@ After a lost response, retain and retry the **same key and request**, including 
 version. Check replay before reapplying state/precondition guards; otherwise a successful
 first command would incorrectly conflict with its own new version. See [timeout and
 expiry reconciliation](idempotency-contract.md) and [tenant scenarios](api-event-scenarios.md).
+
+## Tenancy service boundary — Issue 12
+
+[ADR 0010](../adr/0010-organization-franchise-tenancy.md) adds only the three tenant
+conflict codes above. Organization/Franchise profile results use explicit allowlisted
+DTO mapping, never raw DB rows. UUIDs remain opaque; lifecycle is exactly `active` or
+`disabled`. Stored versions use PostgreSQL `integer` in 1..2147483647, within the general
+safe-integer contract; these commands accept `expected_version` in 1..2147483646 so the
+next revision cannot overflow. At the storage ceiling, further mutation/no-op requests
+fail `VALIDATION_FAILED` pending a reviewed storage widening. Profile display names
+are trimmed strings of 1–120 Unicode code points without ASCII controls. The stable Franchise code must already match
+ASCII `[A-Z][A-Z0-9_]{0,31}`: no casing, whitespace or Unicode normalization is performed.
+These validation rules apply consistently at the service and database boundary.
+
+Internal commands accept only their declared fields. Profile updates require
+`display_name` and `expected_version`; lifecycle commands require the explicit target
+state, `expected_version`, and its controlled reason. A code, `organization_id`, role,
+identity, timestamps or arbitrary lifecycle in a profile command is not mass assignable.
+Unknown fields and invalid scalar/version/reason/pagination input are controlled
+`VALIDATION_FAILED`; successful syntax parsing cannot make an input authoritative.
+Visibility/action scope is resolved before disclosing resource-dependent version,
+duplicate or disabled-state conflicts. An unknown and a foreign private resource have
+the same `RESOURCE_NOT_FOUND` response. Profile updates require an active target and,
+for a Franchise, active parent. Explicit lifecycle recovery remains available while
+disabled under its own approved action. Database constraint names, SQL and supplied
+values never enter conflict messages. Database dependency failures remain controlled
+`TEMPORARILY_UNAVAILABLE`; a failed/uncertain response is not proof that no commit occurred.
+The audit adapter is notified after commit and may fail after successful mutation or
+lose notification on a crash. Such failure also returns controlled 503; no automatic
+retry, durable fact delivery or persisted command replay is promised. #16's durable
+transactional audit integration is required before production route activation.
+
+The authorization seam is internal: R01 `organization.profile.read`, R02
+`franchise.profile.read` / `franchise.profile.list`, W29 `franchise.profile.update`, and
+W41 `franchise.lifecycle.manage`. Client body/query/header scope or role claims cannot
+produce an approval. Normal `buildServer()` production composition registers no private
+tenant detail/list/mutation routes before #13/#14; there is no unauthenticated tenant
+directory or bootstrap endpoint. Test-only trusted injection does not establish live
+authentication or RBAC.
+
+Permitted-franchise lists implement an internal bounded keyset over
+`created_at ASC, id ASC`, default 50 / maximum 100. SQL restricts the trusted Organization
+and permitted Franchise set before keyset boundary, `limit + 1` and `has_more`; disabled
+roots retain authorized historical visibility. The internal continuation boundary is
+not a public cursor or credential. No public wire-list route is activated while cursor
+integrity/query/scope encoding remains with #9/#23. No durable request replay is claimed;
+database uniqueness, optimistic versions and transactions provide the current service
+reliability boundary, and #17 owns authenticated onboarding replay and atomic membership.
 
 
 ## Implemented framework boundary — Issue #11

@@ -58,11 +58,11 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
   } };
 }
 
-await test('fresh infrastructure migrations persist a ledger, repeat as no-op and create no domain tables', { timeout: 20000 }, async (t) => {
+await test('fresh migrations persist a ledger, repeat as no-op and create only tenancy roots', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 1 });
+  assert.deepEqual(await database.migrate(), { applied: 2 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 1);
+  assert.equal(initial.length, 2);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -71,7 +71,25 @@ await test('fresh infrastructure migrations persist a ledger, repeat as no-op an
   const tables = await owner.query<{ schema: string; name: string }>(
     `SELECT schemaname AS schema, tablename AS name FROM pg_tables
      WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename`);
-  assert.deepEqual(tables.rows, [{ schema: 'shipit_migrations', name: 'pgmigrations' }]);
+  assert.deepEqual(tables.rows, [{ schema: 'shipit', name: 'franchises' },
+    { schema: 'shipit', name: 'organizations' }, { schema: 'shipit_migrations', name: 'pgmigrations' }]);
+});
+
+await test('released Issue 10 infrastructure upgrades to tenancy and repeated migration preserves roots', { timeout: 20000 }, async (t) => {
+  const database = await provisionDatabase(t);
+  assert.deepEqual(await database.migrate({ count: 1 }), { applied: 1 });
+  assert.deepEqual(await migrationNames(database), ['1788868800000-infrastructure-schema']);
+  const owner = database.ownerPool();
+  assert.equal((await owner.query<{ relation: string | null }>(
+    "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
+  assert.deepEqual(await database.migrate(), { applied: 1 });
+  await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
+    ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
+  assert.deepEqual(await database.migrate(), { applied: 0 });
+  assert.equal((await owner.query<{ count: string }>('SELECT count(*) FROM shipit.organizations')).rows[0]?.count, '1');
+  assert.deepEqual(await migrationNames(database), [
+    '1788868800000-infrastructure-schema', '1788872400000-organization-franchise-tenancy',
+  ]);
 });
 
 await test('prior migration snapshot upgrades forward and preserves committed fixture state', { timeout: 20000 }, async (t) => {
@@ -160,5 +178,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 1 });
+  assert.deepEqual(await database.migrate(), { applied: 2 });
 });

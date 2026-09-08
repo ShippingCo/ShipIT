@@ -129,5 +129,61 @@ It adds no production fixture endpoint. Frontend tests stay independent of DB/AP
 
 See [dependency review](../../docs/architecture/issue-11-dependency-review.md) and
 [acceptance evidence](../../docs/architecture/issue-11-verification.md). Business persistence,
-Alpha/Beta sibling authorization, sessions, domain SQL and memberships remain #12/#13/#14
-and later owners. Canonical `@shippingco/testkit` fixtures remain development-only.
+sessions and memberships remain #13/#14 and later owners.
+Canonical `@shippingco/testkit` fixtures remain development-only.
+
+## Issue #12 tenancy service boundary
+
+`src/modules/tenancy/` owns organization/franchise commands, parameterized repository
+SQL, explicit domain-to-DTO mapping and the trusted authorization/audit ports. The
+[tenancy ADR](../../docs/adr/0010-organization-franchise-tenancy.md) and
+[verification](../../docs/architecture/issue-12-verification.md) define scope and evidence.
+No private tenancy routes are registered in `buildServer`; requests to `/api/v1/organizations`
+or `/api/v1/franchises`, including mutations, return the normal safe 404. Test-only routes
+under `test/tenancy-support.ts` exercise the real service via Fastify injection without
+opening a port. They are never imported into runtime composition.
+
+`createTenancyService({ database, authorizer, audit })` receives a trusted server adapter
+whose `authorize(action)` supplies the actor, exact action, organization and explicit
+permitted franchise IDs. It receives no request headers, bodies or tenant selectors.
+The service snapshots approvals; both detail and SQL list queries enforce organization
+ownership. #13/#14 must implement current identity/membership, projections and revocation.
+`denyTenancyAuthorization` is an available fail-closed adapter; there is no temporary login.
+W29 grants franchise profile correction only; W41 grants explicit franchise lifecycle
+disable/reactivate. Organization bootstrap/profile/lifecycle and franchise creation
+require internal service authority, which is not a staff role.
+
+Bootstrap atomically creates one Organization and its first Franchise. IDs use Node's
+`crypto.randomUUID()`. The only profile command field is `display_name` plus
+`expected_version`; strict commands reject ownership, code, IDs, timestamps, roles,
+unknown properties and generic lifecycle patches. Codes must already match
+`[A-Z][A-Z0-9_]{0,31}`; no case/Unicode/punctuation normalization occurs. Duplicate
+codes within an organization return `FRANCHISE_CODE_CONFLICT`; unrelated organizations
+may share codes. Lifecycles are `active`/`disabled`, with reasons
+`administrative_disable`/`administrative_reactivate`. Versions reject concurrent stale
+updates. Safe DTOs explicitly allowlist identity/profile/lifecycle/version/UTC fields.
+
+The internal list takes `{limit?, after?: {created_at, id}}`, default 50/max 100.
+Ordering is `(created_at, id)` ascending; SQL constrains organization and permitted IDs
+before fetching limit+1. `page.next_boundary` is an internal keyset value, not the
+future public opaque `next_cursor`. Boundaries must match a currently permitted row.
+No global tenant list, global count, deletion or reparent operation exists.
+
+Future operational services must call
+`lockActiveFranchiseForOperationalWrite(tx, {organizationId, franchiseId})` with trusted
+scope, then write using **that same transaction**. `tx` must be the live capability from
+`withTransaction`; runtime checking rejects ordinary pools and expired transactions.
+`tenancyTransaction` additionally preserves known tenancy errors after confirmed rollback.
+The guard locks Organization then Franchise `FOR SHARE`; lifecycle administration takes
+the corresponding exclusive row lock. Locks survive until commit/rollback. Disable
+linearizes at commit, after earlier guarded writers finish; newly serialized guards
+then fail. Authorized historical reads still work. Organization disable also gates every
+child without rewriting child lifecycles; recovery does not reinstate memberships.
+
+The audit port receives only safe IDs, action, lifecycle before/after, expected/committed
+versions, controlled reason and UTC time. It runs after confirmed commit, so failures,
+stale versions and rollbacks cannot emit false successful facts. **This is not durable
+audit**: a crash can lose notification, and an audit adapter failure returns a controlled
+503 after the mutation has committed. Do not automatically retry or claim replay
+persistence. #16 must integrate durable transactional audit before private production
+routes activate; #17 owns authenticated onboarding and its replay guarantee.
