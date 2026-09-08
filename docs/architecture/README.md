@@ -28,6 +28,7 @@ is implemented by this issue.
 11. [API v1/error/pagination](api-contract.md), [internal event catalog/ordering](event-contract.md) and [idempotency/timeout/expiry](idempotency-contract.md).
 12. [Issue #4 tabletop scenarios](api-event-scenarios.md) and [acceptance/validation evidence](api-event-verification.md).
 13. [Configuration/environment contract](configuration-contract.md), [security threat model](security-threat-model.md) and [Issue #6 verification](security-verification.md).
+14. [Issue #7 frontend migration contract](frontend-migration-contract.md), [complete behavior and regression inventory](prototype-migration-inventory.md), and [verification](prototype-migration-verification.md).
 
 ## Existing evidence and precedence
 

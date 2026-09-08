@@ -2,6 +2,11 @@
 
 **Prototype v0 — completed before production milestones.** Preserve useful UX and tested behavior; replace infrastructure progressively. This is a migration map, not authorization to rebuild the frontend.
 
+Issue #7 supplies the [complete export/caller and regression inventory](architecture/prototype-migration-inventory.md),
+[frontend migration/failure contract](architecture/frontend-migration-contract.md), and
+[acceptance evidence](architecture/prototype-migration-verification.md). These refine this
+overview under the existing ADRs; actual data adapters remain Issue #18.
+
 | Existing evidence | Production owner / staged destination | Preserve or intentionally change |
 | --- | --- | --- |
 | `apps/web/src/data/types.ts` | M0 canonical model; M1 ownership; M2 domain tables | Resolve Booking/Parcel cardinality; keep public DTOs separate from secret/server records. |
