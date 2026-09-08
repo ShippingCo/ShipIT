@@ -113,6 +113,8 @@ try {
     run('test-rejection', ['test'], /AssertionError: expected 1 to be 2/));
   withFile('packages/testkit/src/quality-probe.test.ts', 'import assert from "node:assert/strict"; import test from "node:test"; await test("testkit gate intentional failure", () => { assert.fail("TESTKIT_GATE_SENTINEL"); });\n', () =>
     run('testkit-rejection', ['test'], /TESTKIT_GATE_SENTINEL/));
+  withFile('apps/api/test/integration/quality-probe.test.ts', 'import {it,expect} from "vitest"; it("API gate intentional failure", () => { expect("API_GATE_SENTINEL").toBe("rejected"); });\n', () =>
+    run('api-test-rejection', ['test:api'], /API_GATE_SENTINEL/));
   run('database-missing-config-rejection', ['test:db'], /DB_TEST_CONFIG_INVALID/, {
     NODE_ENV: 'test', TEST_DATABASE_URL: undefined, TEST_DATABASE_IDENTITY: undefined,
   });

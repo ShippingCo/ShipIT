@@ -4,6 +4,7 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
 
     /*
       Unlike the web app this is new code with nothing to migrate, so it runs fully
@@ -19,5 +20,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "test", "vitest.config.ts"]
 }

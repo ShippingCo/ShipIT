@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "description": "ShippingCo — customer connection layer for Indian SMB couriers (WhatsApp automation)",
+  "description": "ShippingCo \u2014 customer connection layer for Indian SMB couriers (WhatsApp automation)",
   "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": "22.23.2",
@@ -11,9 +11,9 @@
   },
   "scripts": {
     "dev": "pnpm --filter @shippingco/web dev",
-    "build": "pnpm --filter @shippingco/web build",
+    "build": "pnpm --filter @shippingco/api build && pnpm --filter @shippingco/web build",
     "preview": "pnpm --filter @shippingco/web preview",
-    "test": "pnpm test:unit && pnpm test:web",
+    "test": "pnpm test:unit && pnpm test:api && pnpm test:web",
     "test:unit": "pnpm --filter @shippingco/testkit test && pnpm --filter @shippingco/db test:unit",
     "test:web": "pnpm --filter @shippingco/web test",
     "test:db": "node scripts/test-database.mjs",
@@ -26,7 +26,8 @@
     "verify:gates": "node scripts/verify-gates.mjs",
     "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm test:db && pnpm build",
     "db:local": "node scripts/with-test-postgres.mjs",
-    "db:migrate": "pnpm --filter @shippingco/db migrate"
+    "db:migrate": "pnpm --filter @shippingco/db migrate",
+    "test:api": "pnpm --filter @shippingco/api test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

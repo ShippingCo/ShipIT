@@ -139,7 +139,10 @@ async function main() {
     const registry = join(temporary, 'resources.jsonl');
     await writeFile(registry, '', { mode: 0o600 });
     const result = await executeDatabaseTests(files, registry, { signal: controller.signal });
-    console.log(`PostgreSQL integration tests: ${result.passed} passed, 0 failed/skipped/cancelled/todo.`);
+    const apiFolder = join(root, 'apps/api/test/database');
+    const apiFiles = (await readdir(apiFolder)).filter(name => name.endsWith('.test.ts')).sort().map(name => join(apiFolder, name));
+    const apiResult = await executeDatabaseTests(apiFiles, registry, { signal: controller.signal });
+    console.log(`PostgreSQL integration tests: ${result.passed} DB + ${apiResult.passed} API passed, 0 failed/skipped/cancelled/todo.`);
   } catch (error) {
     const safeCodes = ['DB_TEST_CONFIG_INVALID', 'DB_TEST_CONNECTION_FAILED', 'DB_TEST_SUITE_EMPTY',
       'DB_TEST_SUITE_INCOMPLETE', 'DB_TEST_INTERRUPTED', 'DB_TEST_TIMEOUT', 'DB_TEST_EXECUTION_FAILED',

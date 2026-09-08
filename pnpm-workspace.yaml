@@ -9,3 +9,4 @@ packages:
 catalog:
   typescript: 5.9.3
   '@types/node': 20.19.43
+  vitest: 3.2.6

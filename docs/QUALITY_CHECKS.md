@@ -35,7 +35,7 @@ pnpm check:migrations
 ```
 
 `pnpm quality` runs, in order: toolchain verification, tooling tests, planning and
-domain validators, lint, all workspace typechecks, testkit/DB unit and prototype tests,
+domain validators, lint, all workspace typechecks, testkit/DB unit, API and prototype tests,
 required real PostgreSQL tests, and web build. It stops on a failed command and requires
 guarded test database configuration. `pnpm db:local quality` supplies that configuration
 using a fresh container and removes the container afterward; `pnpm db:local` defaults
@@ -60,10 +60,10 @@ It never copies `.env`, `.codex`, developer caches or the local planning pack. T
 temporary directory is removed after a checked path-boundary assertion. Sanitized
 test output remains under `node_modules/.cache/quality-verification/`.
 
-The verification script has **21 stages**: three setup/clean/restored checks, eight
+The verification script has **22 stages**: three setup/clean/restored checks, eight
 existing lockfile/lint/types/unit/frontend/build rejection drills, three database
 rejections for missing configuration, unavailable service and zero discovered files,
-two further database rejections for discovered files with no tests or all skipped tests,
+one API assertion rejection, two further database rejections for discovered files with no tests or all skipped tests,
 and five executions of the exact final CI gate (success plus failed, cancelled,
 skipped or absent database work). Database credentials are redacted before logs
 are written. Full clean/restored quality runs inherit the helper's valid bootstrap
@@ -223,7 +223,7 @@ References: [ESLint configuration](https://eslint.org/docs/latest/use/configure/
 [Testing contract](architecture/testing-contract.md) owns layer selection, deterministic
 fixtures, fake clocks/providers, failure boundaries and database isolation requirements.
 `pnpm test` runs `pnpm test:unit` (Node testkit and DB unit tests), then
-`pnpm test:web` (Vitest frontend).
+`pnpm test:api` (Vitest API), then `pnpm test:web` (Vitest frontend).
 `pnpm --filter @shippingco/web test` remains independently runnable without PostgreSQL.
 The CI tests matrix job requires these service-free suites; the separate PostgreSQL
 job requires the real database suite. Testkit remains a development-only workspace.
@@ -244,3 +244,18 @@ cleans registered disposable databases and roles; the outer helper removes its e
 container and anonymous volumes. Generated passwords stay in child environment/driver
 configuration. The disposable service uses `log_statement=none` and
 `log_min_error_statement=panic`. Frontend commands require no DB setup.
+
+
+## Issue #11 API boundary checks
+
+`pnpm test:api` activates the pinned Vitest API suite in normal tests/quality/CI;
+`pnpm build` now checks the erasable TypeScript API before building the frontend.
+`pnpm test:db` requires both the existing 17 DB cases and the API real PostgreSQL
+restart/outage case. The required final gate still depends on PostgreSQL integration.
+`pnpm test:web` remains runnable with all DB/API configuration absent.
+`pnpm db:local verify:gates` adds an intentional API test failure drill to the existing
+21 stages. No existing PostgreSQL drill or enforcement is removed.
+See [Issue #11 verification](architecture/issue-11-verification.md) and
+[API operating guide](../apps/api/README.md) for exact policy and acceptance evidence.
+Issue #11 delivery stops with the PR open for independent external review; merge,
+issue closure, downstream unblocking and branch cleanup require later authorization.
