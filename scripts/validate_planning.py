@@ -4,7 +4,7 @@ import re
 import runpy
 ROOT = Path(__file__).resolve().parents[1]
 required = ["CONTRIBUTING.md", "SECURITY.md", "docs/ROADMAP.md", "docs/ISSUE_INDEX.md", "docs/ENGINEERING_WORKFLOW.md", "docs/PROTOTYPE_TO_PRODUCTION.md", ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/implementation.md", ".github/ISSUE_TEMPLATE/bug.md", ".github/ISSUE_TEMPLATE/research.md", ".github/ISSUE_TEMPLATE/security-infrastructure.md"]
-required.extend(["README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
+required.extend(["docs/QUALITY_CHECKS.md", "docs/ISSUE_5_VERIFICATION.md", "README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
 # Architecture/ADR documents use the same fence/link validation as existing planning.
 required.extend(str(path.relative_to(ROOT)) for folder in ("docs/architecture", "docs/adr")
                 for path in sorted((ROOT / folder).glob("*.md")))

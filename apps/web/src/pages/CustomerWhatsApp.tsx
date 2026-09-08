@@ -45,6 +45,7 @@ export default function CustomerWhatsApp() {
       const cust = data.bookings.find((b) => b.phone === me);
       pushChat(me, 'bot', welcomeText(cust?.name, biz.name, biz.botName));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- L03: seed once per persona change; see docs/QUALITY_CHECKS.md and issue #7.
   }, [me]);
 
   const msgs = me ? (data.chats[me]?.msgs || []) : [];

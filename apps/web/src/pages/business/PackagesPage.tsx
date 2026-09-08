@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Msym } from '../../components/m3/Icon';
 import { TextField, TextArea, SelectField } from '../../components/m3/Input';
-import { Button, IconButton, Checkbox } from '../../components/m3/Button';
+import { Button, Checkbox } from '../../components/m3/Button';
 import { Card, StatusPill, EmptyState } from '../../components/m3/Surface';
 import { Journey } from '../../components/m3/Journey';
 import { Dialog } from '../../components/m3/Dialog';
@@ -49,11 +49,10 @@ export default function PackagesPage() {
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [lotOpen, setLotOpen] = useState(false);
   const [bulkLot, setBulkLot] = useState('');
-  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (params.get('filter') || params.get('open')) setParams({}, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- L07: consume initial deep-link parameters once after state capture; see docs/QUALITY_CHECKS.md and issue #7.
   }, []);
 
   const byFilter = (rows, f) => {

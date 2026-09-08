@@ -6,9 +6,9 @@
 
 import { msg } from './messages';
 import type {
-  Attachment, Booking, BotStats, Business, Charges, Chat, ChatMessage, CityTotal, Database,
+  Booking, Business, Chat, CityTotal, Database,
   DispatchRoute, Escalation, EwayRecord, GstModeOption, Lot, MessageLang, NewBookingInput,
-  NewRouteInput, OtpResult, OutboxMessage, ParcelStatus, Payment, RateTotal, ReachSummary,
+  NewRouteInput, OtpResult, ParcelStatus, RateTotal, ReachSummary,
   RecoveryItem, ReplyWindow, Report, RouteEvent, ServiceType, SupplyKind, Tax, TimelineEntry,
 } from './types';
 
@@ -125,7 +125,7 @@ if (typeof window !== 'undefined') {
     if (e.key === KEY) {
       try {
         if (e.newValue && e.newValue !== 'null') { cache = JSON.parse(e.newValue); listeners.forEach((fn) => fn()); }
-      } catch {}
+      } catch { /* Malformed browser demo data is ignored; keep the current snapshot or reseed below. */ }
     }
   });
   load();
@@ -177,7 +177,7 @@ function load(): Database {
       const parsed = JSON.parse(raw);
       if (looksValid(parsed)) { cache = parsed; normalizeBookings(); return cache; }
     }
-  } catch {}
+  } catch { /* Malformed browser demo data is ignored; keep the current snapshot or reseed below. */ }
   cache = seedData();
   normalizeBookings();
   notifyAndPersist();
@@ -317,7 +317,7 @@ function seedData(): Database {
 /* ---------- formatting ---------- */
 export const uid = (p: string) => p + '_' + Math.random().toString(36).slice(2, 8);
 export function normPhone(p: string | null | undefined): string {
-  let d = String(p || '').replace(/\D/g, '');
+  const d = String(p || '').replace(/\D/g, '');
   if (d.length === 10) return '+91' + d;
   if (d.length === 12 && d.startsWith('91')) return '+' + d;
   if (p?.startsWith('+')) return p;

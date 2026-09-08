@@ -14,3 +14,9 @@ pnpm-debug.log*
 
 # Local package-manager cache
 .pnpm-store/
+
+# Local Codex configuration
+/.codex/
+
+/packages/db
+/docs

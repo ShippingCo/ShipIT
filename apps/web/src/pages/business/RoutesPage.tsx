@@ -7,7 +7,7 @@ import { Dialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
 import {
   createRoute, postRouteEvent, attachToRoute, bookingsOfRoute, queueMsg,
-  fmtDT, CITIES,
+  fmtDT,
 } from '../../data/store';
 import { useDB } from '../../context/AppContext';
 import type { RouteEventKind } from '../../data/types';
@@ -70,7 +70,7 @@ export default function RoutesPage() {
 }
 
 function RouteCard({ r }) {
-  const data = useDB();
+  useDB(); // Keep the subscription: bookingsOfRoute reads the mutable demo store.
   const toast = useToast();
   const pkgs = bookingsOfRoute(r);
   const st = ROUTE_STATUS(r);
@@ -323,6 +323,7 @@ function PlanRouteDialog({ open, onClose }) {
   const [lotSel, setLotSel] = useState<Record<string, boolean>>({});
   React.useEffect(() => {
     if (open) { setForm((f) => ({ ...f, origin: biz.origin, departAt: defT })); setLotSel({}); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- L05: opening sets defaults without resetting an edited form; see docs/QUALITY_CHECKS.md and issue #7.
   }, [open]);
 
   if (!open) return null;

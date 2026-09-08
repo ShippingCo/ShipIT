@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Msym } from '../../components/m3/Icon';
 import { Button } from '../../components/m3/Button';
 import { TextField } from '../../components/m3/Input';
-import { Card, EmptyState, StatusPill } from '../../components/m3/Surface';
+import { Card, EmptyState } from '../../components/m3/Surface';
 import { FilterChips, IconTile } from '../../components/m3/Controls';
 import { Dialog } from '../../components/m3/Dialog';
 import DataTable from '../../components/m3/DataTable';
@@ -59,6 +59,7 @@ export default function EwayPage() {
   const [draftErr, setDraftErr] = useState<string | null>(null);
 
   const win = useMemo(() => windowFor(period), [period]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- L02: data invalidates mutable demo-store reads; see docs/QUALITY_CHECKS.md and issue #7.
   const rows = useMemo(() => ewayList(win.from, win.to), [data, win]);
 
   const pending = rows.filter((b) => ewayState(b) !== 'recorded');

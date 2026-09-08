@@ -293,7 +293,7 @@ export function AttachmentPicker({ items, onChange, onError }: AttachmentPickerP
         ))}
         {(Object.entries(KIND) as Array<[AttachmentKind, KindSpec]>).map(([kind, k]) => (
           <input key={kind} ref={refs[kind]} type="file" accept={k.accept} capture={k.capture}
-            hidden onChange={(e) => add(kind, e)} />
+            hidden onChange={(e) => { void add(kind, e); }} />
         ))}
       </div>
 

@@ -43,17 +43,16 @@ An independent approving review is the production workflow target. Setup may be 
 
 ## Quality commands and current baseline
 
-Use the committed `packageManager` (`pnpm@10.34.5`) with a supported Node runtime. Setup CI pins Node 22 and pnpm; no product package upgrade is implied.
+Use Node 22.23.2, pnpm 10.34.5 and Python 3.12.14. The version files and packageManager are authoritative. See [quality checks](QUALITY_CHECKS.md) for setup, registered exceptions and enforcement rollout.
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
-python3 scripts/validate_planning.py
-pnpm test
-pnpm typecheck
-pnpm build
+pnpm quality
+# Optional full controlled-failure drill in a disposable checkout:
+pnpm verify:gates
 ```
 
-Baseline inspection/test result: 23 frontend tests pass; typecheck passes all four workspace packages; Vite production build passes. React `act(...)` warnings already occur in the prototype tests. No lint command exists yet. The M0 quality-gate issue adds a reviewed linter and required CI lint check before product development. Planning validation is not a substitute for application lint.
+Historical baseline: 23 frontend tests, four workspace typechecks and build passed. Issue #5 adds real lint and gate-verification tests. Existing React `act(...)` warnings remain visible. The required final check keeps the name `Planning and prototype checks` and accepts only successful results from all five matrix jobs. Remote CI/protection verification is still required after pushing; local passing results are not GitHub merge approval.
 
 Use real PostgreSQL/runtime roles for tenant constraints and transactions once M1 activates them. Use fake clocks for expiry and dates, signed synthetic webhooks, fake providers, and fault injection for commit/ack/timeout boundaries. Browser tests cover meaningful workflows, keyboard/focus and intentional prototype regressions. No real customer sends or production credentials in CI.
 

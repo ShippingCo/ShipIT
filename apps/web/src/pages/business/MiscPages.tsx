@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Msym } from '../../components/m3/Icon';
 import { TextField, SelectField } from '../../components/m3/Input';
-import { Button, IconButton } from '../../components/m3/Button';
+import { Button } from '../../components/m3/Button';
 import { Card, EmptyState } from '../../components/m3/Surface';
 import { ConfirmDialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
@@ -271,7 +271,7 @@ export function SettingsPage() {
           )}
           <label className="btn btn-outlined" style={{ cursor: 'pointer' }}>
             <Msym name="image" /> Upload logo
-            <input type="file" accept="image/*" hidden onChange={onLogo} />
+            <input type="file" accept="image/*" hidden onChange={(e) => { void onLogo(e); }} />
           </label>
           <span className="t-body-sm faint">Shows on printed receipts</span>
         </div>
