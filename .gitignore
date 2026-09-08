@@ -17,6 +17,3 @@ pnpm-debug.log*
 
 # Local Codex configuration
 /.codex/
-
-/packages/db
-/docs
