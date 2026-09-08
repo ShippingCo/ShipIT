@@ -34,6 +34,24 @@ will parse the process environment once, return immutable typed configuration, r
 deployment modes, and stop startup on invalid input. Feature modules receive only the values
 they need. Tests may inject a complete synthetic configuration object.
 
+Issue #10 supplies the server-only `@shippingco/db` configuration boundary. Its caller
+injects an explicit resolved PostgreSQL credential, deployment mode and TLS policy;
+the library does not resolve `DATABASE_SECRET_REF` or read application environment
+variables. Host, database, username and nonempty password are required. URL query
+strings/fragments cannot override configuration. Driver fields are explicit, so ambient
+`PG*` settings cannot replace authentication, TLS, timeouts, search path or replication
+mode. Staging/production require verified TLS; an optional trusted PEM CA is injected
+through typed configuration. See the [DB operating reference](../../packages/db/README.md)
+for bounded pool settings and shutdown behavior.
+
+The separate operator migration command consumes `SHIPIT_ENVIRONMENT`,
+`MIGRATION_DATABASE_URL`, `DATABASE_TLS_MODE` and optional `DATABASE_CA_FILE`. The
+migration URL is a resolved secret supplied by the operator's secret mechanism, never
+a browser-public variable or command-line argument. It has no runtime/test URL
+fallback. The migration identity owns schema changes; the runtime identity is a
+non-owner with minimum required grants. #68 provisions deployment identities and
+network isolation; #11 wires runtime secret resolution and lifecycle.
+
 The example file contains names and empty values only. Local `.env` files stay ignored.
 Production uses version-pinned managed references and workload identity. Secret values do not
 belong in source, images, command arguments, CI output, deployment manifests, tickets, or chat.
@@ -80,13 +98,23 @@ for gradual rollout, rollback, disable-before-destroy, and repeatable rotation; 
 for short-lived deployment identity. The selected deployment platform must demonstrate
 equivalent controls; these links do not select a vendor.
 
-## Dedicated test process configuration — Issue #9
+## Dedicated test process configuration — Issues #9–#10
 
 The [testing contract](testing-contract.md#fail-closed-database-configuration) adds test-only
 `NODE_ENV=test`, `TEST_DATABASE_URL` and `TEST_DATABASE_IDENTITY` (`db_test` or worker suffix).
 This is isolated disposable test infrastructure, separate from the four application modes
 and identities above. No application `DATABASE_SECRET_REF`/`DATABASE_URL` fallback is permitted.
 A pure guard requires a test name, approved host and test identity, with production/staging
-host/identity denials taking precedence. #10 binds identities to actual isolated resources
-and activates PostgreSQL CI; #68 maintains production inventory/network separation.
-Never log the URL or resolved configuration.
+host/identity denials taking precedence. #10's active runner uses a trusted static policy
+for localhost/loopback and the reviewed `postgres` service hostname; no host is inferred
+from the URL. Bootstrap credentials provision exact registered disposable databases
+and separate generated migration/runtime roles. Guards also cover connection, fixture
+setup, migration and exact cleanup. Credentials are absent from resource registries;
+cleanup failures fail the run. There is no broad database-name deletion.
+
+`pnpm db:local test:db` provisions the pinned disposable PostgreSQL service with generated
+credentials and a random loopback port, then removes its owned container and volumes.
+The full `quality` command requires DB tests, while `test:web` remains independent.
+#68 maintains production inventory/network separation; a syntactically allowed hostname
+alone cannot prove DNS destination or authorize access to a deployment database.
+Never log the URL, resolved configuration, raw SQL error or generated credential.

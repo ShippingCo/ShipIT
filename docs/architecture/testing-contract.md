@@ -1,11 +1,11 @@
-# Testing contract — Issue 9
+# Testing contract — Issues 9 and 10
 
-[Architecture](README.md) · [Verification](issue-9-verification.md) · [Testkit](../../packages/testkit/README.md) · [Quality](../QUALITY_CHECKS.md)
+[Architecture](README.md) · [Issue 9 history](issue-9-verification.md) · [Testkit](../../packages/testkit/README.md) · [Quality](../QUALITY_CHECKS.md)
 
-This M0 contract establishes executable test infrastructure. Fastify, PostgreSQL, auth,
-business endpoints, tables, provider adapters and workers remain unimplemented.
-Real PostgreSQL integration testing is intentionally not active until Issue #10.
-No Fastify injection or real SQL test is claimed to have run.
+Issue #9 established the shared test infrastructure; #10 activates real PostgreSQL
+pool, transaction and migration tests. Fastify, auth, business endpoints/domain tables,
+provider adapters and workers remain with their implementation issues. The original
+M0 acceptance evidence remains historical; current PostgreSQL coverage is described below.
 
 ## Choose layers by changed behavior
 
@@ -15,8 +15,8 @@ implemented security/transaction boundary cannot be dismissed as an optional lay
 
 | Layer | Responsibility | Placement and runner |
 | --- | --- | --- |
-| Unit | Pure calculations, state guards, authorization helpers, validation, mapping and deterministic business rules; no DB/providers | Future colocated `*.test.ts` in owning API modules/shared; reuse Vitest. Testkit tooling uses Node `src/*.test.ts` now |
-| Database integration | Real SQL semantics, constraints, indexes/query plans, transactions, locks, migrations, concurrency, tenant persistence | Planned `packages/db/test/integration/`; domain SQL cases in `apps/api/test/database/`. Real PostgreSQL only; #10 activates runner |
+| Unit | Pure calculations, state guards, authorization helpers, validation, mapping and deterministic business rules; no DB/providers | Testkit and DB use Node `src/*.test.ts`; future owning API/shared application tests reuse Vitest |
+| Database integration | Real SQL semantics, constraints, indexes/query plans, transactions, locks, migrations, concurrency, tenant persistence | Active Node tests in `packages/db/test/integration/`; future domain SQL cases in `apps/api/test/database/`. Real PostgreSQL only |
 | API/service integration | HTTP validation, safe errors, then auth/authorization, tenant isolation, state transitions, idempotency and transaction outcomes as implemented | Planned `apps/api/test/integration/`; Fastify injection with Vitest; #11 and feature owners activate |
 | Contract | Provider ports, raw-byte webhook signatures, schemas/compatibility, callback parsing, retries | Planned owning `apps/api/src/modules/<domain>/test/contract/`; synthetic provider ports, Vitest; no production accounts |
 | Worker | Retries, leases, duplicates, stale/gap/poison events, crashes, recovery and uncertain provider acceptance | Planned `apps/api/test/worker/`; Vitest with controlled clock/provider; real DB when durable/concurrent behavior is under test |
@@ -25,26 +25,36 @@ implemented security/transaction boundary cannot be dismissed as an optional lay
 The table's **planned** paths are conventions, not empty suites passing CI. Frontend
 changes keep the #7 [regression inventory](prototype-migration-inventory.md). Backend
 changes do not automatically require browser tests. Unit tests cannot certify DB isolation.
-Use the minimum existing runners: Node for dependency-free tooling, Vitest for application
-TypeScript/React. No competing test framework or new third-party version is introduced here.
+Use the existing runners: Node for tooling, DB infrastructure and testkit; Vitest for
+application TypeScript/React. PostgreSQL dependencies are recorded in the
+[Issue #10 dependency review](issue-10-dependency-review.md).
 
 ## Commands and ownership
 
 | Command | Current behavior |
 | --- | --- |
-| `pnpm test:unit` | Executes testkit's Node tests; no external services |
+| `pnpm test:unit` | Executes testkit and DB unit tests; no external services |
 | `pnpm test:web` or `pnpm --filter @shippingco/web test` | Existing standalone frontend tests; no PostgreSQL needed |
-| `pnpm test` | Testkit then frontend; either failure fails the command |
-| `pnpm test:db` | Explicit nonzero `DB_TEST_RUNTIME_NOT_ACTIVE` diagnostic until #10 |
-| `pnpm test:quality` | Existing tooling/gate checks plus test harness inclusion and import-boundary checks |
-| `pnpm quality` | Exact toolchain, tooling tests, planning checks, lint, all workspace typechecks, `pnpm test`, build |
+| `pnpm test` | Testkit/DB unit tests, then frontend; any failure fails the command |
+| `pnpm test:db` | Runs 17 required real PostgreSQL integration cases; guarded bootstrap configuration required |
+| `pnpm db:local test:db` | Creates the pinned disposable PostgreSQL service, supplies generated bootstrap configuration, runs integration tests and cleans up |
+| `pnpm test:quality` | 10 tooling tests, including final CI gate, migration immutability, container lifecycle and import boundaries |
+| `pnpm quality` | Exact toolchain, tooling tests, planning checks, lint, all workspace typechecks, `pnpm test`, required `pnpm test:db`, build |
+| `pnpm db:local quality` or `pnpm db:local` | Runs full quality against a freshly provisioned disposable PostgreSQL service |
+| `pnpm db:local verify:gates` | Runs the disposable-checkout failure drills with a valid bootstrap for clean/restored quality |
+| `pnpm check:migrations` | Separately compares released migration files with `MIGRATION_BASE_SHA` or fetched `origin/main`; required in CI |
 
-The existing CI `Quality (tests)` runs `pnpm test`; the final required check still requires
-every matrix job to succeed. M0 does not include the intentionally inactive DB command in
-quality. This explicit boundary is different from silently skipping a required dependency.
-After #10 activation, the DB CI job must fail on absent configuration, unreachable service,
-unapplied migrations, unavailable extensions or setup/cleanup failure; no skip/pass-if-empty,
-`continue-on-error`, connection-error catch returning success, or conditional green suite.
+CI `Quality (tests)` runs `pnpm test`; **PostgreSQL integration** runs
+`pnpm db:local test:db`. The branch-required **Planning and prototype checks** job
+uses `always()` and accepts exactly two successful results: the whole matrix and the
+PostgreSQL job. Failed, cancelled, skipped, missing or malformed results fail closed.
+Absent/unsafe DB configuration, unreachable service, empty/incomplete required tests,
+migration failure and setup/cleanup failure cannot yield a green database suite.
+
+The planning matrix job also requires `pnpm check:migrations` against the PR base SHA
+or previous main SHA. Released migration changes/deletions/renames fail; new forward
+files are allowed. Missing base history fails closed. This history check is separate
+from `pnpm quality`, whose disposable verification snapshot has no Git history.
 
 ## Shared test-only fixture API
 
@@ -175,9 +185,10 @@ resets external acceptance or asynchronous work. Unknown acceptance must not bli
 | `replayFixture(event)` / duplicate callback | Same logical identity twice; future consumer persists one deduplicated effect |
 
 The callback supplied to `atCommitBoundary` must resolve **after** durable COMMIT. Do not
-pass an uncommitted mutation or a fire-and-forget promise. M0 tests use a synthetic evidence
-array to prove ordering, not SQL atomicity. #10/feature tests must inspect real committed
-business + audit + result + outbox together and prove rollback/error behavior separately.
+pass an uncommitted mutation or a fire-and-forget promise. The #9 helper tests use a
+synthetic evidence array to prove ordering. #10 separately tests real SQL commit/rollback
+and uncertain commit outcomes using synthetic tables. Feature tests must later inspect
+committed business + audit + result + outbox together and prove rollback/error behavior.
 
 ## Fail-closed database configuration
 
@@ -185,54 +196,70 @@ business + audit + result + outbox together and prove rollback/error behavior se
 Require `NODE_ENV=test`, `TEST_DATABASE_URL`, `TEST_DATABASE_IDENTITY=db_test` (or
 `db_test_<worker>`), and a database named `*_test` or `*_test_<worker>`, max 63 characters.
 There is **no ordinary DATABASE_URL or DATABASE_SECRET_REF fallback**. Identity is separate
-from the DB login role; #10 creates limited test roles and binds the asserted identity to
+from the DB login role; the runner creates limited test roles and binds the asserted identity to
 runner-managed resources. This extends #6 for test processes without redefining app modes.
 
-Default allowed hosts are localhost/127.0.0.1/::1 only. CI runner policy explicitly supplies
-reviewed `allowedHosts`, `forbiddenHosts` and `forbiddenIdentities`. No host is inferred from
+Default allowed hosts are localhost/127.0.0.1/::1 only. The runner's trusted static policy
+also permits the reviewed `postgres` service name; the Docker helper uses 127.0.0.1.
+No allowlist is accepted from environment variables, and no host is inferred from
 the URL. Known production/staging host markers and declared deny entries win over allowlists;
 non-test identities (including #6's db_production/db_staging/db_demo/db_developer) are refused.
 Use deployment inventory to populate denials for neutral production aliases. Arbitrary remote
-hosts fail by default, while a disposable CI service named `postgres` can be explicitly approved.
+hosts fail by default.
 
 Only postgres/postgresql URLs with a literal test-name path are accepted. Query/fragment
-options are rejected because connection parameters can override host/database. #10 must
-review any TLS/connection-option extension as typed configuration preserving this guard.
+options are rejected because connection parameters can override host/database. Any future
+test URL connection-option extension requires review preserving this guard.
 Errors expose only `UNSAFE_TEST_DATABASE_CONFIGURATION`, never a URL, password or input.
 The returned connection configuration is sensitive: pass it to the driver, never log it.
 
 Pure validation cannot verify DNS destinations, role privileges or a dishonest allowlist.
-#10/#68 must isolate test networks, prohibit production credentials/access, provision exact
-allowlisted disposable resources, bind deployment identities, and revalidate the final
-resolved target before migrations/reset. Never accept a production host just because its
-database was named `_test`. Test fixtures/logs contain synthetic references only.
+The helper provisions an exact owned disposable service on loopback; the test runner
+checks bootstrap privileges and revalidates resource targets before database operations.
+Deployment/network policy remains #68's responsibility. Never accept a production host
+just because its database was named `_test`. Test fixtures/logs contain synthetic references only.
 
-## Database isolation, cleanup and Issue #10 activation checklist
+## Active PostgreSQL coverage, isolation and cleanup
 
-Issue #10 is the activation point for real PostgreSQL integration tests. It must:
+Issue #10 uses reviewed `pg` and `node-pg-migrate` with real PostgreSQL 18.6. The suite
+has **17 integration cases** across three files:
 
-1. Review/install `pg` and `node-pg-migrate`; implement pool, one-connection transactions,
-   forward-only migration runner and migration locking. No ORM or fake SQL engine.
-2. Replace `scripts/test-database.mjs` with the real runner; retain explicit failure for
-   missing config/service/migrations or zero discovered required tests. Update the inactive
-   command assertion to exercise missing/unreachable DB against the activated runner.
-3. Provision a dedicated disposable database per run/worker, e.g. `shipit_run7_test_2`,
-   scoped least-privilege test roles and a trusted policy; apply the guard **before** connect,
-   create, migrate, reset or drop. Never share developer app, demo, staging or production DBs.
-4. Apply forward migrations and seed canonical fixtures for each isolated worker. Single-
-   connection tests may roll back their transaction. Worker/concurrency/migration tests use
-   committed, multiple-connection state: stop workers, drain/cancel queued work, close all
-   connections, then drop/recreate the guarded disposable worker DB and rerun migrations.
-   A failed teardown fails the suite; interrupted-run cleanup is bounded to the runner's
-   registered test resources, never an unrestricted database-name glob.
-5. Test fresh installation, upgrade from a prior migration snapshot, and repeat application
-   as no-op; test failed migrations, locks and concurrent runners. Never edit applied files.
-6. Add the actual PostgreSQL service/job to CI with readiness/connection deadlines and a
-   reviewed supported version. Make the final required check depend on it and update
-   `scripts/quality.test.mjs` so failure/cancellation/skip/missing results cannot pass.
-   Update `pnpm quality`/full M1 checks to require DB testing. Frontend-only command stays independent.
-7. Prove missing/unreachable PostgreSQL makes the required job red; prove per-worker isolation,
-   runtime-role privileges and cleanup after failure. Record current-head CI evidence.
+| File | Cases | Required behavior |
+| --- | --- | --- |
+| `migrations.test.ts` | 5 | Fresh migration/ledger and repeat no-op; prior snapshot upgrade preserving state; failed migration rollback and recovery; concurrent processes contending for the real advisory lock; lock recovery after owner disconnect |
+| `transactions.test.ts` | 5 | One-client commit and restart persistence; SQL-error rollback; callback-error rollback; caught SQL failure cannot report aborted-transaction success; connection loss at commit yields uncertainty and recovery |
+| `pool-security.test.ts` | 7 | Hostile bound values remain data; runtime DML privileges and denied DDL/cross-database access; pool exhaustion deadline/recovery; shutdown settles queued acquisitions; statement timeout; safe readiness during outage/recovery; isolated resources and registered cleanup |
+
+`scripts/with-test-postgres.mjs` creates a uniquely named container from the pinned
+PostgreSQL 18.6 Bookworm manifest, with a random loopback port and bootstrap database
+`shipit_control_test`. Its generated bootstrap password is passed through child
+environment, never a command argument. PostgreSQL uses `log_statement=none` and
+`log_min_error_statement=panic`. TCP readiness has a deadline. The helper supplies
+`NODE_ENV=test`, `TEST_DATABASE_IDENTITY=db_test` and `TEST_DATABASE_URL`, propagates
+the command status and removes only its owned container and anonymous volumes in cleanup.
+
+`scripts/test-database.mjs` requires a usable guarded bootstrap and actual required
+test execution. `packages/db/test/support.ts` creates a fresh `shipit_<random>_test_1`
+database and correlated migration/runtime roles for each provisioned resource. Generated
+resource names and role relationships are checked before operations; migration and
+runtime credentials remain separate. The runtime role receives DML only on synthetic
+fixture tables. The implementation migration creates infrastructure only, not tenant or
+business tables. Canonical tenant fixtures remain available for future domain SQL tests.
+
+Tests close tracked pools before cleanup; the parent also cleans its exact registered
+databases and roles after failures or interruption. A failed teardown fails the suite.
+The resource registry contains names only, and cleanup never expands an unrestricted
+database-name pattern. Tests needing committed or concurrent behavior use isolated
+databases, real connections and real migration locks; transaction rollback alone is
+insufficient for those boundaries. Released migrations remain immutable; corrections
+use new forward files and the separate Git-history check enforces that rule.
+
+The **10 tooling tests** exercise CI and cleanup behavior as well as lint/import
+boundaries. The full failure-verification command has **21 stages**, checking
+clean/restored quality, missing/unreachable PostgreSQL, zero discovered files,
+discovered files without tests, all-skipped required execution, and the exact
+final CI gate's rejected database results. Missing dependencies or skipped required
+tests must remain failures; no `continue-on-error`, pass-if-empty or retry-until-green.
 
 #11 then wires `buildServer`, configuration and injection tests; #12/#14/#15 and business
 owners add actual tenant schema/auth/query tests. #35/#36/#39/#40 add durable worker/provider

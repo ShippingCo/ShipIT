@@ -13,8 +13,9 @@ shape of the backend is settled before the schema discussion rather than during 
   inspectable SQL. Correct applied migrations with new forward migrations rather than
   editing them. The pool and the migrations live in `packages/db`.
 
-Neither dependency is installed yet. Each will be checked for advisories and
-supply-chain signals before it is added.
+Fastify remains uninstalled. Issue #10 implements the reviewed PostgreSQL dependencies,
+pool, transaction helper, migrations and internal readiness in [the DB package](../../packages/db/README.md).
+Issue #11 will compose that package into the API and its shutdown lifecycle.
 
 ## Layout
 
@@ -63,4 +64,4 @@ not install Fastify, auth, database dependencies, workers or provider integratio
 [Testing contract](../../docs/architecture/testing-contract.md) defines future `buildServer` injection,
 unit/API/provider/worker paths and reusable `@shippingco/testkit` dev-only helpers.
 `pnpm test:unit` runs the current harness; no Fastify server or injection suite exists yet.
-Issue #11 activates API tests and #10 activates real PostgreSQL testing.
+Issue #11 activates API tests; Issue #10 provides the required real PostgreSQL suite.

@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { validateTestDatabaseConfig } from './index.ts';
 import type { TestDatabaseEnvironment, TestDatabasePolicy } from './index.ts';
 const valid = { NODE_ENV: 'test', TEST_DATABASE_URL: 'postgresql://localhost/shipit_test', TEST_DATABASE_IDENTITY: 'db_test' };
@@ -49,13 +47,4 @@ await test('guard errors redact supplied connection material', () => {
   try { validateTestDatabaseConfig({ ...valid, TEST_DATABASE_URL: 'invalid_synthetic_sensitive_marker' }); }
   catch (error) { message = String(error); }
   assert.equal(message, 'Error: UNSAFE_TEST_DATABASE_CONFIGURATION');
-});
-await test('inactive DB command fails explicitly with and without configuration instead of skipping', () => {
-  const script = fileURLToPath(new URL('../../../scripts/test-database.mjs', import.meta.url));
-  for (const env of [{}, valid]) {
-    const child = spawnSync(process.execPath, [script], { env, encoding: 'utf8' });
-    assert.equal(child.status, 1);
-    assert.match(child.stderr, /DB_TEST_RUNTIME_NOT_ACTIVE/);
-    assert.match(child.stderr, /Real PostgreSQL integration testing is intentionally not active until Issue #10\./);
-  }
 });

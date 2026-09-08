@@ -1,15 +1,18 @@
 # Quality checks
 
-Issue #5 adds local and GitHub checks before changes enter main. These checks cover
-the existing prototype, scaffold types and planning contracts. They do not certify
-production tenancy, delivery proof, provider integration or deployment.
+Issue #5 established local and GitHub checks; #9 added the shared test harness and
+#10 activates real PostgreSQL integration. Current checks cover the prototype,
+planning contracts and database infrastructure. Production tenancy, delivery proof,
+provider integration and deployment remain with their implementation issues.
 
 ## Setup
 
 - Node **22.23.2**, from `.node-version` (supported Node 22 maintenance LTS).
 - pnpm **10.34.5**, from `package.json` `packageManager`.
 - Python **3.12.14**, from `.python-version`. Python assertions must remain enabled.
-- Git is needed only by the disposable-checkout verification command.
+- Git is needed by tooling tests, migration-history checking and disposable-checkout verification.
+- Docker must be running for `pnpm db:local`. It uses the reviewed PostgreSQL 18.6
+  Bookworm image pinned by manifest digest; see [the dependency review](architecture/issue-10-dependency-review.md).
 
 Use a version manager or the official Node binary, and install the pinned pnpm.
 Put these executables ahead of older wrappers on PATH. Python may also be selected
@@ -27,12 +30,16 @@ node --version
 pnpm --version
 pnpm check:toolchain
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm quality
+pnpm db:local quality
+pnpm check:migrations
 ```
 
 `pnpm quality` runs, in order: toolchain verification, tooling tests, planning and
-domain validators, lint, all workspace typechecks, testkit and prototype tests, and web build.
-It stops on a failed command. Individual commands are available for faster iteration:
+domain validators, lint, all workspace typechecks, testkit/DB unit and prototype tests,
+required real PostgreSQL tests, and web build. It stops on a failed command and requires
+guarded test database configuration. `pnpm db:local quality` supplies that configuration
+using a fresh container and removes the container afterward; `pnpm db:local` defaults
+to the same command. Individual commands are available for faster iteration:
 
 ```sh
 pnpm test:quality
@@ -40,16 +47,34 @@ pnpm check:planning
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm db:local test:db
 pnpm build
-pnpm verify:gates
+pnpm check:migrations
+pnpm db:local verify:gates
 ```
 
-The last command needs registry network access. It snapshots maintained files into
+The last command needs registry network access and Docker. It snapshots maintained files into
 a new temporary directory, installs with a **new empty package store**, runs quality,
 injects each controlled failure, restores every changed file, and reruns quality.
 It never copies `.env`, `.codex`, developer caches or the local planning pack. The
 temporary directory is removed after a checked path-boundary assertion. Sanitized
 test output remains under `node_modules/.cache/quality-verification/`.
+
+The verification script has **21 stages**: three setup/clean/restored checks, eight
+existing lockfile/lint/types/unit/frontend/build rejection drills, three database
+rejections for missing configuration, unavailable service and zero discovered files,
+two further database rejections for discovered files with no tests or all skipped tests,
+and five executions of the exact final CI gate (success plus failed, cancelled,
+skipped or absent database work). Database credentials are redacted before logs
+are written. Full clean/restored quality runs inherit the helper's valid bootstrap
+configuration; the empty-suite drill restores every removed integration file.
+
+`pnpm check:migrations` is a separate required CI check. It compares files under
+`packages/db/migrations/` with `MIGRATION_BASE_SHA`, or fetched `origin/main` locally.
+Released `.cjs`, `.mjs`, `.js` and `.sql` files cannot be edited, deleted or renamed;
+forward additions are allowed. Missing comparison history fails the command.
+It stays outside `pnpm quality` because the verification snapshot has no Git history.
+Tooling tests exercise immutability in an independent temporary Git repository.
 
 ## Lint policy
 
@@ -100,15 +125,25 @@ explicitly discards the handled Promise. No async checks are disabled globally.
 
 Every PR into main and main push runs five independent matrix jobs on ubuntu-24.04:
 `Quality (planning)`, `Quality (lint)`, `Quality (types)`, `Quality (tests)`,
-`Quality (build)`. Each job has a 15-minute timeout and an identical pinned toolchain.
+`Quality (build)`, plus the required **PostgreSQL integration** job. Each job has a
+15-minute timeout and the same pinned toolchain. The PostgreSQL job runs
+`pnpm db:local test:db` with a digest-pinned container, generated credentials,
+loopback-only port binding, bounded readiness and cleanup after failure or interruption.
 Matrix fail-fast is disabled so one failure does not hide other results. Older runs
 are cancelled when replaced. There are no changed-path shortcuts.
 
 The branch-required check remains **Planning and prototype checks**. It runs with
-`always()` and depends on the entire matrix. Its two-minute inline gate accepts only
-an explicit successful matrix result. Failure, cancellation, skip, neutral, missing
-or malformed results cannot pass. It does not depend on checkout or installation.
+`always()` and depends on both the entire matrix and PostgreSQL integration. Its
+two-minute inline gate accepts exactly those two successful results. Failure,
+cancellation, skip, neutral, missing or malformed results cannot pass. It does not
+depend on checkout or installation.
 The tooling test executes the actual inline gate body for success and negative cases.
+
+The planning job also runs `pnpm check:migrations`. Its checkout fetches full history
+and supplies the PR base SHA or previous main SHA as `MIGRATION_BASE_SHA`; this check
+cannot silently pass because a comparison commit is unavailable. The **10 tooling
+tests** cover the workflow, final gate, migration history, container lifecycle,
+toolchain and lint/import boundaries.
 
 Actions use immutable reviewed commit pins; checkout does not persist credentials.
 Default token permissions are read-only; no production secrets, deployments or real
@@ -116,17 +151,15 @@ customer sends are configured. Cache only pnpm's package store, keyed through se
 and the lockfile. A cache hit never skips locked installation or checks. Lifecycle
 scripts remain disabled; a future necessary exception requires a dependency review.
 
-After the user authorizes pushing, inspect actual branch protection/rulesets and
-verify the existing required name is enforced on the current PR commit. Require
-up-to-date integration with main, one independent approval, stale-approval dismissal,
-resolved conversations and enforcement for administrators. Do not weaken existing
-rules or claim that workflow YAML alone configures repository protection. A controlled
-failing PR check must visibly block merge. The user has not authorized pushing yet,
-so remote CI, protection changes and the merge-block demonstration are pending.
+Inspect actual branch protection/rulesets when verifying a PR and confirm that the
+existing required name is enforced on the current commit. Workflow YAML alone does
+not configure repository protection. Preserve existing review and merge requirements;
+record current-commit CI evidence in the issue verification document. Issue #10 is
+delivered as a PR for the maintainer to review and merge.
 
 If a merge queue is introduced later, add and verify `merge_group` before enabling
-it. No deployment pipeline, code coverage target, production DB tests or provider
-security certification is added by this issue; #9, M1 and later release issues own them.
+it. These checks do not add a deployment pipeline, coverage target, access to
+production databases or provider security certification.
 
 ## Maintenance and recovery
 
@@ -142,7 +175,7 @@ toolchain. Fix or revert the responsible change through review. Revert the issue
 tooling changes if necessary; no customer data migration is involved. Any proposal
 to relax merge enforcement needs a separate explicit maintainer decision.
 
-## Dependency review
+## Issue #5 dependency review (historical)
 
 Reviewed 2026-09-08 against npm metadata, OSV and pnpm's registry audit. These are
 development-only dependencies. Registry integrity is recorded in the lockfile.
@@ -185,18 +218,29 @@ References: [ESLint configuration](https://eslint.org/docs/latest/use/configure/
 [GitHub required checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks),
 [GitHub security](https://docs.github.com/en/actions/reference/security/secure-use).
 
-## Issue #9 harness inclusion
+## Harness inclusion and Issue #10 PostgreSQL activation
 
 [Testing contract](architecture/testing-contract.md) owns layer selection, deterministic
-fixtures, fake clocks/providers, failure boundaries and the database activation checklist.
-`pnpm test` runs `pnpm test:unit` (Node testkit) then `pnpm test:web` (Vitest frontend).
+fixtures, fake clocks/providers, failure boundaries and database isolation requirements.
+`pnpm test` runs `pnpm test:unit` (Node testkit and DB unit tests), then
+`pnpm test:web` (Vitest frontend).
 `pnpm --filter @shippingco/web test` remains independently runnable without PostgreSQL.
-The existing CI tests matrix job now requires both suites; its final required name is unchanged.
-Testkit is a dev-only workspace using existing catalog TypeScript/Node types: no new
-third-party package, version, lifecycle script or runtime dependency. The lockfile adds
-only its importer. Lint restricts production imports and tooling tests check manifests.
+The CI tests matrix job requires these service-free suites; the separate PostgreSQL
+job requires the real database suite. Testkit remains a development-only workspace.
+Lint restricts production imports and tooling tests check manifests. The original
+#9 dependency and inactive-runner evidence remains in [its historical verification](architecture/issue-9-verification.md).
 
-Real PostgreSQL integration testing is intentionally not active until Issue #10.
-`pnpm test:db` is an explicit nonzero activation diagnostic in M0. It is not included in
-M0 quality and cannot pretend to pass a missing DB suite. #10 must replace it with real
-PostgreSQL tests and make their CI result required, including missing-dependency failures.
+Issue #10 replaces the inactive diagnostic with **17 real PostgreSQL integration
+tests**: five migration cases, five transaction cases and seven pool/security/isolation
+cases. They cover fresh/repeated/forward migration, failed migration rollback and
+advisory-lock recovery, atomic commit/rollback and uncertain commit outcomes, bound
+SQL values, runtime privileges, timeouts/outage recovery and exact resource cleanup.
+They use synthetic fixture tables; production tenant tables and authorization tests
+remain with their feature owners. `pnpm quality` now requires this suite to pass.
+
+The runner fails for missing/unsafe configuration, unreachable bootstrap, empty
+discovery/execution, skipped/cancelled/todo tests and setup/cleanup failures. Its parent
+cleans registered disposable databases and roles; the outer helper removes its exact
+container and anonymous volumes. Generated passwords stay in child environment/driver
+configuration. The disposable service uses `log_statement=none` and
+`log_min_error_statement=panic`. Frontend commands require no DB setup.
