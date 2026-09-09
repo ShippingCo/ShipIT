@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { ESLint } from 'eslint';
@@ -175,9 +176,9 @@ test('the disposable PostgreSQL helper guards credentials, propagates failures a
   const log = join(directory, 'events.jsonl');
   const state = join(directory, 'owner');
   const manager = join(directory, 'pnpm.mjs');
-  const timerModule = join(directory, 'bounded-timeout.mjs');
-  const docker = join(directory, 'docker');
-  const fakeDocker = `#!${process.execPath}
+  const processModule = join(directory, 'process-fixture.mjs');
+  const docker = join(directory, 'docker.mjs');
+  const fakeDocker = `
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 const args = process.argv.slice(2);
 const record = (value) => appendFileSync(process.env.HELPER_LOG, JSON.stringify(value) + '\\n');
@@ -205,23 +206,52 @@ appendFileSync(process.env.HELPER_LOG, JSON.stringify({ action: 'command', args:
     url.hostname === '127.0.0.1' && url.username === 'shipit_bootstrap' &&
     url.pathname === '/shipit_control_test' && /^[a-f0-9]{64}$/.test(url.password) }) + '\\n');
 if (process.env.HELPER_SCENARIO === 'signal') {
-  process.kill(process.ppid, 'SIGTERM');
+  if (process.platform === 'win32') {
+    process.on('message', message => { if (message === 'SIGTERM') process.exit(0); });
+    process.send('interrupt');
+  } else process.kill(process.ppid, 'SIGTERM');
   setInterval(() => {}, 1_000);
 } else if (process.env.HELPER_SCENARIO === 'timeout') {
   process.on('SIGTERM', () => {
     appendFileSync(process.env.HELPER_LOG, JSON.stringify({ action: 'timeout-signal', signal: 'SIGTERM' }) + '\\n');
     setTimeout(() => process.exit(0), 25);
   });
+  if (process.platform === 'win32') process.on('message', message => {
+    if (message === 'SIGTERM') process.emit('SIGTERM');
+  });
   setInterval(() => {}, 1_000);
 } else process.exit(process.env.HELPER_SCENARIO === 'command-failure' ? 7 : 0);
 `;
   try {
     writeFileSync(docker, fakeDocker);
-    chmodSync(docker, 0o700);
     writeFileSync(manager, fakeManager);
-    // Only the helper's 30-minute command deadline is shortened. The child must
-    // still receive TERM and finish its simulated cleanup before the KILL grace.
-    writeFileSync(timerModule, 'const original = globalThis.setTimeout; globalThis.setTimeout = (callback, delay, ...args) => original(callback, delay === 30 * 60_000 ? 250 : delay, ...args);\n');
+    // Test-only executable adapter: no shebang, shell, PATH separator or .cmd
+    // assumptions. The real helper still owns spawning, deadlines and cleanup.
+    // Windows emits the registered handler via IPC; POSIX uses real signals.
+    writeFileSync(processModule, `
+import childProcess from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+const originalSpawn = childProcess.spawn;
+childProcess.spawn = (command, args, options) => {
+  if (command === 'docker') return originalSpawn(process.execPath, [${JSON.stringify(docker)}, ...args], options);
+  const child = originalSpawn(command, args, { ...options,
+    stdio: [...(options.stdio === 'inherit' ? ['inherit','inherit','inherit'] : options.stdio), 'ipc'] });
+  if (process.platform === 'win32') {
+    child.on('message', message => { if (message === 'interrupt') process.emit('SIGTERM'); });
+    const kill = child.kill.bind(child);
+    child.kill = signal => {
+      if (signal === 'SIGTERM' && child.connected) { child.send(signal); return true; }
+      return kill(signal);
+    };
+  }
+  return child;
+};
+syncBuiltinESMExports();
+if (process.env.HELPER_SCENARIO === 'timeout') {
+  const original = globalThis.setTimeout;
+  globalThis.setTimeout = (callback, delay, ...args) => original(callback, delay === 30 * 60_000 ? 1000 : delay, ...args);
+}
+`);
     for (const [scenario, expectedStatus, expectedCommand] of [
       ['success', 0, ['quality']], ['command-failure', 7, ['test:db']],
       ['cleanup-failure', 1, ['test:db']], ['lost-create', 1, null],
@@ -229,10 +259,10 @@ if (process.env.HELPER_SCENARIO === 'signal') {
       ['timeout', 1, ['test:db']],
     ]) {
       writeFileSync(log, '');
-      const child = spawnSync(process.execPath, [...(scenario === 'timeout' ? ['--import', timerModule] : []),
+      const child = spawnSync(process.execPath, ['--import', pathToFileURL(processModule).href,
         'scripts/with-test-postgres.mjs', ...(scenario === 'success' ? [] : ['test:db'])], {
         encoding: 'utf8', timeout: 15_000,
-        env: { ...process.env, PATH: `${directory}:${process.env.PATH}`, npm_execpath: manager,
+        env: { ...process.env, npm_execpath: manager,
           NODE_ENV: 'production', TEST_DATABASE_URL: 'inherited-unsafe-value', TEST_DATABASE_IDENTITY: 'db_production',
           HELPER_LOG: log, HELPER_STATE: state, HELPER_SCENARIO: scenario },
       });

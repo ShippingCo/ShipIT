@@ -23,6 +23,14 @@ data available to `zoneinfo` (the verified bundled Python includes tzdata 2026.3
 Linux CI uses the runner's IANA timezone database. These fixtures check a modern
 Asia/Kolkata date, not historical timezone dataset equivalence.
 
+The same quality command runs on Windows and POSIX systems. Tests launch synthetic
+executables through Node without shell/shebang assumptions. Windows force-terminates
+children sent SIGTERM/SIGINT through child.kill, so shutdown-handler tests use a
+test-only IPC bridge to invoke the real application handlers; POSIX tests send native
+signals. Both assert clean process exit and listener closure. This tests application
+shutdown, not Windows native signal delivery. Production startup exposes no test IPC
+control. No platform skips or relaxed success assertions are used.
+
 From the repository root:
 
 ```sh

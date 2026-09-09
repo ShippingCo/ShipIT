@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { preflightTestDatabase, cleanupRegisteredResources } from '../packages/db/test/support.ts';
@@ -62,7 +62,7 @@ export async function executeDatabaseTests(files, registry, { signal, timeoutMs 
   const env = { ...process.env, DB_TEST_RESOURCE_REGISTRY: registry };
   delete env.NODE_TEST_CONTEXT;
   const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-timeout=60000',
-    `--test-reporter=${reporter}`, ...files], {
+    `--test-reporter=${pathToFileURL(reporter).href}`, ...files], {
     cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32',
   });
   let output = '', stopped, termination;

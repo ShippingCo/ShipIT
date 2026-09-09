@@ -66,6 +66,8 @@ export/caller inventory and regression disposition.
 
 ## Architecture in one paragraph
 
+Issue #13 adds the [operator authentication API](operator-authentication.md) and [ADR 0011](../adr/0011-operator-otp-authentication.md). Identity remains separate from franchise membership; live delivery setup is deferred to M3.
+
 Keep React/Vite as presentation and a Fastify modular monolith as the HTTP/application
 boundary. Domain services own commands; scoped SQL queries return public projections.
 PostgreSQL persists business state, command deduplication, audit and outbox facts in
