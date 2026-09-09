@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import cookie from '@fastify/cookie';
+import { createAuthService } from './modules/auth/service.ts';
+import { registerAuth } from './modules/auth/routes.ts';
+import { registerWebhook } from './modules/auth/webhook.ts';
+import type { AuthConfiguration } from './modules/auth/config.ts';
 import type { DatabasePool } from '@shippingco/db';
 import type { RuntimeConfig } from './env.ts';
 import { registerErrors, HttpError, errorEnvelope, rejectTransport } from './plugins/errors.ts';
@@ -9,8 +14,8 @@ import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink }
-export function buildServer({ config, database, logSink }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration }
+export function buildServer({ config, database, logSink, auth }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -36,8 +41,8 @@ export function buildServer({ config, database, logSink }: ServerDependencies) {
   registerJson(app);
   app.register(cors, {
     origin: (origin, callback) => callback(null, origin !== undefined && config.allowedOrigins.includes(origin)),
-    credentials: false, methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'], exposedHeaders: ['x-request-id'],
+    credentials: !!auth, methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', ...(auth ? ['X-CSRF-Token'] : [])], exposedHeaders: ['x-request-id'],
     strictPreflight: true, maxAge: 600,
   });
   app.register(rateLimit, { max: 120, timeWindow: 60_000, cache: 10_000,
@@ -49,5 +54,10 @@ export function buildServer({ config, database, logSink }: ServerDependencies) {
   });
   // Register after infrastructure boot so global plugin hooks cover every route.
   app.register(async instance => { registerHealth(instance, database); });
+  if (auth) {
+    app.register(cookie);
+    app.register(async instance => registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer'));
+    if (auth.webhook) app.register(async instance => registerWebhook(instance,auth.webhook!));
+  }
   return app;
 }

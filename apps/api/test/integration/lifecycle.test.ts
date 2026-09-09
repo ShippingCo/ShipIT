@@ -94,24 +94,29 @@ it('process startup validation is redacted and nonzero', () => {
   });
   expect(child.status).toBe(1); expect(child.stderr).toContain('CONFIGURATION_INVALID'); expect(child.stdout + child.stderr).not.toContain('SYN_STARTUP_SECRET');
 });
-it.each(['SIGTERM', 'SIGINT'] as const)('process %s shuts down a real listener cleanly', async signal => {
+it.each(['SIGTERM', 'SIGINT'] as const)('registered %s handler shuts down a real process and listener cleanly', async signal => {
   const reserve = createServer(); reserve.listen(0, '127.0.0.1'); await once(reserve, 'listening');
   const address = reserve.address(); if (!address || typeof address === 'string') throw new Error('TEST_ADDRESS');
   await new Promise<void>(resolve => reserve.close(() => resolve()));
-  const child = spawn(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('../../src/index.ts', import.meta.url))], {
+  const child = spawn(process.execPath, ['--experimental-strip-types',
+    ...(process.platform === 'win32' ? ['--import', new URL('../signal-control.mjs', import.meta.url).href] : []),
+    fileURLToPath(new URL('../../src/index.ts', import.meta.url))], {
     env: { ...process.env, ...syntheticEnv, PORT: String(address.port), LOCAL_DATABASE_URL: 'postgresql://db_developer:SYN_PASSWORD@127.0.0.1:1/shipit_developer' },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
-  let output = ''; child.stderr.on('data', chunk => { output += String(chunk); });
+  let output = ''; child.stderr!.on('data', chunk => { output += String(chunk); });
   const exit = once(child, 'exit');
   try {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('TEST_STARTUP_TIMEOUT')), 4000);
-      child.stdout.on('data', chunk => { output += String(chunk); if (output.includes('Server listening')) { clearTimeout(timer); resolve(); } });
+      child.stdout!.on('data', chunk => { output += String(chunk); if (output.includes('Server listening')) { clearTimeout(timer); resolve(); } });
       child.once('exit', () => { clearTimeout(timer); reject(new Error('TEST_STARTUP_EXIT')); });
     });
     expect((await get(`http://127.0.0.1:${address.port}/health/live`)).status).toBe(200);
-    child.kill(signal); expect((await exit)[0]).toBe(0); expect(output).not.toContain('SYN_PASSWORD');
+    if (process.platform === 'win32') child.send(signal);
+    else child.kill(signal);
+    expect((await exit)[0]).toBe(0); expect(output).not.toContain('SYN_PASSWORD');
+    await expect(get(`http://127.0.0.1:${address.port}/health/live`)).rejects.toThrow();
   } finally { if (child.exitCode === null) { child.kill('SIGKILL'); await exit; } }
 });
 

@@ -13,6 +13,7 @@ export interface RuntimeConfig {
   readonly trustedProxyAddresses: readonly string[];
   readonly databaseSecretRef: string;
   readonly databaseTls: DatabaseTls;
+  readonly authSecretRef?: string;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
 export class ConfigurationError extends Error {
@@ -86,9 +87,13 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     } catch { issue('DATABASE_CA_PEM', 'INVALID_FORMAT'); }
   }
   if (env.LOCAL_DATABASE_URL !== undefined && (environment !== 'developer' || databaseSecretRef !== 'local:database')) issue('LOCAL_DATABASE_URL', 'INCONSISTENT');
+  const authSecretRef=env.AUTH_SECRET_REF;
+  if (authSecretRef !== undefined && (!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(authSecretRef) || authSecretRef.includes('://'))) issue('AUTH_SECRET_REF','INVALID_FORMAT');
+  if (authSecretRef?.startsWith('local:') && (environment!=='developer' || authSecretRef!=='local:auth')) issue('AUTH_SECRET_REF','INCONSISTENT');
   if (issues.length) throw new ConfigurationError(issues);
   return Object.freeze({ environment: environment!, host, port, logLevel: logLevel as RuntimeConfig['logLevel'],
     allowedOrigins: Object.freeze(allowedOrigins), trustedProxyHops, trustedProxyAddresses: Object.freeze(trustedProxyAddresses), databaseSecretRef,
     databaseTls: Object.freeze(tls === 'verify-full' ? { mode: 'verify-full', ...(ca ? { ca } : {}) } : { mode: 'disable' }),
+    ...(authSecretRef ? {authSecretRef} : {}),
   });
 }

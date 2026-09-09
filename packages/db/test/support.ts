@@ -148,6 +148,7 @@ export interface DisposableDatabase {
   ownerPool(): DatabasePool;
   migrate(options?: { dir?: string; count?: number }): Promise<{ applied: number }>;
   prepareTenancy(): Promise<void>;
+  prepareAuth(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
   terminateBackend(pid: number): Promise<void>;
@@ -209,6 +210,16 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT, INSERT ON shipit.organizations, shipit.franchises TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE (display_name, lifecycle, version, updated_at, lifecycle_changed_at)
           ON shipit.organizations, shipit.franchises TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); pools.delete(owner); }
+    },
+    async prepareAuth() {
+      validate(); await handle.migrate();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT,UPDATE,DELETE ON shipit.auth_users,shipit.auth_identifiers,shipit.auth_sessions,
+          shipit.auth_challenges,shipit.auth_delivery_jobs,shipit.auth_rate_limits TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT ON shipit.auth_security_events TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
     },
     async prepareFixtures() {

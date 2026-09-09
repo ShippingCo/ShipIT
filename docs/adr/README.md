@@ -27,4 +27,5 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 [Issue #8 owning contract](../architecture/money-tax-proof-privacy-contract.md).
 
 Detailed policy questions have an [owner and gate](../architecture/open-decisions.md).
-No ADR here accepts additional auth, queue, hosting, provider or ORM dependencies.
+The baseline ADRs do not select additional auth, queue, hosting, provider or ORM dependencies.
+Issue #13's [ADR 0011](0011-operator-otp-authentication.md) records the owner's OTP choice and narrow authentication delivery scope for review; live setup is deferred to M3.

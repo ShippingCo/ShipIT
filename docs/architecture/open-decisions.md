@@ -1,5 +1,7 @@
 # Open architecture decisions
 
+Issue #13 update (2026-09-09): the owner selected own email/WhatsApp OTP authentication and deferred live delivery setup to M3. [ADR 0011](../adr/0011-operator-otp-authentication.md) and [API contract](operator-authentication.md) refine the authentication portion of D08 for review. This does not resolve privacy retention, high-assurance step-up or downstream authorization/deployment gates.
+
 [Architecture index](README.md) · [ADR index](../adr/README.md)
 
 This register distinguishes resolved contracts from remaining implementation decisions. Owners are responsible issue/domain
