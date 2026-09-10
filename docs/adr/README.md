@@ -25,6 +25,7 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 | [0010](0010-organization-franchise-tenancy.md) | Organization/Franchise persistence, active/disabled lifecycle, explicit W41 franchise administration, ownership/privilege/concurrency defenses; submitted through Issue #12 |
 | [0011](0011-operator-otp-authentication.md) | Email/WhatsApp OTP identity, revocable sessions, CSRF and narrow delivery queue; implemented through Issue #13 |
 | [0012](0012-membership-invitations-and-rbac.md) | Organization/Franchise memberships, identity-bound invitations, W42 administration, live revocation and redacted transactional audit; proposed through Issue #14 |
+| [0013](0013-tenant-scoped-query-capabilities.md) | Immutable scope capabilities, SQL ownership predicates, trusted-job port and AST regression gate; proposed through Issue #15 |
 
 [Issue #8 owning contract](../architecture/money-tax-proof-privacy-contract.md).
 

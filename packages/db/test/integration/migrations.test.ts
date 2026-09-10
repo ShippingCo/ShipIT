@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 4 });
+  assert.deepEqual(await database.migrate(), { applied: 5 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 4);
+  assert.equal(initial.length, 5);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -83,14 +83,14 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 3 });
+  assert.deepEqual(await database.migrate(), { applied: 4 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.equal((await owner.query<{ count: string }>('SELECT count(*) FROM shipit.organizations')).rows[0]?.count, '1');
   assert.deepEqual(await migrationNames(database), [
     '1788868800000-infrastructure-schema', '1788872400000-organization-franchise-tenancy', '1788958800000-operator-authentication',
-    '1789045200000-memberships-authorization',
+    '1789045200000-memberships-authorization', '1789059600000-tenant-audit-ownership',
   ]);
 });
 
@@ -180,5 +180,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 4 });
+  assert.deepEqual(await database.migrate(), { applied: 5 });
 });

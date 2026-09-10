@@ -18,16 +18,17 @@
     "test:web": "pnpm --filter @shippingco/web test",
     "test:db": "node scripts/test-database.mjs",
     "typecheck": "pnpm -r --parallel typecheck",
-    "lint": "eslint apps packages scripts eslint.config.mjs --max-warnings 0",
+    "lint": "pnpm check:tenant-queries && eslint apps packages scripts eslint.config.mjs --max-warnings 0",
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "check:planning": "node scripts/run-planning.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
-    "test:quality": "node --test scripts/quality.test.mjs",
+    "test:quality": "node --test scripts/quality.test.mjs scripts/tenant-queries.test.mjs",
     "verify:gates": "node scripts/verify-gates.mjs",
     "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm test:db && pnpm build",
     "db:local": "node scripts/with-test-postgres.mjs",
     "db:migrate": "pnpm --filter @shippingco/db migrate",
-    "test:api": "pnpm --filter @shippingco/api test"
+    "test:api": "pnpm --filter @shippingco/api test",
+    "check:tenant-queries": "node scripts/check-tenant-queries.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

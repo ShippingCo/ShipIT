@@ -57,7 +57,7 @@ await test('organization and franchise administrators grant only bounded roles a
   const localRoster=await memberships.listMemberships(localAdmin.token,organizationA);
   assert.ok(localRoster.items.some(item=>item.user_id===operator.id));
   assert.ok(!localRoster.items.some(item=>item.user_id===admin.id));
-  await assert.rejects(memberships.updateMembership(operator.token,accepted.id,{role:'org_admin',franchise_ids:[],expected_version:1}),hasCode('ACTION_FORBIDDEN'));
+  await assert.rejects(memberships.updateMembership(operator.token,accepted.id,{role:'org_admin',franchise_ids:[],expected_version:1}),hasCode('RESOURCE_NOT_FOUND'));
   const unknown='00000000-0000-4000-8000-000000009999';
   await assert.rejects(memberships.updateMembership(adminB.token,accepted.id,{role:'dispatcher',franchise_ids:[franchiseA1],expected_version:1}),hasCode('RESOURCE_NOT_FOUND'));
   await assert.rejects(memberships.updateMembership(adminB.token,unknown,{role:'dispatcher',franchise_ids:[franchiseA1],expected_version:1}),hasCode('RESOURCE_NOT_FOUND'));

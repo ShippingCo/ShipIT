@@ -97,6 +97,9 @@ function withFile(file, content, action) {
 try {
   run('empty-store-install', ['install', '--frozen-lockfile', '--ignore-scripts', '--store-dir', join(temporary, 'store')]);
   run('clean-quality', ['quality']);
+  withFile('apps/api/src/modules/tenancy/unsafe-regression.ts',
+    'export const unsafe = db => db.query(`SELECT * FROM shipit.franchises`);',
+    () => run('unscoped-private-query', ['check:tenant-queries'], /TENANT_QUERY_GATE/));
   const manifest = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8'));
   manifest.devDependencies['quality-gate-sentinel'] = '0.0.0';
   withFile('package.json', JSON.stringify(manifest), () =>
