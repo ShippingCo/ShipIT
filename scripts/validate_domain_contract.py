@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 41)]:
+    for prefix, count in [("R", 30), ("E", 4), ("W", 42)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -43,7 +43,7 @@ def validate():
             assert set(cell.split(",")) <= {"-", "F", "C", "A", "G", "O", "V", "S", "P"}, (key, cell)
         if key[0] in "EW":
             assert row[-1] == "-", f"read_only mutation/export: {key}"
-            assert row[2] == "-" or key in {"W31", "W33", "W41"}, f"org_admin operational grant: {key}"
+            assert row[2] == "-" or key in {"W31", "W33", "W41", "W42"}, f"org_admin operational grant: {key}"
     assert rules["E03"][7] == "F"
     assert all(rules[key][7] == "-" for key in ["E01", "E02", "E04"])
     assert rules["W02"][2:] == ["-", "F", "F", "F", "-", "-", "-"]
@@ -53,6 +53,7 @@ def validate():
     assert rules["W34"][2:] == ["-"] * 7
     assert rules["W35"][2:] == ["-"] * 7
     assert rules["W41"][2:] == ["F", "F", "-", "-", "-", "-", "-"]
+    assert rules["W42"][2:] == ["O", "-", "-", "-", "-", "-", "-"]
     assert rules["R05"][2:] == ["V", "F", "F", "-", "-", "-", "-"]
     assert rules["R07"][6] == "A"
 
@@ -200,7 +201,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 75 matrix rows including exact W41 lifecycle grant and W29/W34/W35 restrictions, 28 synthetic access/projection cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 76 matrix rows including exact W41 lifecycle and W42 membership grants plus W29/W34/W35 restrictions, 28 synthetic access/projection cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":

@@ -23,9 +23,11 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 | [0008](0008-environment-secrets-and-security-baseline.md) | Isolated environments, public/server/secret configuration classes, rotation, prohibited logs and threat-to-test ownership gates |
 | [0009](0009-money-tax-proof-and-privacy-policy.md) | Money/tax snapshots, challenge and exceptional proof, field retention and e-way provenance; narrow W37–W40 amendment |
 | [0010](0010-organization-franchise-tenancy.md) | Organization/Franchise persistence, active/disabled lifecycle, explicit W41 franchise administration, ownership/privilege/concurrency defenses; submitted through Issue #12 |
+| [0011](0011-operator-otp-authentication.md) | Email/WhatsApp OTP identity, revocable sessions, CSRF and narrow delivery queue; implemented through Issue #13 |
+| [0012](0012-membership-invitations-and-rbac.md) | Organization/Franchise memberships, identity-bound invitations, W42 administration, live revocation and redacted transactional audit; proposed through Issue #14 |
 
 [Issue #8 owning contract](../architecture/money-tax-proof-privacy-contract.md).
 
 Detailed policy questions have an [owner and gate](../architecture/open-decisions.md).
 The baseline ADRs do not select additional auth, queue, hosting, provider or ORM dependencies.
-Issue #13's [ADR 0011](0011-operator-otp-authentication.md) records the owner's OTP choice and narrow authentication delivery scope for review; live setup is deferred to M3.
+Live authentication delivery setup remains deferred to M3.

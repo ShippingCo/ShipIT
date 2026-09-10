@@ -5,6 +5,8 @@ import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import { createAuthService } from './modules/auth/service.ts';
 import { registerAuth } from './modules/auth/routes.ts';
+import { createMembershipService } from './modules/memberships/service.ts';
+import { registerMemberships } from './modules/memberships/routes.ts';
 import { registerWebhook } from './modules/auth/webhook.ts';
 import type { AuthConfiguration } from './modules/auth/config.ts';
 import type { DatabasePool } from '@shippingco/db';
@@ -56,7 +58,10 @@ export function buildServer({ config, database, logSink, auth }: ServerDependenc
   app.register(async instance => { registerHealth(instance, database); });
   if (auth) {
     app.register(cookie);
-    app.register(async instance => registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer'));
+    app.register(async instance => {
+      registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
+      registerMemberships(instance,createMembershipService(database),config.environment!=='developer');
+    });
     if (auth.webhook) app.register(async instance => registerWebhook(instance,auth.webhook!));
   }
   return app;

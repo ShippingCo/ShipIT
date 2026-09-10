@@ -34,6 +34,7 @@ is implemented by this issue.
 
 16. [Testing layers, fixtures, failure injection and M1 activation — Issue #9](testing-contract.md), with [acceptance evidence](issue-9-verification.md).
 17. [Implemented PostgreSQL infrastructure — Issue #10](../../packages/db/README.md), [dependency review](issue-10-dependency-review.md), and [acceptance evidence](issue-10-verification.md).
+18. [Membership authorization API — Issue #14](membership-authorization.md), [industry research](membership-authorization-research.md), [ADR 0012](../adr/0012-membership-invitations-and-rbac.md), and [verification](issue-14-verification.md).
 
 ## Existing evidence and precedence
 
@@ -66,7 +67,7 @@ export/caller inventory and regression disposition.
 
 ## Architecture in one paragraph
 
-Issue #13 adds the [operator authentication API](operator-authentication.md) and [ADR 0011](../adr/0011-operator-otp-authentication.md). Identity remains separate from franchise membership; live delivery setup is deferred to M3.
+Issue #13 adds the [operator authentication API](operator-authentication.md) and [ADR 0011](../adr/0011-operator-otp-authentication.md). Issue #14 adds the separate [membership and invitation API](membership-authorization.md) and [ADR 0012](../adr/0012-membership-invitations-and-rbac.md). Live delivery setup remains deferred to M3.
 
 Keep React/Vite as presentation and a Fastify modular monolith as the HTTP/application
 boundary. Domain services own commands; scoped SQL queries return public projections.

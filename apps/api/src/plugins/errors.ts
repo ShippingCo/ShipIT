@@ -8,6 +8,8 @@ const errors = {
   ACTION_FORBIDDEN: [403, 'Action is not permitted.'],
   RESOURCE_NOT_FOUND: [404, 'Resource not found.'],
   VERSION_CONFLICT: [409, 'Resource version has changed.'],
+  MEMBERSHIP_CONFLICT: [409, 'An active membership already grants this role.'],
+  INVITATION_CONFLICT: [409, 'An active invitation already grants this role.'],
   FRANCHISE_CODE_CONFLICT: [409, 'Franchise code is already in use in this organization.'],
   FRANCHISE_DISABLED: [409, 'Franchise is disabled for operational writes.'],
   ORGANIZATION_DISABLED: [409, 'Organization is disabled for operational writes.'],

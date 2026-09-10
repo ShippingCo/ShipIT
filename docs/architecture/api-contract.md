@@ -66,6 +66,8 @@ minimized server evidence. Never echo a supplied key or invalid value.
 | 404 | RESOURCE_NOT_FOUND | Identical safe message/shape for unknown or foreign private resources/nested IDs; never name the foreign tenant |
 | 408 | REQUEST_TIMEOUT | HTTP transport request deadline exceeded; reconnect and retain command identity |
 | 409 | VERSION_CONFLICT | Authorized new command has stale expected revision; query current truth before a new deliberate command |
+| 409 | MEMBERSHIP_CONFLICT | The user already has the requested active role in the Organization |
+| 409 | INVITATION_CONFLICT | A pending invitation already exists for the same user, Organization and role |
 | 409 | FRANCHISE_CODE_CONFLICT | Authorized internal tenant creation conflicts with an existing code in the approved Organization; choose another canonical code |
 | 409 | FRANCHISE_DISABLED | The authorized target Franchise is disabled; new operational writes are unavailable until an approved lifecycle recovery |
 | 409 | ORGANIZATION_DISABLED | The authorized target Organization is disabled; new operational writes are unavailable until approved internal recovery |
@@ -207,6 +209,20 @@ integrity/query/scope encoding remains with #9/#23. No durable request replay is
 database uniqueness, optimistic versions and transactions provide the current service
 reliability boundary, and #17 owns authenticated onboarding replay and atomic membership.
 
+
+## Membership boundary — Issue #14
+
+The seven implemented membership endpoints, their strict inputs and success shapes are
+defined in the [membership API](membership-authorization.md). They use the #13 session and
+CSRF boundary. Collection access without management authority is 403; an unknown or foreign
+membership/invitation object is the same 404. Expired, used, revoked or wrong-user
+invitation tokens are the same 403. Stale updates are 409 `VERSION_CONFLICT`; duplicate
+active roles and pending invitations use the two membership-specific conflicts above.
+
+An invitation token is returned once only. It must not appear in list DTOs, persistence,
+logs or audit facts. All membership decisions use current database state rather than role
+claims embedded in a request or session. Issue #15 still owns product-wide query scoping;
+Issue #17 owns public onboarding and initial-administrator coordination.
 
 ## Implemented framework boundary — Issue #11
 
