@@ -1,0 +1,209 @@
+import { digest, secret } from '../auth/crypto.ts';
+import { AuthRepository, type Session } from '../auth/repository.ts';
+import { DatabaseError, withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
+import { HttpError } from '../../plugins/errors.ts';
+import type { TenancyAction, TenancyAuthorizer } from '../tenancy/types.ts';
+import * as repository from './repository.ts';
+import { canManageGrant, managementAuthority, tenancyScope, type ManagementAuthority } from './policy.ts';
+import { invitationDto, membershipDto, type Invitation, type Membership, type Role } from './types.ts';
+import * as validate from './validation.ts';
+
+async function membershipTransaction<T>(database:DatabasePool,work:(tx:TransactionExecutor)=>Promise<T>):Promise<T> {
+  let domainError:HttpError|undefined;
+  try {
+    return await withTransaction(database,async tx=>{
+      try { return await work(tx); }
+      catch(error) { if(error instanceof HttpError) domainError=error; throw error; }
+    });
+  } catch(error) {
+    if(domainError && error instanceof DatabaseError && error.code==='DB_TRANSACTION_FAILED') throw domainError;
+    throw new HttpError('TEMPORARILY_UNAVAILABLE');
+  }
+}
+async function authenticated(tx:TransactionExecutor,sessionToken:string) {
+  if(!/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) throw new HttpError('UNAUTHENTICATED');
+  const session=await new AuthRepository(tx).session(digest(sessionToken),true);
+  if(!session) throw new HttpError('UNAUTHENTICATED');
+  return session;
+}
+async function authorizeManagement(tx:TransactionExecutor,sessionToken:string,organizationId:string) {
+  const session=await authenticated(tx,sessionToken);
+  if(!await repository.lockOrganization(tx,organizationId)) throw new HttpError('ACTION_FORBIDDEN');
+  const memberships=await repository.activeMemberships(tx,session.user_id,organizationId);
+  const authority=managementAuthority(memberships);
+  if(!authority) throw new HttpError('ACTION_FORBIDDEN');
+  return {session,authority,memberships};
+}
+async function objectManagementAuthority(tx:TransactionExecutor,session:Session,organizationId:string) {
+  if(!await repository.lockOrganization(tx,organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await repository.activeMemberships(tx,session.user_id,organizationId);
+  return managementAuthority(memberships);
+}
+function visibleMembership(value:Membership,authority:ManagementAuthority) {
+  if(authority.organizationWide) return value;
+  if(value.role==='org_admin') return undefined;
+  const franchiseIds=value.franchiseIds.filter(id=>authority.franchiseIds.includes(id));
+  return franchiseIds.length ? {...value,franchiseIds} : undefined;
+}
+function visibleInvitation(value:Invitation,authority:ManagementAuthority) {
+  if(authority.organizationWide) return value;
+  if(value.role==='org_admin') return undefined;
+  const franchiseIds=value.franchiseIds.filter(id=>authority.franchiseIds.includes(id));
+  return franchiseIds.length ? {...value,franchiseIds} : undefined;
+}
+function manageable(authority:ManagementAuthority,role:Role,franchiseIds:readonly string[]) {
+  if(!canManageGrant(authority,role,franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
+}
+export function createMembershipService(database:DatabasePool) {
+  return {
+    // Trusted onboarding seam only. #17 calls this while creating the first organization owner.
+    async bootstrapAdministrator(userIdInput:unknown,organizationIdInput:unknown) {
+      const userId=validate.uuid(userIdInput),organizationId=validate.uuid(organizationIdInput);
+      return membershipTransaction(database,async tx=>{
+        if(!await repository.activeUser(tx,userId,true)) throw new HttpError('RESOURCE_NOT_FOUND');
+        if(!await repository.lockOrganization(tx,organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
+        if((await repository.listMemberships(tx,organizationId)).length) throw new HttpError('ACTION_FORBIDDEN');
+        const result=await repository.insertMembership(tx,{userId,organizationId,role:'org_admin',franchiseIds:[]});
+        await repository.audit(tx,{organizationId,actorType:'service',actorUserId:null,affectedUserId:userId,
+          membershipId:result.id,action:'bootstrap_admin',role:result.role,franchiseIds:[]});
+        return membershipDto(result);
+      });
+    },
+    async listMemberships(sessionToken:string,organizationIdInput:unknown) {
+      const organizationId=validate.uuid(organizationIdInput);
+      return membershipTransaction(database,async tx=>{
+        const {authority}=await authorizeManagement(tx,sessionToken,organizationId);
+        return {items:(await repository.listMemberships(tx,organizationId)).map(value=>visibleMembership(value,authority))
+          .filter((value):value is Membership=>!!value).map(membershipDto)};
+      });
+    },
+    async listInvitations(sessionToken:string,organizationIdInput:unknown) {
+      const organizationId=validate.uuid(organizationIdInput);
+      return membershipTransaction(database,async tx=>{
+        const {authority}=await authorizeManagement(tx,sessionToken,organizationId),now=await new AuthRepository(tx).now();
+        return {items:(await repository.listInvitations(tx,organizationId)).map(value=>visibleInvitation(value,authority))
+          .filter((value):value is Invitation=>!!value).map(value=>invitationDto(value,now))};
+      });
+    },
+    async createInvitation(sessionToken:string,input:unknown) {
+      const body=validate.createInvitationInput(input),acceptanceToken=secret(),tokenHash=digest(acceptanceToken);
+      return membershipTransaction(database,async tx=>{
+        const {session,authority}=await authorizeManagement(tx,sessionToken,body.organizationId);
+        if(session.user_id===body.inviteeUserId) throw new HttpError('ACTION_FORBIDDEN');
+        manageable(authority,body.role,body.franchiseIds);
+        if(!await repository.validateFranchises(tx,body.organizationId,body.franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
+        if(!await repository.activeUser(tx,body.inviteeUserId,true)) throw new HttpError('RESOURCE_NOT_FOUND');
+        if(await repository.activeRoleExists(tx,body.inviteeUserId,body.organizationId,body.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        const expired=await repository.expiredPendingInvitation(tx,body.inviteeUserId,body.organizationId,body.role);
+        if(expired) {
+          if(!await repository.revokeInvitation(tx,expired)) throw new HttpError('INVITATION_CONFLICT');
+          await repository.audit(tx,{organizationId:body.organizationId,actorType:'user',actorUserId:session.user_id,
+            affectedUserId:body.inviteeUserId,invitationId:expired.id,action:'invitation_expired',role:expired.role,
+            franchiseIds:expired.franchiseIds});
+        }
+        if(await repository.pendingInvitationExists(tx,body.inviteeUserId,body.organizationId,body.role)) throw new HttpError('INVITATION_CONFLICT');
+        const result=await repository.insertInvitation(tx,{...body,tokenHash,actorUserId:session.user_id});
+        await repository.audit(tx,{organizationId:body.organizationId,actorType:'user',actorUserId:session.user_id,
+          affectedUserId:body.inviteeUserId,invitationId:result.id,action:'invitation_created',role:body.role,franchiseIds:body.franchiseIds});
+        return {...invitationDto(result),acceptance_token:acceptanceToken};
+      });
+    },
+    async revokeInvitation(sessionToken:string,invitationIdInput:unknown,input:unknown) {
+      const invitationId=validate.uuid(invitationIdInput),body=validate.expectedVersionInput(input);
+      return membershipTransaction(database,async tx=>{
+        const authenticatedSession=await authenticated(tx,sessionToken);
+        const organizationId=await repository.invitationOrganizationById(tx,invitationId);
+        if(!organizationId) throw new HttpError('RESOURCE_NOT_FOUND');
+        const authority=await objectManagementAuthority(tx,authenticatedSession,organizationId);
+        const current=await repository.findInvitation(tx,organizationId,invitationId,true);
+        if(!current) throw new HttpError('RESOURCE_NOT_FOUND');
+        if(!authority) throw new HttpError('RESOURCE_NOT_FOUND');
+        manageable(authority,current.role,current.franchiseIds);
+        if(current.version!==body.expectedVersion) throw new HttpError('VERSION_CONFLICT');
+        if(current.state!=='pending' || !(await repository.revokeInvitation(tx,current))) throw new HttpError('ACTION_FORBIDDEN');
+        await repository.audit(tx,{organizationId,actorType:'user',actorUserId:authenticatedSession.user_id,
+          affectedUserId:current.inviteeUserId,invitationId:current.id,action:'invitation_revoked',role:current.role,franchiseIds:current.franchiseIds});
+        return {ok:true};
+      });
+    },
+    async acceptInvitation(sessionToken:string,input:unknown) {
+      const body=validate.acceptanceInput(input),tokenHash=digest(body.token);
+      return membershipTransaction(database,async tx=>{
+        const session=await authenticated(tx,sessionToken);
+        const organizationId=await repository.invitationOrganization(tx,tokenHash);
+        if(!organizationId || !await repository.lockOrganization(tx,organizationId)) throw new HttpError('ACTION_FORBIDDEN');
+        const current=await repository.findInvitationByToken(tx,organizationId,tokenHash),now=await new AuthRepository(tx).now();
+        if(!current || current.state!=='pending' || current.expiresAt<=now || current.inviteeUserId!==session.user_id) throw new HttpError('ACTION_FORBIDDEN');
+        if(await repository.activeRoleExists(tx,current.inviteeUserId,current.organizationId,current.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        const created=await repository.insertMembership(tx,{userId:current.inviteeUserId,organizationId:current.organizationId,
+          role:current.role,franchiseIds:current.franchiseIds});
+        if(!await repository.acceptInvitation(tx,current)) throw new HttpError('ACTION_FORBIDDEN');
+        await repository.audit(tx,{organizationId:current.organizationId,actorType:'user',actorUserId:session.user_id,
+          affectedUserId:session.user_id,membershipId:created.id,invitationId:current.id,action:'invitation_accepted',
+          role:created.role,franchiseIds:created.franchiseIds});
+        return membershipDto(created);
+      });
+    },
+    async updateMembership(sessionToken:string,membershipIdInput:unknown,input:unknown) {
+      const membershipId=validate.uuid(membershipIdInput),body=validate.updateMembershipInput(input);
+      return membershipTransaction(database,async tx=>{
+        const authenticatedSession=await authenticated(tx,sessionToken);
+        const organizationId=await repository.membershipOrganization(tx,membershipId);
+        if(!organizationId) throw new HttpError('RESOURCE_NOT_FOUND');
+        const authority=await objectManagementAuthority(tx,authenticatedSession,organizationId);
+        const current=await repository.findMembership(tx,organizationId,membershipId,true);
+        if(!current || current.lifecycle!=='active') throw new HttpError('RESOURCE_NOT_FOUND');
+        if(current.userId===authenticatedSession.user_id) throw new HttpError('ACTION_FORBIDDEN');
+        // Object APIs deliberately hide foreign records from non-managers.
+        if(!authority) throw new HttpError('RESOURCE_NOT_FOUND');
+        manageable(authority,current.role,current.franchiseIds);manageable(authority,body.role,body.franchiseIds);
+        if(current.version!==body.expectedVersion) throw new HttpError('VERSION_CONFLICT');
+        if(!await repository.validateFranchises(tx,organizationId,body.franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
+        if(current.role==='org_admin' && body.role!=='org_admin' && await repository.activeAdminCount(tx,organizationId,current.id)<1) throw new HttpError('ACTION_FORBIDDEN');
+        if(await repository.activeRoleExists(tx,current.userId,organizationId,body.role,current.id)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        const changed=await repository.updateMembership(tx,current,body.role,body.franchiseIds);
+        if(!changed) throw new HttpError('VERSION_CONFLICT');
+        await repository.audit(tx,{organizationId,actorType:'user',actorUserId:authenticatedSession.user_id,
+          affectedUserId:changed.userId,membershipId:changed.id,action:'membership_updated',role:changed.role,franchiseIds:changed.franchiseIds});
+        return membershipDto(changed);
+      });
+    },
+    async revokeMembership(sessionToken:string,membershipIdInput:unknown,input:unknown) {
+      const membershipId=validate.uuid(membershipIdInput),body=validate.expectedVersionInput(input);
+      return membershipTransaction(database,async tx=>{
+        const authenticatedSession=await authenticated(tx,sessionToken);
+        const organizationId=await repository.membershipOrganization(tx,membershipId);
+        if(!organizationId) throw new HttpError('RESOURCE_NOT_FOUND');
+        const authority=await objectManagementAuthority(tx,authenticatedSession,organizationId);
+        const current=await repository.findMembership(tx,organizationId,membershipId,true);
+        if(!current || current.lifecycle!=='active') throw new HttpError('RESOURCE_NOT_FOUND');
+        if(current.userId===authenticatedSession.user_id) throw new HttpError('ACTION_FORBIDDEN');
+        if(!authority) throw new HttpError('RESOURCE_NOT_FOUND');
+        manageable(authority,current.role,current.franchiseIds);
+        if(current.version!==body.expectedVersion) throw new HttpError('VERSION_CONFLICT');
+        if(current.role==='org_admin' && await repository.activeAdminCount(tx,organizationId,current.id)<1) throw new HttpError('ACTION_FORBIDDEN');
+        if(!await repository.revokeMembership(tx,current)) throw new HttpError('VERSION_CONFLICT');
+        await repository.audit(tx,{organizationId,actorType:'user',actorUserId:authenticatedSession.user_id,
+          affectedUserId:current.userId,membershipId:current.id,action:'membership_revoked',role:current.role,franchiseIds:current.franchiseIds});
+        return {ok:true};
+      });
+    },
+  };
+}
+export type MembershipService=ReturnType<typeof createMembershipService>;
+
+export function createMembershipTenancyAuthorizer(database:DatabasePool,sessionToken:string,organizationIdInput:unknown,correlationId:string):TenancyAuthorizer {
+  const organizationId=validate.uuid(organizationIdInput);
+  return {async authorize(action:TenancyAction) {
+    return membershipTransaction(database,async tx=>{
+      const session=await authenticated(tx,sessionToken);
+      if(!await repository.lockOrganization(tx,organizationId)) throw new HttpError('ACTION_FORBIDDEN');
+      const memberships=await repository.activeMemberships(tx,session.user_id,organizationId);
+      const allFranchises=await repository.organizationFranchiseIds(tx,organizationId);
+      const permittedFranchiseIds=tenancyScope(action,memberships,allFranchises);
+      if(permittedFranchiseIds===null) throw new HttpError('ACTION_FORBIDDEN');
+      return {action,actor:{type:'user' as const,id:session.user_id},organizationId,
+        permittedFranchiseIds,correlationId};
+    });
+  }};
+}

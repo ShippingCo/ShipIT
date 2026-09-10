@@ -2,8 +2,9 @@
 
 Fastify **5.12.3**, official CORS **11.3.0** and rate-limit **11.2.0** implement the
 Issue #11 HTTP infrastructure boundary. PostgreSQL remains the existing
-[`@shippingco/db`](../../packages/db/README.md) implementation; no ORM, authentication,
-domain routes, schema migrations or provider integrations are added.
+[`@shippingco/db`](../../packages/db/README.md) implementation. Issues #13 and #14 add
+operator authentication and membership/invitation authorization without an ORM or an
+external identity/authorization provider.
 
 ## Construction and ownership
 
@@ -74,7 +75,7 @@ is exactly **262,144 bytes (256 KiB)** inclusive, then 413 `PAYLOAD_TOO_LARGE`; 
 bodies never reach handlers. Attachments need their own future upload boundary.
 
 CORS uses an exact canonical origin allowlist, fixed methods and allowed headers;
-credentials are disabled until #13 owns sessions/CSRF policy. Hostile origins receive
+credentials are enabled only with #13 authentication and its CSRF policy. Hostile origins receive
 no browser access grant. CORS is browser policy and grants no server authorization.
 Request IDs, IPs, forwarding headers and arbitrary user/franchise/role headers likewise
 establish no tenant authority. Proxy trust defaults operationally to explicit zero hops;
@@ -128,9 +129,19 @@ real outage/recovery, pool cleanup and synthetic SQL persistence across API/pool
 It adds no production fixture endpoint. Frontend tests stay independent of DB/API config.
 
 See [dependency review](../../docs/architecture/issue-11-dependency-review.md) and
-[acceptance evidence](../../docs/architecture/issue-11-verification.md). Business persistence,
-sessions and memberships remain #13/#14 and later owners.
+[acceptance evidence](../../docs/architecture/issue-11-verification.md). Other business
+persistence and product-wide scoped queries remain with later owners.
 Canonical `@shippingco/testkit` fixtures remain development-only.
+
+## Issue #14 membership authorization
+
+`src/modules/memberships/` owns the fixed role policy, strict inputs, parameterized SQL,
+transactional service and seven authenticated HTTP endpoints. See the
+[membership API](../../docs/architecture/membership-authorization.md),
+[ADR 0012](../../docs/adr/0012-membership-invitations-and-rbac.md), and
+[verification](../../docs/architecture/issue-14-verification.md). Authentication and
+membership state are checked from PostgreSQL on every request. Invitation tokens are
+returned once and stored only as digests; audit rows contain controlled IDs/actions only.
 
 ## Issue #12 tenancy service boundary
 

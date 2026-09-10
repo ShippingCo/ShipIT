@@ -58,11 +58,11 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
   } };
 }
 
-await test('fresh migrations persist a ledger, repeat as no-op and create tenancy and authentication tables', { timeout: 20000 }, async (t) => {
+await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 3 });
+  assert.deepEqual(await database.migrate(), { applied: 4 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 3);
+  assert.equal(initial.length, 4);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -72,6 +72,7 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
     `SELECT schemaname AS schema, tablename AS name FROM pg_tables
      WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename`);
   assert.deepEqual(tables.rows, [...['auth_challenges','auth_delivery_jobs','auth_identifiers','auth_rate_limits','auth_security_events','auth_sessions','auth_users'].map(name=>({schema:'shipit',name})),{ schema: 'shipit', name: 'franchises' },
+    ...['invitation_franchise_scopes','membership_audit_events','membership_franchise_scopes','membership_invitations','memberships'].map(name=>({schema:'shipit',name})),
     { schema: 'shipit', name: 'organizations' }, { schema: 'shipit_migrations', name: 'pgmigrations' }]);
 });
 
@@ -82,13 +83,14 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 2 });
+  assert.deepEqual(await database.migrate(), { applied: 3 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.equal((await owner.query<{ count: string }>('SELECT count(*) FROM shipit.organizations')).rows[0]?.count, '1');
   assert.deepEqual(await migrationNames(database), [
     '1788868800000-infrastructure-schema', '1788872400000-organization-franchise-tenancy', '1788958800000-operator-authentication',
+    '1789045200000-memberships-authorization',
   ]);
 });
 
@@ -178,5 +180,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 3 });
+  assert.deepEqual(await database.migrate(), { applied: 4 });
 });

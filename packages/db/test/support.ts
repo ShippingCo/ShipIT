@@ -149,6 +149,7 @@ export interface DisposableDatabase {
   migrate(options?: { dir?: string; count?: number }): Promise<{ applied: number }>;
   prepareTenancy(): Promise<void>;
   prepareAuth(): Promise<void>;
+  prepareMemberships(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
   terminateBackend(pid: number): Promise<void>;
@@ -220,6 +221,20 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT,UPDATE,DELETE ON shipit.auth_users,shipit.auth_identifiers,shipit.auth_sessions,
           shipit.auth_challenges,shipit.auth_delivery_jobs,shipit.auth_rate_limits TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT ON shipit.auth_security_events TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); pools.delete(owner); }
+    },
+    async prepareMemberships() {
+      validate(); await handle.prepareTenancy(); await handle.prepareAuth();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.memberships,shipit.membership_franchise_scopes,
+          shipit.membership_invitations,shipit.invitation_franchise_scopes TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE (role,lifecycle,version,updated_at,revoked_at) ON shipit.memberships
+          TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE (state,version,updated_at,accepted_at,revoked_at) ON shipit.membership_invitations
+          TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT DELETE ON shipit.membership_franchise_scopes TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT ON shipit.membership_audit_events TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
     },
     async prepareFixtures() {

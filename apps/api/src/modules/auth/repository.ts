@@ -66,11 +66,11 @@ export class AuthRepository {
     return (await this.db.query<Session>(`INSERT INTO shipit.auth_sessions(id,user_id,token_hash,auth_version,idle_expires_at,expires_at)
       VALUES($1,$2,$3,$4,clock_timestamp()+interval '30 minutes',clock_timestamp()+interval '12 hours') RETURNING *`, [randomUUID(),user.id,hash,user.auth_version])).rows[0]!;
   }
-  async session(hash: string) {
+  async session(hash: string, lock = false) {
     return (await this.db.query<Session>(`SELECT s.id,s.user_id,s.auth_version,s.authenticated_at,s.idle_expires_at,s.expires_at
       FROM shipit.auth_sessions s JOIN shipit.auth_users u ON u.id=s.user_id
       WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.idle_expires_at>clock_timestamp()
-      AND u.lifecycle='active' AND u.auth_version=s.auth_version`, [hash])).rows[0];
+      AND u.lifecycle='active' AND u.auth_version=s.auth_version ${lock ? 'FOR SHARE OF s,u' : ''}`, [hash])).rows[0];
   }
   async activity(id: string) {
     await this.db.query(`UPDATE shipit.auth_sessions SET idle_expires_at=LEAST(expires_at,clock_timestamp()+interval '30 minutes')

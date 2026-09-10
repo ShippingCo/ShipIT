@@ -164,13 +164,17 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W39 | Exceptional delivery proof request with evidence | - | - | - | - | A | - | - |
 | W40 | Independently approve exceptional proof; current responsible custody required | - | F,C | - | - | - | - | - |
 | W41 | Franchise lifecycle disable/reactivate with explicit target grant | F | F | - | - | - | - | - |
+| W42 | Organization memberships/invites/grants create/revoke with no-self and final-admin guards | O | - | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
 or referenced records block deletion; #26/#27 finalize archival mechanics. W18 permits
 route event recording but any parcel state effect must meet W08/W09/W10 and lifecycle
 actor restrictions in the same command; reporting a departure is not a transit bypass.
-W17/W30 cannot self-escalate into org scope or grant absent permissions. W31 intentionally
+W17/W30 cannot self-escalate into org scope or grant absent permissions. W42 is the narrow
+org_admin administration exception to broad W35 denial: it changes only memberships and
+invitations, never Organization configuration; it cannot alter the actor's own membership
+or remove the final active org_admin. W31 intentionally
 gives read_only no mutation API in this private-domain matrix; authentication sign-out
 and mandatory session expiry remain #13's identity behavior, not operational write grants.
 
@@ -191,7 +195,7 @@ W28 cannot cancel/dispatch indirectly; service tools must authorize the underlyi
 For **every R01–R30 resource**, action classes are: list; detail/read; export; create;
 mutate/edit; cancel/destructive; state transition; operational job; custody transfer;
 configuration. Reads are exhaustively R01–R30, exports E01–E04, and permitted staff commands
-W01–W41. **Every other resource/action/role combination is explicitly denied.** Thus no
+W01–W42. **Every other resource/action/role combination is explicitly denied.** Thus no
 missing mutation column implies a future permission. This includes private reports (read
 sources, never mutate them), issued receipts (no direct create/edit; owning transaction),
 audit/outbox/proof internals (owner-service append only), and organization-wide config
