@@ -279,3 +279,15 @@ Use the same `pnpm db:local quality`, `pnpm db:local verify:gates` and
 `pnpm check:migrations` commands; the infrastructure migration remains unchanged.
 See [Issue #12 verification](architecture/issue-12-verification.md) for exact results and
 the explicit external-review boundary: leave its PR open and branch retained.
+
+## Issue #15 tenant query gate
+
+`pnpm lint` now runs `pnpm check:tenant-queries` before ESLint. The TypeScript AST
+checker covers every production API module, requires scoped private queries and limits
+scope issuance/identity exceptions to named adapters. `pnpm test:quality` now has 13
+cases, including positive/negative scope controls and actual nonzero CLI execution.
+`pnpm db:local verify:gates` has 23 stages: the additional stage injects an unscoped
+private query into a disposable checkout and verifies rejection. Required CI still
+runs the same lint, tooling and real PostgreSQL jobs; no existing check is removed.
+See [tenant query isolation](architecture/tenant-query-isolation.md) for limitations and
+[Issue #15 verification](architecture/issue-15-verification.md) for exact final counts.

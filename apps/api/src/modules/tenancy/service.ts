@@ -1,4 +1,6 @@
-import { DatabaseError, type DatabasePool } from '@shippingco/db';
+import { DatabaseError, type DatabasePool, type QueryExecutor } from '@shippingco/db';
+import { issueTenantAccess } from '../security/scope.ts';
+import { HttpError } from '../../plugins/errors.ts';
 import { TenancyError } from './errors.ts';
 import * as repository from './repository.ts';
 import * as validate from './validation.ts';
@@ -33,6 +35,10 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       organizationId: context.organizationId, permittedFranchiseIds: [...context.permittedFranchiseIds],
       correlationId: context.correlationId };
   }
+  function access(executor: QueryExecutor, context: ApprovedTenancyContext, transaction = true) {
+    return issueTenantAccess(executor, { ...context, organizationWide: context.actor.type === 'service',
+      provenance: context.actor.type === 'service' ? 'internal-service' : 'membership' }, transaction);
+  }
   function franchiseScope(context: ApprovedTenancyContext, id: unknown) {
     const franchiseId = validate.uuid(id);
     if (!context.permittedFranchiseIds.includes(franchiseId)) throw new TenancyError('RESOURCE_NOT_FOUND');
@@ -41,6 +47,7 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
   async function dependency<T>(operation: () => Promise<T>): Promise<T> {
     try { return await operation(); }
     catch (error) {
+      if (error instanceof HttpError) throw new TenancyError(error.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
       if (error instanceof DatabaseError) throw new TenancyError('TEMPORARILY_UNAVAILABLE');
       throw error;
     }
@@ -68,8 +75,8 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const displayName = validate.displayName(body.display_name);
       const initial = validate.createFranchiseInput(body.franchise);
       const result = await tenancyTransaction(database, async tx => {
-        const organization = await repository.insertOrganization(tx, displayName);
-        const franchise = await repository.insertFranchise(tx, { organizationId: organization.id, ...initial });
+        const organization = await repository.insertOrganization(access(tx, context), displayName);
+        const franchise = await repository.insertFranchise(access(tx, { ...context, organizationId: organization.id }), { organizationId: organization.id, ...initial });
         return { organization, franchise };
       });
       await report(fact({ ...context, organizationId: result.organization.id }, result.franchise, result.franchise.id, null, 'bootstrap'));
@@ -79,23 +86,23 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const context = await approved('franchise.create');
       const body = validate.createFranchiseInput(input);
       const result = await tenancyTransaction(database, async tx => {
-        const parent = await repository.lockOrganization(tx, context.organizationId!);
+        const parent = await repository.lockOrganization(access(tx, context), context.organizationId!);
         if (parent.lifecycle !== 'active') throw new TenancyError('ORGANIZATION_DISABLED');
-        return repository.insertFranchise(tx, { organizationId: parent.id, ...body });
+        return repository.insertFranchise(access(tx, context), { organizationId: parent.id, ...body });
       });
       await report(fact(context, result, result.id, null, 'franchise_creation'));
       return franchiseDto(result);
     },
     async readOrganization() {
       const context = await approved('organization.profile.read');
-      const result = await dependency(() => repository.findOrganization(database, context.organizationId!));
+      const result = await dependency(() => repository.findOrganization(access(database, context, false), context.organizationId!));
       if (!result) throw new TenancyError('RESOURCE_NOT_FOUND');
       return organizationDto(result);
     },
     async readFranchise(franchiseId: unknown) {
       const context = await approved('franchise.profile.read');
       const scope = franchiseScope(context, franchiseId);
-      const result = await dependency(() => repository.findFranchise(database, scope));
+      const result = await dependency(() => repository.findFranchise(access(database, context, false), scope));
       if (!result) throw new TenancyError('RESOURCE_NOT_FOUND');
       return franchiseDto(result);
     },
@@ -106,11 +113,11 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
         // Internal boundary must refer to an existing currently permitted row. #23
         // owns opaque wire encoding, expiry and full query/scope integrity.
         if (!context.permittedFranchiseIds.includes(body.after.id)) throw new TenancyError('VALIDATION_FAILED');
-        const boundary = await dependency(() => repository.findFranchise(database,
+        const boundary = await dependency(() => repository.findFranchise(access(database, context, false),
           { organizationId: context.organizationId!, franchiseId: body.after!.id }));
         if (!boundary || utcInstant(boundary.createdAt) !== body.after.created_at) throw new TenancyError('VALIDATION_FAILED');
       }
-      const rows = await dependency(() => repository.listFranchises(database,
+      const rows = await dependency(() => repository.listFranchises(access(database, context, false),
         { organizationId: context.organizationId!, permittedFranchiseIds: context.permittedFranchiseIds }, body));
       const hasMore = rows.length > body.limit;
       const items = rows.slice(0, body.limit).map(franchiseDto);
@@ -123,12 +130,12 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const scope = franchiseScope(context, franchiseId);
       const body = validate.profileInput(input);
       const result = await tenancyTransaction(database, async tx => {
-        const parent = await repository.lockOrganization(tx, scope.organizationId);
-        const previous = await repository.lockFranchise(tx, scope, true);
+        const parent = await repository.lockOrganization(access(tx, context), scope.organizationId);
+        const previous = await repository.lockFranchise(access(tx, context), scope, true);
         expected(previous, body.expectedVersion);
         if (parent.lifecycle !== 'active') throw new TenancyError('ORGANIZATION_DISABLED');
         if (previous.lifecycle !== 'active') throw new TenancyError('FRANCHISE_DISABLED');
-        return { previous, current: await repository.updateFranchiseProfile(tx, scope, body.displayName, body.expectedVersion) };
+        return { previous, current: await repository.updateFranchiseProfile(access(tx, context), scope, body.displayName, body.expectedVersion) };
       });
       await report(fact(context, result.current, scope.franchiseId, result.previous, 'profile_correction'));
       return franchiseDto(result.current);
@@ -138,11 +145,11 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const scope = franchiseScope(context, franchiseId);
       const body = validate.lifecycleInput(input);
       const result = await tenancyTransaction(database, async tx => {
-        await repository.lockOrganization(tx, scope.organizationId);
-        const previous = await repository.lockFranchise(tx, scope, true);
+        await repository.lockOrganization(access(tx, context), scope.organizationId);
+        const previous = await repository.lockFranchise(access(tx, context), scope, true);
         expected(previous, body.expectedVersion);
         if (previous.lifecycle === body.lifecycle) return { previous, current: previous };
-        return { previous, current: await repository.updateFranchiseLifecycle(tx, scope, body.lifecycle, body.expectedVersion) };
+        return { previous, current: await repository.updateFranchiseLifecycle(access(tx, context), scope, body.lifecycle, body.expectedVersion) };
       });
       if (result.current.version !== result.previous.version) await report(fact(context, result.current, scope.franchiseId, result.previous, body.reasonCode));
       return franchiseDto(result.current);
@@ -151,10 +158,10 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const context = await approved('organization.profile.update');
       const body = validate.profileInput(input);
       const result = await tenancyTransaction(database, async tx => {
-        const previous = await repository.lockOrganization(tx, context.organizationId!, true);
+        const previous = await repository.lockOrganization(access(tx, context), context.organizationId!, true);
         expected(previous, body.expectedVersion);
         if (previous.lifecycle !== 'active') throw new TenancyError('ORGANIZATION_DISABLED');
-        return { previous, current: await repository.updateOrganizationProfile(tx, previous.id, body.displayName, body.expectedVersion) };
+        return { previous, current: await repository.updateOrganizationProfile(access(tx, context), previous.id, body.displayName, body.expectedVersion) };
       });
       await report(fact(context, result.current, null, result.previous, 'profile_correction'));
       return organizationDto(result.current);
@@ -163,10 +170,10 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       const context = await approved('organization.lifecycle.manage');
       const body = validate.lifecycleInput(input);
       const result = await tenancyTransaction(database, async tx => {
-        const previous = await repository.lockOrganization(tx, context.organizationId!, true);
+        const previous = await repository.lockOrganization(access(tx, context), context.organizationId!, true);
         expected(previous, body.expectedVersion);
         if (previous.lifecycle === body.lifecycle) return { previous, current: previous };
-        return { previous, current: await repository.updateOrganizationLifecycle(tx, previous.id, body.lifecycle, body.expectedVersion) };
+        return { previous, current: await repository.updateOrganizationLifecycle(access(tx, context), previous.id, body.lifecycle, body.expectedVersion) };
       });
       if (result.current.version !== result.previous.version) await report(fact(context, result.current, null, result.previous, body.reasonCode));
       return organizationDto(result.current);

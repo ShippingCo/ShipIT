@@ -7,6 +7,8 @@ import { provisionDatabase, type DisposableDatabase } from '../../../../packages
 import { createTenancyService } from '../../src/modules/tenancy/service.ts';
 import { TenancyError } from '../../src/modules/tenancy/errors.ts';
 import { tenancyTransaction } from '../../src/modules/tenancy/transaction.ts';
+import { issueTenantAccess } from '../../src/modules/security/scope.ts';
+import type { TransactionExecutor } from '@shippingco/db';
 import { lockActiveFranchiseForOperationalWrite } from '../../src/modules/tenancy/repository.ts';
 import type { TenancyAuditFact, FranchiseDto, OrganizationDto } from '../../src/modules/tenancy/types.ts';
 import { approvedAuthority, seedTenancy, tenancyFixture as f, testTenancyServer, unknownTenantId } from '../tenancy-support.ts';
@@ -185,9 +187,9 @@ await test('disable preserves authorized history, denies new operational writes 
   const { facts, audit } = captureAudit();
   const service = createTenancyService({ database: pool, authorizer: approvedAuthority(), audit });
   const initial = await service.readFranchise(alpha1Id);
-  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped));
+  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped));
   for (const franchiseId of [f.franchises.beta1.id, unknownTenantId]) {
-    await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, { organizationId: alphaId, franchiseId })), hasCode('RESOURCE_NOT_FOUND'));
+    await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), { organizationId: alphaId, franchiseId })), hasCode('RESOURCE_NOT_FOUND'));
   }
   const disabled = await service.changeFranchiseLifecycle(alpha1Id, disable);
   assert.equal(disabled.id, initial.id); assert.equal(disabled.organization_id, initial.organization_id);
@@ -199,14 +201,14 @@ await test('disable preserves authorized history, denies new operational writes 
     await assert.rejects(service.updateFranchiseProfile(alpha1Id, { display_name: 'Synthetic Disabled Bypass', expected_version: 2, ...bypass }), hasCode('VALIDATION_FAILED'));
   }
   assert.deepEqual(await service.readFranchise(alpha1Id), disabled); assert.equal(facts.length, 1);
-  await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped)), hasCode('FRANCHISE_DISABLED'));
+  await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped)), hasCode('FRANCHISE_DISABLED'));
   const sibling = createTenancyService({ database: pool, authorizer: approvedAuthority(alphaId, [f.franchises.alpha2.id]), audit });
   await assert.rejects(sibling.readFranchise(alpha1Id), hasCode('RESOURCE_NOT_FOUND'));
   const repeated = await service.changeFranchiseLifecycle(alpha1Id, { ...disable, expected_version: 2 });
   assert.deepEqual(repeated, disabled); assert.equal(facts.length, 1);
   const active = await service.changeFranchiseLifecycle(alpha1Id, { lifecycle: 'active', expected_version: 2, reason_code: 'administrative_reactivate' });
   assert.equal(active.version, 3); assert.equal(active.lifecycle, 'active');
-  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped));
+  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped));
   assert.equal(facts.length, 2); assert.equal(facts[0]?.reason_code, 'administrative_disable');
   assert.equal(facts[1]?.reason_code, 'administrative_reactivate');
   assert.doesNotMatch(JSON.stringify(facts), /display_name|franchise_code|Franchise Alpha/);
@@ -220,7 +222,7 @@ await test('active write locks first: disable waits for the operational transact
   const order: string[] = [];
   const write = tenancyTransaction(pool, async tx => {
     blockingPid = (await tx.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
-    await lockActiveFranchiseForOperationalWrite(tx, scoped); entered.resolve();
+    await lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped); entered.resolve();
     await release.promise;
     await tx.query('INSERT INTO synthetic.fixture (id,label) VALUES ($1,$2)', [probeId, 'synthetic_operational_write']);
     order.push('write-completes');
@@ -237,7 +239,7 @@ await test('active write locks first: disable waits for the operational transact
     await waitForBlocked(database, blockingPid); assert.deepEqual(order, []);
     release.resolve(); await write; await pendingDisable;
     assert.deepEqual(order, ['write-completes', 'disable-committed']);
-    await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped)), hasCode('FRANCHISE_DISABLED'));
+    await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped)), hasCode('FRANCHISE_DISABLED'));
   } finally { release.resolve(); await Promise.allSettled([write, pendingDisable]); }
 });
 
@@ -245,7 +247,7 @@ await test('disable locks first: blocked and subsequently started operational gu
   const database = await provisionDatabase(t), pool = await fixture(database);
   await database.prepareFixtures();
   const operationalWrite = (id: string) => tenancyTransaction(pool, async tx => {
-    await lockActiveFranchiseForOperationalWrite(tx, scoped);
+    await lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped);
     await tx.query('INSERT INTO synthetic.fixture (id,label) VALUES ($1,$2)', [id, 'synthetic_forbidden_operational_write']);
   });
   const commitEntered = deferred(), releaseCommit = deferred(); let blockingPid = 0;
@@ -286,11 +288,11 @@ await test('organization administration is service-only and disabling it gates a
   const disabled = await service.changeOrganizationLifecycle({ ...disable, expected_version: 2 });
   assert.equal(disabled.version, 3); assert.equal((await member.readOrganization()).lifecycle, 'disabled');
   assert.equal((await member.readFranchise(alpha1Id)).lifecycle, 'active');
-  await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped)), hasCode('ORGANIZATION_DISABLED'));
+  await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped)), hasCode('ORGANIZATION_DISABLED'));
   await assert.rejects(service.createFranchise({ display_name: 'Synthetic Denied Creation', franchise_code: 'DENIED' }), hasCode('ORGANIZATION_DISABLED'));
   assert.equal(facts.length, 2);
   await service.changeOrganizationLifecycle({ lifecycle: 'active', expected_version: 3, reason_code: 'administrative_reactivate' });
-  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(tx, scoped));
+  await tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped));
 });
 
 await test('second bootstrap write failure rolls back both roots and publishes no successful audit fact', { timeout: 30000 }, async t => {
@@ -372,3 +374,9 @@ await test('post-commit audit failure and uncertain commit return safe errors wh
     assert.doesNotMatch(response.body + boundary.logs.join(''), /DB_|postgres|password/);
   } finally { await boundary.app.close(); }
 });
+
+function operationalAccess(tx:TransactionExecutor) {
+  return issueTenantAccess(tx,{action:'franchise.profile.update',actor:{type:'service',id:'synthetic-operations'},
+    organizationId:f.organizations.alpha.id,permittedFranchiseIds:[f.franchises.alpha1.id],organizationWide:false,
+    provenance:'internal-service',correlationId:'synthetic-operations'});
+}

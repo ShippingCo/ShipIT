@@ -1,4 +1,5 @@
 import { DatabaseError, withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
+import { HttpError } from '../../plugins/errors.ts';
 import { TenancyError } from './errors.ts';
 
 // #10 intentionally sanitizes arbitrary callback errors. Recover our known domain
@@ -9,7 +10,11 @@ export async function tenancyTransaction<T>(database: DatabasePool, work: (tx: T
   try {
     return await withTransaction(database, async tx => {
       try { return await work(tx); }
-      catch (error) { if (error instanceof TenancyError) domainError = error; throw error; }
+      catch (error) {
+        if (error instanceof TenancyError) domainError = error;
+        if (error instanceof HttpError) domainError = new TenancyError(error.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
+        throw error;
+      }
     });
   } catch (error) {
     if (domainError && error instanceof DatabaseError && error.code === 'DB_TRANSACTION_FAILED') throw domainError;

@@ -251,3 +251,21 @@ await test('lock-dependent executor accepts only the active transaction and reje
   assert.throws(() => assertActiveTransaction(completed), { message: 'DB_TRANSACTION_FAILED' });
   await assert.rejects(completed.query('SELECT 1'), { message: 'DB_CLOSED' });
 });
+
+await test('Issue 14 data upgrades with composite audit ownership and repeat migration is a no-op', {timeout:20000}, async t => {
+  const db=await provisionDatabase(t);
+  assert.deepEqual(await db.migrate({count:4}),{applied:4});
+  const owner=db.ownerPool();
+  const orgA='00000000-0000-4000-8000-000000000001',orgB='00000000-0000-4000-8000-000000000002';
+  const user='00000000-0000-4000-8000-000000000101',member='00000000-0000-4000-8000-000000000201';
+  await owner.query("INSERT INTO shipit.organizations(id,display_name) VALUES($1,'Synthetic Alpha'),($2,'Synthetic Beta')",[orgA,orgB]);
+  await owner.query('INSERT INTO shipit.auth_users(id) VALUES($1)',[user]);
+  await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin')",[member,user,orgA]);
+  await owner.query(`INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,affected_user_id,membership_id,action,role)
+    VALUES('00000000-0000-4000-8000-000000000901',$1,'service',$2,$3,'bootstrap_admin','org_admin')`,[orgA,user,member]);
+  assert.deepEqual(await db.migrate(),{applied:1});
+  assert.deepEqual(await db.migrate(),{applied:0});
+  assert.equal((await owner.query<{count:string}>('SELECT count(*) FROM shipit.membership_audit_events')).rows[0]?.count,'1');
+  await assert.rejects(owner.query(`INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,affected_user_id,membership_id,action,role)
+    VALUES('00000000-0000-4000-8000-000000000902',$1,'service',$2,$3,'bootstrap_admin','org_admin')`,[orgB,user,member]));
+});
