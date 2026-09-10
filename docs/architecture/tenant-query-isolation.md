@@ -135,7 +135,7 @@ Only these exact production files can issue raw application SQL:
 | --- | --- |
 | `auth/repository.ts` | Identity/session/challenge storage, preceding tenant authorization |
 | `auth/worker.ts` | Identity-bound OTP delivery/expiry, not tenant business operations |
-| `memberships/authority.ts` | Live actor membership discovery, own-organization serialization and minimal franchise IDs; invite resolution requires authenticated invitee plus hash |
+| `memberships/authority.ts` | Live actor membership discovery, own-organization serialization and minimal franchise IDs; invite resolution requires authenticated invitee plus hash; authorized organization-wide role/invitation occupancy returns booleans only |
 | `security/scope.ts` | The checked low-level capability executor itself |
 
 The authority module can only be imported by the membership service. Issuance can only
@@ -145,6 +145,39 @@ repositories cannot import its executor primitives or driver. Bootstrap/root adm
 remain explicit injected internal-service capabilities, with no HTTP route or extra role.
 No other staff record-ID discovery, unrestricted audit reader, cache, signed attachment
 or export exception exists. Future features must add their applicable security matrix.
+
+### Organization-wide membership conflicts
+
+Issue #14's partial unique indexes `memberships_one_active_role_idx` (active lifecycle)
+and `invitations_one_pending_role_idx` (pending state) cover user, Organization and role,
+independent of Franchise visibility. The membership service checks these slots through
+two `EXISTS` operations in the existing authority exception. They require a live capability
+for membership management or, for active-role occupancy only, authenticated invitation
+acceptance. Organization comes from the capability; user and role come from validated,
+authorized service input or the identity-bound invitation. Acceptance cannot query a
+different user or exclude a membership. There is no public occupancy endpoint.
+
+Only a boolean crosses this boundary: no conflicting record ID, scope, token, timestamp,
+count or other metadata. Tenant-facing record queries and writes retain their existing
+scope predicates. This preserves the existing generic 409 conflict contract without
+granting access to the conflicting record. Membership role updates use the same check,
+excluding only the already-authorized membership being changed.
+
+Expiry makes an invitation unusable but does not change its stored `pending` state or
+release the partial unique index. The existing expiration/replacement helper remains
+scoped: a manager of the complete old grant may revoke it, append `invitation_expired`
+and insert its replacement atomically. An inaccessible expired sibling grant returns
+409 `INVITATION_CONFLICT` and remains unchanged, just like an inaccessible live pending
+grant. An organization administrator can perform the existing replacement flow. This
+retains ADR 0012's complete-grant management ceiling without exposing or automatically
+revoking a sibling record through an A-only capability.
+
+The database remains the final integrity boundary. Sanitized database errors retain
+only those two reviewed index names for SQLSTATE 23505; arbitrary constraint names and
+driver detail remain discarded. The membership transaction translates only those known
+query failures to the existing 409 domain errors, and reports them only after successful
+rollback. Other unique violations, unknown database errors, rollback failure and commit
+uncertainty keep their normal 503 path. No schema, runtime grants or AST exemptions change.
 
 ## Compatibility and rollback
 

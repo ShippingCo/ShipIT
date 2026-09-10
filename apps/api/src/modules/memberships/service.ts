@@ -16,7 +16,16 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
   try {
     return await withTransaction(database,async tx=>{
       try { return await work(tx); }
-      catch(error) { if(error instanceof HttpError) domainError=error; throw error; }
+      catch(error) {
+        if(error instanceof HttpError) domainError=error;
+        // The indexes remain the final boundary if occupancy changes after a check.
+        // Translate inside the transaction so normal rollback must succeed first.
+        if(error instanceof DatabaseError && error.code==='DB_QUERY_FAILED' && error.sqlState==='23505') {
+          if(error.constraint==='memberships_one_active_role_idx') domainError=new HttpError('MEMBERSHIP_CONFLICT');
+          if(error.constraint==='invitations_one_pending_role_idx') domainError=new HttpError('INVITATION_CONFLICT');
+        }
+        throw domainError??error;
+      }
     });
   } catch(error) {
     if(domainError && error instanceof DatabaseError && error.code==='DB_TRANSACTION_FAILED') throw domainError;
@@ -100,7 +109,7 @@ export function createMembershipService(database:DatabasePool) {
         manageable(authority,body.role,body.franchiseIds);
         if(!await repository.validateFranchises(scope,body.organizationId,body.franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
         if(!await authorityRepository.activeUser(tx,body.inviteeUserId,true)) throw new HttpError('RESOURCE_NOT_FOUND');
-        if(await repository.activeRoleExists(scope,body.inviteeUserId,body.organizationId,body.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        if(await authorityRepository.activeRoleExists(tx,scope,body.inviteeUserId,body.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
         const expired=await repository.expiredPendingInvitation(scope,body.inviteeUserId,body.organizationId,body.role);
         if(expired) {
           if(!await repository.revokeInvitation(scope,expired)) throw new HttpError('INVITATION_CONFLICT');
@@ -108,7 +117,9 @@ export function createMembershipService(database:DatabasePool) {
             affectedUserId:body.inviteeUserId,invitationId:expired.id,action:'invitation_expired',role:expired.role,
             franchiseIds:expired.franchiseIds});
         }
-        if(await repository.pendingInvitationExists(scope,body.inviteeUserId,body.organizationId,body.role)) throw new HttpError('INVITATION_CONFLICT');
+        // Expiry does not release the pending index. Replacement above requires
+        // authority over the old grant; inaccessible (even expired) grants conflict.
+        if(await authorityRepository.pendingInvitationExists(tx,scope,body.inviteeUserId,body.role)) throw new HttpError('INVITATION_CONFLICT');
         const result=await repository.insertInvitation(scope,{...body,tokenHash,actorUserId:session.user_id});
         await repository.audit(scope,{organizationId:body.organizationId,actorType:'user',actorUserId:session.user_id,
           affectedUserId:body.inviteeUserId,invitationId:result.id,action:'invitation_created',role:body.role,franchiseIds:body.franchiseIds});
@@ -140,7 +151,7 @@ export function createMembershipService(database:DatabasePool) {
         if(!current || current.state!=='pending' || current.expiresAt<=now || current.inviteeUserId!==session.user_id) throw new HttpError('ACTION_FORBIDDEN');
         const scope=issueTenantAccess(tx,{action:'invitations.accept',actor:{type:'user',id:session.user_id},organizationId,
           permittedFranchiseIds:current.franchiseIds,organizationWide:current.role==='org_admin',invitationId:current.id,correlationId:randomUUID(),provenance:'invitation'});
-        if(await repository.activeRoleExists(scope,current.inviteeUserId,current.organizationId,current.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        if(await authorityRepository.activeRoleExists(tx,scope,current.inviteeUserId,current.role)) throw new HttpError('MEMBERSHIP_CONFLICT');
         const created=await repository.insertMembership(scope,{userId:current.inviteeUserId,organizationId:current.organizationId,
           role:current.role,franchiseIds:current.franchiseIds});
         if(!await repository.acceptInvitation(scope,current)) throw new HttpError('ACTION_FORBIDDEN');
@@ -163,7 +174,7 @@ export function createMembershipService(database:DatabasePool) {
         if(current.version!==body.expectedVersion) throw new HttpError('VERSION_CONFLICT');
         if(!await repository.validateFranchises(scope,organizationId,body.franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
         if(current.role==='org_admin' && body.role!=='org_admin' && await repository.activeAdminCount(scope,organizationId,current.id)<1) throw new HttpError('ACTION_FORBIDDEN');
-        if(await repository.activeRoleExists(scope,current.userId,organizationId,body.role,current.id)) throw new HttpError('MEMBERSHIP_CONFLICT');
+        if(await authorityRepository.activeRoleExists(tx,scope,current.userId,body.role,current.id)) throw new HttpError('MEMBERSHIP_CONFLICT');
         const changed=await repository.updateMembership(scope,current,body.role,body.franchiseIds);
         if(!changed) throw new HttpError('VERSION_CONFLICT');
         await repository.audit(scope,{organizationId,actorType:'user',actorUserId:authenticatedSession.user_id,

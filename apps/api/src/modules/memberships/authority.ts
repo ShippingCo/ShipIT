@@ -1,5 +1,25 @@
 import { assertActiveTransaction, type QueryExecutor, type TransactionExecutor } from '@shippingco/db';
 import type { Invitation, InvitationState, Membership, MembershipLifecycle, Role } from './types.ts';
+import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
+import { HttpError } from '../../plugins/errors.ts';
+
+// Organization-wide occupancy is a conflict fact, never permission to load the
+// conflicting grant. Only the authorized membership service may call this module.
+export async function activeRoleExists(tx:TransactionExecutor,scope:TenantAccess,userId:string,role:Role,exceptId?:string) {
+  const context=assertTenantAccess(scope,['memberships.manage','invitations.accept']);
+  assertActiveTransaction(tx);
+  if(context.action==='invitations.accept' && (userId!==context.actor.id || exceptId)) throw new HttpError('ACTION_FORBIDDEN');
+  return (await tx.query<{occupied:boolean}>(`SELECT EXISTS (SELECT 1 FROM shipit.memberships
+    WHERE organization_id=$1 AND user_id=$2 AND role=$3 AND lifecycle='active'
+    AND ($4::uuid IS NULL OR id<>$4)) AS occupied`,[context.organizationId,userId,role,exceptId??null])).rows[0]!.occupied;
+}
+export async function pendingInvitationExists(tx:TransactionExecutor,scope:TenantAccess,userId:string,role:Role) {
+  const context=assertTenantAccess(scope,['memberships.manage']);
+  assertActiveTransaction(tx);
+  return (await tx.query<{occupied:boolean}>(`SELECT EXISTS (SELECT 1 FROM shipit.membership_invitations
+    WHERE organization_id=$1 AND invitee_user_id=$2 AND role=$3 AND state='pending') AS occupied`,
+  [context.organizationId,userId,role])).rows[0]!.occupied;
+}
 
 interface MembershipRow {
   id:string;user_id:string;organization_id:string;role:Role;lifecycle:MembershipLifecycle;version:number;

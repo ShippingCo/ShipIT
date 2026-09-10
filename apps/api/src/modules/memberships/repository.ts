@@ -95,11 +95,6 @@ export async function insertMembership(tx:TenantAccess,input:{userId:string;orga
   await replaceMembershipScopes(tx,id,input.organizationId,input.franchiseIds);
   return (await findMembership(tx,input.organizationId,id))!;
 }
-export async function activeRoleExists(tx:TenantAccess,userId:string,organizationId:string,role:Role,exceptId?:string) {
-  assertOrganization(tx,organizationId);
-  return !!(await scopedQuery(tx, ['memberships.read','memberships.manage','memberships.bootstrap','invitations.accept'], `SELECT 1 FROM shipit.memberships m WHERE {{membership:m}} AND user_id=$1 AND organization_id=$2 AND role=$3
-    AND lifecycle='active' AND ($4::uuid IS NULL OR id<>$4)`,[userId,organizationId,role,exceptId??null])).rows[0];
-}
 export async function updateMembership(tx:TenantAccess,current:Membership,role:Role,franchiseIds:readonly string[]) {
   assertTenantAccess(tx, ['memberships.manage']); assertOrganization(tx,current.organizationId); assertGrant(tx,current.role,current.franchiseIds); assertGrant(tx,role,franchiseIds);
   const result=await scopedQuery(tx, ['memberships.manage'], `UPDATE shipit.memberships m SET role=$3,version=version+1,
@@ -128,11 +123,6 @@ export async function expiredPendingInvitation(tx:TenantAccess,userId:string,org
     AND organization_id=$2 AND role=$3 AND state='pending' AND expires_at<=clock_timestamp() FOR UPDATE`,
   [userId,organizationId,role])).rows[0];
   return row ? findInvitation(tx,organizationId,row.id) : undefined;
-}
-export async function pendingInvitationExists(tx:TenantAccess,userId:string,organizationId:string,role:Role) {
-  assertOrganization(tx,organizationId);
-  return !!(await scopedQuery(tx, ['memberships.read','memberships.manage','memberships.bootstrap','invitations.accept'], `SELECT 1 FROM shipit.membership_invitations i WHERE {{invitation:i}} AND invitee_user_id=$1 AND organization_id=$2
-    AND role=$3 AND state='pending'`,[userId,organizationId,role])).rows[0];
 }
 export async function insertInvitation(tx:TenantAccess,input:{inviteeUserId:string;organizationId:string;role:Role;franchiseIds:readonly string[];tokenHash:string;actorUserId:string}) {
   assertTenantAccess(tx, ['memberships.manage']); assertOrganization(tx,input.organizationId); assertGrant(tx,input.role,input.franchiseIds);

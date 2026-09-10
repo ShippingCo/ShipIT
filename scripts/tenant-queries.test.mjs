@@ -33,3 +33,11 @@ test('intentionally unscoped repository makes actual checker CLI exit nonzero', 
     assert.equal(result.status, 1); assert.match(result.stderr, /TENANT_QUERY_GATE/);
   } finally { rmSync(root, {recursive:true,force:true}); }
 });
+test('organization occupancy authority remains confined to the membership service', () => {
+  const source = "import {activeRoleExists,pendingInvitationExists} from '../memberships/authority.ts'";
+  assert.deepEqual(inspectSource('apps/api/src/modules/memberships/service.ts', source), []);
+  for (const path of [file, 'apps/api/src/modules/example/service.ts']) {
+    assert.ok(inspectSource(path, source).some(error => error.includes('authority resolution')));
+    assert.ok(inspectSource(path, "export * from '../memberships/authority.ts'").length);
+  }
+});
