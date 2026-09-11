@@ -1,3 +1,7 @@
+import { createAuditService } from './modules/audit/service.ts';
+import { registerAudit } from './modules/audit/routes.ts';
+import { registerSecurityAudit } from './modules/audit/security.ts';
+import { createSecurityCounters, type SecurityTelemetry } from './modules/audit/telemetry.ts';
 import { randomUUID } from 'node:crypto';
 import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
@@ -16,8 +20,8 @@ import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration }
-export function buildServer({ config, database, logSink, auth }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry }
+export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters() }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -59,6 +63,8 @@ export function buildServer({ config, database, logSink, auth }: ServerDependenc
   if (auth) {
     app.register(cookie);
     app.register(async instance => {
+      registerSecurityAudit(instance,database,config.environment!=='developer',securityTelemetry);
+      registerAudit(instance,createAuditService(database,auth.keys.browser),config.environment!=='developer');
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');
     });

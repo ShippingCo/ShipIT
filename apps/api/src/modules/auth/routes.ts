@@ -31,38 +31,38 @@ export function registerAuth(app: FastifyInstance, service: AuthService, keys: A
   app.post('/auth/challenges', async r => {
     const body=object(r.body,['channel','address']);
     const contact=identifier(body.channel,body.address);
-    return service.start(contact.channel,contact.address,binding(r),r.ip);
+    return service.withCorrelation(r.id).start(contact.channel,contact.address,binding(r),r.ip);
   });
   app.post('/auth/challenges/resend', async r => {
     const body=object(r.body,['challenge_id']);
-    return service.resend(String(body.challenge_id ?? ''),binding(r),r.ip);
+    return service.withCorrelation(r.id).resend(String(body.challenge_id ?? ''),binding(r),r.ip);
   });
   app.post('/auth/challenges/verify', async (r,reply) => {
     const body=object(r.body,['challenge_id','code']);
     if (typeof body.code !== 'string') throw new HttpError('VALIDATION_FAILED');
-    const result=await service.verify(String(body.challenge_id ?? ''),body.code,binding(r),r.ip,token(r),token(r));
+    const result=await service.withCorrelation(r.id).verify(String(body.challenge_id ?? ''),body.code,binding(r),r.ip,token(r),token(r));
     if (!result.linked) reply.setCookie(sessionName,result.token,{...options,maxAge:43200});
     return { authenticated:true };
   });
   app.get('/auth/session', async r => {
-    const s=await service.current(token(r));
+    const s=await service.withCorrelation(r.id).current(token(r));
     return { user_id:s.user_id,expires_at:s.expires_at,idle_expires_at:s.idle_expires_at };
   });
-  app.post('/auth/activity', async r => { object(r.body,[]); await service.activity(token(r)); return { ok:true }; });
+  app.post('/auth/activity', async r => { object(r.body,[]); await service.withCorrelation(r.id).activity(token(r)); return { ok:true }; });
   app.post('/auth/logout', async (r,reply) => {
-    object(r.body,[]); await service.logout(token(r)); reply.clearCookie(sessionName,options); return { ok:true };
+    object(r.body,[]); await service.withCorrelation(r.id).logout(token(r)); reply.clearCookie(sessionName,options); return { ok:true };
   });
   app.post('/auth/logout-all', async (r,reply) => {
-    object(r.body,[]); await service.logoutAll(token(r)); reply.clearCookie(sessionName,options); return { ok:true };
+    object(r.body,[]); await service.withCorrelation(r.id).logoutAll(token(r)); reply.clearCookie(sessionName,options); return { ok:true };
   });
-  app.get('/auth/contacts', async r => ({ contacts:await service.contacts(token(r)) }));
+  app.get('/auth/contacts', async r => ({ contacts:await service.withCorrelation(r.id).contacts(token(r)) }));
   app.post('/auth/contacts', async r => {
     const body=object(r.body,['channel','address']),contact=identifier(body.channel,body.address);
-    await service.current(token(r));
-    return service.start(contact.channel,contact.address,binding(r),r.ip,token(r));
+    await service.withCorrelation(r.id).current(token(r));
+    return service.withCorrelation(r.id).start(contact.channel,contact.address,binding(r),r.ip,token(r));
   });
   app.post('/auth/contacts/remove', async (r,reply) => {
-    const body=object(r.body,['id']); await service.unlink(token(r),String(body.id ?? ''));
+    const body=object(r.body,['id']); await service.withCorrelation(r.id).unlink(token(r),String(body.id ?? ''));
     reply.clearCookie(sessionName,options); return { ok:true };
   });
 }

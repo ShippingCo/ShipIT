@@ -5,11 +5,12 @@ import { AuthRepository, authTransaction, type Session, type Challenge } from '.
 import { digest, equal, mac, otp, seal, secret, type AuthKeys } from './crypto.ts';
 import { identifier, uuid, type Channel } from './validation.ts';
 
-export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
-  const root = new AuthRepository(pool);
+function createAuthCore(pool: DatabasePool, keys: AuthKeys, correlationId?:string) {
+  const root = new AuthRepository(pool,correlationId);
+  const transaction = <T>(work:(repo:AuthRepository)=>Promise<T>)=>authTransaction(pool,work,correlationId);
   async function limit(action: string, identity: string, ip: string, max: number, seconds: number) {
     // Global first bounds arbitrary attacker-generated account/IP bucket storage.
-    const permitted = await authTransaction(pool, async repo => {
+    const permitted = await transaction(async repo => {
       if (!await repo.hit(mac(keys.browser,'limit',action,'global'),60,1000)) return false;
       const source = await repo.hit(mac(keys.browser,'limit',action,'ip',ip),seconds,Math.max(max * 5,20));
       if (!source) return false;
@@ -46,12 +47,12 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
     // Trusted provisioning boundary only. #17 supplies verified enrollment; never expose as HTTP CRUD.
     async provision(channel: Channel, address: string) {
       const contact=identifier(channel,address);
-      return authTransaction(pool,repo=>repo.provision(contact.channel,contact.address));
+      return transaction(repo=>repo.provision(contact.channel,contact.address));
     },
     async start(channel: Channel, address: string, binding: string, ip: string, linkToken?: string) {
       const contact=identifier(channel,address);
       await limit('start',`${contact.channel}:${contact.address}`,ip,3,900);
-      return authTransaction(pool, async repo => {
+      return transaction(async repo => {
         const s = linkToken ? await lockedSession(repo,linkToken,true) : undefined;
         let user = s ? await repo.user(s.user_id) : await repo.lookup(contact.channel,contact.address);
         if (user) user=await repo.user(user.id,true);
@@ -70,7 +71,7 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
     async resend(idInput: string, binding: string, ip: string) {
       const id=uuid(idInput), before=await readChallenge(id);
       await limit('resend',before ? `${before.channel}:${before.address}` : id,ip,3,900);
-      return authTransaction(pool, async repo => {
+      return transaction(async repo => {
         if (before?.user_id) await repo.user(before.user_id,true);
         const c=await repo.challenge(id,true),now=await repo.now();
         if (!valid(c,binding,now) || c.resends>=3 || now.getTime()-c.last_sent_at.getTime()<60_000) throw new HttpError('ACTION_FORBIDDEN');
@@ -83,7 +84,7 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
     async verify(idInput: string, code: string, binding: string, ip: string, linkToken?: string, oldToken?: string) {
       const id=uuid(idInput), before=await readChallenge(id);
       await limit('verify',before ? `${before.channel}:${before.address}` : id,ip,10,900);
-      const result=await authTransaction(pool, async repo => {
+      const result=await transaction(async repo => {
         const user=before?.user_id ? await repo.user(before.user_id,true) : undefined;
         const c=await repo.challenge(id,true),now=await repo.now();
         if (!valid(c,binding,now)) return null;
@@ -111,24 +112,24 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
     },
     async logout(token: string) {
       // Invalid/already revoked logout is idempotent; outage still fails visibly.
-      return authTransaction(pool,async repo=>{
+      return transaction(async repo=>{
         const s=await repo.session(digest(token));
         if (!s) return;
         await repo.user(s.user_id,true); await repo.revokeSession(s.id); await repo.event(s.user_id,'logout',s.id);
       });
     },
     async logoutAll(token: string) {
-      return authTransaction(pool,async repo=>{ const s=await lockedSession(repo,token,true); await repo.revokeAll(s.user_id); await repo.event(s.user_id,'revoke_all',s.id); });
+      return transaction(async repo=>{ const s=await lockedSession(repo,token,true); await repo.revokeAll(s.user_id); await repo.event(s.user_id,'revoke_all',s.id); });
     },
     async activity(token: string) {
-      return authTransaction(pool,async repo=>{ const s=await lockedSession(repo,token); await repo.activity(s.id); });
+      return transaction(async repo=>{ const s=await lockedSession(repo,token); await repo.activity(s.id); });
     },
     async contacts(token: string) {
-      return authTransaction(pool,async repo=>{const s=await lockedSession(repo,token);return repo.identifiers(s.user_id);});
+      return transaction(async repo=>{const s=await lockedSession(repo,token);return repo.identifiers(s.user_id);});
     },
     async unlink(token: string,idInput: string) {
       const id=uuid(idInput);
-      return authTransaction(pool,async repo=>{
+      return transaction(async repo=>{
         const s=await lockedSession(repo,token,true), contacts=await repo.identifiers(s.user_id);
         if (contacts.length<=1 || !contacts.some(c=>c.id===id)) throw new HttpError('ACTION_FORBIDDEN');
         await repo.removeIdentifier(s.user_id,id); await repo.revokeAll(s.user_id); await repo.event(s.user_id,'unlink',s.id);
@@ -137,7 +138,7 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
     // Internal service capability: no public global-admin route or tenant role inference.
     async changeAccount(userId: string,lifecycle: 'active'|'disabled') {
       const id=uuid(userId);
-      return authTransaction(pool,async repo=>{
+      return transaction(async repo=>{
         if (!await repo.user(id,true)) throw new HttpError('RESOURCE_NOT_FOUND');
         await repo.revokeAll(id,lifecycle); await repo.event(id,lifecycle==='active'?'enable':'disable');
       });
@@ -145,3 +146,7 @@ export function createAuthService(pool: DatabasePool, keys: AuthKeys) {
   };
 }
 export type AuthService=ReturnType<typeof createAuthService>;
+
+export function createAuthService(pool:DatabasePool,keys:AuthKeys) {
+  return {...createAuthCore(pool,keys),withCorrelation:(id:string)=>createAuthCore(pool,keys,id)};
+}

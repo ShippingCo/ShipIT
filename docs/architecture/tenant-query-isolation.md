@@ -88,7 +88,9 @@ ownership keys and FKs. Migration `1789059600000-tenant-audit-ownership.cjs` add
 `(organization_id, membership_id)` and `(organization_id, invitation_id)` audit FKs plus
 supporting indexes. Existing inconsistent audit data would fail migration validation;
 repair requires a reviewed forward data correction, never deletion or relaxed constraints.
-There is no audit retrieval endpoint; runtime still has INSERT-only audit access.
+Issue #16 adds [R28 audit retrieval](audit-contract.md) through a scoped canonical
+compatibility view. Legacy audit writes remain INSERT-only; new facts use append-only
+functions, with no direct runtime access to the new storage table.
 
 ## Trusted jobs
 
@@ -189,3 +191,12 @@ Disable affected routes or revert compatible application code if needed; retain 
 migration and correct database issues forward. Do not roll back to browser authority.
 #16 durable tenancy audit, #17 onboarding, #23 cursors/search, and future workers retain their
 existing ownership; this foundation neither implements nor marks them ready.
+
+
+Issue #16 adds the closed `audit.read` action, issued only by the existing membership
+service after live session/grant resolution. The audit repository retains explicit
+Organization predicates and complete historical Franchise-snapshot containment in SQL.
+No new raw SQL issuer exception exists. The exact Fastify `request.query` data access in
+`audit/routes.ts` is permitted; executor calls there remain rejected. The scoped executor
+treats the two audit append functions as writes, preventing a read capability from invoking
+a side-effecting SELECT. Positive/negative scanner tests include unscoped audit history.

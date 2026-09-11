@@ -80,3 +80,6 @@ register rather than silently inherited from the prototype.
 
 - [Tenant query isolation](tenant-query-isolation.md) — mandatory scoped repositories, trusted jobs and AST CI enforcement.
 - [Issue #15 verification](issue-15-verification.md) — tenant boundary acceptance evidence.
+
+- [Append-only audit and safe telemetry](audit-contract.md) — canonical compatibility projection, transactional writes, R28 retrieval and counters.
+- [Issue #16 verification](issue-16-verification.md) — migration, security and delivery evidence.

@@ -187,10 +187,10 @@ for a Franchise, active parent. Explicit lifecycle recovery remains available wh
 disabled under its own approved action. Database constraint names, SQL and supplied
 values never enter conflict messages. Database dependency failures remain controlled
 `TEMPORARILY_UNAVAILABLE`; a failed/uncertain response is not proof that no commit occurred.
-The audit adapter is notified after commit and may fail after successful mutation or
-lose notification on a crash. Such failure also returns controlled 503; no automatic
-retry, durable fact delivery or persisted command replay is promised. #16's durable
-transactional audit integration is required before production route activation.
+Issue #16 replaces the post-commit audit notification with mandatory transactional
+insertion. Failure rolls back state and audit together; an uncertain COMMIT response
+still returns controlled 503 and does not justify blindly replaying a mutation. See the
+[audit contract](audit-contract.md). No general outbox or persisted command replay is added.
 
 The authorization seam is internal: R01 `organization.profile.read`, R02
 `franchise.profile.read` / `franchise.profile.list`, W29 `franchise.profile.update`, and
@@ -247,3 +247,16 @@ return 400 without input excerpts. Unsupported body media returns 415. Endpoint 
 must keep unknown-property rejection and safe schema paths; attachments need separate
 bounded upload contracts. The [API guide](../../apps/api/README.md) owns operational
 CORS/proxy/rate/logging/shutdown details. CORS and rate limits are not authorization.
+
+
+## Audit boundary — Issue #16
+
+`GET /api/v1/audit` is ratified with current-session R28 authorization, a required
+Organization selector, bounded exact resource/Franchise and UTC date filters, limit 1–100
+(default 50), and opaque expiring cursors. Own-Organization org_admin and complete-scope
+franchise_admin administrative projections are implemented; accountant cannot browse
+these nonfinancial facts. Identity-only history never enters the tenant projection.
+Malformed or scope/query-incompatible cursors return controlled 422 `CURSOR_INVALID`;
+foreign/unknown exact resource selectors return uniform 404. GET has no mutation-only
+CSRF requirement. [The audit contract](audit-contract.md) defines exact filters, DTO,
+ordering, correlation, grants, compatibility and privacy rules.

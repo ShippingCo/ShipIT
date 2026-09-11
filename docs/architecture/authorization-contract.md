@@ -294,6 +294,7 @@ service authority with an actor reference, never a staff role or browser claim. 
 create no identity/membership and expose no generic public onboarding. W35 grants none
 of these. Normal production HTTP composition registers no private tenancy routes before
 #13/#14; #17 owns authenticated onboarding and its idempotent membership transaction.
-The Issue #12 audit seam is a post-commit notification, which can fail after the mutation
-commits or be lost on process crash. It supplies no durable delivery/retry guarantee.
-Durable transactional audit persistence (#16) is required before private route activation.
+Issue #16 replaces the Issue #12 post-commit notification with mandatory durable
+audit insertion in the business transaction. Its [audit contract](audit-contract.md)
+defines the R28 administrative projection without adding financial permissions, roles,
+exports or global identity browsing. No post-commit success-audit gap remains.

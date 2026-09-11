@@ -3,7 +3,7 @@ import { HttpError } from '../../plugins/errors.ts';
 import type { ApprovedTenancyContext } from '../tenancy/types.ts';
 
 export type PrivateAction = ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
-  'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export';
+  'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
 export interface PrivateContext extends Omit<ApprovedTenancyContext, 'action'> {
   readonly action: PrivateAction;
   readonly organizationWide: boolean;
@@ -17,7 +17,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const actions: readonly PrivateAction[] = ['organization.bootstrap','franchise.create','organization.profile.update',
   'organization.lifecycle.manage','organization.profile.read','franchise.profile.read','franchise.profile.list',
   'franchise.profile.update','franchise.lifecycle.manage','memberships.read','memberships.manage',
-  'invitations.accept','memberships.bootstrap','operations.export','financial.export'];
+  'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read'];
 const reference = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/;
 
 // Internal issuer. Import sites are allowlisted by the AST security gate. Never a DTO parser.
@@ -67,8 +67,9 @@ export function scopedQuery<Row extends object = Record<string, unknown>>(
   if (!actions.length) throw new HttpError('ACTION_FORBIDDEN');
   const context = assertTenantAccess(access, actions);
   const command = sql.trimStart().match(/^(SELECT|INSERT|UPDATE|DELETE)\b/i)?.[1]?.toUpperCase();
+  const writes = command !== 'SELECT' || /\bshipit\.append_(?:tenancy_audit|security_denial)\s*\(/i.test(sql);
   if (!command || sql.includes(';') ||
-    ((command !== 'SELECT' || /FOR\s+(UPDATE|SHARE)/i.test(sql)) && !capabilities.get(access)!.transaction) || (command !== 'SELECT' && /(?:\.read|\.list|\.export)$/.test(context.action))) {
+    ((writes || /FOR\s+(UPDATE|SHARE)/i.test(sql)) && !capabilities.get(access)!.transaction) || (writes && /(?:\.read|\.list|\.export)$/.test(context.action))) {
     throw new HttpError('ACTION_FORBIDDEN');
   }
   const values = [...params];
