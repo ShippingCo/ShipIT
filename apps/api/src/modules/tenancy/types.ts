@@ -53,6 +53,6 @@ export interface TenancyAuditFact {
   reason_code: 'bootstrap' | 'franchise_creation' | 'profile_correction' | 'administrative_disable' | 'administrative_reactivate';
   occurred_at: string;
 }
-// Post-commit notification only. #16 must replace this with transactional durable audit
-// before private production administration is activated; it is not an event outbox.
+// Optional transaction-local validation/test observer, invoked after mandatory durable
+// insertion and before commit. Throwing aborts the transaction; not a delivery callback.
 export interface TenancyAuditPort { record(fact: Readonly<TenancyAuditFact>): Promise<void> }

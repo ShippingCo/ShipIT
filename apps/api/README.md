@@ -154,7 +154,7 @@ or `/api/v1/franchises`, including mutations, return the normal safe 404. Test-o
 under `test/tenancy-support.ts` exercise the real service via Fastify injection without
 opening a port. They are never imported into runtime composition.
 
-`createTenancyService({ database, authorizer, audit })` receives a trusted server adapter
+`createTenancyService({ database, authorizer })` receives a trusted server adapter
 whose `authorize(action)` supplies the actor, exact action, organization and explicit
 permitted franchise IDs. It receives no request headers, bodies or tenant selectors.
 The service snapshots approvals; both detail and SQL list queries enforce organization
@@ -191,10 +191,9 @@ linearizes at commit, after earlier guarded writers finish; newly serialized gua
 then fail. Authorized historical reads still work. Organization disable also gates every
 child without rewriting child lifecycles; recovery does not reinstate memberships.
 
-The audit port receives only safe IDs, action, lifecycle before/after, expected/committed
-versions, controlled reason and UTC time. It runs after confirmed commit, so failures,
-stale versions and rollbacks cannot emit false successful facts. **This is not durable
-audit**: a crash can lose notification, and an audit adapter failure returns a controlled
-503 after the mutation has committed. Do not automatically retry or claim replay
-persistence. #16 must integrate durable transactional audit before private production
-routes activate; #17 owns authenticated onboarding and its replay guarantee.
+Issue #16 makes audit insertion mandatory inside each sensitive tenancy transaction.
+The optional `audit.record` observer now runs before commit, after the durable insert;
+it cannot replace persistence and must not perform external side effects. Its failure
+rolls back both state and audit. See [the canonical audit contract](../../docs/architecture/audit-contract.md)
+for compatibility, exact runtime grants, R28 GET retrieval, opaque cursor rules and safe
+denial telemetry. Production tenancy route activation remains with its owning coordinator.

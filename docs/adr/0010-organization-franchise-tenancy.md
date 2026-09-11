@@ -89,3 +89,13 @@ with separately reviewed ownership-history, grant migration and recovery costs. 
 W41 policy and lifecycle enum become accepted only when this Issue #12 PR is externally
 reviewed and merged. The PR must remain open for that review; an open PR does not satisfy
 downstream prerequisites.
+
+
+## Issue #16 implementation amendment
+
+Issue #16 replaces the historical post-commit notification described above with mandatory
+transactional durable insertion; the optional observer now runs before commit and cannot
+replace storage. This satisfies ADR 0004 without creating an outbox or activating new
+administrative routes. [The audit contract](../architecture/audit-contract.md) defines the
+compatible schema, runtime privileges, R28 projection and denial boundary; its PR remains
+subject to independent review. Earlier limitations above describe the released #12 state.

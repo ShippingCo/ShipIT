@@ -232,13 +232,13 @@ await test('active write locks first: disable waits for the operational transact
     audit: { record: async () => {
       const probe = await pool.query<{ label: string }>('SELECT label FROM synthetic.fixture WHERE id=$1', [probeId]);
       assert.equal(probe.rows[0]?.label, 'synthetic_operational_write');
-      order.push('disable-committed');
+      order.push('disable-before-commit');
     } } });
   const pendingDisable = service.changeFranchiseLifecycle(alpha1Id, disable);
   try {
     await waitForBlocked(database, blockingPid); assert.deepEqual(order, []);
     release.resolve(); await write; await pendingDisable;
-    assert.deepEqual(order, ['write-completes', 'disable-committed']);
+    assert.deepEqual(order, ['write-completes', 'disable-before-commit']);
     await assert.rejects(tenancyTransaction(pool, tx => lockActiveFranchiseForOperationalWrite(operationalAccess(tx), scoped)), hasCode('FRANCHISE_DISABLED'));
   } finally { release.resolve(); await Promise.allSettled([write, pendingDisable]); }
 });
@@ -266,7 +266,8 @@ await test('disable locks first: blocked and subsequently started operational gu
   const blockedGuard = operationalWrite(fixtureId(8302));
   const blockedRejection = assert.rejects(blockedGuard, hasCode('FRANCHISE_DISABLED'));
   try {
-    await waitForBlocked(database, blockingPid); assert.equal(facts.length, 0);
+    await waitForBlocked(database, blockingPid); assert.equal(facts.length, 1);
+    assert.equal((await database.adminQuery<{count:string}>('SELECT count(*) FROM shipit.audit_records')).rows[0]?.count,'0');
     releaseCommit.resolve(); await pendingDisable; await blockedRejection;
     assert.equal(facts.length, 1);
     await assert.rejects(operationalWrite(fixtureId(8303)), hasCode('FRANCHISE_DISABLED'));
@@ -337,7 +338,7 @@ await test('real database outage returns a safe 503 without partial mutation or 
   } finally { await database.setAvailable(true); await app.close(); }
 });
 
-await test('post-commit audit failure and uncertain commit return safe errors while preserving committed state', { timeout: 30000 }, async t => {
+await test('audit failure rolls back state and uncertain commit preserves both state and durable audit', { timeout: 30000 }, async t => {
   const database = await provisionDatabase(t), pool = await fixture(database);
   let attemptedFacts = 0;
   const failedAudit = testTenancyServer(pool, approvedAuthority(), { record: async () => {
@@ -348,11 +349,12 @@ await test('post-commit audit failure and uncertain commit return safe errors wh
     assert.equal(response.statusCode, 503); assert.equal(response.json().error.code, 'TEMPORARILY_UNAVAILABLE');
     assert.equal(attemptedFacts, 1); assert.doesNotMatch(response.body + failedAudit.logs.join(''), /SYN_AUDIT|password|postgres/);
     const retained = await failedAudit.service.readFranchise(alpha1Id);
-    assert.equal(retained.lifecycle, 'disabled'); assert.equal(retained.version, 2);
+    assert.equal(retained.lifecycle, 'active'); assert.equal(retained.version, 1);
+    assert.equal((await database.adminQuery<{count:string}>('SELECT count(*) FROM shipit.audit_records')).rows[0]?.count,'0');
   } finally { await failedAudit.app.close(); }
 
   // The underlying COMMIT succeeds but its result is lost. Never invent rollback
-  // or a successful audit notification from an ambiguous service outcome.
+  // or report API success from an ambiguous outcome; persisted state and audit agree.
   let committed = false;
   const uncertain: DatabasePool = { ...pool, async connect() {
     const client = await pool.connect();
@@ -368,7 +370,8 @@ await test('post-commit audit failure and uncertain commit return safe errors wh
   try {
     const response = await boundary.app.inject({ method: 'POST', url: `/test/tenancy/franchises/${secondId}/lifecycle`, payload: disable });
     assert.equal(response.statusCode, 503); assert.equal(response.json().error.code, 'TEMPORARILY_UNAVAILABLE');
-    assert.equal(committed, true); assert.equal(facts.length, 0);
+    assert.equal(committed, true); assert.equal(facts.length, 1);
+    assert.equal((await database.adminQuery<{count:string}>('SELECT count(*) FROM shipit.audit_records WHERE franchise_id=$1',[secondId])).rows[0]?.count,'1');
     const retained = await boundary.service.readFranchise(secondId);
     assert.equal(retained.lifecycle, 'disabled'); assert.equal(retained.version, 2);
     assert.doesNotMatch(response.body + boundary.logs.join(''), /DB_|postgres|password/);

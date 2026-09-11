@@ -148,12 +148,3 @@ export async function acceptInvitation(tx:TenantAccess,current:Invitation) {
   [current.organizationId,current.id,current.version]);
   return !!result.rows[0];
 }
-export async function audit(tx:TenantAccess,input:{organizationId:string;actorType:'user'|'service';actorUserId:string|null;
-  affectedUserId:string;membershipId?:string;invitationId?:string;action:string;role:Role;franchiseIds:readonly string[]}) {
-  assertTenantAccess(tx,['memberships.manage','memberships.bootstrap','invitations.accept']);
-  assertOrganization(tx,input.organizationId); assertGrant(tx,input.role,input.franchiseIds);
-  await scopedQuery(tx, ['memberships.manage','memberships.bootstrap','invitations.accept'], `INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,actor_user_id,affected_user_id,
-    membership_id,invitation_id,action,role,franchise_ids) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10::uuid[] WHERE {{organization:$2}}`,
-  [randomUUID(),tx.context.organizationId,tx.context.actor.type,tx.context.actor.type==='user'?tx.context.actor.id:null,input.affectedUserId,input.membershipId??null,
-    input.invitationId??null,input.action,input.role,input.franchiseIds]);
-}

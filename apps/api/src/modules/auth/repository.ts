@@ -13,7 +13,8 @@ export interface Challenge {
 }
 export class AuthRepository {
   readonly db: QueryExecutor;
-  constructor(db: QueryExecutor) { this.db=db; }
+  readonly correlationId: string;
+  constructor(db: QueryExecutor, correlationId: string = randomUUID()) { this.db=db; this.correlationId=correlationId; }
   async now() { return (await this.db.query<{ now: Date }>('SELECT clock_timestamp() AS now')).rows[0]!.now; }
   async user(id: string, lock = false) {
     return (await this.db.query<User>(`SELECT id,lifecycle,auth_version FROM shipit.auth_users WHERE id=$1 ${lock ? 'FOR UPDATE' : ''}`, [id])).rows[0];
@@ -40,7 +41,12 @@ export class AuthRepository {
     return (await this.db.query('DELETE FROM shipit.auth_identifiers WHERE user_id=$1 AND id=$2 RETURNING id', [userId, id])).rows.length > 0;
   }
   async event(userId: string, action: string, sessionId: string | null = null) {
-    await this.db.query('INSERT INTO shipit.auth_security_events(id,user_id,action,session_id) VALUES($1,$2,$3,$4)', [randomUUID(), userId, action, sessionId]);
+    await this.db.query('INSERT INTO shipit.auth_security_events(id,user_id,action,session_id,correlation_id) VALUES($1,$2,$3,$4,$5)', [randomUUID(), userId, action, sessionId,this.correlationId]);
+  }
+  // Identity-only denial adapter: never look up the submitted target or tenant.
+  async denial(actor:{type:'user'|'anonymous';id:string},action:string,resourceType:string,reason:string,correlationId:string) {
+    await this.db.query('SELECT shipit.append_security_denial($1,$2,$3,$4,$5,$6)',
+      [actor.type,actor.id,action,resourceType,reason,correlationId]);
   }
   async hit(bucket: string, seconds: number, maximum: number) {
     const row = (await this.db.query<{ hits: number }>(`INSERT INTO shipit.auth_rate_limits(bucket,hits,expires_at)
@@ -81,11 +87,11 @@ export class AuthRepository {
     await this.db.query('UPDATE shipit.auth_users SET auth_version=auth_version+1,lifecycle=COALESCE($2,lifecycle) WHERE id=$1', [id,lifecycle ?? null]);
   }
 }
-export async function authTransaction<T>(pool: DatabasePool, work: (repo: AuthRepository) => Promise<T>): Promise<T> {
+export async function authTransaction<T>(pool: DatabasePool, work: (repo: AuthRepository) => Promise<T>, correlationId?:string): Promise<T> {
   let domainError: HttpError | undefined;
   try {
     return await withTransaction(pool, async tx => {
-      try { return await work(new AuthRepository(tx)); }
+      try { return await work(new AuthRepository(tx,correlationId)); }
       catch (error) { if (error instanceof HttpError) domainError = error; throw error; }
     });
   } catch { throw domainError ?? new HttpError('TEMPORARILY_UNAVAILABLE'); }

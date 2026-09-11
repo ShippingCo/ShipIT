@@ -158,7 +158,7 @@ reject ordinary owner SQL updates to those columns; controlled adoption is defer
 to #79. Migration owners remain privileged administrators and are never application
 credentials. Disabling preserves rows and historical authorized reads; the API
 tenancy guard serializes operational writes with lifecycle administration. Durable
-audit and product-wide tenant enforcement remain with #16 and #15.
+audit and tenant enforcement are described in the Issue #16 section below and ADR 0013.
 
 ## Local and CI testing
 
@@ -213,6 +213,30 @@ commit/rollback/release, restart persistence, parameter binding, runtime privile
 pool exhaustion, statement timeouts, outage recovery and exact cleanup. Synthetic
 fixture tables exist only in disposable databases. Tenancy service tests use the
 same real PostgreSQL provisioner and the existing Alpha/Beta testkit fixture graph.
-These tests do not establish production TLS deployment, authentication, membership
-RBAC, product-wide tenant enforcement, durable audit, workers or provider behavior;
-those remain with their owning downstream issues.
+The original infrastructure/tenancy tests do not establish production TLS deployment,
+workers or provider behavior. Later API suites cover authentication, membership RBAC,
+tenant enforcement and the Issue #16 audit boundary described below.
+
+
+## Issue #16 audit provisioning
+
+Apply `1789146000000-append-only-audit.cjs` before deploying audit-enabled code. It leaves
+all released migrations/history intact and builds a canonical compatibility view over
+new tenancy/denial storage and the original membership/auth stores. No backfill or dual
+write occurs. Invalid historical membership Franchise ownership fails migration safely.
+
+In addition to the earlier explicit grants, provision the resolved runtime role with
+SELECT on `shipit.audit_history` and EXECUTE on exactly:
+
+- `shipit.append_tenancy_audit(uuid,uuid,text,text,text,text,uuid,text,uuid,timestamptz,text,text,integer)`
+- `shipit.append_security_denial(text,text,text,text,text,uuid)`
+
+Grant no privileges on `shipit.audit_records`; direct INSERT is denied as well as
+UPDATE/DELETE/TRUNCATE. Keep the original INSERT-only legacy audit grants and no DDL,
+role membership or ownership privileges. Do not use broad default/table grants. The
+functions are fixed-SQL SECURITY DEFINER with `search_path=pg_catalog` and no PUBLIC
+execute privilege. `prepareAudit()` in the guarded test provisioner exercises exactly
+this model with actual distinct migration/runtime credentials. Application SQL scopes
+the view using TenantAccess; this is not RLS protection from compromised runtime SQL.
+See [audit contract](../../docs/architecture/audit-contract.md) and
+[verification](../../docs/architecture/issue-16-verification.md) for rollout and evidence.

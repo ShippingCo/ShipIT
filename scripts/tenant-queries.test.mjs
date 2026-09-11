@@ -41,3 +41,12 @@ test('organization occupancy authority remains confined to the membership servic
     assert.ok(inspectSource(path, "export * from '../memberships/authority.ts'").length);
   }
 });
+test('audit SQL requires explicit scope and closed actions; request query data is not an executor', () => {
+  const audit='apps/api/src/modules/audit/repository.ts';
+  assert.deepEqual(inspectSource(audit, "scopedQuery(scope,['audit.read'],'SELECT id FROM shipit.audit_history WHERE {{organization:organization_id}}')"),[]);
+  for(const code of ["db.query('SELECT * FROM shipit.audit_history')", "scopedQuery(scope,['audit.read'],'SELECT * FROM shipit.audit_history')",
+    "scopedQuery(scope,[],'SELECT * FROM shipit.audit_history WHERE {{organization:organization_id}}')",
+    "import {issueTenantAccess} from '../security/scope.ts'", "import * as authority from '../memberships/authority.ts'"])assert.ok(inspectSource(audit,code).length);
+  assert.deepEqual(inspectSource('apps/api/src/modules/audit/routes.ts','service.list(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/audit/routes.ts',"request.query('SELECT * FROM shipit.audit_history')").length);
+});

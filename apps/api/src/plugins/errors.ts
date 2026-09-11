@@ -17,6 +17,7 @@ const errors = {
   HEADERS_TOO_LARGE: [431, 'Request headers exceed the permitted size.'],
   PAYLOAD_TOO_LARGE: [413, 'Request body exceeds the permitted size.'],
   UNSUPPORTED_MEDIA_TYPE: [415, 'Request body must use supported JSON.'],
+  CURSOR_INVALID: [422, 'Cursor is invalid. Restart the authorized query.'],
   VALIDATION_FAILED: [422, 'One or more request fields are invalid.'],
   RATE_LIMITED: [429, 'Too many requests. Retry later.'],
   INTERNAL_ERROR: [500, 'An unexpected error occurred.'],
