@@ -1,5 +1,7 @@
 import { createPricingService } from './modules/pricing/service.ts';
 import { registerPricing } from './modules/pricing/routes.ts';
+import { createTaxService } from './modules/tax/service.ts';
+import { registerTax } from './modules/tax/routes.ts';
 import { registerCustomers } from './modules/customers/routes.ts';
 import { createCustomerService } from './modules/customers/service.ts';
 import { registerOnboarding } from './modules/onboarding/routes.ts';
@@ -73,6 +75,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
+      registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');
     });

@@ -54,7 +54,7 @@ await test('released seven-migration main upgrades without altering old facts, r
   await owner.query("INSERT INTO shipit.franchises(id,organization_id,franchise_code,display_name) VALUES($1,$2,'MAIN','Synthetic')",[A,org]);
   await owner.query("SELECT shipit.append_tenancy_audit($1,$2,'service','synthetic','franchise.profile.update','franchise',$2,'profile_correction',$3,clock_timestamp(),'active','active',2)",[org,A,randomUUID()]);
   const before=(await owner.query('SELECT * FROM shipit.audit_history')).rows;
-  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual((await owner.query('SELECT * FROM shipit.audit_history')).rows,before);
+  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual((await owner.query('SELECT * FROM shipit.audit_history')).rows,before);
   await owner.query(insert,[randomUUID(),...values]);assert.deepEqual(await db.migrate(),{applied:0});
   assert.equal((await owner.query<{n:number}>('SELECT count(*)::integer AS n FROM shipit.customers')).rows[0]!.n,1);
 });
