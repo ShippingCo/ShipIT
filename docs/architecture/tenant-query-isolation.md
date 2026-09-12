@@ -200,3 +200,14 @@ No new raw SQL issuer exception exists. The exact Fastify `request.query` data a
 `audit/routes.ts` is permitted; executor calls there remain rejected. The scoped executor
 treats the two audit append functions as writes, preventing a read capability from invoking
 a side-effecting SELECT. Positive/negative scanner tests include unscoped audit history.
+
+## Issue #17 identity-to-workspace boundary
+
+The existing membership authority exception also resolves immutable bootstrap evidence
+by the freshly authenticated user's ID, tests whether that user has membership history,
+and persists the first command after its roots/membership/audit are created in the same
+transaction. Only the existing membership service can import these primitives; the AST
+exception list and issuer restrictions are unchanged. There is no raw request-key lookup.
+Permitted shell profiles use `usableFranchises` with R02 scope macros and active-root SQL
+predicates. The [onboarding contract](independent-onboarding.md) documents the null-tenant
+bootstrap namespace and live replay checks.

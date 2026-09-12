@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import App from '../App';
+import App from '../DemoApp';
 import { db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';
 
 describe('fresh-browser startup (blank screen regression)', () => {

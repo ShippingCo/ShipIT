@@ -6,10 +6,10 @@ receives after that — booking confirmation, dispatch, delay, out-for-delivery,
 delivery — is sent automatically, and routine customer questions are answered without
 anyone at the shop having to reply.
 
-The web app is complete and works end to end today. All of its state lives in the
-browser, so the whole product can be demonstrated with no backend and no accounts. A
-Postgres-backed API is planned; its folder structure is in place, its schema is not yet
-designed.
+The default web entry now uses the Fastify/PostgreSQL API for verified operator login,
+independent-franchise onboarding, invitations and a scope-aware workspace. Booking and
+customer workflows remain in the explicitly fictional demo until their production services
+are enabled. See [operator setup and synthetic demo](docs/architecture/independent-onboarding.md).
 
 ## Who it is designed for
 
@@ -35,17 +35,16 @@ A pnpm workspace.
 ```
 apps/
   web/        the React app — operator console and the simulated customer WhatsApp view
-  api/        HTTP API. Structure only; nothing implemented yet (see its README)
+  api/        Fastify identity, tenancy, membership, audit and onboarding API
 packages/
   shared/     public DTOs, browser-safe constants and pure non-secret functions
   db/         Postgres pool and SQL migrations
 docs/         design brief and working notes
 ```
 
-`apps/api`, `packages/shared` and `packages/db` are scaffolds. They exist so that the
-shape of the system is agreed before the schema conversation rather than during it. The
-stack is chosen — **Fastify**, and **raw SQL migrated with node-pg-migrate**, no ORM —
-but neither dependency is installed yet.
+`apps/api`, `packages/shared` and `packages/db` now implement the production infrastructure, identity, tenancy, membership and audit foundations.
+
+The stack is React/Vite, Fastify and raw SQL over pg, migrated with node-pg-migrate.
 
 ## Running it
 
@@ -53,7 +52,8 @@ Requires Node **22.23.2**, [pnpm](https://pnpm.io) **10.34.5** and Python **3.12
 
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm dev          # http://localhost:5173
+pnpm dev          # production operator entry; API required at http://localhost:3000
+VITE_DATA_MODE=demo pnpm dev  # isolated fictional prototype
 ```
 
 ```bash
@@ -65,10 +65,8 @@ pnpm quality      # complete local quality gate
 pnpm typecheck    # every workspace package
 ```
 
-The build uses `vite-plugin-singlefile`, so `apps/web/dist/index.html` is the entire
-application — one file you can open from disk or drop on any static host. That stops
-being the deliverable once there is an API to call, but while the product is a
-prototype it is the easiest way to show it to someone.
+The build retains a single-file web bundle. Production must be served over HTTP(S)
+with same-origin API proxying; the explicit demo bundle can run without a backend.
 
 ## How the web app is put together
 
@@ -88,31 +86,25 @@ prototype it is the easiest way to show it to someone.
 - **Tailwind runs with preflight disabled.** `src/styles/base.css` already carries a full
   reset and Tailwind's would override it. The one part of preflight that shadcn
   genuinely needs — border defaults — is reproduced by hand in `tailwind.css`.
-- **No backend yet.** `src/data/store.ts` is the whole data layer: an in-memory object
-  persisted to `localStorage`, seeded with a realistic demo dataset on first run. It
-  fuses three separate concerns — the seed data, the persistence, and the actual
-  business rules — and splitting those is the next piece of work.
+- **Production operator entry** uses `src/operator/` for cookie/CSRF requests,
+  permitted context, onboarding and scope invalidation. The existing prototype store is
+  loaded only by the explicit demo composition; operational migration remains per-domain.
 
 ## Data, privacy and security
 
-- **Nothing leaves the browser.** There is no server, no analytics and no network call
-  at runtime; the only external requests are the Google Fonts links in `index.html`.
-- **The seed data is fictional.** The names, phone numbers and addresses in
-  `apps/web/src/data/store.ts` are invented for the demo and are not real customer
-  records.
-- **The app reads no environment variables.** `.env` holds only developer-machine
-  credentials for pulling UI components (see `.env.example`); it is git-ignored and
-  never bundled. Nothing in `dist/` contains a secret.
-- **Dependencies are checked before they are installed**, not audited afterwards:
-  known advisories against the exact version, publisher and age, whether it runs install
-  scripts, and how many packages it brings with it.
-- WhatsApp messaging is **simulated locally**. Wiring this to the real WhatsApp Business
-  API would mean introducing a server, and message templates, opt-in records and
-  customer phone numbers would then become real personal data subject to India's DPDP
-  Act. None of that applies to this prototype.
+- Production identity, organization, franchise and membership state comes from PostgreSQL.
+  No failed production operation falls back to browser JSON.
+- Session cookies are HttpOnly. OTPs and invitation secrets are never persisted by the
+  operator UI. Only an uncertain onboarding request intent is retained in session storage.
+- The demo seed is fictional and stays in its separate composition. It cannot send real
+  customer messages or create production bookings.
+- `VITE_DATA_MODE=demo` explicitly selects a fictional build. Server credentials and auth
+  keys remain server-only; do not put them into Vite variables.
+- Dependencies and install scripts require review; see the engineering workflow.
 
 ## Status
 
+The operator entry is API-backed; the following description applies to the explicit demo.
 A prototype, not a production system. `localStorage` is the only persistence, so
 clearing site data resets everything; the app offers a "restore demo data" action in
 Settings for exactly that reason.
@@ -125,11 +117,10 @@ production plan lives in [docs/ROADMAP.md](docs/ROADMAP.md) and the linked
 M8 is post-MVP commercialization. Start from [CONTRIBUTING.md](CONTRIBUTING.md)
 and follow the dedicated issue branch → reviewed PR → merge → pull-main workflow.
 See [prototype migration](docs/PROTOTYPE_TO_PRODUCTION.md) for preserved behavior
-and intentional security changes. Product implementation has not started as part of
-this planning setup.
+and intentional security changes.
 
 Production architecture: [overview and ownership](docs/architecture/README.md),
 [runtime diagrams](docs/architecture/runtime-sequences.md), [ADRs](docs/adr/README.md),
 [pilot/commercial gates](docs/architecture/pilot-boundaries.md), and
-[open decisions](docs/architecture/open-decisions.md). These are planned boundaries,
-submitted for issue #2 review; production services remain unimplemented.
+[open decisions](docs/architecture/open-decisions.md). The linked owning contracts distinguish
+implemented infrastructure/operator entry from future operational services.

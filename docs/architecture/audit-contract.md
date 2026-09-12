@@ -171,3 +171,13 @@ Test the synthetic example below before enabling production administration. The 
 prototype remains fictional: mutable local JSON and plaintext-code timelines are not
 imported, exposed or treated as production audit. No audit UI, exports, general outbox,
 financial domain, privacy lifecycle or onboarding work is included.
+
+## Issue #17 coordinator
+
+Public independent onboarding composes three facts in one transaction: Organization
+bootstrap, initial Franchise bootstrap, and initial administrator membership. Both tenancy
+facts retain `organization.bootstrap` with the respective resource reference, and use the
+verified user UUID as the internal coordinator actor reference. The membership fact retains
+`bootstrap_admin` and its affected user reference. They share the HTTP correlation UUID.
+Replay adds no success facts. The older internal #12 bootstrap continues its combined
+Organization-plus-Franchise fact; no historical facts are rewritten or doubled.

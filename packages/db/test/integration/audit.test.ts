@@ -45,7 +45,7 @@ await test('released main upgrades by compatibility projection without rewriting
   await owner.query(`INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,actor_user_id,affected_user_id,membership_id,action,role,franchise_ids)
     VALUES($1,$2,'user',$3,$3,$4,'membership_updated','operator',$5)`,[audit,org,user,member,[franchise]]);
   const before=await owner.query('SELECT to_jsonb(a) AS value FROM shipit.membership_audit_events a');
-  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await owner.query("SELECT to_jsonb(a)-'correlation_id' AS value FROM shipit.membership_audit_events a")).rows,before.rows);
   const rows=(await owner.query('SELECT * FROM shipit.audit_history ORDER BY id')).rows;
   assert.equal(rows.length,2);assert.deepEqual(rows.map(r=>r.id),[`identity:${identity}`,`membership:${audit}`]);

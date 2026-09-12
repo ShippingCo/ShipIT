@@ -241,7 +241,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.memberships,shipit.membership_franchise_scopes,
-          shipit.membership_invitations,shipit.invitation_franchise_scopes TO ${identifier(resource.runtimeRole)}`);
+          shipit.membership_invitations,shipit.invitation_franchise_scopes,shipit.onboarding_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE (role,lifecycle,version,updated_at,revoked_at) ON shipit.memberships
           TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE (state,version,updated_at,accepted_at,revoked_at) ON shipit.membership_invitations

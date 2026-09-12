@@ -115,3 +115,12 @@ export async function updateFranchiseLifecycle(tx: TenantAccess, scope: Franchis
   if (!result.rows[0]) throw new TenancyError('VERSION_CONFLICT');
   return franchise(result.rows[0]);
 }
+
+/** R02 safe shell projection; SQL applies grants and active-root eligibility. */
+export async function usableFranchises(scope: TenantAccess) {
+  return (await scopedQuery<{ id: string; display_name: string; organization_name: string }>(scope,
+    ['franchise.profile.list'], `SELECT f.id,f.display_name,o.display_name AS organization_name
+      FROM shipit.franchises f JOIN shipit.organizations o ON o.id=f.organization_id
+      WHERE {{franchise:f.organization_id:f.id}} AND f.lifecycle='active' AND o.lifecycle='active'
+      ORDER BY f.created_at,f.id`)).rows;
+}
