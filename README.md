@@ -35,7 +35,7 @@ A pnpm workspace.
 ```
 apps/
   web/        the React app — operator console and the simulated customer WhatsApp view
-  api/        Fastify identity, tenancy, membership, audit and onboarding API
+  api/        Fastify identity, tenancy, membership, audit, onboarding and customer API
 packages/
   shared/     public DTOs, browser-safe constants and pure non-secret functions
   db/         Postgres pool and SQL migrations
@@ -130,3 +130,8 @@ implemented infrastructure/operator entry from future operational services.
 [Issue #18 architecture](docs/architecture/production-data-access.md) documents the typed API client, purpose-specific operator data source, safe errors, immutable mutation intent and scope cache lifetime. Same-origin API routing remains the default; optional `VITE_API_BASE_URL` is a canonical public origin without authentication/path/query. Unknown public configuration fails startup. Demo is selected only by `VITE_DATA_MODE=demo`, has no API base, and starts a new explicit fictional storage namespace without importing legacy browser JSON.
 
 Both builds are checked separately; production build inspection rejects demo modules and known secret/demo markers. [Verification and synthetic walkthrough](docs/architecture/issue-18-verification.md) includes the full PostgreSQL gate and controlled isolation failure drill.
+
+The [Customer backend](docs/architecture/customers.md) provides franchise-private contact persistence,
+bounded repeat lookup, optimistic edits, idempotent commands and immutable safe audit.
+[Verification](docs/architecture/issue-19-verification.md) covers real PostgreSQL isolation.
+Production customer screens remain with #33 and booking snapshot persistence with #22.

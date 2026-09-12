@@ -37,7 +37,7 @@ export function inspectSource(file, source) {
       // Catch extracted/aliased query methods too; Fastify request.query is data, not a call.
       if (ts.isPropertyAccessExpression(node) && node.name.text === 'query' &&
         !((file.endsWith('/auth/webhook.ts') && node.expression.getText(tree) === 'r') ||
-          (file === 'apps/api/src/modules/audit/routes.ts' && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
+          (['apps/api/src/modules/audit/routes.ts', 'apps/api/src/modules/customers/routes.ts'].includes(file) && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
       if (ts.isElementAccessExpression(node) && ((ts.isStringLiteral(node.argumentExpression) && node.argumentExpression.text === 'query') ||
         (!ts.isStringLiteral(node.argumentExpression) && ts.isCallExpression(node.parent) && node.parent.expression === node))) report(node, 'computed executor calls are not approved');
       if (ts.isBindingElement(node) && (node.propertyName?.getText(tree) ?? node.name.getText(tree)) === 'query') report(node, 'extracted query bypasses scopedQuery');
@@ -47,6 +47,7 @@ export function inspectSource(file, source) {
         const text = literal ? sql.getText(tree) : '';
         const bootstrap = file === 'apps/api/src/modules/tenancy/repository.ts' && text.includes('INSERT INTO shipit.organizations');
         if (!literal || (!/\{\{(?:organization|franchise|membership|invitation):/.test(text) && !bootstrap)) report(node, 'scoped SQL needs an explicit ownership predicate');
+        if (/shipit\.(?:customers|customer_commands|customer_audit_events|append_customer_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'customer SQL requires both organization and franchise ownership');
         if (!node.arguments[1] || !ts.isArrayLiteralExpression(node.arguments[1]) || !node.arguments[1].elements.length) report(node, 'query must declare a closed action allowlist');
       }
     }

@@ -211,3 +211,15 @@ exception list and issuer restrictions are unchanged. There is no raw request-ke
 Permitted shell profiles use `usableFranchises` with R02 scope macros and active-root SQL
 predicates. The [onboarding contract](independent-onboarding.md) documents the null-tenant
 bootstrap namespace and live replay checks.
+
+## Customer capabilities — Issue #19
+
+The closed staff action set now includes customer.read/list/create/update under R05/W03.
+withStaffTenantScope returns the current membership revision for cursor binding and can
+narrow an approved customer grant to exactly one validated Franchise selector. Every
+Customer/receipt query requires both Organization and Franchise macros; no raw executor
+or new issuer exception exists. The AST gate additionally rejects Customer SQL with only
+an Organization predicate. Its exact customer/routes.ts request.query data allowance
+cannot be called as an executor. Customer audit append SELECT is classified as a write.
+The existing active tenancy write guard admits the two customer mutation actions.
+[Customer isolation, privacy, indexes and bounded search](customers.md).

@@ -181,3 +181,22 @@ verified user UUID as the internal coordinator actor reference. The membership f
 `bootstrap_admin` and its affected user reference. They share the HTTP correlation UUID.
 Replay adds no success facts. The older internal #12 bootstrap continues its combined
 Organization-plus-Franchise fact; no historical facts are rewritten or doubled.
+
+## Customer producer — Issue #19
+
+The additive Customer migration adds `customer_audit_events` and
+`appendCustomer(TenantAccess, franchiseId, customerId, committedVersion)` using only
+customer.create/customer.update capabilities. `append_customer_audit(uuid,uuid,uuid,uuid,text,integer,uuid)`
+is SECURITY DEFINER, fixed search_path=pg_catalog, with typed references and closed actions;
+it verifies the scoped current customer version. The canonical view adds namespaced
+`customer:UUID` facts with `resource_type=customer`, `reason_code=contact_change`, null
+lifecycle fields and positive committed version. No historical source is rewritten.
+R28 retains its existing scope/role policy; safe customer audit references grant no R05
+directory access. Cursor decoding accepts this additional namespaced source.
+
+Runtime receives only EXECUTE on the new append function, no base-table privileges.
+The scoped executor treats the function as a write, including side-effecting SELECT.
+Customer mutation, its fact and original-result receipt share the authorized transaction.
+Closed denial/resource/counter sets now include customer.read/list/create/update and
+customer; guessed targets and tenant fields remain null. No contact fields, queries or
+idempotency keys enter success/denial facts. [Exact contract and rollout](customers.md).

@@ -50,3 +50,21 @@ test('audit SQL requires explicit scope and closed actions; request query data i
   assert.deepEqual(inspectSource('apps/api/src/modules/audit/routes.ts','service.list(request.query)'),[]);
   assert.ok(inspectSource('apps/api/src/modules/audit/routes.ts',"request.query('SELECT * FROM shipit.audit_history')").length);
 });
+
+test('customer phone queries require franchise ownership and no new raw SQL exception', () => {
+  const customer = 'apps/api/src/modules/customers/repository.ts';
+  assert.deepEqual(inspectSource(customer, "scopedQuery(scope,['customer.list'],'SELECT id FROM shipit.customers WHERE {{franchise:organization_id:franchise_id}} AND phone_normalized=$1')"), []);
+  for (const source of ["db.query('SELECT id FROM shipit.customers WHERE phone_normalized=$1')",
+    "scopedQuery(scope,['customer.list'],'SELECT id FROM shipit.customers WHERE phone_normalized=$1')",
+    "scopedQuery(scope,['customer.list'],'SELECT id FROM shipit.customers WHERE {{organization:organization_id}} AND phone_normalized=$1')",
+    "import {query} from '@shippingco/db'", "import {issueTenantAccess} from '../security/scope.ts'"]) assert.ok(inspectSource(customer,source).length);
+  assert.deepEqual(inspectSource('apps/api/src/modules/customers/routes.ts','service.list(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/customers/routes.ts',"request.query('SELECT * FROM shipit.customers')").length);
+  const root = mkdtempSync(join(tmpdir(), 'shipit-customer-gate-'));
+  try {
+    mkdirSync(join(root,'apps/api/src/modules/customers'),{recursive:true});
+    writeFileSync(join(root,customer),"scopedQuery(scope,['customer.list'],'SELECT id FROM shipit.customers WHERE phone_normalized=$1')");
+    const result=spawnSync(process.execPath,[resolve('scripts/check-tenant-queries.mjs')],{cwd:root,encoding:'utf8'});
+    assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
+  } finally {rmSync(root,{recursive:true,force:true});}
+});

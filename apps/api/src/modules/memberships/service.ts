@@ -12,7 +12,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -291,26 +291,34 @@ export function createMembershipTenancyAuthorizer(database:DatabasePool,sessionT
  * The callback gets no raw executor; live authority and work share one transaction.
  */
 export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken:string,organizationIdInput:unknown,
-  action:TenancyAction|'operations.export'|'financial.export',work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+  action:TenancyAction|'operations.export'|'financial.export'|import('../customers/types.ts').CustomerAction,
+  work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>,
+  selection?:{franchiseId:string;correlationId:string;object:boolean}):Promise<T> {
   const organizationId=validate.uuid(organizationIdInput);
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,sessionToken);
-    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId)) throw new HttpError('ACTION_FORBIDDEN');
-    if(!await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError('ACTION_FORBIDDEN');
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId)) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
+    if(!await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
     let permittedFranchiseIds:string[]|null;
-    if(action==='operations.export' || action==='financial.export') {
+    if (action==='customer.read'||action==='customer.list'||action==='customer.create'||action==='customer.update') {
+      permittedFranchiseIds=customerScope(memberships);
+      if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
+      if(!selection || !permittedFranchiseIds.includes(selection.franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
+      permittedFranchiseIds=[selection.franchiseId];
+    } else if(action==='operations.export' || action==='financial.export') {
       // E01 / E03 ceilings; no staff/configuration export is created by this seam.
       permittedFranchiseIds=[...new Set(memberships.filter(value=>value.role==='franchise_admin' ||
         (action==='financial.export' && value.role==='accountant')).flatMap(value=>value.franchiseIds))];
-      if(!permittedFranchiseIds.length) throw new HttpError('ACTION_FORBIDDEN');
+      if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     } else {
       const allFranchises=memberships.some(value=>value.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
       permittedFranchiseIds=tenancyScope(action,memberships,allFranchises);
-      if(permittedFranchiseIds===null) throw new HttpError('ACTION_FORBIDDEN');
+      if(permittedFranchiseIds===null) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     }
     return work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
-      permittedFranchiseIds,organizationWide:false,correlationId:randomUUID(),provenance:'membership'}));
+      permittedFranchiseIds,organizationWide:false,correlationId:selection?.correlationId??randomUUID(),provenance:'membership'}),
+      JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
   });
 }
 
