@@ -165,3 +165,7 @@ not a production environment-secret fallback.
 Validation reports only field plus REQUIRED/INVALID_FORMAT/OUT_OF_RANGE/INCONSISTENT.
 No missing or malformed security setting receives an invented fallback. Code-owned
 HTTP, JSON, rate and shutdown limits are documented in the [API operating guide](../../apps/api/README.md).
+
+## Browser composition — Issue #18
+
+`VITE_DATA_MODE` is an approved browser-public composition setting: omitted/production uses APIs; demo explicitly selects the isolated fictional build. `VITE_API_BASE_URL` is empty for same-origin or a canonical HTTPS origin (HTTP loopback for local development only), without userinfo/path/query/fragment. Demo requires it empty. `VITE_APP_VERSION` is an optional bounded public version label. Unknown public names fail build/startup; no runtime URL/storage selection or server-env serialization. See [production data access](production-data-access.md) for exact parsing, same-site cookies, deployment constraints and rollback.

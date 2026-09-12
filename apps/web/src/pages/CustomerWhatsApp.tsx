@@ -1,3 +1,4 @@
+import { DEMO_PERSONA_KEY } from '../demo/storage';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Msym } from '../components/m3/Icon';
@@ -25,7 +26,7 @@ export default function CustomerWhatsApp() {
 
   const [me, setMe] = useState(() => {
     return params.get('phone')
-      || localStorage.getItem('shippingco_current_phone')
+      || localStorage.getItem(DEMO_PERSONA_KEY)
       || customers[0]?.phone
       || '';
   });
@@ -35,7 +36,7 @@ export default function CustomerWhatsApp() {
   /* Messages that arrived while the tab was hidden, replayed when it comes back. */
   const pendingRef = useRef<string[]>([]);
 
-  useEffect(() => { localStorage.setItem('shippingco_current_phone', me); }, [me]);
+  useEffect(() => { localStorage.setItem(DEMO_PERSONA_KEY, me); }, [me]);
 
   // seed welcome message for fresh personas
   useEffect(() => {

@@ -1,5 +1,6 @@
+import { DEMO_DATABASE_KEY, DEMO_PERSONA_KEY } from '../demo/storage';
 /* ============================================================
-   Data layer — localStorage-backed store shared by both apps.
+   Fictional demo data layer — localStorage shared by demo operator/customer views only.
    Business actions automatically queue WhatsApp notifications,
    so opening the customer view shows live automation.
    ============================================================ */
@@ -12,8 +13,7 @@ import type {
   RecoveryItem, ReplyWindow, Report, RouteEvent, ServiceType, SupplyKind, Tax, TimelineEntry,
 } from './types';
 
-const KEY = 'shippingco_v1';
-const LEGACY_KEY = 'setu_courier_v2';
+const KEY = DEMO_DATABASE_KEY;
 
 /*
    Every phone number in this file comes from +44 7700 900xxx.
@@ -113,7 +113,7 @@ export function subscribe(fn: () => void) { listeners.add(fn); return () => { li
 export function db(): Database { return cache ?? load(); }
 
 function notifyAndPersist() {
-  try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch (e) { console.warn('persist failed', e); }
+  try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch { console.warn('Fictional demo persistence unavailable'); }
   /* A fresh object identity is what tells useSyncExternalStore the snapshot changed. */
   if (cache) cache = { ...cache };
   listeners.forEach((fn) => fn());
@@ -168,10 +168,6 @@ function normalizeBookings() {
 
 function load(): Database {
   try {
-    if (!localStorage.getItem(KEY)) {
-      const legacy = localStorage.getItem(LEGACY_KEY);
-      if (legacy) localStorage.setItem(KEY, legacy);
-    }
     const raw = localStorage.getItem(KEY);
     if (raw && raw !== 'null') {
       const parsed = JSON.parse(raw);
@@ -634,6 +630,7 @@ export function updateBusiness(patch: Partial<Business>) { Object.assign(db().bu
 
 export function resetDemo() {
   localStorage.removeItem(KEY);
+  localStorage.removeItem(DEMO_PERSONA_KEY);
   cache = seedData();
   notifyAndPersist();
 }

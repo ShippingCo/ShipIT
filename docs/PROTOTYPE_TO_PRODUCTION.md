@@ -83,3 +83,7 @@ The original Launcher, BusinessShell, Settings and AppProvider live in the expli
 `VITE_DATA_MODE=demo` composition. Production never reads browser Business or mounts
 prototype operational screens. The scoped request generation and request-intent recovery
 are bounded to operator entry; general domain adapters remain with #18.
+
+## Issue #18 data-access boundary
+
+Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). Later domain screens remain with #33/#34/#44 and their prerequisites.

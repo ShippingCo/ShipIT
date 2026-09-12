@@ -1,24 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TextField } from '../components/m3/Input';
-import { request } from './api';
-export default function SignIn({ complete }: { complete: () => Promise<void> }) {
+import type { OperatorDataSource } from './data-source';
+export default function SignIn({ complete, source }: { complete: () => Promise<void>; source: OperatorDataSource }) {
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => { const abort = new AbortController(); active.current = abort; return () => abort.abort(); }, []);
   const [email, setEmail] = useState(''), [code, setCode] = useState(''), [challenge, setChallenge] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError('');
+    event.preventDefault(); if (busy || !active.current) return; setBusy(true); setError('');
+    const abort = active.current;
     try {
       if (!challenge) {
-        const result = await request<{ challenge_id: string }>('/auth/challenges', { body: { channel: 'email', address: email } });
+        const result = await source.startSignIn(email, abort.signal);
         setChallenge(result.challenge_id);
       } else {
-        await request('/auth/challenges/verify', { body: { challenge_id: challenge, code } });
-        setCode(''); await complete();
+        await source.verifySignIn(challenge, code, abort.signal);
+        setCode(''); if (!abort.signal.aborted) await complete();
       }
     } catch { setCode(''); setError('Sign-in could not be completed. Check your details or request a new code.'); }
     finally { setBusy(false); }
   }
   return <section className="card operator-card">
-    <h1 className="t-headline-sm">Sign in to ShippingCo</h1>
+    <h1 id="signin-title" tabIndex={-1} className="t-headline-sm">Sign in to ShippingCo</h1>
     <p className="muted">Use your verified operator email. If you have not been enrolled, contact your administrator to verify your identity first.</p>
     <form onSubmit={event => { void submit(event); }}>
       {!challenge ? <TextField label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} required disabled={busy} /> : <>

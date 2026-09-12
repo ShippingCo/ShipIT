@@ -100,6 +100,9 @@ try {
   withFile('apps/api/src/modules/tenancy/unsafe-regression.ts',
     'export const unsafe = db => db.query(`SELECT * FROM shipit.franchises`);',
     () => run('unscoped-private-query', ['check:tenant-queries'], /TENANT_QUERY_GATE/));
+  const appSource = readFileSync(join(project, 'apps/web/src/App.tsx'), 'utf8');
+  withFile('apps/web/src/App.tsx', `import { db } from './data/store';\nconsole.info(db());\n${appSource}`,
+    () => run('production-demo-import-rejection', ['build'], /Production bundle includes demo module/));
   const manifest = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8'));
   manifest.devDependencies['quality-gate-sentinel'] = '0.0.0';
   withFile('package.json', JSON.stringify(manifest), () =>

@@ -22,7 +22,7 @@
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "check:planning": "node scripts/run-planning.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
-    "test:quality": "node --test scripts/quality.test.mjs scripts/tenant-queries.test.mjs",
+    "test:quality": "node --test scripts/quality.test.mjs scripts/tenant-queries.test.mjs scripts/web-isolation.test.mjs",
     "verify:gates": "node scripts/verify-gates.mjs",
     "quality": "pnpm check:toolchain && pnpm test:quality && pnpm check:planning && pnpm lint && pnpm typecheck && pnpm test && pnpm test:db && pnpm build",
     "db:local": "node scripts/with-test-postgres.mjs",
