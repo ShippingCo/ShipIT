@@ -1,7 +1,7 @@
-export const resourceTypes = ['organization','franchise','membership','invitation','identity','audit','request'] as const;
+export const resourceTypes = ['organization','franchise','membership','invitation','identity','audit','request','customer'] as const;
 export type ResourceType = typeof resourceTypes[number];
 export const denialActions = ['audit.read','membership.manage','invitation.create','invitation.accept','invitation.revoke',
-  'auth.start','auth.verify','auth.resend','auth.session','auth.manage','security.request'] as const;
+  'customer.read','customer.list','customer.create','customer.update','auth.start','auth.verify','auth.resend','auth.session','auth.manage','security.request'] as const;
 export type DenialAction = typeof denialActions[number];
 export const denialReasons = ['ACTION_FORBIDDEN','UNAUTHENTICATED','RESOURCE_NOT_FOUND','RATE_LIMITED'] as const;
 export type DenialReason = typeof denialReasons[number];

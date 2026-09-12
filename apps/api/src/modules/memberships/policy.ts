@@ -26,3 +26,9 @@ export function tenancyScope(action: TenancyAction, memberships: readonly Member
     (action==='franchise.lifecycle.manage' && value.role==='org_admin')).flatMap(value=>value.franchiseIds);
   return ids.length ? [...new Set(ids)].sort() : null;
 }
+
+/** R05/W03: explicit local grants only; V needs a separate verified-purpose workflow. */
+export function customerScope(memberships: readonly Membership[]) {
+  return [...new Set(memberships.filter(m => m.lifecycle === 'active' &&
+    (m.role === 'franchise_admin' || m.role === 'operator')).flatMap(m => m.franchiseIds))].sort();
+}

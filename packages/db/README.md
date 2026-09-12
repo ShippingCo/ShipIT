@@ -249,3 +249,20 @@ primary key forbids duplicate initial workspaces, composite FKs bind root/member
 ownership, and committed replay evidence retains at least 24 hours. Never delete it as
 ordinary expired request data: it also preserves the initial-workspace uniqueness invariant.
 See [onboarding rollout and verification](../../docs/architecture/independent-onboarding.md).
+
+## Issue #19 Customer provisioning
+
+Apply `1789318800000-tenant-private-customers.cjs` after the seven released migrations.
+Resolve the deployment runtime identity separately; never embed its role in a migration.
+Grant SELECT/INSERT on shipit.customers and shipit.customer_commands; grant only
+UPDATE(name,phone_normalized,phone_display,address,version,updated_at) on shipit.customers.
+Grant EXECUTE on shipit.append_customer_audit(uuid,uuid,uuid,uuid,text,integer,uuid).
+Retain the existing audit_history SELECT and security-denial function grants. Grant no
+access to customer_audit_events, no table-wide UPDATE, DELETE/TRUNCATE, DDL or migration-role
+access. Test provisioning uses prepareCustomers with exactly these grants.
+
+Customers have a composite parent FK and immutable ownership trigger, scoped nonunique
+phone/name prefix indexes and deterministic ordering index. Command receipts and customer
+audit facts have composite Customer FKs and unique command/version constraints. No browser
+backfill. Apply schema/grants before code; revert compatible code while retaining applied
+schema/data, and repair using a new forward migration. [Customer contract](../../docs/architecture/customers.md).

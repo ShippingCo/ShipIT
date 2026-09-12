@@ -263,7 +263,7 @@ await test('Issue 14 data upgrades with composite audit ownership and repeat mig
   await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin')",[member,user,orgA]);
   await owner.query(`INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,affected_user_id,membership_id,action,role)
     VALUES('00000000-0000-4000-8000-000000000901',$1,'service',$2,$3,'bootstrap_admin','org_admin')`,[orgA,user,member]);
-  assert.deepEqual(await db.migrate(),{applied:3});
+  assert.deepEqual(await db.migrate(),{applied:4});
   assert.deepEqual(await db.migrate(),{applied:0});
   assert.equal((await owner.query<{count:string}>('SELECT count(*) FROM shipit.membership_audit_events')).rows[0]?.count,'1');
   await assert.rejects(owner.query(`INSERT INTO shipit.membership_audit_events(id,organization_id,actor_type,affected_user_id,membership_id,action,role)

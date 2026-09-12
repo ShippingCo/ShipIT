@@ -46,3 +46,13 @@ export async function appendMembership(tx:TenantAccess,input:{organizationId:str
   [randomUUID(),tx.context.organizationId,tx.context.actor.type,tx.context.actor.type==='user'?tx.context.actor.id:null,input.affectedUserId,input.membershipId??null,
     input.invitationId??null,input.action,input.role,input.franchiseIds,tx.context.correlationId]);
 }
+
+/** Customer facts carry version/references, never contact values or tenancy lifecycle. */
+export async function appendCustomer(scope: TenantAccess, franchiseId: string, customerId: string, version: number) {
+  const c = assertTenantAccess(scope, ['customer.create','customer.update']);
+  assertFranchises(scope, [franchiseId]);
+  if (c.actor.type !== 'user') throw new HttpError('ACTION_FORBIDDEN');
+  await scopedQuery(scope, ['customer.create','customer.update'],
+    `SELECT shipit.append_customer_audit($1,$2,$3,$4,$5,$6,$7) WHERE {{franchise:$1:$2}}`,
+    [c.organizationId,franchiseId,customerId,c.actor.id,c.action,version,c.correlationId]);
+}

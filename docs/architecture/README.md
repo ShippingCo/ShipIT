@@ -89,3 +89,10 @@ Issue #17: [independent onboarding and operator context](independent-onboarding.
 ## Production frontend data access — Issue #18
 
 [Production data access](production-data-access.md) owns validated build composition, the single API client, operator data source, ephemeral cache/command lifetime and fictional demo isolation. [Verification](issue-18-verification.md) maps all twelve acceptance criteria.
+
+## Customer backend — Issue #19
+
+[Tenant-private customers](customers.md) defines R05/W03 contact persistence, bounded lookup,
+optimistic edits, scoped replay, immutable audit and the future Booking snapshot boundary.
+[Verification](issue-19-verification.md) records real PostgreSQL/HTTP/security evidence.
+Production customer UI migration remains #33; Booking persistence remains #22.

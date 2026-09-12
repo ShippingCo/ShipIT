@@ -151,6 +151,7 @@ export interface DisposableDatabase {
   prepareTenancy(): Promise<void>;
   prepareAuth(): Promise<void>;
   prepareMemberships(): Promise<void>;
+  prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
   terminateBackend(pid: number): Promise<void>;
@@ -248,6 +249,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
           TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT DELETE ON shipit.membership_franchise_scopes TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT ON shipit.membership_audit_events TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); pools.delete(owner); }
+    },
+    async prepareCustomers() {
+      await handle.prepareMemberships();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.customers,shipit.customer_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(name,phone_normalized,phone_display,address,version,updated_at)
+          ON shipit.customers TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_customer_audit(uuid,uuid,uuid,uuid,text,integer,uuid)
+          TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
     },
     async prepareFixtures() {

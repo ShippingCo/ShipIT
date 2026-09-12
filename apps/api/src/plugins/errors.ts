@@ -30,6 +30,14 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
+export type ValidationField = '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
+export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
+export class FieldValidationError extends HttpError {
+  readonly details: { field: ValidationField; code: ValidationCode }[];
+  constructor(field: ValidationField, code: ValidationCode) {
+    super('VALIDATION_FAILED'); this.details = [{ field, code }];
+  }
+}
 export function errorEnvelope(code: PublicErrorCode, correlationId: string) {
   return { error: { code, message: errors[code][1], correlation_id: correlationId } };
 }
@@ -55,7 +63,7 @@ export function registerErrors(app: FastifyInstance) {
     if (code === 'INTERNAL_ERROR') request.log.error({ event: 'request_failed', code, request_id: request.id }, 'Request failed');
     const envelope = errorEnvelope(code, request.id);
     const response = code === 'VALIDATION_FAILED'
-      ? { error: { ...envelope.error, details: (e.validation ?? []).slice(0, 10).map(detail) } } : envelope;
+      ? { error: { ...envelope.error, details: error instanceof FieldValidationError ? error.details : (e.validation ?? []).slice(0, 10).map(detail) } } : envelope;
     return reply.code(errors[code][0]).send(response);
   });
 }

@@ -260,3 +260,14 @@ Malformed or scope/query-incompatible cursors return controlled 422 `CURSOR_INVA
 foreign/unknown exact resource selectors return uniform 404. GET has no mutation-only
 CSRF requirement. [The audit contract](audit-contract.md) defines exact filters, DTO,
 ordering, correlation, grants, compatibility and privacy rules.
+
+## Customer boundary — Issue #19
+
+[Customers v1](customers.md) ratifies the explicit Organization/Franchise nested collection
+`/api/v1/organizations/:organization_id/franchises/:franchise_id/customers`: GET search,
+POST create, and GET/PATCH `/:customer_id`. No DELETE. Both ownership IDs are narrowing
+selectors, outside the mutable body. R05/W03 permits franchise_admin/operator only; V
+verified-purpose org_admin directory access is not implemented. Idempotency-Key is required
+for both commands, expected_version for PATCH. Search requires search_by and a bounded
+literal prefix, with canonical items/page and encrypted keysets. All normal safe errors,
+session/CSRF/Origin, no-store and redacted route-template logging remain in force.
