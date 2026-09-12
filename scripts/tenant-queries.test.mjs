@@ -68,3 +68,19 @@ test('customer phone queries require franchise ownership and no new raw SQL exce
     assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
   } finally {rmSync(root,{recursive:true,force:true});}
 });
+
+test('pricing repositories require both owners, closed actions and no raw SQL path',()=>{
+  const pricing='apps/api/src/modules/pricing/repository.ts';
+  assert.deepEqual(inspectSource(pricing,"scopedQuery(scope,['pricing.quote'],'SELECT id FROM shipit.pricing_rules WHERE {{franchise:organization_id:franchise_id}}')"),[]);
+  for(const source of ["db.query('SELECT * FROM shipit.pricing_rules')",
+    "scopedQuery(scope,['pricing.quote'],'SELECT * FROM shipit.pricing_rules')",
+    "scopedQuery(scope,['pricing.quote'],'SELECT * FROM shipit.pricing_rules WHERE {{organization:organization_id}}')",
+    "import {issueTenantAccess} from '../security/scope.ts'","import {query} from '@shippingco/db'"])assert.ok(inspectSource(pricing,source).length);
+  const root=mkdtempSync(join(tmpdir(),'shipit-pricing-gate-'));
+  try {
+    mkdirSync(join(root,'apps/api/src/modules/pricing'),{recursive:true});
+    writeFileSync(join(root,pricing),"scopedQuery(scope,['pricing.quote'],'SELECT * FROM shipit.pricing_rules WHERE {{organization:organization_id}}')");
+    const result=spawnSync(process.execPath,[resolve('scripts/check-tenant-queries.mjs')],{cwd:root,encoding:'utf8'});
+    assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
+  } finally {rmSync(root,{recursive:true,force:true});}
+});

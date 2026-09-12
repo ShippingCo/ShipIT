@@ -96,3 +96,10 @@ Issue #17: [independent onboarding and operator context](independent-onboarding.
 optimistic edits, scoped replay, immutable audit and the future Booking snapshot boundary.
 [Verification](issue-19-verification.md) records real PostgreSQL/HTTP/security evidence.
 Production customer UI migration remains #33; Booking persistence remains #22.
+
+## Pricing backend — Issue #20
+
+[Versioned pricing](pricing.md) owns immutable local rates, exact matching/paise quotes,
+finite proposal evidence, override approval, replay and the future Booking validation seam.
+[Verification](issue-20-verification.md) maps every acceptance criterion and PostgreSQL gate.
+#21 owns tax, #22 persists Booking snapshots and #33 connects the production booking UI.

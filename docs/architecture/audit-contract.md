@@ -200,3 +200,22 @@ Customer mutation, its fact and original-result receipt share the authorized tra
 Closed denial/resource/counter sets now include customer.read/list/create/update and
 customer; guessed targets and tenant fields remain null. No contact fields, queries or
 idempotency keys enter success/denial facts. [Exact contract and rollout](customers.md).
+
+## Pricing producer — Issue #20
+
+Pricing configuration and proposal override facts use the additive pricing_audit_events
+source and appendPricing in this module. The typed SECURITY DEFINER append function has
+fixed search_path=pg_catalog, no dynamic SQL, reference/closed-action/reason fields only,
+current version validation and matching quote/actor/reason validation for overrides.
+Runtime has EXECUTE only on the append function; no base audit table privileges. The
+existing canonical view keeps its identity, previous sources and grants, adding namespaced
+pricing:UUID records. No history is rewritten. resource_type=pricing selects configuration
+or proposal references under the existing administrative R28 policy; this is not a booked
+financial ledger/audit projection. Accountant R21 effective rates/quotes remain available.
+
+Draft creation/replacement and publication append one success fact with the same transaction
+as state and its command receipt. Every override appends a quote-linked fact; excessive
+variance uses pricing.override.approve. Replay adds no fact. The shared denial adapter records
+pricing.read/draft/publish/quote categories with identity-only scope after a rejected request.
+No destination, weight, amount, request/key, approval/source text, address or credential enters
+logs/audit; authorized policy/quote DTOs alone expose the needed commercial information.

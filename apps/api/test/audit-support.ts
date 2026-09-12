@@ -13,14 +13,14 @@ import { parseEnvironment } from '../src/env.ts';
 import { seedTenancy, tenancyFixture } from './tenancy-support.ts';
 export const f=tenancyFixture,org=f.organizations.alpha.id,A=f.franchises.alpha1.id,B=f.franchises.alpha2.id,
   otherOrg=f.organizations.beta.id,C=f.franchises.beta1.id;
-export async function auditSetup(t:TestContext) {
+export async function auditSetup(t:TestContext,pricingClock?:()=>Date) {
   const db=await provisionDatabase(t);await db.prepareMemberships();const pool=db.runtimePool();await seedTenancy(pool);
   const keys={version:'test',verifier:randomBytes(32),encryption:randomBytes(32),browser:randomBytes(32)};
   const auth=createAuthService(pool,keys),memberships=createMembershipService(pool),audit=createAuditService(pool,keys.browser);
   const logs:string[]=[],telemetry=createSecurityCounters();
   const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3000',LOG_LEVEL:'info',ALLOWED_ORIGINS:'http://localhost:5173',
     TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
-  const app=buildServer({config,database:pool,auth:{keys,delivery:{},webhook:undefined},securityTelemetry:telemetry,logSink:{write:x=>logs.push(x)}});
+  const app=buildServer({config,database:pool,auth:{keys,delivery:{},webhook:undefined},securityTelemetry:telemetry,pricingClock,logSink:{write:x=>logs.push(x)}});
   t.after(()=>app.close());
   async function user() {
     const id=await auth.provision('email',`${randomUUID()}@example.test`),token=secret();

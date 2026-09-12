@@ -271,3 +271,23 @@ verified-purpose org_admin directory access is not implemented. Idempotency-Key 
 for both commands, expected_version for PATCH. Search requires search_by and a bounded
 literal prefix, with canonical items/page and encrypted keysets. All normal safe errors,
 session/CSRF/Origin, no-store and redacted route-template logging remain in force.
+
+## Pricing boundary — Issue #20
+
+[Pricing v1](pricing.md) ratifies `POST /api/v1/pricing/quote` with required
+organization_id/franchise_id query selectors narrowing live membership. Body contains
+only destination_key, service, integer weight_grams and optional structured freight
+override. Idempotency-Key is required; result is a proposal, never a booked total.
+The nested `/organizations/:organization_id/franchises/:franchise_id/pricing/versions`
+base supports POST draft, GET effective approved policy, GET/PUT /:version_id admin
+view/replacement, and POST /:version_id/publish. PUT/publish require expected_version.
+W27 controls administration; R21 controls effective views and suggestions; W01/W43
+control ordinary/privileged overrides. Unknown fields, ownership bodies and client
+calculated totals are rejected. Original numeric tokens are checked for exact integers
+before JSON precision loss; fractional/unsafe input is 422, nonfinite JSON remains 400.
+
+Additional safe conflicts: 409 NO_RATE (no exact effective match), RATE_CONFLICT
+(overlap/invalid publication), QUOTE_STALE (requote required). The existing envelope,
+CSRF, Origin, bounded bodies, no-store and route-template-only logging remain unchanged.
+Time input accepts seconds with at most millisecond precision, normalizes explicit
+UTC offsets, and rejects invalid calendar dates. No quote confirmation HTTP route.

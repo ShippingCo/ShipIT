@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 42)]:
+    for prefix, count in [("R", 30), ("E", 4), ("W", 43)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -54,6 +54,7 @@ def validate():
     assert rules["W35"][2:] == ["-"] * 7
     assert rules["W41"][2:] == ["F", "F", "-", "-", "-", "-", "-"]
     assert rules["W42"][2:] == ["O", "-", "-", "-", "-", "-", "-"]
+    assert rules["W43"][2:] == ["-", "F", "-", "-", "-", "-", "-"]
     assert rules["R05"][2:] == ["V", "F", "F", "-", "-", "-", "-"]
     assert rules["R07"][6] == "A"
 
@@ -95,6 +96,11 @@ def validate():
         # S/P are outside this object interpreter; adoption predicates are checked below.
         cells = set(rules[rule][2 + ROLES.index(case["role"])].split(","))
         return available & cells
+
+    assert len(fixture["pricing_override_cases"]) == 21
+    for case in fixture["pricing_override_cases"]:
+        permitted = rules["W43"][2 + ROLES.index(case["role"])] == "F"
+        assert case["expected"] == (404 if case["franchise"] != "A1" else 200 if permitted else 403)
 
     scenarios = (DOCS / "domain-scenarios.md").read_text()
     assert len(fixture["access_cases"]) == 28
@@ -201,7 +207,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 76 matrix rows including exact W41 lifecycle and W42 membership grants plus W29/W34/W35 restrictions, 28 synthetic access/projection cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 77 matrix rows including exact W41 lifecycle, W42 membership and W43 pricing override grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":

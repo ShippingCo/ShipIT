@@ -23,7 +23,7 @@ export function auditCursorCodec(key:Buffer,now=()=>Date.now()) {
         cipher.setAAD(Buffer.from('audit:v1'));cipher.setAuthTag(data.subarray(12,28));
         const value=JSON.parse(Buffer.concat([cipher.update(data.subarray(28)),cipher.final()]).toString('utf8'));
         if(value.binding!==binding||!Number.isSafeInteger(value.expires)||value.expires<=now()||value.expires>now()+900_000||
-          !/^(audit|membership|identity|customer):[0-9a-f-]{36}$/.test(value.boundary.id)||
+          !/^(audit|membership|identity|customer|pricing):[0-9a-f-]{36}$/.test(value.boundary.id)||
           !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/.test(value.boundary.time))throw new Error();
         return {id:value.boundary.id,time:value.boundary.time};
       } catch {throw new HttpError('CURSOR_INVALID');}

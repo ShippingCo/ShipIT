@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { HttpError } from './errors.ts';
+import { FieldValidationError, HttpError } from './errors.ts';
 
 export const JSON_BODY_LIMIT = 256 * 1024;
 export const JSON_MAX_DEPTH = 64;
 // Native JSON.parse owns grammar. This iterative structural pass detects decoded
 // duplicate keys and pollution keys without recursion or a regex JSON parser.
-export function parseStrictJson(source: string): unknown {
+export function parseStrictJson(source: string, exactIntegers = false): unknown {
   const refuse = (): never => { throw new HttpError('MALFORMED_REQUEST'); };
   let result: unknown;
   try { result = JSON.parse(source); } catch { return refuse(); }
@@ -33,16 +33,26 @@ export function parseStrictJson(source: string): unknown {
     else if (char === '-' || (char! >= '0' && char! <= '9')) {
       const start = i;
       while (i + 1 < source.length && ![' ', '\t', '\n', '\r', ',', '}', ']'].includes(source[i + 1]!)) i++;
-      if (!Number.isFinite(Number(source.slice(start, i + 1)))) refuse();
+      const token=source.slice(start,i+1);
+      if (!Number.isFinite(Number(token))) refuse();
+      // Pricing schemas permit only integers. Inspect original decimal digits before
+      // JSON.parse precision loss can turn 9007199254740991.1 or 1e-999 into an integer.
+      if(exactIntegers) {
+        const match=/^-?(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(token)!;
+        const digits=(match[1]!+(match[2]??'')).replace(/^0+/,'');
+        const scale=(match[2]?.length??0)-Number(match[3]??0);
+        if(!Number.isSafeInteger(Number(token)) || (digits && (scale>digits.length ||
+          (scale>0 && !/^0*$/.test(digits.slice(-scale))))))throw new FieldValidationError('$','OUT_OF_RANGE');
+      }
     }
   }
   return result;
 }
 export function registerJson(app: FastifyInstance) {
   app.removeAllContentTypeParsers();
-  app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: JSON_BODY_LIMIT }, (_request, body, done) => {
-    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer))); }
-    catch { done(new HttpError('MALFORMED_REQUEST')); }
+  app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: JSON_BODY_LIMIT }, (request, body, done) => {
+    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), (request.routeOptions.url??'').includes('/pricing/'))); }
+    catch(error) { done(error instanceof FieldValidationError?error:new HttpError('MALFORMED_REQUEST')); }
   });
   app.addHook('onRequest', async (request) => {
     try { decodeURIComponent(request.raw.url ?? ''); }
