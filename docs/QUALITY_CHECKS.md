@@ -291,3 +291,7 @@ private query into a disposable checkout and verifies rejection. Required CI sti
 runs the same lint, tooling and real PostgreSQL jobs; no existing check is removed.
 See [tenant query isolation](architecture/tenant-query-isolation.md) for limitations and
 [Issue #15 verification](architecture/issue-15-verification.md) for exact final counts.
+
+## Issue #18 production/demo build isolation
+
+The web Vite production build rejects rendered demo modules, including transitive imports, and known demo/secret markers before single-file assembly. `pnpm test:quality` includes isolated positive/negative checker tests. `pnpm db:local verify:gates` additionally injects a live demo store import into a disposable snapshot and requires the real build to fail; other gate drills remain unchanged. No new runtime dependency, SQL exception or migration is introduced. See [Issue #18 verification](architecture/issue-18-verification.md).

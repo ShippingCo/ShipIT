@@ -433,3 +433,40 @@ pending onboarding request key/body; it is never a fallback workspace or session
 | apps/web/src/test/operator.test.tsx: authenticates through existing challenge routes and safely signs out | preserve | seam |
 | apps/web/src/test/operator.test.tsx: does not fall back to localStorage on an API outage | preserve | seam |
 | apps/web/src/test/operator.test.tsx: an invitation response after navigation refreshes the current route instead of stranding loading | preserve | seam |
+
+
+## Issue 18 reviewed boundary evidence
+
+The active fictional namespace is now explicit; historical JSON stays untouched and is not imported.
+Shared test setup no longer imports or seeds demo state. The original fictional regressions
+remain, while production composition and generalized client/cache/command tests are separate.
+The build checks rendered module paths and forbidden markers before single-file assembly.
+See [production data access](production-data-access.md) and [verification](issue-18-verification.md).
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/app.test.tsx: resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched | demo_only | demo |
+| apps/web/src/test/data-access.test.ts: defaults to production and accepts only explicit demo or safe canonical API origins | preserve | seam |
+| apps/web/src/test/data-access.test.ts: rejects unsafe or noncanonical API base %s without echoing it | preserve | seam |
+| apps/web/src/test/data-access.test.ts: rejects unknown public settings, invalid mode/version and configured demo API | preserve | seam |
+| apps/web/src/test/data-access.test.ts: uses configured routing, credentials, no-store, no redirects, CSRF and exact mutation key | preserve | seam |
+| apps/web/src/test/data-access.test.ts: reads without bootstrap and supports approved future methods and 204 | preserve | seam |
+| apps/web/src/test/data-access.test.ts: projects only known code, server correlation and declared validation fields | preserve | seam |
+| apps/web/src/test/data-access.test.ts: handles non-JSON HTTP %s without raw response leakage | preserve | seam |
+| apps/web/src/test/data-access.test.ts: classifies mutation HTTP %s %s as %s without replay | preserve | seam |
+| apps/web/src/test/data-access.test.ts: sanitizes network exceptions and malformed successes without manufacturing committed results | preserve | seam |
+| apps/web/src/test/data-access.test.ts: cancellation during ignored bootstrap prevents sending the mutation; after dispatch remains uncertain | preserve | seam |
+| apps/web/src/test/data-access.test.ts: never sends to an arbitrary destination or continues after invalid bootstrap | preserve | seam |
+| apps/web/src/test/data-access.test.ts: purges cache/cleanup before B and revisited A; rejects ignored cancellation and stale same-query results | preserve | seam |
+| apps/web/src/test/data-access.test.ts: isolates identity/permission changes and rejects late errors from an old scope | preserve | seam |
+| apps/web/src/test/data-access.test.ts: retries exact intent after uncertainty but refuses replay after identity/scope generation changes | preserve | seam |
+| apps/web/src/test/data-access.test.ts: never publishes a command result after scope changes and enforces expected-version consistency | preserve | seam |
+| apps/web/src/test/data-access.test.ts: broadcasts only payload-free invalidation and closes its channel; missing channel needs no storage fallback | preserve | seam |
+| apps/web/src/test/operator.test.tsx: production startup ignores URL/storage demo flags and never initializes fictional state | preserve | seam |
+| apps/web/src/test/operator.test.tsx: 401 during a mutation purges workspace and requires sign-in without replay or request loops | preserve | seam |
+| apps/web/src/test/operator.test.tsx: 401 on private cached work erases cache/context and late work cannot restore it | preserve | seam |
+| apps/web/src/test/operator.test.tsx: logout hides private data immediately and late context cannot repaint | preserve | seam |
+| apps/web/src/test/operator.test.tsx: revisiting A from B shows loading until fresh authorized retrieval | preserve | seam |
+| apps/web/src/test/operator.test.tsx: cross-tab invalidation immediately removes old context and revalidates without echo loops | preserve | seam |
+| apps/web/src/test/operator.test.tsx: sign-in works under Strict Mode effect replay | preserve | seam |
+| apps/web/src/test/operator.test.tsx: malformed successful context becomes controlled recovery without private fields | preserve | seam |

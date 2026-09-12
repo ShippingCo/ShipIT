@@ -174,22 +174,21 @@
       "apps/web/src/pages/business/RoutesPage.tsx",
       "apps/web/src/test/app.test.tsx",
       "apps/web/src/test/operator.test.tsx",
-      "apps/web/src/test/setup.ts",
       "apps/web/src/utils/receipt.ts"
     ],
     "fingerprints": {
-      "apps/web/src/App.tsx": "97f88220afa120f81ae3572c95c57aea04141a132e8d9ea2c361e635d7f03624",
-      "apps/web/src/DemoApp.tsx": "0115396e3200dfc848c647af797bc9eecee020add17415d6b0d72d86d3ad5b26",
+      "apps/web/src/App.tsx": "5478cba782f17d158f57908bec9930e70e9a46d3c26a2e7bf266c4c7d3007339",
+      "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
       "apps/web/src/components/m3/Controls.tsx": "2fc205e1a8d3604569f3e81da35d73fbb7e8c51383505ba8786acc5f51f34c10",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
-      "apps/web/src/data/store.ts": "5f8b0a0fab9db61f2fab8ee40ad9f7b86462d01246bf34b804a83786bfaad022",
+      "apps/web/src/data/store.ts": "064fda5747516bc6ee39f0e6d41b5096a6551fb5a755526371527a6ae7a496e9",
       "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
       "apps/web/src/main.tsx": "5605ec5cd89de6bfd64a7210fab53beb3313159933818cbee4622c581794ec2c",
-      "apps/web/src/pages/CustomerWhatsApp.tsx": "c3954742b222ea63cf3184a916527449ac9edc048dda8fa1a75bc0f4a627dc6b",
+      "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
       "apps/web/src/pages/business/Dashboard.tsx": "26d98d1b095cecd4590cbbf77f7a06c1fab8247c94bf2c9a78e478bb79b5b448",
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
@@ -200,9 +199,8 @@
       "apps/web/src/pages/business/PackagesPage.tsx": "ba25681f56d9b51ebee6a56c419e65cdb702a81a8389fdacd0d2c9df88eeafc8",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "766d5928c67763441c7ad65956907dee2624a91259e799de14178c6d9232e745",
-      "apps/web/src/test/operator.test.tsx": "c93b7b7e08ba87f0466be32fe9e2631a6bed08e9b882992f440b2b824588ec89",
-      "apps/web/src/test/setup.ts": "6b17cf72d6ac4dc944f0cc6bff9d1db4f032a1ff51f14ecbb8aa0c591034393a",
+      "apps/web/src/test/app.test.tsx": "21fffc0f1b57cc1ccc299da464fcae59c3e5464e2cd684c335d23312735a6ea0",
+      "apps/web/src/test/operator.test.tsx": "8378107b4f8950af118c165cc60ce14e3fa5962ef835ebb7547ab366dfc9d9f9",
       "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7",
       "apps/web/src/utils/receipt.ts": "2bcad0e9d719240eb051d31c33e2535842295ccdfdfbe2ed7338f6536aefddd5"
     },
@@ -213,12 +211,12 @@
           "syntax": "import { ToastProvider } from './components/m3/Snackbar';"
         },
         {
-          "target": "apps/web/src/operator/OperatorApp.tsx",
-          "syntax": "import OperatorApp from './operator/OperatorApp';"
-        },
-        {
           "target": "apps/web/src/DemoApp.tsx",
           "syntax": "import('./DemoApp')"
+        },
+        {
+          "target": "apps/web/src/operator/OperatorApp.tsx",
+          "syntax": "import('./operator/OperatorApp')"
         }
       ],
       "apps/web/src/DemoApp.tsx": [
@@ -297,6 +295,10 @@
       ],
       "apps/web/src/data/store.ts": [
         {
+          "target": "apps/web/src/demo/storage.ts",
+          "syntax": "import { DEMO_DATABASE_KEY, DEMO_PERSONA_KEY } from '../demo/storage';"
+        },
+        {
           "target": "apps/web/src/data/messages.ts",
           "syntax": "import { msg } from './messages';"
         },
@@ -312,6 +314,10 @@
         }
       ],
       "apps/web/src/pages/CustomerWhatsApp.tsx": [
+        {
+          "target": "apps/web/src/demo/storage.ts",
+          "syntax": "import { DEMO_PERSONA_KEY } from '../demo/storage';"
+        },
         {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../components/m3/Icon';"
@@ -780,7 +786,7 @@
         },
         {
           "target": "apps/web/src/data/store.ts",
-          "syntax": "import { db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';"
+          "syntax": "import { resetDemo, db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';"
         },
         {
           "target": "apps/web/src/data/store.ts",
@@ -801,14 +807,8 @@
           "syntax": "import { createScopeController } from '../operator/scope';"
         },
         {
-          "target": "apps/web/src/operator/api.ts",
-          "syntax": "import { OperatorError } from '../operator/api';"
-        }
-      ],
-      "apps/web/src/test/setup.ts": [
-        {
-          "target": "apps/web/src/data/store.ts",
-          "syntax": "import { resetDemo } from '../data/store';"
+          "target": "apps/web/src/data-access/errors.ts",
+          "syntax": "import { ApiFailure as OperatorError } from '../data-access/errors';"
         }
       ],
       "apps/web/src/utils/receipt.ts": [
@@ -956,6 +956,91 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "defaults to production and accepts only explicit demo or safe canonical API origins",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "rejects unsafe or noncanonical API base %s without echoing it",
+        "cases": "['https://user:secret@example.test', 'https://example.test/?token=secret', 'https://example.test/#secret', '//example.test', 'javascript:secret', 'http://remote.test', 'https://example.test/path', 'https://example.test/', 'https://EXAMPLE.test']"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "rejects unknown public settings, invalid mode/version and configured demo API",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "uses configured routing, credentials, no-store, no redirects, CSRF and exact mutation key",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "reads without bootstrap and supports approved future methods and 204",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "projects only known code, server correlation and declared validation fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "handles non-JSON HTTP %s without raw response leakage",
+        "cases": "[401, 403, 404, 408, 429, 500, 503]"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "classifies mutation HTTP %s %s as %s without replay",
+        "cases": "[\n    [401, 'UNAUTHENTICATED', 'reauthenticate'], [403, 'ACTION_FORBIDDEN', 'unavailable'], [404, 'RESOURCE_NOT_FOUND', 'unavailable'],\n    [408, 'REQUEST_TIMEOUT', 'uncertain'], [409, 'VERSION_CONFLICT', 'refresh'], [409, 'IDEMPOTENCY_CONFLICT', 'conflict'],\n    [409, 'IDEMPOTENCY_IN_PROGRESS', 'pending'], [422, 'VALIDATION_FAILED', 'validate'], [429, 'RATE_LIMITED', 'retry'],\n    [500, 'INTERNAL_ERROR', 'uncertain'], [503, 'TEMPORARILY_UNAVAILABLE', 'uncertain'],\n  ]"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "sanitizes network exceptions and malformed successes without manufacturing committed results",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "cancellation during ignored bootstrap prevents sending the mutation; after dispatch remains uncertain",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "never sends to an arbitrary destination or continues after invalid bootstrap",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "purges cache/cleanup before B and revisited A; rejects ignored cancellation and stale same-query results",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "isolates identity/permission changes and rejects late errors from an old scope",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "retries exact intent after uncertainty but refuses replay after identity/scope generation changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "never publishes a command result after scope changes and enforces expected-version consistency",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "name": "broadcasts only payload-free invalidation and closes its channel; missing channel needs no storage fallback",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/lint-regressions.test.tsx",
         "name": "can change between empty and populated series without changing hook order",
         "cases": null
@@ -1024,6 +1109,46 @@
         "file": "apps/web/src/test/operator.test.tsx",
         "name": "does not fall back to localStorage on an API outage",
         "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "production startup ignores URL/storage demo flags and never initializes fictional state",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "401 during a mutation purges workspace and requires sign-in without replay or request loops",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "401 on private cached work erases cache/context and late work cannot restore it",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "logout hides private data immediately and late context cannot repaint",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "revisiting A from B shows loading until fresh authorized retrieval",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "cross-tab invalidation immediately removes old context and revalidates without echo loops",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "sign-in works under Strict Mode effect replay",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "malformed successful context becomes controlled recovery without private fields",
+        "cases": null
       }
     ],
     "effects": [
@@ -1077,15 +1202,7 @@
       },
       {
         "file": "apps/web/src/data/store.ts",
-        "kind": "localStorage.getItem"
-      },
-      {
-        "file": "apps/web/src/data/store.ts",
-        "kind": "localStorage.setItem"
-      },
-      {
-        "file": "apps/web/src/data/store.ts",
-        "kind": "localStorage.getItem"
+        "kind": "localStorage.removeItem"
       },
       {
         "file": "apps/web/src/data/store.ts",
@@ -1160,6 +1277,50 @@
         "kind": "localStorage.setItem"
       },
       {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "expect(localStorage.getItem('shipit_demo_persona_v1')).toBeNull"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "expect(localStorage.getItem('shippingco_v1')).toBe"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "expect(JSON.parse(localStorage.getItem('shipit_demo_database_v1')!).bookings.length).toBeGreaterThan"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "kind": "expect(sessionStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/data-access.test.ts",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
         "file": "apps/web/src/test/operator.test.tsx",
         "kind": "sessionStorage.clear"
       },
@@ -1180,8 +1341,28 @@
         "kind": "localStorage.setItem"
       },
       {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "expect(JSON.stringify(localStorage)).toBe"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "expect(localStorage.getItem('shipit_demo_database_v1')).toBeNull"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "localStorage.getItem"
+      },
+      {
         "file": "apps/web/src/test/setup.ts",
         "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/setup.ts",
+        "kind": "sessionStorage.clear"
       },
       {
         "file": "apps/web/src/utils/receipt.ts",
@@ -1595,6 +1776,10 @@
     "apps/web/src/App.tsx": [
       "seam"
     ],
+    "apps/web/src/DemoApp.tsx": [
+      "demo",
+      "seam"
+    ],
     "apps/web/src/components/CommandPalette.tsx": [
       "presentation"
     ],
@@ -1630,12 +1815,16 @@
       "receipts",
       "attachments"
     ],
-    "apps/web/src/DemoApp.tsx": [
-      "demo",
-      "seam"
-    ],
     "apps/web/src/main.tsx": [
       "seam"
+    ],
+    "apps/web/src/pages/CustomerWhatsApp.tsx": [
+      "assistant",
+      "messaging",
+      "demo"
+    ],
+    "apps/web/src/pages/Launcher.tsx": [
+      "demo"
     ],
     "apps/web/src/pages/business/Dashboard.tsx": [
       "reports",
@@ -1681,14 +1870,6 @@
       "routes",
       "messaging"
     ],
-    "apps/web/src/pages/CustomerWhatsApp.tsx": [
-      "assistant",
-      "messaging",
-      "demo"
-    ],
-    "apps/web/src/pages/Launcher.tsx": [
-      "demo"
-    ],
     "apps/web/src/test/app.test.tsx": [
       "demo",
       "booking",
@@ -1699,14 +1880,6 @@
     ],
     "apps/web/src/test/operator.test.tsx": [
       "seam"
-    ],
-    "apps/web/src/test/setup.ts": [
-      "demo",
-      "booking",
-      "proof",
-      "routes",
-      "reports",
-      "eway"
     ],
     "apps/web/src/utils/receipt.ts": [
       "receipts"
@@ -1826,6 +1999,142 @@
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched",
+      "cases": null,
+      "group": "demo",
+      "disposition": "demo_only",
+      "reason": "Issue 18 demo reset only mutates the explicit fictional namespace and performs zero network requests."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "defaults to production and accepts only explicit demo or safe canonical API origins",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "rejects unsafe or noncanonical API base %s without echoing it",
+      "cases": "['https://user:secret@example.test', 'https://example.test/?token=secret', 'https://example.test/#secret', '//example.test', 'javascript:secret', 'http://remote.test', 'https://example.test/path', 'https://example.test/', 'https://EXAMPLE.test']",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "rejects unknown public settings, invalid mode/version and configured demo API",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "uses configured routing, credentials, no-store, no redirects, CSRF and exact mutation key",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "reads without bootstrap and supports approved future methods and 204",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "projects only known code, server correlation and declared validation fields",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "handles non-JSON HTTP %s without raw response leakage",
+      "cases": "[401, 403, 404, 408, 429, 500, 503]",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "classifies mutation HTTP %s %s as %s without replay",
+      "cases": "[\n    [401, 'UNAUTHENTICATED', 'reauthenticate'], [403, 'ACTION_FORBIDDEN', 'unavailable'], [404, 'RESOURCE_NOT_FOUND', 'unavailable'],\n    [408, 'REQUEST_TIMEOUT', 'uncertain'], [409, 'VERSION_CONFLICT', 'refresh'], [409, 'IDEMPOTENCY_CONFLICT', 'conflict'],\n    [409, 'IDEMPOTENCY_IN_PROGRESS', 'pending'], [422, 'VALIDATION_FAILED', 'validate'], [429, 'RATE_LIMITED', 'retry'],\n    [500, 'INTERNAL_ERROR', 'uncertain'], [503, 'TEMPORARILY_UNAVAILABLE', 'uncertain'],\n  ]",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "sanitizes network exceptions and malformed successes without manufacturing committed results",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "cancellation during ignored bootstrap prevents sending the mutation; after dispatch remains uncertain",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "never sends to an arbitrary destination or continues after invalid bootstrap",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "purges cache/cleanup before B and revisited A; rejects ignored cancellation and stale same-query results",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "isolates identity/permission changes and rejects late errors from an old scope",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "retries exact intent after uncertainty but refuses replay after identity/scope generation changes",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "never publishes a command result after scope changes and enforces expected-version consistency",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/data-access.test.ts",
+      "name": "broadcasts only payload-free invalidation and closes its channel; missing channel needs no storage fallback",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
       "file": "apps/web/src/test/lint-regressions.test.tsx",
       "name": "can change between empty and populated series without changing hook order",
       "cases": null,
@@ -1936,6 +2245,70 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "production startup ignores URL/storage demo flags and never initializes fictional state",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "401 during a mutation purges workspace and requires sign-in without replay or request loops",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "401 on private cached work erases cache/context and late work cannot restore it",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "logout hides private data immediately and late context cannot repaint",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "revisiting A from B shows loading until fresh authorized retrieval",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "cross-tab invalidation immediately removes old context and revalidates without echo loops",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "sign-in works under Strict Mode effect replay",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "malformed successful context becomes controlled recovery without private fields",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     }
   ],
   "safety": {

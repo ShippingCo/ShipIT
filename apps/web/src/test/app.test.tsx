@@ -1,8 +1,10 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../DemoApp';
-import { db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';
+import { resetDemo, db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';
+
+beforeEach(() => resetDemo());
 
 describe('fresh-browser startup (blank screen regression)', () => {
   it('store seeds itself before first render even with empty localStorage', async () => {
@@ -17,7 +19,7 @@ describe('fresh-browser startup (blank screen regression)', () => {
   });
 
   it('heals corrupted persisted state', async () => {
-    localStorage.setItem('shippingco_v1', '{"bookings":"oops"}');
+    localStorage.setItem('shipit_demo_database_v1', '{"bookings":"oops"}');
     vi.resetModules();
     const store = await import('../data/store');
     const snap = store.getSnapshot();
@@ -255,5 +257,24 @@ describe('GST place of supply', () => {
     expect(ewayValidDays(530)).toBe(3);
     expect(ewayState(findByDocket(b.docket)!)).toBe('recorded');
     db().bookings = db().bookings.filter((x) => x.id !== b.id);
+  });
+});
+
+
+describe('fictional demo isolation', () => {
+  it('resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched', async () => {
+    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+    try {
+      localStorage.setItem('shippingco_v1','untouched legacy');
+      localStorage.setItem('shipit_demo_persona_v1','fictional persona');
+      window.location.hash='/';render(<App/>);await screen.findByText('Business Console');
+      fireEvent.click(screen.getByRole('button',{name:/Reset demo data/i}));
+      const dialog=await screen.findByRole('dialog');
+      fireEvent.click(Array.from(dialog.querySelectorAll('button')).find(button=>button.textContent?.includes('Reset'))!);
+      await screen.findByText('Demo data restored.');
+      expect(fetcher).not.toHaveBeenCalled();expect(localStorage.getItem('shipit_demo_persona_v1')).toBeNull();
+      expect(localStorage.getItem('shippingco_v1')).toBe('untouched legacy');
+      expect(JSON.parse(localStorage.getItem('shipit_demo_database_v1')!).bookings.length).toBeGreaterThan(0);
+    } finally {vi.unstubAllGlobals();}
   });
 });

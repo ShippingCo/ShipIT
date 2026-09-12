@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach } from 'vitest';
-import { resetDemo } from '../data/store';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -20,7 +19,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: tru
 
 beforeEach(() => {
   localStorage.clear();
-  resetDemo();
+  sessionStorage.clear();
 });
 
 afterEach(() => {

@@ -124,3 +124,9 @@ Production architecture: [overview and ownership](docs/architecture/README.md),
 [pilot/commercial gates](docs/architecture/pilot-boundaries.md), and
 [open decisions](docs/architecture/open-decisions.md). The linked owning contracts distinguish
 implemented infrastructure/operator entry from future operational services.
+
+## Production data access and fictional demo
+
+[Issue #18 architecture](docs/architecture/production-data-access.md) documents the typed API client, purpose-specific operator data source, safe errors, immutable mutation intent and scope cache lifetime. Same-origin API routing remains the default; optional `VITE_API_BASE_URL` is a canonical public origin without authentication/path/query. Unknown public configuration fails startup. Demo is selected only by `VITE_DATA_MODE=demo`, has no API base, and starts a new explicit fictional storage namespace without importing legacy browser JSON.
+
+Both builds are checked separately; production build inspection rejects demo modules and known secret/demo markers. [Verification and synthetic walkthrough](docs/architecture/issue-18-verification.md) includes the full PostgreSQL gate and controlled isolation failure drill.

@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { OperatorContext } from '@shippingco/shared';
 import App from '../App';
 import { createScopeController } from '../operator/scope';
-import { OperatorError } from '../operator/api';
+import { ApiFailure as OperatorError } from '../data-access/errors';
 
 const A='00000000-0000-4000-8000-000000000001',B='00000000-0000-4000-8000-000000000002';
 const user='00000000-0000-4000-8000-000000000003';
@@ -168,4 +168,77 @@ describe('production operator flow',()=>{
     await screen.findByRole('heading',{name:'Workspace access unavailable'});expect(screen.queryByText('Forbidden cached shop')).not.toBeInTheDocument();
     await waitFor(()=>expect(screen.queryByText('Reset demo data')).not.toBeInTheDocument());
   });
+  it('production startup ignores URL/storage demo flags and never initializes fictional state', async () => {
+    window.location.hash='/?VITE_DATA_MODE=demo'; localStorage.setItem('VITE_DATA_MODE','demo');
+    const stored=JSON.stringify(localStorage); render(<App/>); await screen.findByRole('heading',{name:'Set up your shop'});
+    expect(JSON.stringify(localStorage)).toBe(stored); expect(localStorage.getItem('shipit_demo_database_v1')).toBeNull();
+    expect(screen.queryByText('Customer WhatsApp')).not.toBeInTheDocument(); expect(screen.queryByText('Reset demo data')).not.toBeInTheDocument();
+  });
+  it('401 during a mutation purges workspace and requires sign-in without replay or request loops', async () => {
+    responseOverride=path=>path==='/api/v1/onboarding'?Promise.resolve(json({error:{code:'UNAUTHENTICATED'}},401)):undefined;
+    render(<App/>);await fill();fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
+    await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    expect(screen.queryByRole('heading',{name:'Set up your shop'})).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Business name')).not.toBeInTheDocument();
+    expect(calls.filter(c=>c.path==='/api/v1/onboarding')).toHaveLength(1);
+    expect(calls.filter(c=>c.path.startsWith('/api/v1/operator-context'))).toHaveLength(1);
+    expect(screen.getByRole('heading',{name:'Sign in to ShippingCo'})).toHaveFocus();
+  });
+  it('401 on private cached work erases cache/context and late work cannot restore it', async () => {
+    context=ready;const controller=createScopeController();await controller.load(A);
+    const query={resource:'test-adapter',parameters:{cursor:'synthetic'}};
+    await controller.runtime.query(query,async()=>'A private payload',()=>{});
+    expect(controller.runtime.read(query)).toBe('A private payload');
+    const old=deferred<string>(),paint=vi.fn();const pending=controller.runtime.query({resource:'late'},()=>old.promise,paint);
+    await controller.runtime.query(query,async()=>{throw new OperatorError('UNAUTHENTICATED');},paint);
+    expect(controller.snapshot()).toMatchObject({status:'signed_out',context:null});
+    old.resolve('late private');await pending;expect(paint).not.toHaveBeenCalled();
+    await controller.load(A);expect(controller.runtime.read(query)).toBeUndefined();
+  });
+  it('logout hides private data immediately and late context cannot repaint', async () => {
+    context=ready;const logout=deferred<Response>();responseOverride=path=>path==='/auth/logout'?logout.promise:undefined;
+    render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByRole('button',{name:'Sign out'}));
+    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    await act(async()=>logout.resolve(json({ok:true})));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    expect(calls.filter(c=>c.path==='/auth/logout')).toHaveLength(1);
+  });
+  it('revisiting A from B shows loading until fresh authorized retrieval', async () => {
+    context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});await screen.findByRole('heading',{name:'Counter B'});
+    const reload=deferred<Response>();responseOverride=path=>path.endsWith(A)?reload.promise:undefined;
+    fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:A}});
+    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByRole('heading',{name:'Counter B'})).not.toBeInTheDocument();
+    await act(async()=>reload.resolve(json({...ready,franchises:[franchise(A,'Fresh Counter A')]})));
+    await screen.findByRole('heading',{name:'Fresh Counter A'});
+  });
+  it('cross-tab invalidation immediately removes old context and revalidates without echo loops', async () => {
+    let receive!:(event:{data:unknown})=>void;const publish=vi.fn(),close=vi.fn();
+    vi.stubGlobal('BroadcastChannel',class {set onmessage(handler:(event:{data:unknown})=>void){receive=handler;}postMessage=publish;close=close;});
+    context=ready;const view=render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    const slow=deferred<Response>();responseOverride=path=>path.startsWith('/api/v1/operator-context')?slow.promise:undefined;
+    act(()=>receive({data:'invalidate'}));expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
+    await act(async()=>slow.resolve(json({error:{code:'UNAUTHENTICATED'}},401)));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    expect(publish).not.toHaveBeenCalled();expect(calls.filter(c=>c.path.startsWith('/api/v1/operator-context'))).toHaveLength(2);
+    view.unmount();expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('sign-in works under Strict Mode effect replay', async () => {
+    let signedIn=false;
+    responseOverride=path=>{
+      if(path==='/auth/challenges/verify'){signedIn=true;context=ready;return Promise.resolve(json({authenticated:true}));}
+      if(path.startsWith('/api/v1/operator-context')&&!signedIn)return Promise.resolve(json({error:{code:'UNAUTHENTICATED'}},401));
+    };
+    render(<React.StrictMode><App/></React.StrictMode>);await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Send sign-in code'}));
+    await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'12345678'}});
+    fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await screen.findByRole('heading',{name:'Counter A'});
+    expect(calls.filter(c=>c.path==='/auth/challenges/verify')).toHaveLength(1);
+  });
+  it('malformed successful context becomes controlled recovery without private fields', async () => {
+    responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({state:'ready',franchises:'private malformed body'})):undefined;
+    render(<App/>);await screen.findByRole('heading',{name:'Workspace access unavailable'});
+    expect(screen.queryByText('private malformed body')).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+  });
+
 });

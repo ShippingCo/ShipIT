@@ -4,16 +4,25 @@ import { TextField } from '../components/m3/Input';
 import BusinessShell from '../pages/business/BusinessShell';
 import SignIn from './SignIn';
 import Onboarding, { clearPending } from './Onboarding';
-import { request } from './api';
+import { connectInvalidation } from '../data-access/invalidation';
+import { ApiFailure } from '../data-access/errors';
 import { createScopeController } from './scope';
 import './operator.css';
 
 export default function OperatorApp() {
-  const [controller] = useState(createScopeController);
+  const [controller] = useState(() => createScopeController());
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const location = useLocation(), navigate = useNavigate();
   const selected = useRef<string | undefined>(undefined);
   const latestPath = useRef(location.pathname);
+  const crossTab = useRef<ReturnType<typeof connectInvalidation> | null>(null);
+  useEffect(() => {
+    crossTab.current = connectInvalidation(() => {
+      selected.current = undefined; setInvitation(''); setMessage('');
+      void controller.load(undefined, latestPath.current);
+    });
+    return () => { crossTab.current?.close(); };
+  }, [controller]);
   const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const refresh = () => controller.load(selected.current, latestPath.current);
   useEffect(() => {
@@ -30,20 +39,28 @@ export default function OperatorApp() {
       document.getElementById('workspace-title')?.focus();
     }
   }, [state.context]);
+  useEffect(() => {
+    if (state.status === 'signed_out') {
+      selected.current = undefined; setInvitation('');
+      document.getElementById('signin-title')?.focus();
+    }
+  }, [state.status]);
   async function accept(event: React.FormEvent) {
     event.preventDefault(); if (busy) return; setBusy(true); setMessage('');
     const token = invitation; setInvitation(''); controller.clear();
     try {
-      await request('/api/v1/membership-invitations/accept', { body: { token } });
+      await controller.source.acceptInvitation(token);
+      crossTab.current?.publish();
       selected.current = undefined; await refresh();
       setMessage('Invitation accepted. Your permitted workspace has been refreshed.');
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiFailure && error.code === 'UNAUTHENTICATED') { controller.clear('signed_out', latestPath.current); return; }
       await refresh(); setMessage('Invitation could not be confirmed. Refresh workspace access; otherwise ask the sender for a new invitation for your verified identity.');
     } finally { setBusy(false); }
   }
   async function logout() {
-    if (busy) return; setBusy(true); setMessage(''); controller.clear();
-    try { await request('/auth/logout', { body: {} }); selected.current = undefined; controller.clear('signed_out', latestPath.current); }
+    if (busy) return; setBusy(true); setMessage(''); setInvitation(''); controller.clear(); crossTab.current?.publish();
+    try { await controller.source.logout(); selected.current = undefined; controller.clear('signed_out', latestPath.current); crossTab.current?.publish(); }
     catch { controller.clear('error', latestPath.current); setMessage('Sign-out could not be confirmed. Retry when the connection returns.'); }
     finally { setBusy(false); }
   }
@@ -52,7 +69,7 @@ export default function OperatorApp() {
   const loading = state.status === 'loading' || state.path !== location.pathname;
   return <div className="operator-root">
     {loading ? <main className="operator-center" role="status">Checking workspace access…</main> : state.status === 'signed_out' ?
-      <main className="operator-center"><SignIn complete={async () => { selected.current = undefined; await refresh(); }} /></main> :
+      <main className="operator-center"><SignIn source={controller.source} complete={async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); }} /></main> :
       state.status === 'error' ? <main className="operator-center"><section className="card operator-card">
         <h1 className="t-headline-sm">Workspace access unavailable</h1>
         <p role="alert">Your session or access may have changed, or the service is unavailable. Private workspace data has been cleared.</p>
@@ -60,7 +77,7 @@ export default function OperatorApp() {
       </section></main> : context?.state === 'ready' ? <BusinessShell context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
       }} /> : <main className="operator-center">
-        {context?.state === 'onboarding_required' ? <Onboarding userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /> :
+        {context?.state === 'onboarding_required' ? <Onboarding key={context.user_id} controller={controller} userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /> :
           <section className="card operator-card"><h1 className="t-headline-sm">No available workspace</h1><p role="alert">Ask an administrator to restore access or send an invitation. Disabled locations and revoked memberships cannot be used.</p></section>}
       </main>}
     {!loading && state.status !== 'signed_out' && <footer className="operator-actions">

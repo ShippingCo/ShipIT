@@ -9,6 +9,7 @@ import CustomerWhatsApp from './pages/CustomerWhatsApp';
 export default function App() {
   return (
     <AppProvider>
+      <div className="t-label-sm" style={{ textAlign: 'center', padding: 6, background: 'var(--md-surface-container)' }}>Fictional demo · Local sample data · No real messages</div>
       <ToastProvider>
         <HashRouter>
           <Routes>

@@ -85,3 +85,7 @@ register rather than silently inherited from the prototype.
 - [Issue #16 verification](issue-16-verification.md) — migration, security and delivery evidence.
 
 Issue #17: [independent onboarding and operator context](independent-onboarding.md) · [verification](issue-17-verification.md).
+
+## Production frontend data access — Issue #18
+
+[Production data access](production-data-access.md) owns validated build composition, the single API client, operator data source, ephemeral cache/command lifetime and fictional demo isolation. [Verification](issue-18-verification.md) maps all twelve acceptance criteria.

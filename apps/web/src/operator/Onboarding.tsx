@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { TextField } from '../components/m3/Input';
-import { OperatorError, request } from './api';
+import { ApiFailure, recoveryFor } from '../data-access/errors';
+import type { OnboardingRequest } from '@shippingco/shared';
+import type { ScopeController } from './scope';
 
-type Intent = { key: string; body: { display_name: string; franchise: { display_name: string; franchise_code: string } } };
+type Intent = { key: string; body: OnboardingRequest };
 // Only a pending request intent, never workspace authority. GET context always runs first.
 function pending(userId: string): Intent | null {
   try {
@@ -14,7 +16,7 @@ function pending(userId: string): Intent | null {
 export function clearPending(userId: string) {
   try { sessionStorage.removeItem(`shipit_onboarding_request:${userId}`); } catch { /* context remains authoritative */ }
 }
-export default function Onboarding({ userId, complete }: { userId: string; complete: () => Promise<void> }) {
+export default function Onboarding({ userId, complete, controller }: { userId: string; complete: () => Promise<void>; controller: ScopeController }) {
   const [intent, setIntent] = useState(() => pending(userId));
   const [name, setName] = useState(intent?.body.display_name ?? '');
   const [location, setLocation] = useState(intent?.body.franchise.display_name ?? '');
@@ -34,11 +36,14 @@ export default function Onboarding({ userId, complete }: { userId: string; compl
     setIntent(command); setBusy(true); setMessage('');
     try { sessionStorage.setItem(`shipit_onboarding_request:${userId}`, JSON.stringify(command)); } catch { /* server identity guard also prevents duplicate workspaces */ }
     try {
-      await request('/api/v1/onboarding', { key: command.key, body: command.body });
+      const approved = controller.source.onboardingIntent(command.body, controller.runtime.ticket(), command.key);
+      await controller.command(() => controller.source.onboard(approved, controller.runtime.ticket));
       await complete();
     } catch (error) {
-      if (error instanceof OperatorError && error.code === 'VALIDATION_FAILED') {
+      if (error instanceof ApiFailure && recoveryFor(error, true) === 'validate') {
         setIntent(null); clearPending(userId); setMessage('Check the business and location details, then try again.');
+      } else if (error instanceof ApiFailure && ['conflict', 'refresh'].includes(recoveryFor(error, true))) {
+        setMessage('The request conflicts with current state. Refresh workspace access before reviewing a new action.');
       } else {
         setMessage('We could not confirm your workspace. Retry the same request, or refresh workspace access.');
       }

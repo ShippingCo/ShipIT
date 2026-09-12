@@ -18,3 +18,9 @@ export interface OnboardingResult {
   franchise: { id: string; display_name: string };
   role: 'org_admin';
 }
+
+/** Validated independent-onboarding input; IDs and roles are server-owned. */
+export interface OnboardingRequest {
+  display_name: string;
+  franchise: { display_name: string; franchise_code: string };
+}
