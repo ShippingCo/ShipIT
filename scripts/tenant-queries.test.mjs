@@ -69,6 +69,13 @@ test('customer phone queries require franchise ownership and no new raw SQL exce
   } finally {rmSync(root,{recursive:true,force:true});}
 });
 
+test('tax repositories require both owners, closed actions and no raw SQL path',()=>{
+  const file='apps/api/src/modules/tax/repository.ts';
+  assert.deepEqual(inspectSource(file,"scopedQuery(scope,['tax.calculate'],'SELECT id FROM shipit.tax_intents WHERE {{franchise:organization_id:franchise_id}}')"),[]);
+  for(const source of ["db.query('SELECT * FROM shipit.tax_intents')",
+    "scopedQuery(scope,['tax.calculate'],'SELECT * FROM shipit.tax_intents WHERE {{organization:organization_id}}')",
+    "import {issueTenantAccess} from '../security/scope.ts'"])assert.ok(inspectSource(file,source).length);
+});
 test('pricing repositories require both owners, closed actions and no raw SQL path',()=>{
   const pricing='apps/api/src/modules/pricing/repository.ts';
   assert.deepEqual(inspectSource(pricing,"scopedQuery(scope,['pricing.quote'],'SELECT id FROM shipit.pricing_rules WHERE {{franchise:organization_id:franchise_id}}')"),[]);

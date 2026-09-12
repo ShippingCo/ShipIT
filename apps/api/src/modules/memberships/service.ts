@@ -12,7 +12,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -344,6 +344,34 @@ export async function withAuditScope<T>(database:DatabasePool,sessionToken:strin
     const scope=issueTenantAccess(tx,{action:'audit.read',actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:authority.franchiseIds,organizationWide:authority.organizationWide,correlationId,provenance:'membership'});
     return work(scope,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+  });
+}
+
+/** Domain-specific coordinator: independent capabilities, one authenticated and locked transaction.
+ * No executor or capability issuer escapes to the tax/booking consumer.
+ */
+export async function withTaxTenantScope<T>(database: DatabasePool, sessionToken: string, organizationId: string,
+  franchiseId: string, action: import('../tax/types.ts').TaxAction, correlationId: string,
+  work: (scopes: { tax: import('../security/scope.ts').TenantAccess; pricing: import('../security/scope.ts').TenantAccess|null }) => Promise<T>): Promise<T> {
+  validate.uuid(organizationId); validate.uuid(franchiseId);
+  return membershipTransaction(database, async tx => {
+    const session = await authenticated(tx,sessionToken);
+    if (!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId) ||
+      !await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships = await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all = action === 'tax.read' && memberships.some(m => m.role === 'org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
+    const permitted = taxScope(action,memberships,all);
+    if (!permitted.length) throw new HttpError('ACTION_FORBIDDEN');
+    if (!permitted.includes(franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
+    const context = { actor: { type: 'user' as const,id: session.user_id }, organizationId, permittedFranchiseIds: [franchiseId],
+      organizationWide: false, correlationId, provenance: 'membership' as const };
+    const tax = issueTenantAccess(tx,{ ...context,action });
+    let pricing: import('../security/scope.ts').TenantAccess|null = null;
+    if (['tax.prepare','tax.calculate','tax.validate'].includes(action)) {
+      if (!pricingScope('pricing.validate',memberships,[]).includes(franchiseId)) throw new HttpError('ACTION_FORBIDDEN');
+      pricing = issueTenantAccess(tx,{ ...context,action: pricingScope('pricing.override.approve',memberships,[]).includes(franchiseId) ? 'pricing.override.approve' : 'pricing.validate' });
+    }
+    return work({ tax,pricing });
   });
 }
 

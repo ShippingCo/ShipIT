@@ -33,6 +33,15 @@ export function customerScope(memberships: readonly Membership[]) {
     (m.role === 'franchise_admin' || m.role === 'operator')).flatMap(m => m.franchiseIds))].sort();
 }
 
+/** R21 published projection, W27 policy administration, W37 resolution, W01 booking preparation. */
+export function taxScope(action: import('../tax/types.ts').TaxAction, memberships: readonly Membership[], all: readonly string[]) {
+  const active = memberships.filter(m => m.lifecycle === 'active');
+  if (action === 'tax.read' && active.some(m => m.role === 'org_admin')) return [...all];
+  const roles: readonly Role[] = action === 'tax.read' ? ['franchise_admin','operator','dispatcher','accountant'] :
+    ['tax.draft','tax.publish','tax.resolve'].includes(action) ? ['franchise_admin'] : ['franchise_admin','operator','dispatcher'];
+  return [...new Set(active.filter(m => roles.includes(m.role)).flatMap(m => m.franchiseIds))].sort();
+}
+
 /** R21 reads; W27 local config; W01 ordinary variance; W43 privileged approval. */
 export function pricingScope(action:import('../pricing/types.ts').PricingAction,memberships:readonly Membership[],all:readonly string[]) {
   const active=memberships.filter(m=>m.lifecycle==='active');

@@ -11,7 +11,7 @@ await test('eight released migrations upgrade with existing tenant/customer/audi
   await owner.query("INSERT INTO shipit.franchises(id,organization_id,franchise_code,display_name) VALUES($1,$2,'MAIN','Synthetic')",[A,org]);
   await owner.query("INSERT INTO shipit.customers(id,organization_id,franchise_id,name,phone_normalized,phone_display,address) VALUES($1,$2,$3,'Synthetic','+12025550100','+12025550100','')",[randomUUID(),org,A]);
   const before=(await owner.query('SELECT * FROM shipit.customers')).rows,roots=(await owner.query('SELECT * FROM shipit.franchises')).rows;
-  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await owner.query('SELECT * FROM shipit.customers')).rows,before);assert.deepEqual((await owner.query('SELECT * FROM shipit.franchises')).rows,roots);
   assert.equal((await owner.query('SELECT count(*)::integer AS n FROM shipit.pricing_cards')).rows[0]!.n,0);
 });

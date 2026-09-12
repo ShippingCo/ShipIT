@@ -152,6 +152,7 @@ export interface DisposableDatabase {
   prepareAuth(): Promise<void>;
   prepareMemberships(): Promise<void>;
   preparePricing(): Promise<void>;
+  prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
@@ -272,6 +273,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT DELETE ON shipit.pricing_rules TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_pricing_audit(uuid,uuid,uuid,uuid,uuid,text,text,integer,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareTax() {
+      await handle.preparePricing();
+      const owner = handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.tax_cards,shipit.tax_versions,shipit.tax_intents,shipit.tax_resolutions,shipit.tax_calculations,shipit.tax_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(policy,effective_from,effective_to,revision,state,published_by) ON shipit.tax_versions TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); pools.delete(owner); }
     },
     async prepareFixtures() {
       validate();
