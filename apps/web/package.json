@@ -41,7 +41,8 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.2",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "@shippingco/shared": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.5.0",

@@ -154,6 +154,7 @@
     ],
     "consumers": [
       "apps/web/src/App.tsx",
+      "apps/web/src/DemoApp.tsx",
       "apps/web/src/components/CommandPalette.tsx",
       "apps/web/src/components/m3/Journey.tsx",
       "apps/web/src/context/AppContext.tsx",
@@ -162,8 +163,8 @@
       "apps/web/src/main.tsx",
       "apps/web/src/pages/CustomerWhatsApp.tsx",
       "apps/web/src/pages/Launcher.tsx",
-      "apps/web/src/pages/business/BusinessShell.tsx",
       "apps/web/src/pages/business/Dashboard.tsx",
+      "apps/web/src/pages/business/DemoBusinessShell.tsx",
       "apps/web/src/pages/business/EwayPage.tsx",
       "apps/web/src/pages/business/LotsPage.tsx",
       "apps/web/src/pages/business/MiscPages.tsx",
@@ -172,11 +173,13 @@
       "apps/web/src/pages/business/ReportsPage.tsx",
       "apps/web/src/pages/business/RoutesPage.tsx",
       "apps/web/src/test/app.test.tsx",
+      "apps/web/src/test/operator.test.tsx",
       "apps/web/src/test/setup.ts",
       "apps/web/src/utils/receipt.ts"
     ],
     "fingerprints": {
-      "apps/web/src/App.tsx": "2c687632fb5fafb0ff2cd0936f65ddbff3f174478fb25b3b2ec46094e4a6ddab",
+      "apps/web/src/App.tsx": "97f88220afa120f81ae3572c95c57aea04141a132e8d9ea2c361e635d7f03624",
+      "apps/web/src/DemoApp.tsx": "0115396e3200dfc848c647af797bc9eecee020add17415d6b0d72d86d3ad5b26",
       "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
       "apps/web/src/components/m3/Controls.tsx": "2fc205e1a8d3604569f3e81da35d73fbb7e8c51383505ba8786acc5f51f34c10",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
@@ -188,8 +191,8 @@
       "apps/web/src/main.tsx": "5605ec5cd89de6bfd64a7210fab53beb3313159933818cbee4622c581794ec2c",
       "apps/web/src/pages/CustomerWhatsApp.tsx": "c3954742b222ea63cf3184a916527449ac9edc048dda8fa1a75bc0f4a627dc6b",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
-      "apps/web/src/pages/business/BusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
       "apps/web/src/pages/business/Dashboard.tsx": "26d98d1b095cecd4590cbbf77f7a06c1fab8247c94bf2c9a78e478bb79b5b448",
+      "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
       "apps/web/src/pages/business/MiscPages.tsx": "e29360b8189ab907debf28bfc6919171aeb6f9b80219d07752b2970a4fd21fe9",
@@ -197,13 +200,28 @@
       "apps/web/src/pages/business/PackagesPage.tsx": "ba25681f56d9b51ebee6a56c419e65cdb702a81a8389fdacd0d2c9df88eeafc8",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "7ebb04ea7a7bf8623ce7dd496365a92cbbdf3fdb3666b00e3572263b4bcf0f61",
+      "apps/web/src/test/app.test.tsx": "766d5928c67763441c7ad65956907dee2624a91259e799de14178c6d9232e745",
+      "apps/web/src/test/operator.test.tsx": "c93b7b7e08ba87f0466be32fe9e2631a6bed08e9b882992f440b2b824588ec89",
       "apps/web/src/test/setup.ts": "6b17cf72d6ac4dc944f0cc6bff9d1db4f032a1ff51f14ecbb8aa0c591034393a",
       "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7",
       "apps/web/src/utils/receipt.ts": "2bcad0e9d719240eb051d31c33e2535842295ccdfdfbe2ed7338f6536aefddd5"
     },
     "imports": {
       "apps/web/src/App.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Snackbar.tsx",
+          "syntax": "import { ToastProvider } from './components/m3/Snackbar';"
+        },
+        {
+          "target": "apps/web/src/operator/OperatorApp.tsx",
+          "syntax": "import OperatorApp from './operator/OperatorApp';"
+        },
+        {
+          "target": "apps/web/src/DemoApp.tsx",
+          "syntax": "import('./DemoApp')"
+        }
+      ],
+      "apps/web/src/DemoApp.tsx": [
         {
           "target": "apps/web/src/context/AppContext.tsx",
           "syntax": "import { AppProvider } from './context/AppContext';"
@@ -217,8 +235,8 @@
           "syntax": "import Launcher from './pages/Launcher';"
         },
         {
-          "target": "apps/web/src/pages/business/BusinessShell.tsx",
-          "syntax": "import BusinessShell from './pages/business/BusinessShell';"
+          "target": "apps/web/src/pages/business/DemoBusinessShell.tsx",
+          "syntax": "import BusinessShell from './pages/business/DemoBusinessShell';"
         },
         {
           "target": "apps/web/src/pages/CustomerWhatsApp.tsx",
@@ -337,7 +355,37 @@
           "syntax": "import { resetDemo } from '../data/store';"
         }
       ],
-      "apps/web/src/pages/business/BusinessShell.tsx": [
+      "apps/web/src/pages/business/Dashboard.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Icon.tsx",
+          "syntax": "import { Msym } from '../../components/m3/Icon';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Surface.tsx",
+          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Button.tsx",
+          "syntax": "import { Button } from '../../components/m3/Button';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Meter.tsx",
+          "syntax": "import { Ring } from '../../components/m3/Meter';"
+        },
+        {
+          "target": "apps/web/src/components/m3/Kpi.tsx",
+          "syntax": "import { KpiCard } from '../../components/m3/Kpi';"
+        },
+        {
+          "target": "apps/web/src/context/AppContext.tsx",
+          "syntax": "import { useDB } from '../../context/AppContext';"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import {\n  bookingsOfRoute, activeDelayFor, toPaySummary, reachSummary, openEscalations,\n  recoveryQueue, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';"
+        }
+      ],
+      "apps/web/src/pages/business/DemoBusinessShell.tsx": [
         {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../../components/m3/Icon';"
@@ -385,36 +433,6 @@
         {
           "target": "apps/web/src/components/CommandPalette.tsx",
           "syntax": "import CommandPalette, { useCommandPalette } from '../../components/CommandPalette';"
-        }
-      ],
-      "apps/web/src/pages/business/Dashboard.tsx": [
-        {
-          "target": "apps/web/src/components/m3/Icon.tsx",
-          "syntax": "import { Msym } from '../../components/m3/Icon';"
-        },
-        {
-          "target": "apps/web/src/components/m3/Surface.tsx",
-          "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
-        },
-        {
-          "target": "apps/web/src/components/m3/Button.tsx",
-          "syntax": "import { Button } from '../../components/m3/Button';"
-        },
-        {
-          "target": "apps/web/src/components/m3/Meter.tsx",
-          "syntax": "import { Ring } from '../../components/m3/Meter';"
-        },
-        {
-          "target": "apps/web/src/components/m3/Kpi.tsx",
-          "syntax": "import { KpiCard } from '../../components/m3/Kpi';"
-        },
-        {
-          "target": "apps/web/src/context/AppContext.tsx",
-          "syntax": "import { useDB } from '../../context/AppContext';"
-        },
-        {
-          "target": "apps/web/src/data/store.ts",
-          "syntax": "import {\n  bookingsOfRoute, activeDelayFor, toPaySummary, reachSummary, openEscalations,\n  recoveryQueue, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';"
         }
       ],
       "apps/web/src/pages/business/EwayPage.tsx": [
@@ -757,8 +775,8 @@
       ],
       "apps/web/src/test/app.test.tsx": [
         {
-          "target": "apps/web/src/App.tsx",
-          "syntax": "import App from '../App';"
+          "target": "apps/web/src/DemoApp.tsx",
+          "syntax": "import App from '../DemoApp';"
         },
         {
           "target": "apps/web/src/data/store.ts",
@@ -771,6 +789,20 @@
         {
           "target": "apps/web/src/data/store.ts",
           "syntax": "import('../data/store')"
+        }
+      ],
+      "apps/web/src/test/operator.test.tsx": [
+        {
+          "target": "apps/web/src/App.tsx",
+          "syntax": "import App from '../App';"
+        },
+        {
+          "target": "apps/web/src/operator/scope.ts",
+          "syntax": "import { createScopeController } from '../operator/scope';"
+        },
+        {
+          "target": "apps/web/src/operator/api.ts",
+          "syntax": "import { OperatorError } from '../operator/api';"
         }
       ],
       "apps/web/src/test/setup.ts": [
@@ -788,67 +820,67 @@
     },
     "routes": [
       {
-        "file": "apps/web/src/App.tsx",
+        "file": "apps/web/src/DemoApp.tsx",
         "declaration": "<Route path=\"/\" element={<Launcher />} />"
       },
       {
-        "file": "apps/web/src/App.tsx",
+        "file": "apps/web/src/DemoApp.tsx",
         "declaration": "<Route path=\"/business/*\" element={<BusinessShell />} />"
       },
       {
-        "file": "apps/web/src/App.tsx",
+        "file": "apps/web/src/DemoApp.tsx",
         "declaration": "<Route path=\"/customer\" element={<CustomerWhatsApp />} />"
       },
       {
-        "file": "apps/web/src/App.tsx",
+        "file": "apps/web/src/DemoApp.tsx",
         "declaration": "<Route path=\"*\" element={<Navigate to=\"/\" replace />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route index element={<Dashboard />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"booking\" element={<NewBookingPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"packages\" element={<PackagesPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"lots\" element={<LotsPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"routes\" element={<RoutesPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"feed\" element={<AutomationFeedPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"receipts\" element={<ReceiptsPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"reports\" element={<ReportsPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"reports/:id\" element={<ReportsPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"eway\" element={<EwayPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"settings\" element={<SettingsPage />} />"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "declaration": "<Route path=\"*\" element={<Navigate to=\"/business\" replace />} />"
       }
     ],
@@ -927,6 +959,71 @@
         "file": "apps/web/src/test/lint-regressions.test.tsx",
         "name": "can change between empty and populated series without changing hook order",
         "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "completes onboarding, sends only approved fields and reloads server context without browser authority",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "associates required validation with focusable inputs and completes a form submit",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "lists only server scopes and clears the old shell immediately while switching",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "late A response cannot paint after B, even when transport ignores cancellation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "protected navigation after revocation removes cached data and offers controlled recovery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "a denied scoped action clears context and a late previous request cannot restore it",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "uncertain onboarding preserves the exact request key and body over remount",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "committed onboarding followed by context failure recovers from server state without a second create",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "accepts through the existing invitation API and never stores the secret",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "an invitation response after navigation refreshes the current route instead of stranding loading",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "failed invitation acceptance preserves controlled recovery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "authenticates through existing challenge routes and safely signs out",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "does not fall back to localStorage on an API outage",
+        "cases": null
       }
     ],
     "effects": [
@@ -995,6 +1092,30 @@
         "kind": "localStorage.removeItem"
       },
       {
+        "file": "apps/web/src/operator/Onboarding.tsx",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/operator/Onboarding.tsx",
+        "kind": "sessionStorage.removeItem"
+      },
+      {
+        "file": "apps/web/src/operator/Onboarding.tsx",
+        "kind": "sessionStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/operator/OperatorApp.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operator/OperatorApp.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operator/OperatorApp.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
         "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
         "kind": "localStorage.getItem"
       },
@@ -1015,11 +1136,11 @@
         "kind": "setTimeout"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "kind": "window.addEventListener"
       },
       {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
         "kind": "document.addEventListener"
       },
       {
@@ -1036,6 +1157,26 @@
       },
       {
         "file": "apps/web/src/test/app.test.tsx",
+        "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "kind": "expect(JSON.stringify(sessionStorage)+JSON.stringify(localStorage)).not.toContain"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
         "kind": "localStorage.setItem"
       },
       {
@@ -1489,18 +1630,11 @@
       "receipts",
       "attachments"
     ],
-    "apps/web/src/main.tsx": [
+    "apps/web/src/DemoApp.tsx": [
+      "demo",
       "seam"
     ],
-    "apps/web/src/pages/CustomerWhatsApp.tsx": [
-      "assistant",
-      "messaging",
-      "demo"
-    ],
-    "apps/web/src/pages/Launcher.tsx": [
-      "demo"
-    ],
-    "apps/web/src/pages/business/BusinessShell.tsx": [
+    "apps/web/src/main.tsx": [
       "seam"
     ],
     "apps/web/src/pages/business/Dashboard.tsx": [
@@ -1508,6 +1642,10 @@
       "routes",
       "payments",
       "recovery"
+    ],
+    "apps/web/src/pages/business/DemoBusinessShell.tsx": [
+      "demo",
+      "seam"
     ],
     "apps/web/src/pages/business/EwayPage.tsx": [
       "eway"
@@ -1543,6 +1681,14 @@
       "routes",
       "messaging"
     ],
+    "apps/web/src/pages/CustomerWhatsApp.tsx": [
+      "assistant",
+      "messaging",
+      "demo"
+    ],
+    "apps/web/src/pages/Launcher.tsx": [
+      "demo"
+    ],
     "apps/web/src/test/app.test.tsx": [
       "demo",
       "booking",
@@ -1550,6 +1696,9 @@
       "routes",
       "reports",
       "eway"
+    ],
+    "apps/web/src/test/operator.test.tsx": [
+      "seam"
     ],
     "apps/web/src/test/setup.ts": [
       "demo",
@@ -1683,6 +1832,110 @@
       "group": "presentation",
       "disposition": "preserve",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "completes onboarding, sends only approved fields and reloads server context without browser authority",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "associates required validation with focusable inputs and completes a form submit",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "lists only server scopes and clears the old shell immediately while switching",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "late A response cannot paint after B, even when transport ignores cancellation",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "protected navigation after revocation removes cached data and offers controlled recovery",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "a denied scoped action clears context and a late previous request cannot restore it",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "uncertain onboarding preserves the exact request key and body over remount",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "committed onboarding followed by context failure recovers from server state without a second create",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "accepts through the existing invitation API and never stores the secret",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "an invitation response after navigation refreshes the current route instead of stranding loading",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 navigation recovery: late invitation completion refreshes the current route."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "failed invitation acceptance preserves controlled recovery",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "authenticates through existing challenge routes and safely signs out",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "does not fall back to localStorage on an API outage",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     }
   ],
   "safety": {

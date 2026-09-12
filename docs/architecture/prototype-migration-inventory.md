@@ -280,7 +280,7 @@ The JSON evidence also records resolved import declarations. Full-file fingerpri
 | apps/web/src/main.tsx | seam |
 | apps/web/src/pages/CustomerWhatsApp.tsx | assistant, messaging, demo |
 | apps/web/src/pages/Launcher.tsx | demo |
-| apps/web/src/pages/business/BusinessShell.tsx | seam |
+| apps/web/src/pages/business/DemoBusinessShell.tsx | demo, seam |
 | apps/web/src/pages/business/Dashboard.tsx | reports, routes, payments, recovery |
 | apps/web/src/pages/business/EwayPage.tsx | eway |
 | apps/web/src/pages/business/LotsPage.tsx | lots, messaging |
@@ -403,3 +403,33 @@ These are reviewable expected outcomes, not executable API or database tests.
 - Expected: Only explicitly allowed own-org/own-franchise projections; export roles enforced; half-open totals reconcile without mutations.
 - Owner and governing rule: reports group above.
 
+
+## Issue #17 production cutover evidence
+
+The original shell is preserved in DemoBusinessShell and AppProvider is mounted only
+by DemoApp. App chooses production unless an explicit demo build is selected. The
+static inventory follows the lazy demo import conservatively; that reachability does
+not mean the production branch initializes it. New production tests intentionally
+seed hostile browser storage to prove it is ignored. Session storage holds only a
+pending onboarding request key/body; it is never a fallback workspace or session.
+
+| Caller | Groups |
+| --- | --- |
+| apps/web/src/DemoApp.tsx | demo, seam |
+| apps/web/src/test/operator.test.tsx | seam |
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/operator.test.tsx: completes onboarding, sends only approved fields and reloads server context without browser authority | preserve | seam |
+| apps/web/src/test/operator.test.tsx: associates required validation with focusable inputs and completes a form submit | preserve | seam |
+| apps/web/src/test/operator.test.tsx: lists only server scopes and clears the old shell immediately while switching | preserve | seam |
+| apps/web/src/test/operator.test.tsx: late A response cannot paint after B, even when transport ignores cancellation | preserve | seam |
+| apps/web/src/test/operator.test.tsx: protected navigation after revocation removes cached data and offers controlled recovery | preserve | seam |
+| apps/web/src/test/operator.test.tsx: a denied scoped action clears context and a late previous request cannot restore it | preserve | seam |
+| apps/web/src/test/operator.test.tsx: uncertain onboarding preserves the exact request key and body over remount | preserve | seam |
+| apps/web/src/test/operator.test.tsx: committed onboarding followed by context failure recovers from server state without a second create | preserve | seam |
+| apps/web/src/test/operator.test.tsx: accepts through the existing invitation API and never stores the secret | preserve | seam |
+| apps/web/src/test/operator.test.tsx: failed invitation acceptance preserves controlled recovery | preserve | seam |
+| apps/web/src/test/operator.test.tsx: authenticates through existing challenge routes and safely signs out | preserve | seam |
+| apps/web/src/test/operator.test.tsx: does not fall back to localStorage on an API outage | preserve | seam |
+| apps/web/src/test/operator.test.tsx: an invitation response after navigation refreshes the current route instead of stranding loading | preserve | seam |

@@ -147,3 +147,14 @@ certainty, escalate for authorized reconciliation; do not guess and submit again
 commands. The server cannot always distinguish a never-used key from deleted evidence,
 so no universal expired-key HTTP detection is promised. A client with known uncertainty
 must stop automatic resubmission even when the server no longer remembers the key.
+
+## Issue #17 pre-tenant bootstrap refinement
+
+Before the first Organization exists, the authenticated onboarding coordinator uses
+`(user, authenticated_user_id, null, null, api.v1.onboarding.create, request_key)`.
+Null Organization is permitted only for this initial command, never ordinary private
+commands. A permanent unique identity constraint additionally prevents duplicate initial
+workspaces across keys. Committed evidence binds the created roots and membership,
+retains the original authorized DTO, and is reauthorized before replay or conflict
+information is disclosed. See [independent onboarding](independent-onboarding.md) for
+v1 canonicalization, same-request retry, immutable retention and context reconciliation.

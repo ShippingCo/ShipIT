@@ -83,3 +83,5 @@ register rather than silently inherited from the prototype.
 
 - [Append-only audit and safe telemetry](audit-contract.md) — canonical compatibility projection, transactional writes, R28 retrieval and counters.
 - [Issue #16 verification](issue-16-verification.md) — migration, security and delivery evidence.
+
+Issue #17: [independent onboarding and operator context](independent-onboarding.md) · [verification](issue-17-verification.md).

@@ -80,3 +80,24 @@ export async function userOrganizationIds(db:QueryExecutor,userId:string) {
   return (await db.query<{organization_id:string}>(`SELECT DISTINCT organization_id FROM shipit.memberships
     WHERE user_id=$1 AND lifecycle='active' ORDER BY organization_id`,[userId])).rows.map(row=>row.organization_id);
 }
+
+// Pre-tenant identity discovery for the onboarding coordinator, never a raw-key lookup.
+export async function onboardingHistory(tx: TransactionExecutor, userId: string) {
+  assertActiveTransaction(tx);
+  return (await tx.query<{ request_key: string; fingerprint: string; organization_id: string;
+    franchise_id: string; membership_id: string; result: import('@shippingco/shared').OnboardingResult }>(
+    'SELECT request_key,fingerprint,organization_id,franchise_id,membership_id,result FROM shipit.onboarding_commands WHERE user_id=$1', [userId])).rows[0];
+}
+export async function hasMembershipHistory(tx: TransactionExecutor, userId: string) {
+  assertActiveTransaction(tx);
+  return (await tx.query<{ present: boolean }>(
+    'SELECT EXISTS (SELECT 1 FROM shipit.memberships WHERE user_id=$1) AS present', [userId])).rows[0]!.present;
+}
+export async function saveOnboarding(tx: TransactionExecutor, userId: string, key: string, fingerprint: string,
+  membershipId: string, result: import('@shippingco/shared').OnboardingResult) {
+  assertActiveTransaction(tx);
+  await tx.query(`INSERT INTO shipit.onboarding_commands
+    (user_id,command_id,operation_id,request_key,fingerprint,normalization_version,organization_id,franchise_id,membership_id,result)
+    VALUES ($1,$2,'api.v1.onboarding.create',$3,$4,1,$5,$6,$7,$8)`,
+  [userId, result.command_id, key, fingerprint, result.organization.id, result.franchise.id, membershipId, result]);
+}

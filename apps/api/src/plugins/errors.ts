@@ -7,6 +7,8 @@ const errors = {
   UNAUTHENTICATED: [401, 'Authentication is required.'],
   ACTION_FORBIDDEN: [403, 'Action is not permitted.'],
   RESOURCE_NOT_FOUND: [404, 'Resource not found.'],
+  IDEMPOTENCY_CONFLICT: [409, 'Request key was already used for a different command.'],
+  IDEMPOTENCY_IN_PROGRESS: [409, 'Request is still being resolved. Retry the same request.'],
   VERSION_CONFLICT: [409, 'Resource version has changed.'],
   MEMBERSHIP_CONFLICT: [409, 'An active membership already grants this role.'],
   INVITATION_CONFLICT: [409, 'An active invitation already grants this role.'],

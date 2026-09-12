@@ -1,0 +1,20 @@
+.operator-center { min-height: 65vh; display: grid; place-items: center; padding: 24px; }
+.operator-card { padding: 24px; width: 100%; max-width: 560px; }
+.operator-card h1 { margin-bottom: 12px; }
+.operator-card p { margin: 12px 0; }
+.operator-card form { display: grid; gap: 16px; margin-top: 24px; }
+.operator-error { color: var(--md-error); }
+.operator-workspace { padding: 24px; display: grid; gap: 24px; max-width: 800px; }
+.operator-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 24px; }
+.operator-invitation { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.operator-message { padding: 24px; text-align: center; }
+.operator-mobile-nav { display: none; gap: 24px; }
+@media (max-width: 900px) {
+  .operator-shell .drawer-pane { display: none; }
+  .operator-shell .main-area { margin-left: 0; }
+  .operator-mobile-nav { display: flex; }
+  .operator-center, .operator-workspace { padding: 16px; }
+  .operator-card { padding: 20px; }
+  .operator-invitation { width: 100%; }
+  .operator-invitation .tf { width: 100%; }
+}

@@ -75,3 +75,11 @@ config cannot recalculate confirmed snapshots; no staff OTP reveal or secret his
 e-way distance-derived validity is a labelled ShippingCo estimate, separate from external
 provenance (#32/#67). Existing prototype GST/OTP/e-way tests remain fictional UX evidence;
 they do not verify these future controls. #7 inventory and #18 isolation still apply.
+
+## Issue #17 operator entry
+
+Production now defaults to the authenticated [onboarding and scope-aware shell](architecture/independent-onboarding.md).
+The original Launcher, BusinessShell, Settings and AppProvider live in the explicit
+`VITE_DATA_MODE=demo` composition. Production never reads browser Business or mounts
+prototype operational screens. The scoped request generation and request-intent recovery
+are bounded to operator entry; general domain adapters remain with #18.

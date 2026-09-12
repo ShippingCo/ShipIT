@@ -28,7 +28,8 @@
     "db:local": "node scripts/with-test-postgres.mjs",
     "db:migrate": "pnpm --filter @shippingco/db migrate",
     "test:api": "pnpm --filter @shippingco/api test",
-    "check:tenant-queries": "node scripts/check-tenant-queries.mjs"
+    "check:tenant-queries": "node scripts/check-tenant-queries.mjs",
+    "demo:onboarding": "node --experimental-strip-types apps/api/test/onboarding-demo.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

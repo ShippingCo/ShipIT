@@ -197,3 +197,13 @@ it cannot replace persistence and must not perform external side effects. Its fa
 rolls back both state and audit. See [the canonical audit contract](../../docs/architecture/audit-contract.md)
 for compatibility, exact runtime grants, R28 GET retrieval, opaque cursor rules and safe
 denial telemetry. Production tenancy route activation remains with its owning coordinator.
+
+## Independent operator entry (Issue #17)
+
+`POST /api/v1/onboarding` atomically creates the initial roots/admin/audit/replay outcome
+for a signed-in, previously verified identity with no membership history.
+`GET /api/v1/operator-context` and its `/franchises/:franchiseId` variant return only live,
+usable granted profiles. Existing CSRF/cookie, invitation, audit and scope contracts apply.
+See [request/retry/role/rollout rules](../../docs/architecture/independent-onboarding.md)
+and [verification](../../docs/architecture/issue-17-verification.md). Public unverified
+account registration is not added; use the trusted #13 verified identity provisioning seam.

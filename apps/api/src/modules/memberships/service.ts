@@ -1,3 +1,7 @@
+import type { OperatorContext, OnboardingResult } from '@shippingco/shared';
+import { onboardingInput, requestKey, fingerprint } from '../onboarding/validation.ts';
+import { bootstrapTenancyInTransaction } from '../tenancy/service.ts';
+import { usableFranchises } from '../tenancy/repository.ts';
 import { randomUUID } from 'node:crypto';
 import { digest, secret } from '../auth/crypto.ts';
 import { AuthRepository } from '../auth/repository.ts';
@@ -33,9 +37,9 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
     throw new HttpError('TEMPORARILY_UNAVAILABLE');
   }
 }
-async function authenticated(tx:TransactionExecutor,sessionToken:string) {
+async function authenticated(tx:TransactionExecutor,sessionToken:string,lock=true) {
   if(!/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) throw new HttpError('UNAUTHENTICATED');
-  const session=await new AuthRepository(tx).session(digest(sessionToken),true);
+  const session=await new AuthRepository(tx).session(digest(sessionToken),lock);
   if(!session) throw new HttpError('UNAUTHENTICATED');
   return session;
 }
@@ -71,21 +75,83 @@ async function objectAuthority(tx:TransactionExecutor,sessionToken:string,id:str
 function manageable(authority:ManagementAuthority,role:Role,franchiseIds:readonly string[]) {
   if(!canManageGrant(authority,role,franchiseIds)) throw new HttpError('RESOURCE_NOT_FOUND');
 }
+async function bootstrapAdministratorInTransaction(tx: TransactionExecutor, userId: string,
+  organizationId: string, correlationId: string) {
+  const scope=issueTenantAccess(tx,{action:'memberships.bootstrap',actor:{type:'service',id:'onboarding'},organizationId,
+    permittedFranchiseIds:[],organizationWide:true,correlationId,provenance:'internal-service'});
+  if((await repository.listMemberships(scope,organizationId)).length) throw new HttpError('ACTION_FORBIDDEN');
+  const result=await repository.insertMembership(scope,{userId,organizationId,role:'org_admin',franchiseIds:[]});
+  await appendMembership(scope,{organizationId,actorType:'service',actorUserId:null,affectedUserId:userId,
+    membershipId:result.id,action:'bootstrap_admin',role:result.role,franchiseIds:[]});
+  return result;
+}
+async function permittedContext(tx: TransactionExecutor, userId: string, correlationId: string,
+  selected?: string): Promise<OperatorContext> {
+  const franchises: OperatorContext['franchises'] = [];
+  for (const organizationId of await authorityRepository.userOrganizationIds(tx,userId)) {
+    if (!await authorityRepository.lockOrganization(tx,organizationId)) continue;
+    const memberships=await authorityRepository.activeMemberships(tx,userId,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
+    const ids=tenancyScope('franchise.profile.list',memberships,all);
+    if (!ids) continue;
+    const scope=issueTenantAccess(tx,{action:'franchise.profile.list',actor:{type:'user',id:userId},organizationId,
+      permittedFranchiseIds:ids,organizationWide:false,correlationId,provenance:'membership'});
+    for (const row of await usableFranchises(scope)) franchises.push({ id:row.id,display_name:row.display_name,
+      organization:{id:organizationId,display_name:row.organization_name},
+      roles:[...new Set(memberships.filter(m=>m.role==='org_admin'||m.franchiseIds.includes(row.id)).map(m=>m.role))] });
+  }
+  if (selected && !franchises.some(f=>f.id===selected)) throw new HttpError('RESOURCE_NOT_FOUND');
+  const history=await authorityRepository.hasMembershipHistory(tx,userId);
+  return {user_id:userId,state:franchises.length?'ready':history?'scope_unavailable':'onboarding_required',
+    franchises,active_franchise_id:selected??franchises[0]?.id??null};
+}
 function createMembershipCore(database:DatabasePool,correlationId?:string) {
   return {
+    async operatorContext(sessionToken: string, selectedInput?: unknown): Promise<OperatorContext> {
+      const selected=selectedInput===undefined?undefined:validate.uuid(selectedInput);
+      return membershipTransaction(database,async tx=>{
+        const session=await authenticated(tx,sessionToken);
+        return permittedContext(tx,session.user_id,correlationId??randomUUID(),selected);
+      });
+    },
+    async onboard(sessionToken: string, keyInput: unknown, input: unknown): Promise<OnboardingResult> {
+      const body=onboardingInput(input),key=requestKey(keyInput),intent=fingerprint(body),correlation=correlationId??randomUUID();
+      return membershipTransaction(database,async tx=>{
+        // Exclusive identity lock serializes different sessions/keys; the PK remains the final invariant.
+        const initial=await authenticated(tx,sessionToken,false);
+        try { await new AuthRepository(tx).user(initial.user_id,true); }
+        catch(error) {
+          if(error instanceof DatabaseError && error.code==='DB_TIMEOUT') throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
+          throw error;
+        }
+        const session=await authenticated(tx,sessionToken);
+        const previous=await authorityRepository.onboardingHistory(tx,session.user_id);
+        if(previous) {
+          // Reauthorize the original result before disclosing replay or mismatch evidence.
+          const context=await permittedContext(tx,session.user_id,correlation,previous.franchise_id);
+          if(!context.franchises.some(f=>f.id===previous.franchise_id&&f.roles.includes('org_admin')))
+            throw new HttpError('ACTION_FORBIDDEN');
+          if(previous.request_key!==key) throw new HttpError('ACTION_FORBIDDEN');
+          if(previous.fingerprint!==intent) throw new HttpError('IDEMPOTENCY_CONFLICT');
+          return previous.result;
+        }
+        if(await authorityRepository.hasMembershipHistory(tx,session.user_id)) throw new HttpError('ACTION_FORBIDDEN');
+        const roots=await bootstrapTenancyInTransaction(tx,body,session.user_id,correlation);
+        const membership=await bootstrapAdministratorInTransaction(tx,session.user_id,roots.organization.id,correlation);
+        const result:OnboardingResult={command_id:randomUUID(),
+          organization:{id:roots.organization.id,display_name:roots.organization.displayName},
+          franchise:{id:roots.franchise.id,display_name:roots.franchise.displayName},role:'org_admin'};
+        await authorityRepository.saveOnboarding(tx,session.user_id,key,intent,membership.id,result);
+        return result;
+      });
+    },
     // Trusted onboarding seam only. #17 calls this while creating the first organization owner.
     async bootstrapAdministrator(userIdInput:unknown,organizationIdInput:unknown) {
       const userId=validate.uuid(userIdInput),organizationId=validate.uuid(organizationIdInput);
       return membershipTransaction(database,async tx=>{
         if(!await authorityRepository.activeUser(tx,userId,true)) throw new HttpError('RESOURCE_NOT_FOUND');
         if(!await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
-        const scope=issueTenantAccess(tx,{action:'memberships.bootstrap',actor:{type:'service',id:'onboarding'},organizationId,
-          permittedFranchiseIds:[],organizationWide:true,correlationId:randomUUID(),provenance:'internal-service'});
-        if((await repository.listMemberships(scope,organizationId)).length) throw new HttpError('ACTION_FORBIDDEN');
-        const result=await repository.insertMembership(scope,{userId,organizationId,role:'org_admin',franchiseIds:[]});
-        await appendMembership(scope,{organizationId,actorType:'service',actorUserId:null,affectedUserId:userId,
-          membershipId:result.id,action:'bootstrap_admin',role:result.role,franchiseIds:[]});
-        return membershipDto(result);
+        return membershipDto(await bootstrapAdministratorInTransaction(tx,userId,organizationId,correlationId??randomUUID()));
       });
     },
     async listMemberships(sessionToken:string,organizationIdInput:unknown) {

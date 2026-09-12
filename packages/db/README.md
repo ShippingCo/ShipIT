@@ -240,3 +240,12 @@ this model with actual distinct migration/runtime credentials. Application SQL s
 the view using TenantAccess; this is not RLS protection from compromised runtime SQL.
 See [audit contract](../../docs/architecture/audit-contract.md) and
 [verification](../../docs/architecture/issue-16-verification.md) for rollout and evidence.
+
+## Initial workspace replay evidence (Issue #17)
+
+Forward migration `1789232400000-independent-onboarding.cjs` adds immutable
+`shipit.onboarding_commands`. Grant runtime SELECT/INSERT only on this table. Its user
+primary key forbids duplicate initial workspaces, composite FKs bind root/membership
+ownership, and committed replay evidence retains at least 24 hours. Never delete it as
+ordinary expired request data: it also preserves the initial-workspace uniqueness invariant.
+See [onboarding rollout and verification](../../docs/architecture/independent-onboarding.md).

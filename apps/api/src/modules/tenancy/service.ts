@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { appendTenancy } from '../audit/repository.ts';
 import type { TenantAccess } from '../security/scope.ts';
-import { DatabaseError, type DatabasePool, type QueryExecutor } from '@shippingco/db';
+import { DatabaseError, type DatabasePool, type QueryExecutor, type TransactionExecutor } from '@shippingco/db';
 import { issueTenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import { TenancyError } from './errors.ts';
@@ -187,4 +187,25 @@ export function createTenancyService({ database, authorizer, audit }: Dependenci
       return organizationDto(result.current);
     },
   };
+}
+
+/** Trusted coordinator seam. The caller owns identity, membership and replay in this transaction. */
+export async function bootstrapTenancyInTransaction(tx: TransactionExecutor, input: unknown,
+  actorReference: string, correlationId: string) {
+  const body = validate.object(input, ['display_name', 'franchise']);
+  const displayName = validate.displayName(body.display_name);
+  const initial = validate.createFranchiseInput(body.franchise);
+  const context = { action: 'organization.bootstrap' as const, actor: { type: 'service' as const, id: actorReference },
+    organizationId: null as string | null, permittedFranchiseIds: [] as string[], organizationWide: true,
+    correlationId, provenance: 'internal-service' as const };
+  const organization = await repository.insertOrganization(issueTenantAccess(tx, context), displayName);
+  const scope = issueTenantAccess(tx, { ...context, organizationId: organization.id });
+  const franchise = await repository.insertFranchise(scope, { organizationId: organization.id, ...initial });
+  for (const record of [organization, franchise]) {
+    await appendTenancy(scope, { actor: context.actor, action: context.action, organization_id: organization.id,
+      franchise_id: record === franchise ? franchise.id : null, previous_lifecycle: null, new_lifecycle: 'active',
+      expected_version: null, committed_version: 1, correlation_id: correlationId, reason_code: 'bootstrap',
+      occurred_at: utcInstant(record.createdAt) });
+  }
+  return { organization, franchise };
 }

@@ -14,6 +14,7 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(root, 'src') } },
   server: {
     port: 5173,
+    proxy: { '/auth': process.env.SHIPIT_API_PROXY ?? 'http://127.0.0.1:3000', '/api': process.env.SHIPIT_API_PROXY ?? 'http://127.0.0.1:3000' },
     open: false,
     // Accept any Cloudflare quick-tunnel host. The hostname is regenerated on every
     // `cloudflared` run, so pinning one means editing this file each time — and a

@@ -1,3 +1,4 @@
+import { registerOnboarding } from './modules/onboarding/routes.ts';
 import { createAuditService } from './modules/audit/service.ts';
 import { registerAudit } from './modules/audit/routes.ts';
 import { registerSecurityAudit } from './modules/audit/security.ts';
@@ -66,6 +67,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerSecurityAudit(instance,database,config.environment!=='developer',securityTelemetry);
       registerAudit(instance,createAuditService(database,auth.keys.browser),config.environment!=='developer');
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
+      registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');
     });
     if (auth.webhook) app.register(async instance => registerWebhook(instance,auth.webhook!));
