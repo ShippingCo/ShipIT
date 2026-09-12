@@ -95,3 +95,16 @@ T10 receives a safe typed post-commit audit notification seam only. It has neith
 transactional durability nor replay persistence: notification failure may follow a
 committed mutation. #16 integration is required before production route activation.
 No new user role, customer directory, credential store or adoption path is introduced.
+
+## Issue #20 pricing boundary
+
+T01/T05: current R21/W27/W01/W43 membership, one selected Franchise and scope macros protect
+all pricing paths. Published versions/rules have immutable DB guards; a persistent card lock
+prevents concurrent overlapping publications, including direct runtime SQL. T07 retains
+session, CSRF and Origin controls. T08/T10 keep pricing inputs out of logs and use only closed
+reference/reason audit facts. Client totals and approval booleans are unknown fields; exact
+numeric-token validation prevents precision loss from changing a weight or paise amount.
+The snapshot validator reloads stored evidence and recomputes against current immutable
+rules and live privilege, rejecting expired/tampered proposals. Tests include direct runtime
+privileges, missing/expired capabilities, sibling/unrelated IDs, lost COMMIT acknowledgement,
+per-step rollback and audit/log inspection. No new provider, secret or application role.

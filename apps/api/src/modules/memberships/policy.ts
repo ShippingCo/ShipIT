@@ -32,3 +32,13 @@ export function customerScope(memberships: readonly Membership[]) {
   return [...new Set(memberships.filter(m => m.lifecycle === 'active' &&
     (m.role === 'franchise_admin' || m.role === 'operator')).flatMap(m => m.franchiseIds))].sort();
 }
+
+/** R21 reads; W27 local config; W01 ordinary variance; W43 privileged approval. */
+export function pricingScope(action:import('../pricing/types.ts').PricingAction,memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active');
+  const reading=action==='pricing.read'||action==='pricing.quote';
+  if(reading&&active.some(m=>m.role==='org_admin'))return [...all];
+  const roles:readonly Role[]=reading?['franchise_admin','operator','dispatcher','accountant']:
+    action==='pricing.draft'||action==='pricing.publish'||action==='pricing.override.approve'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
+  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}

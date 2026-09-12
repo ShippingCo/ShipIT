@@ -9,6 +9,9 @@ const errors = {
   RESOURCE_NOT_FOUND: [404, 'Resource not found.'],
   IDEMPOTENCY_CONFLICT: [409, 'Request key was already used for a different command.'],
   IDEMPOTENCY_IN_PROGRESS: [409, 'Request is still being resolved. Retry the same request.'],
+  NO_RATE: [409, 'No applicable pricing rate is available.'],
+  RATE_CONFLICT: [409, 'Pricing rules or effective intervals conflict.'],
+  QUOTE_STALE: [409, 'Pricing proposal is stale. Request a new quote.'],
   VERSION_CONFLICT: [409, 'Resource version has changed.'],
   MEMBERSHIP_CONFLICT: [409, 'An active membership already grants this role.'],
   INVITATION_CONFLICT: [409, 'An active invitation already grants this role.'],
@@ -30,7 +33,7 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
-export type ValidationField = '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
+export type ValidationField = 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
 export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
 export class FieldValidationError extends HttpError {
   readonly details: { field: ValidationField; code: ValidationCode }[];

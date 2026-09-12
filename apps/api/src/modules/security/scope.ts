@@ -3,7 +3,7 @@ import { HttpError } from '../../plugins/errors.ts';
 import type { CustomerAction } from '../customers/types.ts';
 import type { ApprovedTenancyContext } from '../tenancy/types.ts';
 
-export type PrivateAction = CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
+export type PrivateAction = import('../pricing/types.ts').PricingAction | CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
   'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
 export interface PrivateContext extends Omit<ApprovedTenancyContext, 'action'> {
   readonly action: PrivateAction;
@@ -18,7 +18,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const actions: readonly PrivateAction[] = ['organization.bootstrap','franchise.create','organization.profile.update',
   'organization.lifecycle.manage','organization.profile.read','franchise.profile.read','franchise.profile.list',
   'franchise.profile.update','franchise.lifecycle.manage','memberships.read','memberships.manage',
-  'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read','customer.read','customer.list','customer.create','customer.update'];
+  'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read','pricing.read','pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve','pricing.validate','customer.read','customer.list','customer.create','customer.update'];
 const reference = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/;
 
 // Internal issuer. Import sites are allowlisted by the AST security gate. Never a DTO parser.
@@ -35,7 +35,7 @@ export function issueTenantAccess(executor: QueryExecutor, input: PrivateContext
     (input.organizationId === null ? input.action !== 'organization.bootstrap' : !uuid.test(input.organizationId))) {
     throw new HttpError('ACTION_FORBIDDEN');
   }
-  if (['customer.read','customer.list','customer.create','customer.update'].includes(input.action) &&
+  if ((input.action.startsWith('pricing.') || ['customer.read','customer.list','customer.create','customer.update'].includes(input.action)) &&
     (input.provenance !== 'membership' || input.actor.type !== 'user' || input.organizationWide || input.permittedFranchiseIds.length !== 1)) {
     throw new HttpError('ACTION_FORBIDDEN');
   }
@@ -72,7 +72,7 @@ export function scopedQuery<Row extends object = Record<string, unknown>>(
   if (!actions.length) throw new HttpError('ACTION_FORBIDDEN');
   const context = assertTenantAccess(access, actions);
   const command = sql.trimStart().match(/^(SELECT|INSERT|UPDATE|DELETE)\b/i)?.[1]?.toUpperCase();
-  const writes = command !== 'SELECT' || /\bshipit\.append_(?:tenancy_audit|security_denial|customer_audit)\s*\(/i.test(sql);
+  const writes = command !== 'SELECT' || /\bshipit\.append_(?:tenancy_audit|security_denial|customer_audit|pricing_audit)\s*\(/i.test(sql);
   if (!command || sql.includes(';') ||
     ((writes || /FOR\s+(UPDATE|SHARE)/i.test(sql)) && !capabilities.get(access)!.transaction) || (writes && /(?:\.read|\.list|\.export)$/.test(context.action))) {
     throw new HttpError('ACTION_FORBIDDEN');

@@ -12,7 +12,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -291,7 +291,7 @@ export function createMembershipTenancyAuthorizer(database:DatabasePool,sessionT
  * The callback gets no raw executor; live authority and work share one transaction.
  */
 export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken:string,organizationIdInput:unknown,
-  action:TenancyAction|'operations.export'|'financial.export'|import('../customers/types.ts').CustomerAction,
+  action:TenancyAction|'operations.export'|'financial.export'|import('../customers/types.ts').CustomerAction|import('../pricing/types.ts').PricingAction,
   work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>,
   selection?:{franchiseId:string;correlationId:string;object:boolean}):Promise<T> {
   const organizationId=validate.uuid(organizationIdInput);
@@ -301,7 +301,15 @@ export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken
     if(!await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
     let permittedFranchiseIds:string[]|null;
-    if (action==='customer.read'||action==='customer.list'||action==='customer.create'||action==='customer.update') {
+    if (action.startsWith('pricing.')) {
+      const all=memberships.some(m=>m.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
+      permittedFranchiseIds=pricingScope(action as import('../pricing/types.ts').PricingAction,memberships,all);
+      if(!permittedFranchiseIds.length)throw new HttpError(selection?.object?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
+      if(!selection||!permittedFranchiseIds.includes(selection.franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+      permittedFranchiseIds=[selection.franchiseId];
+      // The effective approval action comes only from current W43 membership, never browser claims.
+      if((action==='pricing.override'||action==='pricing.validate')&&pricingScope('pricing.override.approve',memberships,[]).includes(selection.franchiseId))action='pricing.override.approve';
+    } else if (action==='customer.read'||action==='customer.list'||action==='customer.create'||action==='customer.update') {
       permittedFranchiseIds=customerScope(memberships);
       if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
       if(!selection || !permittedFranchiseIds.includes(selection.franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
@@ -313,7 +321,7 @@ export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken
       if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     } else {
       const allFranchises=memberships.some(value=>value.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
-      permittedFranchiseIds=tenancyScope(action,memberships,allFranchises);
+      permittedFranchiseIds=tenancyScope(action as TenancyAction,memberships,allFranchises);
       if(permittedFranchiseIds===null) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     }
     return work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,

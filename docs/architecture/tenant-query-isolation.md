@@ -223,3 +223,19 @@ an Organization predicate. Its exact customer/routes.ts request.query data allow
 cannot be called as an executor. Customer audit append SELECT is classified as a write.
 The existing active tenancy write guard admits the two customer mutation actions.
 [Customer isolation, privacy, indexes and bounded search](customers.md).
+
+## Pricing capabilities — Issue #20
+
+The existing staff transaction issuer adds pricing.read/quote (R21), pricing.draft/publish
+(W27), pricing.override/validate (W01) and pricing.override.approve (W43). Scope is narrowed
+to one currently permitted Franchise even for an org_admin R21 read. For an override or
+validation request the issuer selects the approval capability only from live own-franchise
+franchise_admin membership. Request booleans never affect this decision. Private pricing
+capabilities require membership provenance, a user and exactly one Franchise. No new raw
+SQL or issuer exception. Pricing repository statements require the Franchise macro, including
+rules, quotes, receipts and audit appends. Read capabilities cannot call append_pricing_audit.
+
+The active root guard now admits the exact pricing mutation/validation actions. Its locks
+remain inside the live staff transaction. PostgreSQL card publication serialization adds a
+constraint independent of application Organization serialization. No session-variable scope,
+RLS promise, custody access, org-admin mutation or eighth role is added.

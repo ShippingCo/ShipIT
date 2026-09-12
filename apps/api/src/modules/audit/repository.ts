@@ -56,3 +56,14 @@ export async function appendCustomer(scope: TenantAccess, franchiseId: string, c
     `SELECT shipit.append_customer_audit($1,$2,$3,$4,$5,$6,$7) WHERE {{franchise:$1:$2}}`,
     [c.organizationId,franchiseId,customerId,c.actor.id,c.action,version,c.correlationId]);
 }
+
+/** Pricing audit is closed reference/reason evidence; never a rule or request dump. */
+export async function appendPricing(scope:TenantAccess,versionId:string,version:number,
+  quoteId:string|null,action:'pricing.draft'|'pricing.publish'|'pricing.override'|'pricing.override.approve',reason:string) {
+  const c=assertTenantAccess(scope,['pricing.draft','pricing.publish','pricing.override','pricing.override.approve']);
+  if(action==='pricing.override'&&c.action!=='pricing.override'&&c.action!=='pricing.override.approve')throw new HttpError('ACTION_FORBIDDEN');
+  if((action==='pricing.draft'||action==='pricing.publish'||action==='pricing.override.approve')&&c.action!==action)throw new HttpError('ACTION_FORBIDDEN');
+  await scopedQuery(scope,['pricing.draft','pricing.publish','pricing.override','pricing.override.approve'],
+    `SELECT shipit.append_pricing_audit($1,$2,$3,$4,$5,$6,$7,$8,$9) WHERE {{franchise:$1:$2}}`,
+    [c.organizationId,c.permittedFranchiseIds[0],versionId,quoteId,c.actor.id,action,reason,version,c.correlationId]);
+}

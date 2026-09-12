@@ -165,6 +165,7 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W40 | Independently approve exceptional proof; current responsible custody required | - | F,C | - | - | - | - | - |
 | W41 | Franchise lifecycle disable/reactivate with explicit target grant | F | F | - | - | - | - | - |
 | W42 | Organization memberships/invites/grants create/revoke with no-self and final-admin guards | O | - | - | - | - | - | - |
+| W43 | Above-tolerance freight override approval (`pricing.override.approve`), with structured reason | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -195,7 +196,7 @@ W28 cannot cancel/dispatch indirectly; service tools must authorize the underlyi
 For **every R01–R30 resource**, action classes are: list; detail/read; export; create;
 mutate/edit; cancel/destructive; state transition; operational job; custody transfer;
 configuration. Reads are exhaustively R01–R30, exports E01–E04, and permitted staff commands
-W01–W42. **Every other resource/action/role combination is explicitly denied.** Thus no
+W01–W43. **Every other resource/action/role combination is explicitly denied.** Thus no
 missing mutation column implies a future permission. This includes private reports (read
 sources, never mutate them), issued receipts (no direct create/edit; owning transaction),
 audit/outbox/proof internals (owner-service append only), and organization-wide config
@@ -298,3 +299,13 @@ Issue #16 replaces the Issue #12 post-commit notification with mandatory durable
 audit insertion in the business transaction. Its [audit contract](audit-contract.md)
 defines the R28 administrative projection without adding financial permissions, roles,
 exports or global identity browsing. No post-commit success-audit gap remains.
+
+## Issue #20 pricing amendment
+
+[Pricing](pricing.md) adds W43 because W27 config publication does not authorize a
+commercial exception. Only owning-franchise franchise_admin approves above-tolerance
+freight, with server-computed variance and a structured reason. W01 covers ordinary
+within-tolerance overrides for franchise_admin/operator/dispatcher. R21 permits effective
+quote/policy reads for org_admin (O), franchise_admin/operator/dispatcher/accountant (F);
+read_only and delivery_agent remain denied. W27 controls drafts/replacement/publication
+and draft/history administration. No inherited org_admin write or eighth role.

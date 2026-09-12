@@ -1,3 +1,5 @@
+import { createPricingService } from './modules/pricing/service.ts';
+import { registerPricing } from './modules/pricing/routes.ts';
 import { registerCustomers } from './modules/customers/routes.ts';
 import { createCustomerService } from './modules/customers/service.ts';
 import { registerOnboarding } from './modules/onboarding/routes.ts';
@@ -23,8 +25,8 @@ import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry }
-export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters() }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date }
+export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -70,6 +72,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAudit(instance,createAuditService(database,auth.keys.browser),config.environment!=='developer');
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
+      registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');
     });

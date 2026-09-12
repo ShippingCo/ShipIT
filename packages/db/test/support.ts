@@ -151,6 +151,7 @@ export interface DisposableDatabase {
   prepareTenancy(): Promise<void>;
   prepareAuth(): Promise<void>;
   prepareMemberships(): Promise<void>;
+  preparePricing(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
   setAvailable(available: boolean): Promise<void>;
@@ -261,6 +262,16 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_customer_audit(uuid,uuid,uuid,uuid,text,integer,uuid)
           TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
+    },
+    async preparePricing() {
+      await handle.prepareCustomers();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.pricing_cards,shipit.pricing_versions,shipit.pricing_rules,shipit.pricing_quotes,shipit.pricing_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(revision,state,effective_from,effective_to,quote_validity_seconds,override_tolerance_paise,approval_ref,source_ref,published_at,published_by) ON shipit.pricing_versions TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT DELETE ON shipit.pricing_rules TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_pricing_audit(uuid,uuid,uuid,uuid,uuid,text,text,integer,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
     },
     async prepareFixtures() {
       validate();

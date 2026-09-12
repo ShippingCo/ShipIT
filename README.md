@@ -135,3 +135,9 @@ The [Customer backend](docs/architecture/customers.md) provides franchise-privat
 bounded repeat lookup, optimistic edits, idempotent commands and immutable safe audit.
 [Verification](docs/architecture/issue-19-verification.md) covers real PostgreSQL isolation.
 Production customer screens remain with #33 and booking snapshot persistence with #22.
+
+The [Pricing backend](docs/architecture/pricing.md) persists and publishes tenant-scoped
+rate versions and returns deterministic freight/packing proposals with exact paise/gram
+representations, finite expiry and audited overrides. [Verification](docs/architecture/issue-20-verification.md)
+covers PostgreSQL concurrency and immutable evidence. Tax (#21), confirmed Booking snapshots
+(#22) and the production New Booking UI (#33) remain separate downstream work.

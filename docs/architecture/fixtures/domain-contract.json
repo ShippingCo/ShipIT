@@ -607,5 +607,112 @@
       "collection_eligible": false,
       "rto_time_eligible": true
     }
+  ],
+  "pricing_override_cases": [
+    {
+      "role": "org_admin",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "org_admin",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "org_admin",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "franchise_admin",
+      "franchise": "A1",
+      "expected": 200
+    },
+    {
+      "role": "franchise_admin",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "franchise_admin",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "operator",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "operator",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "operator",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "dispatcher",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "dispatcher",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "dispatcher",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "delivery_agent",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "delivery_agent",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "delivery_agent",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "accountant",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "accountant",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "accountant",
+      "franchise": "B1",
+      "expected": 404
+    },
+    {
+      "role": "read_only",
+      "franchise": "A1",
+      "expected": 403
+    },
+    {
+      "role": "read_only",
+      "franchise": "A2",
+      "expected": 404
+    },
+    {
+      "role": "read_only",
+      "franchise": "B1",
+      "expected": 404
+    }
   ]
 }

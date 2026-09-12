@@ -7,6 +7,7 @@ import { denialReasons, type DenialAction, type DenialReason, type ResourceType 
 import type { SecurityTelemetry } from './telemetry.ts';
 
 function category(route:string,method:string):[DenialAction,ResourceType] {
+  if(route.includes('/pricing'))return [route.endsWith('/quote')?'pricing.quote':route.endsWith('/publish')?'pricing.publish':method==='GET'?'pricing.read':'pricing.draft','pricing'];
   if(route.includes('/customers'))return [method==='POST'?'customer.create':method==='PATCH'?'customer.update':route.endsWith('/:customer_id')?'customer.read':'customer.list','customer'];
   if(route==='/api/v1/audit')return ['audit.read','audit'];
   if(route==='/api/v1/membership-invitations/accept')return ['invitation.accept','invitation'];

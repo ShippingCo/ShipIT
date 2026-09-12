@@ -266,3 +266,37 @@ phone/name prefix indexes and deterministic ordering index. Command receipts and
 audit facts have composite Customer FKs and unique command/version constraints. No browser
 backfill. Apply schema/grants before code; revert compatible code while retaining applied
 schema/data, and repair using a new forward migration. [Customer contract](../../docs/architecture/customers.md).
+
+## Issue #20 pricing migration and runtime grants
+
+`1789405200000-versioned-pricing.cjs` adds pricing_cards, pricing_versions, pricing_rules,
+pricing_quotes, pricing_commands and pricing_audit_events. Composite ownership/FKs, safe
+paise/gram bounds, immutable publication triggers, serialized conflict checks, unique
+version/key/audit identities and finite time constraints are mandatory. No extension,
+backfill, Booking/tax tables or changes to released migrations. Apply before compatible API.
+
+After resolving the separate deployment runtime role, grant exactly (substitute the
+reviewed identifier for `runtime_role`, never a request value):
+
+```sql
+GRANT SELECT, INSERT ON shipit.pricing_cards, shipit.pricing_versions,
+  shipit.pricing_rules, shipit.pricing_quotes, shipit.pricing_commands TO runtime_role;
+GRANT UPDATE (revision,state,effective_from,effective_to,quote_validity_seconds,
+  override_tolerance_paise,approval_ref,source_ref,published_at,published_by)
+  ON shipit.pricing_versions TO runtime_role;
+GRANT DELETE ON shipit.pricing_rules TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.append_pricing_audit(uuid,uuid,uuid,uuid,uuid,text,text,integer,uuid)
+  TO runtime_role;
+```
+
+Existing auth/membership/tenancy/audit grants are prerequisites; audit_history retains its
+view identity and SELECT grant. No quote/receipt UPDATE/DELETE/TRUNCATE or audit base-table
+access. Rules can be deleted only while their parent is a draft, under its row lock.
+The publication trigger owns the private card revision write and checks overlaps after
+serialization. Owner/migration credentials remain unavailable to the application.
+
+Rollback disables/reverts compatible code and preserves commercial evidence. Repair schema
+forward. No production-to-demo fallback or browser import. The guarded fixture's
+preparePricing method applies these exact privileges, with real-runtime negative tests.
+See [pricing architecture](../../docs/architecture/pricing.md) and
+[verification](../../docs/architecture/issue-20-verification.md).

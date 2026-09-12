@@ -57,17 +57,17 @@ export async function listFranchises(db: TenantAccess, scope: { organizationId: 
 // Shared locks allow concurrent operational writes; UPDATE waits for all prior writers.
 // Always lock parent before child to serialize organization disable as well.
 export async function lockOrganization(tx: TenantAccess, organizationId: string, exclusive = false): Promise<Organization> {
-  assertTenantAccess(tx, ['franchise.create', 'organization.profile.update', 'organization.lifecycle.manage', 'franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update']); assertOrganization(tx, organizationId);
+  assertTenantAccess(tx, ['franchise.create', 'organization.profile.update', 'organization.lifecycle.manage', 'franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update', 'pricing.draft', 'pricing.publish', 'pricing.quote', 'pricing.override', 'pricing.override.approve', 'pricing.validate']); assertOrganization(tx, organizationId);
   assertTenantAccess(tx);
-  const result = await scopedQuery<OrganizationRow>(tx, ['franchise.create', 'organization.profile.update', 'organization.lifecycle.manage', 'franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update'], `SELECT ${organizationColumns} FROM shipit.organizations
+  const result = await scopedQuery<OrganizationRow>(tx, ['franchise.create', 'organization.profile.update', 'organization.lifecycle.manage', 'franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update', 'pricing.draft', 'pricing.publish', 'pricing.quote', 'pricing.override', 'pricing.override.approve', 'pricing.validate'], `SELECT ${organizationColumns} FROM shipit.organizations
     WHERE {{organization:id}} AND id = $1 ${exclusive ? 'FOR UPDATE' : 'FOR SHARE'}`, [organizationId]);
   if (!result.rows[0]) throw new TenancyError('RESOURCE_NOT_FOUND');
   return organization(result.rows[0]);
 }
 export async function lockFranchise(tx: TenantAccess, scope: FranchiseScope, exclusive = false): Promise<Franchise> {
-  assertTenantAccess(tx, ['franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update']); assertOrganization(tx, scope.organizationId); assertFranchises(tx, [scope.franchiseId]);
+  assertTenantAccess(tx, ['franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update', 'pricing.draft', 'pricing.publish', 'pricing.quote', 'pricing.override', 'pricing.override.approve', 'pricing.validate']); assertOrganization(tx, scope.organizationId); assertFranchises(tx, [scope.franchiseId]);
   assertTenantAccess(tx);
-  const result = await scopedQuery<FranchiseRow>(tx, ['franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update'], `SELECT ${franchiseColumns} FROM shipit.franchises
+  const result = await scopedQuery<FranchiseRow>(tx, ['franchise.profile.update', 'franchise.lifecycle.manage', 'customer.create', 'customer.update', 'pricing.draft', 'pricing.publish', 'pricing.quote', 'pricing.override', 'pricing.override.approve', 'pricing.validate'], `SELECT ${franchiseColumns} FROM shipit.franchises
     WHERE {{franchise:organization_id:id}} AND organization_id = $1 AND id = $2 ${exclusive ? 'FOR UPDATE' : 'FOR SHARE'}`, [scope.organizationId, scope.franchiseId]);
   if (!result.rows[0]) throw new TenancyError('RESOURCE_NOT_FOUND');
   return franchise(result.rows[0]);
