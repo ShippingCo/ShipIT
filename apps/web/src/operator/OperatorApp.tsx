@@ -13,9 +13,11 @@ export default function OperatorApp() {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const location = useLocation(), navigate = useNavigate();
   const selected = useRef<string | undefined>(undefined);
+  const latestPath = useRef(location.pathname);
   const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-  const refresh = () => controller.load(selected.current, location.pathname);
+  const refresh = () => controller.load(selected.current, latestPath.current);
   useEffect(() => {
+    latestPath.current = location.pathname;
     void controller.load(selected.current, location.pathname);
     const resume = () => { if (document.visibilityState === 'visible') void controller.load(selected.current, location.pathname); };
     window.addEventListener('focus', resume); document.addEventListener('visibilitychange', resume);
@@ -41,8 +43,8 @@ export default function OperatorApp() {
   }
   async function logout() {
     if (busy) return; setBusy(true); setMessage(''); controller.clear();
-    try { await request('/auth/logout', { body: {} }); selected.current = undefined; controller.clear('signed_out', location.pathname); }
-    catch { controller.clear('error', location.pathname); setMessage('Sign-out could not be confirmed. Retry when the connection returns.'); }
+    try { await request('/auth/logout', { body: {} }); selected.current = undefined; controller.clear('signed_out', latestPath.current); }
+    catch { controller.clear('error', latestPath.current); setMessage('Sign-out could not be confirmed. Retry when the connection returns.'); }
     finally { setBusy(false); }
   }
   const context = state.context;

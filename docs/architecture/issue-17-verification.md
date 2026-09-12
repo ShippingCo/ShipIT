@@ -98,7 +98,7 @@ additional database-outage regression; the earlier passing run is not substitute
 | `pnpm check:planning` | PASS, including reviewed migration inventory and negative controls |
 | `pnpm lint` | PASS, unchanged tenant-query AST restrictions and zero lint warnings |
 | `pnpm typecheck` | PASS, all five workspace packages |
-| `pnpm test` | PASS: testkit 22 + DB unit 12 + API Vitest 126 + web 36 |
+| `pnpm test` | PASS: testkit 22 + DB unit 12 + API Vitest 126 + web 37 |
 | `pnpm test:db` inside disposable PostgreSQL | PASS: 31 DB + 56 API, zero failed/skipped/cancelled/todo |
 | `pnpm build` | PASS; API typecheck + production Vite bundle |
 | `VITE_DATA_MODE=demo pnpm --filter @shippingco/web build --outDir /tmp/shipit-17-demo-dist` | PASS, explicit demo build |
@@ -125,3 +125,13 @@ must still be reviewed by its maintainer before merge under the engineering work
 This task delivers the PR open; neither merge, issue closure nor post-merge cleanup is
 claimed. Temporary browser viewport overrides, local servers and the disposable browser
 fixture were cleaned up.
+
+
+## Final navigation-race correction
+
+The post-push review also exercised navigation while invitation acceptance was in flight.
+An old callback could tag its context with the previous route and leave the current page
+in loading. The callback now uses the current route reference. A new browser regression
+navigates while acceptance is deferred, completes acceptance, and asserts the current
+Settings shell appears. The final web total is 37 (13 production plus 24 fictional
+regressions). The full quality gate is rerun for this correction before pushing it.

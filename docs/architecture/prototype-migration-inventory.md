@@ -432,3 +432,4 @@ pending onboarding request key/body; it is never a fallback workspace or session
 | apps/web/src/test/operator.test.tsx: failed invitation acceptance preserves controlled recovery | preserve | seam |
 | apps/web/src/test/operator.test.tsx: authenticates through existing challenge routes and safely signs out | preserve | seam |
 | apps/web/src/test/operator.test.tsx: does not fall back to localStorage on an API outage | preserve | seam |
+| apps/web/src/test/operator.test.tsx: an invitation response after navigation refreshes the current route instead of stranding loading | preserve | seam |

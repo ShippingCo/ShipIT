@@ -180,6 +180,6 @@ Port 3017 avoids interfering with an existing local API on port 3000.
 The DB tests use the canonical Alpha/A1/A2/Beta/B1 fixtures and actual runtime credentials.
 They assert persisted owners and grants, rollback after each real SQL write, concurrent
 keys, lost COMMIT, restart, foreign IDs, revoked/disabled scope and invitation rules.
-The web suite retains the 24 demo regressions and adds production onboarding, validation,
+The web suite retains the 24 demo regressions and adds 13 production tests for onboarding, validation,
 retry, reload, scope-generation race, revocation, invitation and authentication tests.
 See [Issue #17 evidence](issue-17-verification.md) for executed results and limitations.

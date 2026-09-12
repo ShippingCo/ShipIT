@@ -130,6 +130,19 @@ describe('production operator flow',()=>{
     expect(JSON.stringify(sessionStorage)+JSON.stringify(localStorage)).not.toContain('synthetic-invitation-secret');
     expect(screen.getByLabelText('Invitation code')).toHaveValue('');
   });
+  it('an invitation response after navigation refreshes the current route instead of stranding loading',async()=>{
+    const accepting=deferred<Response>();
+    responseOverride=path=>path.endsWith('/accept')?accepting.promise:undefined;
+    render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
+    fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
+    fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
+    await act(async()=>{window.location.hash='/business/settings';});
+    await screen.findByRole('heading',{name:'Set up your shop'});
+    context=ready;await act(async()=>accepting.resolve(json({},201)));
+    await screen.findByRole('heading',{name:'Counter A'});
+    expect(document.querySelector('.appbar-title')).toHaveTextContent('Settings');
+    expect(screen.queryByText('Checking workspace access…')).not.toBeInTheDocument();
+  });
   it('failed invitation acceptance preserves controlled recovery',async()=>{
     responseOverride=path=>path.endsWith('/accept')?Promise.resolve(json({error:{code:'ACTION_FORBIDDEN'}},403)):undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});

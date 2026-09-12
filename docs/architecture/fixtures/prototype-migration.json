@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "766d5928c67763441c7ad65956907dee2624a91259e799de14178c6d9232e745",
-      "apps/web/src/test/operator.test.tsx": "b7c193d3f3c93597640fb2114ef8a84f4207debc7413317bc58265b0e5e84316",
+      "apps/web/src/test/operator.test.tsx": "c93b7b7e08ba87f0466be32fe9e2631a6bed08e9b882992f440b2b824588ec89",
       "apps/web/src/test/setup.ts": "6b17cf72d6ac4dc944f0cc6bff9d1db4f032a1ff51f14ecbb8aa0c591034393a",
       "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7",
       "apps/web/src/utils/receipt.ts": "2bcad0e9d719240eb051d31c33e2535842295ccdfdfbe2ed7338f6536aefddd5"
@@ -1003,6 +1003,11 @@
       {
         "file": "apps/web/src/test/operator.test.tsx",
         "name": "accepts through the existing invitation API and never stores the secret",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "an invitation response after navigation refreshes the current route instead of stranding loading",
         "cases": null
       },
       {
@@ -1899,6 +1904,14 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "an invitation response after navigation refreshes the current route instead of stranding loading",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 17 navigation recovery: late invitation completion refreshes the current route."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
