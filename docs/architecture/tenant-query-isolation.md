@@ -239,3 +239,19 @@ The active root guard now admits the exact pricing mutation/validation actions. 
 remain inside the live staff transaction. PostgreSQL card publication serialization adds a
 constraint independent of application Organization serialization. No session-variable scope,
 RLS promise, custody access, org-admin mutation or eighth role is added.
+
+## Booking coordinator — Issue #22
+
+`withBookingTenantScope` stays inside the existing membership-service issuer allowlist.
+It authenticates once, obtains the Organization serialization lock through identity-bound
+membership discovery, checks the exact current operator grant and active roots, then issues
+independent bookings.create, parcels.create, customer.snapshot.read, pricing.validate,
+tax.validate, bookings.audit and bookings.events capabilities. Every capability requires
+membership provenance, one user and one Franchise; all expire with the same transaction.
+Customer SELECT FOR SHARE and pricing/tax validation locks remain valid through snapshot
+commit. Replays reauthorize before receipt lookup; no executor or issuer escapes.
+
+The AST gate requires both owners for Booking, Parcel, receipt, obligation, event and audit
+SQL. The only new allowance is request.query **data** in the exact booking route file; calls
+remain rejected. No new raw SQL or issuer exception, ORM, global lookup or RLS claim.
+[Booking scope, concrete tests and known limits](bookings.md).

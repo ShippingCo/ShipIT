@@ -1,3 +1,4 @@
+import { active as bookingActive } from '../bookings/repository.ts';
 import type { OperatorContext, OnboardingResult } from '@shippingco/shared';
 import { onboardingInput, requestKey, fingerprint } from '../onboarding/validation.ts';
 import { bootstrapTenancyInTransaction } from '../tenancy/service.ts';
@@ -377,4 +378,30 @@ export async function withTaxTenantScope<T>(database: DatabasePool, sessionToken
 
 export function createMembershipService(database:DatabasePool) {
   return {...createMembershipCore(database),withCorrelation:(id:string)=>createMembershipCore(database,id)};
+}
+
+/** Issue 22's narrower activation: only a live operator in the selected franchise.
+ * Every capability is independent and expires with this transaction. */
+export async function withBookingTenantScope<T>(database: DatabasePool, sessionToken: string, organizationId: string,
+  franchiseId: string, correlationId: string, work: (s: import('../bookings/types.ts').BookingScopes) => Promise<T>): Promise<T> {
+  validate.uuid(organizationId); validate.uuid(franchiseId);
+  return membershipTransaction(database,async tx => {
+    const session = await authenticated(tx,sessionToken);
+    if (!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent = await authorityRepository.lockOrganization(tx,organizationId);
+    if (!parent) throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships = await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const operators = memberships.filter(m => m.role === 'operator');
+    if (!operators.length) throw new HttpError('ACTION_FORBIDDEN');
+    if (!operators.some(m => m.franchiseIds.includes(franchiseId))) throw new HttpError('RESOURCE_NOT_FOUND');
+    if (parent.lifecycle !== 'active') throw new HttpError('ORGANIZATION_DISABLED');
+    const context = { actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+      organizationWide:false,correlationId,provenance:'membership' as const };
+    const scopes = { bookings:issueTenantAccess(tx,{...context,action:'bookings.create'}),
+      parcels:issueTenantAccess(tx,{...context,action:'parcels.create'}),customer:issueTenantAccess(tx,{...context,action:'customer.snapshot.read'}),
+      pricing:issueTenantAccess(tx,{...context,action:pricingScope('pricing.override.approve',memberships,[]).includes(franchiseId)?'pricing.override.approve':'pricing.validate'}),tax:issueTenantAccess(tx,{...context,action:'tax.validate'}),
+      audit:issueTenantAccess(tx,{...context,action:'bookings.audit'}),events:issueTenantAccess(tx,{...context,action:'bookings.events'}) };
+    await bookingActive(scopes.bookings);
+    return work(scopes);
+  });
 }

@@ -141,3 +141,10 @@ rate versions and returns deterministic freight/packing proposals with exact pai
 representations, finite expiry and audited overrides. [Verification](docs/architecture/issue-20-verification.md)
 covers PostgreSQL concurrency and immutable evidence. Tax (#21), confirmed Booking snapshots
 (#22) and the production New Booking UI (#33) remain separate downstream work.
+
+The [Booking backend](docs/architecture/bookings.md) now confirms operator-authorized
+Customer/pricing/tax snapshots, creates initial Parcels with permanent global dockets,
+and atomically retains the uncollected obligation, replay result, audit and producer events.
+[Verification](docs/architecture/issue-22-verification.md) covers real PostgreSQL races and
+rollback. Production booking UI, collections, issued receipts and event processing remain
+with their downstream issues.

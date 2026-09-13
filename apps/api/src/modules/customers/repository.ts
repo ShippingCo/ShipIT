@@ -60,3 +60,9 @@ export async function saveReceipt(scope: TenantAccess, franchiseId: string, oper
     SELECT $1,$2,{{organization}},$3,$4,$5,$6,1,$7,$8 WHERE {{franchise:$9:$3}}`,
   [randomUUID(),c.actor.id,franchiseId,operation,key,fingerprint,result.id,result,c.organizationId]);
 }
+
+/** Transaction-bound source read: locks contact/version until the booking commits. */
+export async function snapshot(scope: TenantAccess, id: string) {
+  return (await scopedQuery<CustomerRow>(scope,['customer.snapshot.read'],`SELECT ${columns} FROM shipit.customers
+    WHERE {{franchise:organization_id:franchise_id}} AND id=$1 FOR SHARE`,[id])).rows[0];
+}

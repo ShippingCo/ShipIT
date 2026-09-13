@@ -300,3 +300,38 @@ forward. No production-to-demo fallback or browser import. The guarded fixture's
 preparePricing method applies these exact privileges, with real-runtime negative tests.
 See [pricing architecture](../../docs/architecture/pricing.md) and
 [verification](../../docs/architecture/issue-20-verification.md).
+
+## Issue #22 atomic Booking migration and runtime grants
+
+Apply forward migration `1789578000000-atomic-bookings.cjs` after the ten existing
+migrations. It adds bookings, parcels, booking_obligations, booking_commands, domain_events,
+booking_audit_events and one global non-cycling docket sequence. Ownership FKs, immutable
+snapshots, payment reconciliation, logical event/command uniqueness and a deferred complete
+command check enforce the atomic boundary. The existing audit view retains identity/grants.
+No backfill, extension, lot table or production rate seed. No historical migration changes.
+
+After resolving the deployment's separate runtime role, grant exactly:
+
+```sql
+GRANT SELECT, INSERT ON shipit.bookings, shipit.parcels, shipit.booking_obligations,
+  shipit.booking_commands, shipit.domain_events TO runtime_role;
+GRANT UPDATE (state,http_status,result,committed_at,retain_until)
+  ON shipit.booking_commands TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,uuid,timestamptz)
+  TO runtime_role;
+```
+
+Retain existing Customer/pricing/tax/auth/membership/tenancy and audit_history grants.
+`prepareBookings` provisions the exact test runtime privileges. The allocator and integrity
+functions run only as triggers (execution checked at trigger creation); PUBLIC execution is
+revoked and no direct runtime grant is needed. Runtime receives no sequence access/setval,
+no booking_audit_events privileges and no DDL, TRUNCATE, DELETE or snapshot updates.
+Command UPDATE is guarded to allow only reserved→committed, with immutable identity.
+
+Roll out schema, grants, compatible API, then synthetic verification. Disable/revert the
+compatible API for rollback while preserving schema, receipts, sequence watermark and
+history. There is no down migration. Repair applied schema only by a subsequent forward
+migration; a failed unapplied migration rolls back schema/ledger and can be retried by a
+fresh migrator. Never reset the sequence, erase command evidence, import browser state or
+fall back to localStorage. [Contract](../../docs/architecture/bookings.md) and
+[acceptance/repair tests](../../docs/architecture/issue-22-verification.md).

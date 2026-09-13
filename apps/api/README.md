@@ -207,3 +207,15 @@ usable granted profiles. Existing CSRF/cookie, invitation, audit and scope contr
 See [request/retry/role/rollout rules](../../docs/architecture/independent-onboarding.md)
 and [verification](../../docs/architecture/issue-17-verification.md). Public unverified
 account registration is not added; use the trusted #13 verified identity provisioning seam.
+
+## Booking creation — Issue #22
+
+With authenticated API composition enabled, `POST /api/v1/bookings` takes validated
+organization_id/franchise_id query selectors, one Idempotency-Key and strict commercial
+input. Only a current operator of that active Franchise is admitted. One transaction
+confirms the existing private Customer, quote and tax proposal, creates 1–50 Parcels with
+global dockets, and commits the initial obligation, original response, audit and events.
+See [full request/response and failure contract](../../docs/architecture/bookings.md) and
+[synthetic tests and rollout](../../docs/architecture/issue-22-verification.md).
+Apply migration and explicit runtime grants first. No frontend production booking flow,
+search API, worker, lot, payment collection or issued customer receipt is enabled here.
