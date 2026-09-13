@@ -103,3 +103,11 @@ Production customer UI migration remains #33; Booking persistence remains #22.
 finite proposal evidence, override approval, replay and the future Booking validation seam.
 [Verification](issue-20-verification.md) maps every acceptance criterion and PostgreSQL gate.
 #21 owns tax, #22 persists Booking snapshots and #33 connects the production booking UI.
+
+## Booking backend — Issue #22
+
+[Atomic Booking creation](bookings.md) documents operator-only confirmation, frozen parties,
+pricing/tax, uncollected obligation, global permanent dockets, original-result replay and
+transactional audit/events. [Verification](issue-22-verification.md) maps acceptance to
+unit, real PostgreSQL and HTTP tests. Retrieval, lifecycle, lots, collections, receipts,
+production booking UI and relay remain #23/#24/#26/#29/#30/#33/#35 respectively.

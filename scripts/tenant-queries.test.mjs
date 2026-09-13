@@ -91,3 +91,15 @@ test('pricing repositories require both owners, closed actions and no raw SQL pa
     assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
   } finally {rmSync(root,{recursive:true,force:true});}
 });
+
+test('booking and parcel repositories require both owners and cannot mint capabilities or use raw SQL',()=>{
+  for(const table of ['bookings','parcels','booking_commands','booking_obligations','domain_events']) {
+    const file='apps/api/src/modules/bookings/repository.ts';
+    assert.deepEqual(inspectSource(file,`scopedQuery(scope,['bookings.create'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+    for(const source of [`db.query('SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['bookings.create'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+      "import {issueTenantAccess} from '../security/scope.ts'","import {activeMemberships} from '../memberships/authority.ts'"])assert.ok(inspectSource(file,source).length);
+  }
+  assert.deepEqual(inspectSource('apps/api/src/modules/bookings/routes.ts','selection(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/bookings/routes.ts',"request.query('SELECT * FROM shipit.bookings')").length);
+});

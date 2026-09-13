@@ -67,3 +67,9 @@ export async function appendPricing(scope:TenantAccess,versionId:string,version:
     `SELECT shipit.append_pricing_audit($1,$2,$3,$4,$5,$6,$7,$8,$9) WHERE {{franchise:$1:$2}}`,
     [c.organizationId,c.permittedFranchiseIds[0],versionId,quoteId,c.actor.id,action,reason,version,c.correlationId]);
 }
+
+export async function appendBooking(scope: TenantAccess, booking: string, command: string, time: string) {
+  const c = assertTenantAccess(scope,['bookings.audit']);
+  await scopedQuery(scope,['bookings.audit'],`SELECT shipit.append_booking_audit($1,$2,$3,$4,$5,$6,$7) WHERE {{franchise:$1:$2}}`,
+    [c.organizationId,c.permittedFranchiseIds[0],booking,command,c.actor.id,c.correlationId,time]);
+}

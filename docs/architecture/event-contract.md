@@ -224,3 +224,14 @@ D05 stays **OPEN**: #35 owns lease duration, recovery, concurrency, polling, ret
 fairness, poison/redrive mechanics; #39 owns messaging processing/provider ambiguity;
 #40 owns consumer dedupe persistence. No numeric worker values, queue library, production
 table, adapter, timer or daemon are introduced by these contracts.
+
+## Issue #22 producer implementation
+
+`shipit.domain_events` now durably stores the booking.created and parcel.booked schema-1
+producer envelopes in the Booking transaction. Logical UNIQUE(event_type,aggregate_id),
+composite owner/source FKs, closed envelope/payload checks and a deferred completeness
+constraint enforce one parent event plus one event per child. They are immutable; replay
+persists none. parcel_set_ref names the Booking's immutable ordered child set (IDs/revision 1),
+not a lot or an authorization grant. [Booking implementation and verification](bookings.md).
+The table is the durable producer fact for #35; no processing state, leases, worker,
+provider acknowledgement or notification delivery is implemented.

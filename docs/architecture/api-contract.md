@@ -291,3 +291,23 @@ Additional safe conflicts: 409 NO_RATE (no exact effective match), RATE_CONFLICT
 CSRF, Origin, bounded bodies, no-store and route-template-only logging remain unchanged.
 Time input accepts seconds with at most millisecond precision, normalizes explicit
 UTC offsets, and rejects invalid calendar dates. No quote confirmation HTTP route.
+
+## Booking creation — Issue #22
+
+The [ratified Booking v1 request/response](bookings.md#ratified-v1-api) activates
+`POST /api/v1/bookings?organization_id=...&franchise_id=...`. It requires a session,
+CSRF/Origin protection and exactly one Idempotency-Key. The strict body is customer_id,
+expected_customer_version, tax_calculation_id, exact tax_intent (quote_id, pricing_input,
+facts), and 1–50 ordered parcels (integer weight_grams, recipient contact, optional docket).
+One whole-booking quote covers the sum of parcel grams. Ownership, state, totals, lot_id,
+paid/settled/payment_mode and confirmation evidence are not accepted input.
+
+The Issue #22-specific active-franchise **operator** policy is intentionally narrower
+than the W01 representative ceiling above; it does not activate other roles or amend the
+global matrix. 201 returns immutable Booking identity/state/version, authorized owners,
+customer and shipment-party snapshots, authoritative charges/tax, initial uncollected
+obligation, all children with permanent dockets/booked/awaiting_intake, and event references.
+Authorized replay returns the original 201 DTO. DOCKET_CONFLICT is safe 409 for an unusable
+manual/generated docket, without existing ownership information; all existing pricing,
+tax, version, lifecycle, auth, validation and idempotency errors retain their envelopes.
+No retrieval/search API, lot relationship, issued receipt or payment collection is added.

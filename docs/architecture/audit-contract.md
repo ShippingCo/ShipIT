@@ -219,3 +219,19 @@ variance uses pricing.override.approve. Replay adds no fact. The shared denial a
 pricing.read/draft/publish/quote categories with identity-only scope after a rejected request.
 No destination, weight, amount, request/key, approval/source text, address or credential enters
 logs/audit; authorized policy/quote DTOs alone expose the needed commercial information.
+
+## Booking producer — Issue #22
+
+`appendBooking` uses an independent bookings.audit capability and the typed fixed-path
+SECURITY DEFINER `append_booking_audit(uuid,uuid,uuid,uuid,uuid,uuid,timestamptz)` function.
+One booking_audit_events fact per Booking records only owner/actor/resource/command/correlation
+references and confirmation time. audit_history preserves its identity, grants and old
+sources, adding booking:UUID, bookings.create, booking, success, booking_create, version 1.
+The existing R28 administrative projection and cursor now support this namespace; it adds
+no financial ledger browse. Replay adds no audit. The command completeness trigger requires
+this fact before commit; failure rolls back the commercial mutation and events.
+
+Runtime receives EXECUTE on the append function, no direct booking_audit_events access.
+PUBLIC execution is revoked, ownership/history is immutable, and reads cannot call the
+write-classified append. Identity-only denial telemetry adds bookings.create / booking,
+without submitted tenant/resource/PII. [Verification](issue-22-verification.md).
