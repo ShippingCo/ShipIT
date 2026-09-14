@@ -44,7 +44,7 @@ Unless a different path is given, names below are tests in
 | B/C union/provenance, G history, H lock, N guard | `lot/direct union has one Parcel with deterministic provenance; finalization freezes history and releases Lot guard`: P1/P2 Lot plus P2/P3 direct yields exactly three rows, P2 two sources; historical/current frozen response unchanged after Lot remove/add; no dispatched status |
 | D/E foreign nested IDs, L foreign manifest | `real sibling B and unrelated C nested resources and manifests are indistinguishable from unknown`: real nonempty B/C Lots, Parcels, Routes and finalized manifests; identical 404 envelopes, zero effects; owner-insert composite FK rejection |
 | F ineligible states | `ineligible delivered/rto/dispatched direct and Lot members reject atomically; detach provides recovery` (three cases): explicit controlled failure and unchanged lifecycle/effects |
-| I concurrency, J replay | `optimistic attach/detach winner, exact source replay and permanent finalized dispatch uniqueness`: same-key pair one effect, changed intent conflict, one optimistic winner, finalized uniqueness, detach original replay |
+| I concurrency, J replay | `optimistic attach/detach winner, exact source replay and permanent finalized dispatch uniqueness`: same-key pair one effect, changed intent conflict, direct/direct and Lot/direct races each have one optimistic winner, finalized uniqueness, detach original replay |
 | K uncertain commit, T privacy, U immutability, V failures | `every transaction boundary rolls back; omitted facts cannot commit; uncertain COMMIT replays across restart`: exact pre/post counts, fresh-pool original receipt, safe stored receipts/log/audit/event inspection, owner UPDATE/DELETE/ownership/late-insert denial |
 | L authoritative T03, M bulk | `T03 finalized membership and bounded bulk dispatch preserve existing lifecycle/audit and deny fabricated references`: unknown/planning/not-containing rejection, valid version-3 dispatch and one binding, exact replay, one valid/one invalid bulk item; old producer rejected by new DB trigger |
 | O all seven roles, P disabled/revoked roots | `all seven roles enforce R09 W05 W06, live revocation and disabled-root historical reads`: explicit role matrix and live changes; roots deny writes while approved reads work |
@@ -110,6 +110,11 @@ dependency, CI, test runner or production web file changed. The final grant revi
 unused runtime SELECT on internal dispatch bindings and added an explicit denial assertion;
 both clean/restored full quality runs passed with those final privileges. All 24 gate stages
 passed, with no timeout, runner or assertion relaxation.
+
+A final acceptance cross-check added explicit Lot/direct concurrency assertions to the
+existing race test, preserving the direct/direct case. The complete focused Route PG
+suite passed 13/13, and lint/typecheck passed again; production code and gate mechanics
+were unchanged. The new PR head reruns all required CI suites.
 
 CI result on the final PR head: the **Final-head delivery record** in
 [PR #110](https://github.com/ShippingCo/ShipIT/pull/110) records the exact reviewed SHA,

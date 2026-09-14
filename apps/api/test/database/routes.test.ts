@@ -132,6 +132,13 @@ await test('optimistic attach/detach winner, exact source replay and permanent f
   assert.equal((await s.request('POST',`routes/${route.id}/parcels`,{...body,parcel_id:q},s.operator,key)).json().error.code,'IDEMPOTENCY_CONFLICT');
   const race=await Promise.all([s.request('POST',`routes/${route.id}/parcels`,{expected_version:2,parcel_id:q}),s.request('POST',`routes/${route.id}/parcels/${p}/remove`,{expected_version:2})]);
   assert.deepEqual(race.map(r=>r.statusCode).sort(),[200,409]);assert.equal(race.find(r=>r.statusCode===409)!.json().error.code,'VERSION_CONFLICT');
+  const lot=await s.request('POST','lots',{name:'Concurrent Source',destination_key:'SYN_DEST'});assert.equal(lot.statusCode,201,lot.body);
+  const lotId=lot.json().id as string,spare=await s.parcel();
+  const grouped=await s.request('POST',`lots/${lotId}/parcels`,{expected_version:1,parcel_id:q});assert.equal(grouped.statusCode,200,grouped.body);
+  const version=race.find(r=>r.statusCode===200)!.json().version as number;
+  const mixed=await Promise.all([s.request('POST',`routes/${route.id}/lots`,{expected_version:version,lot_id:lotId}),
+    s.request('POST',`routes/${route.id}/parcels`,{expected_version:version,parcel_id:spare})]);
+  assert.deepEqual(mixed.map(r=>r.statusCode).sort(),[200,409]);assert.equal(mixed.find(r=>r.statusCode===409)!.json().error.code,'VERSION_CONFLICT');
   // A separate pair isolates the finalization uniqueness invariant from source deduplication.
   await s.check(q);let a=await s.create(),b=await s.create();a=await s.mutate(a,'parcels',{parcel_id:q});b=await s.mutate(b,'parcels',{parcel_id:q});
   await s.mutate(a,'finalize');const before=await s.effects();
