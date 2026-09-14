@@ -365,3 +365,21 @@ Deploy schema/grants before compatible API. Rollback disables/reverts API code a
 the additive schema, receipts and evidence. Never down-migrate or erase history; repair an
 applied schema with a new forward migration. See [ADR 0014](../../docs/adr/0014-guarded-parcel-lifecycle-commands.md)
 and [verification](../../docs/architecture/issue-24-verification.md).
+
+## Issue #25 bulk intent guard
+
+Apply `1789837200000-bounded-parcel-bulk.cjs` after Issue #24. The additive
+`parcel_bulk_requests` table binds actor and composite Organization/Franchise ownership
+to a unique outer key digest and canonical fingerprint. It stores no raw command body,
+keys or duplicate business results. Intent is immutable, retained indefinitely, and
+recovered using existing Parcel command receipts. No backfill or released-file change.
+
+```sql
+GRANT SELECT, INSERT ON shipit.parcel_bulk_requests TO runtime_role;
+```
+
+Resolve the separate runtime role as in the earlier grants. Grant no UPDATE, DELETE,
+TRUNCATE, DDL or migration-role membership; existing history trigger needs no runtime
+EXECUTE privilege. `prepareBookings()` applies these exact test privileges. Apply schema
+and grants before API. Rollback preserves additive schema/committed history; repair forward.
+See [bulk contract](../../docs/architecture/parcel-bulk.md) for retention/recovery obligations.

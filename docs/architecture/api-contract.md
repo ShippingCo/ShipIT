@@ -339,3 +339,9 @@ input or timer-triggered RTO. Cross-Franchise C authority requires future durabl
 evidence and is currently denied; assigned-agent A is enforced for failed-attempt. See
 [ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) and
 [verification](issue-24-verification.md).
+
+## Bounded Parcel bulk — Issue #25
+
+[Bulk Parcel v1](parcel-bulk.md) defines POST `/api/v1/parcels/bulk`, required trusted-scope
+selectors, strict 1–50 entries, check_in/dispatch allowlist, sorted unique per-item 200
+results and canonical request-level failures. It reuses #24 command bodies and transition DTOs.

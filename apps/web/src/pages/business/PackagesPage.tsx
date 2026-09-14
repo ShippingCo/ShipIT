@@ -109,7 +109,7 @@ export default function PackagesPage() {
     const eligible = pickedRows.filter((b) => b.status !== next && b.status !== 'delivered');
     eligible.forEach((b) => updateStatus(b.id, next));
     setPicked({});
-    toast(`${eligible.length} parcel${eligible.length === 1 ? '' : 's'} ${label}. Customers notified.`);
+    toast(`${eligible.length} parcel${eligible.length === 1 ? '' : 's'} ${label}.`);
   }
   function bulkLotAssign() {
     const n = pickedIds.length;

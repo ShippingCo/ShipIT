@@ -127,3 +127,9 @@ typed check-in, dispatch, transit, failed-attempt and RTO commands with optimist
 durable scoped replay, atomic events/audit, closed reasons and fail-closed custody authority.
 [ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) records the decision and
 [verification](issue-24-verification.md) maps concurrency, tenant, rollback and PostgreSQL evidence.
+
+## Parcel bulk orchestration — Issue #25
+
+[Bulk contract](parcel-bulk.md) · [ADR 0015](../adr/0015-bounded-parcel-bulk.md) ·
+[Verification](issue-25-verification.md). Independent single-item transactions, durable
+outer intent and reusable partial-result/retry UI; full operational cutover remains #34.

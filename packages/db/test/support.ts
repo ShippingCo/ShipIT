@@ -290,6 +290,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.bookings,shipit.parcels,shipit.booking_commands,shipit.booking_obligations,shipit.domain_events TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.booking_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,uuid,timestamptz) TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT ON shipit.parcel_bulk_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.parcel_commands,shipit.parcel_transitions,shipit.parcel_failed_attempts,shipit.parcel_rto_approvals TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(status,custody,version,attempts_started,failed_attempt_count,active_attempt_id,assigned_agent_id,last_command_id,updated_at) ON shipit.parcels TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.parcel_commands TO ${identifier(resource.runtimeRole)}`);

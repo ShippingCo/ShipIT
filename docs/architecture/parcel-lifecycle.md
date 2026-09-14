@@ -178,3 +178,9 @@ permission/grant details, staff secrets, raw refusal/payment/address narratives,
 PII or full addresses. A correction appends a visible correction; it never deletes the
 previous delivered entry. Internal failure categories can map to the same safe phrase.
 Messaging consumes committed safe facts; it cannot infer a new state from a title or LLM.
+
+## Issue #25 bulk orchestration
+
+[Bounded bulk commands](parcel-bulk.md) orchestrate only T02 check-in and T03 dispatch
+through this same authoritative service. No additional edge, role, custody, OTP, payment
+or notification-delivery authority is introduced. Each item retains its own transaction.

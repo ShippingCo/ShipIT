@@ -33,3 +33,5 @@ is recorded by the approved and merged PR; superseding a decision requires a new
 Detailed policy questions have an [owner and gate](../architecture/open-decisions.md).
 The baseline ADRs do not select additional auth, queue, hosting, provider or ORM dependencies.
 Live authentication delivery setup remains deferred to M3.
+
+- [0015: Bounded Parcel bulk orchestration](0015-bounded-parcel-bulk.md) — Issue #25; proposed for PR review.

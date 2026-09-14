@@ -12,8 +12,7 @@ export interface ParcelCommandInput { expected_version:number; evidence_ref:stri
   return_plan_ref?:string; override_reason_code?:RtoOverrideReason }
 export interface ParcelLifecycleRow { id:string;booking_id:string;organization_id:string;franchise_id:string;docket:string;version:number;
   status:ParcelStatus;custody:ParcelCustody;attempts_started:number;failed_attempt_count:number;active_attempt_id:string|null;assigned_agent_id:string|null }
-export interface ParcelTransitionDto { id:string;booking_id:string;docket:string;version:number;status:ParcelStatus;custody:ParcelCustody;
-  attempts_started:number;failed_attempt_count:number;event_id:string;transitioned_at:string;reason_code?:FailureReason }
+export type { ParcelTransitionDto } from '@shippingco/shared';
 
 export const eventFor:Readonly<Record<ParcelOperation,string>>={
   'parcels.check_in':'parcel.checked_in','parcels.dispatch':'parcel.dispatched','parcels.transit':'parcel.in_transit',

@@ -152,3 +152,10 @@ role, authorization, audit, SQL whitelist, endpoint or migration changes. Roll o
 compatible production build against existing #17 APIs and synthetic staging first. Revert
 to a compatible API-backed version or disable the affected workflow to roll back. Never
 switch a production deployment to demo as outage recovery or automatically import browser JSON.
+
+## Issue #25 reusable Parcel bulk control
+
+[Parcel bulk](parcel-bulk.md#browser-integration-and-accessibility) supplies the typed
+adapter, scope-owned controller and accessible M3 panel. It validates confirmed results,
+retains failed selection and immutable uncertain intent, and requires authoritative refresh
+for deliberate failed-item retry. Full operational screen cutover remains #34.

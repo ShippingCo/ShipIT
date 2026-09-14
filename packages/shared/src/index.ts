@@ -79,3 +79,24 @@ export interface PricingQuoteDto {
   subtotal_paise:number; created_at:string; expires_at:string; fingerprint:string;
   breakdown:{calculation:'flat_paise_v1';min_weight_grams:number;max_weight_grams:number|null;excluded:['tax','final_payable_rounding']};
 }
+
+/** Interactive operator commands, not an import API. Bound applies before deduplication. */
+export const MAX_BULK_PARCELS = 50;
+export type BulkParcelAction = 'check_in' | 'dispatch';
+export interface ParcelTransitionDto {
+  id: string; booking_id: string; docket: string; version: number;
+  status: 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto';
+  custody: 'awaiting_intake'|'franchise_office'|'route_dispatch'|'delivery_agent'|'recipient';
+  attempts_started: number; failed_attempt_count: number; event_id: string; transitioned_at: string;
+  reason_code?: 'customer_unavailable'|'customer_requests_pickup'|'address_issue'|'recipient_refusal'|'payment_not_collected'|'operational_issue'|'other_controlled';
+}
+export type BulkParcelCommand = { expected_version: number; evidence_ref: string } &
+  ({ location_ref: string; manifest_id?: never } | { manifest_id: string; location_ref?: never });
+export interface BulkParcelItem { parcel_id: string; idempotency_key: string; command: BulkParcelCommand }
+export interface BulkParcelRequest { action: BulkParcelAction; items: BulkParcelItem[] }
+export const bulkParcelFailureCodes = ['RESOURCE_NOT_FOUND','ACTION_FORBIDDEN','VERSION_CONFLICT','PARCEL_STATE_CONFLICT',
+  'IDEMPOTENCY_CONFLICT','FRANCHISE_DISABLED','ORGANIZATION_DISABLED'] as const;
+export type BulkParcelFailureCode = typeof bulkParcelFailureCodes[number];
+export type BulkParcelItemResult = { parcel_id: string; outcome: 'succeeded'; result: ParcelTransitionDto } |
+  { parcel_id: string; outcome: 'failed'; error: { code: BulkParcelFailureCode } };
+export interface BulkParcelResult { action: BulkParcelAction; items: BulkParcelItemResult[]; summary: { succeeded: number; failed: number } }

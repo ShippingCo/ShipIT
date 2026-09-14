@@ -158,3 +158,12 @@ workspaces across keys. Committed evidence binds the created roots and membershi
 retains the original authorized DTO, and is reauthorized before replay or conflict
 information is disclosed. See [independent onboarding](independent-onboarding.md) for
 v1 canonicalization, same-request retry, immutable retention and context reconciliation.
+
+## Issue #25 bulk specialization
+
+[ADR 0015](../adr/0015-bounded-parcel-bulk.md) and [bulk contract](parcel-bulk.md) define
+an immutable outer intent guard plus existing individual Parcel receipts. Successful
+items replay their original DTO; failed transactions are re-evaluated on explicit recovery.
+A mixed response is not a frozen receipt of denied commands. Unknown commit outcomes stop
+response construction and require the same immutable request. Sorted unique item sets bind
+outer identity; changed failed-only subsets use a new outer key without including successes.

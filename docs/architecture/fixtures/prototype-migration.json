@@ -196,7 +196,7 @@
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
       "apps/web/src/pages/business/MiscPages.tsx": "e29360b8189ab907debf28bfc6919171aeb6f9b80219d07752b2970a4fd21fe9",
       "apps/web/src/pages/business/NewBookingPage.tsx": "7802ebd7677b6cd698551f74fc2ba2fa309c42145ba20116a909bbb316b29107",
-      "apps/web/src/pages/business/PackagesPage.tsx": "ba25681f56d9b51ebee6a56c419e65cdb702a81a8389fdacd0d2c9df88eeafc8",
+      "apps/web/src/pages/business/PackagesPage.tsx": "0db6443191eca763eebc787de4f56797134ddf6b4a580fb76e420aa201832451",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "21fffc0f1b57cc1ccc299da464fcae59c3e5464e2cd684c335d23312735a6ea0",
@@ -1149,6 +1149,51 @@
         "file": "apps/web/src/test/operator.test.tsx",
         "name": "malformed successful context becomes controlled recovery without private fields",
         "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "network loss preserves exact immutable body, outer/item keys, versions and acting scope",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "scope switch aborts/discards late results and purges selection/private results, including repeated scope generations",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "keyboard-reachable selection/action/retry, disabled pending state and live textual partial results",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "malformed/partial/foreign success DTO cannot fabricate completion or expose extra fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "refresher cannot reinsert successful A and unavailable failures remain represented when omitted",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "refresh authentication denial purges the prior private selection and result",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "explicit demo composition refuses the production bulk adapter without contacting any endpoint",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/parcel-bulk.test.tsx",
+        "name": "same outer adapter intent is a frozen snapshot and 503 retains command identity",
+        "cases": null
       }
     ],
     "effects": [
@@ -1269,6 +1314,10 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/parcels/BulkParcelPanel.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
         "file": "apps/web/src/test/app.test.tsx",
         "kind": "localStorage.clear"
       },
@@ -1319,6 +1368,10 @@
       {
         "file": "apps/web/src/test/data-access.test.ts",
         "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/fixtures/parcel-bulk.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/test/operator.test.tsx",
@@ -2309,6 +2362,78 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "network loss preserves exact immutable body, outer/item keys, versions and acting scope",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "scope switch aborts/discards late results and purges selection/private results, including repeated scope generations",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "keyboard-reachable selection/action/retry, disabled pending state and live textual partial results",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "malformed/partial/foreign success DTO cannot fabricate completion or expose extra fields",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "refresher cannot reinsert successful A and unavailable failures remain represented when omitted",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "refresh authentication denial purges the prior private selection and result",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 authoritative refresh authentication failures purge private bulk state."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "explicit demo composition refuses the production bulk adapter without contacting any endpoint",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/parcel-bulk.test.tsx",
+      "name": "same outer adapter intent is a frozen snapshot and 503 retains command identity",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     }
   ],
   "safety": {
