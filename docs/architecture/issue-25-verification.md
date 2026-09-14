@@ -98,7 +98,11 @@ No weakened authorization or skipped test is used to correct those expectations.
 An initial aggregate invocation omitted the pinned `PYTHON` environment and correctly
 failed toolchain validation; reruns use the exact environment above.
 
-GitHub CI is recorded in the PR's exact-head check links and delivery evidence. It must
+GitHub delivery: [PR #108](https://github.com/ShippingCo/ShipIT/pull/108) against main,
+with `Closes #25`. Implementation commit: `da882f4463422a1cef0a81449658802371b99efc`.
+The [current-head checks](https://github.com/ShippingCo/ShipIT/pull/108/checks) and PR
+delivery evidence record the final head SHA, run URL and conclusions after any documentation
+follow-up. This document does not claim that publication alone passed GitHub CI. It must
 include the required **Planning and prototype checks** aggregate, all five quality jobs
 and PostgreSQL integration. A local pass or an older commit's CI is not a delivery pass.
 
