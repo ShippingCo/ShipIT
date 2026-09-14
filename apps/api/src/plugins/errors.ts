@@ -38,7 +38,7 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
-export type ValidationField = 'parcels'|'docket'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
+export type ValidationField = 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
 export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
 export class FieldValidationError extends HttpError {
   readonly details: { field: ValidationField; code: ValidationCode }[];

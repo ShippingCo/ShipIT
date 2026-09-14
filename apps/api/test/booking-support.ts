@@ -13,7 +13,7 @@ export async function bookingSetup(t: TestContext) {
   const calculated = await s.tax.calculate(s.operator.token,org,A,randomUUID(),{intent_id:prepared.intent.id},randomUUID());
   const body = {customer_id:source.id,expected_customer_version:1,tax_calculation_id:calculated.id,tax_intent:prepared.body,
     parcels:[{weight_grams:999,recipient:{name:'Synthetic Recipient',phone:'+1 202-555-0101',address:'21 Fictional Street'}}]};
-  const booking = createBookingService(s.pool,s.clock);
+  const booking = createBookingService(s.pool,s.keys.browser,s.clock);
   const post = (input:unknown=body,key:string=randomUUID(),token=s.operator.token,franchise=A,organization=org) => s.app.inject({method:'POST',
     url:'/api/v1/bookings?'+new URLSearchParams({organization_id:organization,franchise_id:franchise}),
     headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(token),payload:JSON.stringify(input)});

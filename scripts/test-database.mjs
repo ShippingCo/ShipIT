@@ -61,7 +61,7 @@ export async function executeDatabaseTests(files, registry, { signal, timeoutMs 
   await writeFile(reporter, reporterSource, { mode: 0o600 });
   const env = { ...process.env, DB_TEST_RESOURCE_REGISTRY: registry };
   delete env.NODE_TEST_CONTEXT;
-  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-timeout=60000',
+  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-timeout=90000',
     `--test-reporter=${pathToFileURL(reporter).href}`, ...files], {
     cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32',
   });

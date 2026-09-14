@@ -77,7 +77,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
-      registerBookings(instance,createBookingService(database,pricingClock),config.environment!=='developer');
+      registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');

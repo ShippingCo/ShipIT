@@ -3,7 +3,8 @@ import { HttpError } from '../../plugins/errors.ts';
 import type { CustomerAction } from '../customers/types.ts';
 import type { ApprovedTenancyContext } from '../tenancy/types.ts';
 
-export type BookingAction = 'bookings.create'|'parcels.create'|'customer.snapshot.read'|'bookings.audit'|'bookings.events';
+export type BookingAction = 'bookings.create'|'parcels.create'|'customer.snapshot.read'|'bookings.audit'|'bookings.events'|
+  'bookings.read'|'bookings.list'|'parcels.read'|'parcels.list'|'parcels.timeline';
 export type PrivateAction = BookingAction | import('../tax/types.ts').TaxAction | import('../pricing/types.ts').PricingAction | CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
   'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
 export interface PrivateContext extends Omit<ApprovedTenancyContext, 'action'> {
@@ -16,7 +17,7 @@ const brand: unique symbol = Symbol('TenantAccess');
 export interface TenantAccess { readonly [brand]: true; readonly context: PrivateContext }
 const capabilities = new WeakMap<TenantAccess, { executor: QueryExecutor; transaction: boolean }>();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const actions: readonly PrivateAction[] = ['bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events','tax.read','tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate','organization.bootstrap','franchise.create','organization.profile.update',
+const actions: readonly PrivateAction[] = ['bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events','bookings.read','bookings.list','parcels.read','parcels.list','parcels.timeline','tax.read','tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate','organization.bootstrap','franchise.create','organization.profile.update',
   'organization.lifecycle.manage','organization.profile.read','franchise.profile.read','franchise.profile.list',
   'franchise.profile.update','franchise.lifecycle.manage','memberships.read','memberships.manage',
   'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read','pricing.read','pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve','pricing.validate','customer.read','customer.list','customer.create','customer.update'];

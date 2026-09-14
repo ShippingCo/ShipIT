@@ -8,7 +8,7 @@ export function envelope(scope: TenantAccess, command: string, id: string, type:
 }
 export async function persist(scope: TenantAccess, event: ReturnType<typeof envelope>, booking: string) {
   await scopedQuery(scope,['bookings.events'],`INSERT INTO shipit.domain_events
-    (event_id,organization_id,franchise_id,booking_id,parcel_id,command_id,event_type,aggregate_id,envelope)
-    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,
-  [event.event_id,event.franchise_id,booking,event.aggregate_type==='parcel'?event.aggregate_id:null,event.command_id,event.event_type,event.aggregate_id,event,event.organization_id]);
+    (event_id,organization_id,franchise_id,booking_id,parcel_id,command_id,event_type,aggregate_id,envelope,occurred_at,aggregate_sequence)
+    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`,
+  [event.event_id,event.franchise_id,booking,event.aggregate_type==='parcel'?event.aggregate_id:null,event.command_id,event.event_type,event.aggregate_id,event,event.occurred_at,event.aggregate_version,event.organization_id]);
 }

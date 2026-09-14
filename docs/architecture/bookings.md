@@ -205,3 +205,36 @@ use existing identity-only evidence with null guessed scope/target and safe tele
 settled payment, intake, dispatch, lot implementation, frontend migration or worker is added.
 Prototype addBooking still belongs exclusively to the fictional demo: browser sequence,
 client tax/paid state, lot attachment and simulated WhatsApp/receipt effects are not reused.
+
+## Tenant-isolated retrieval — Issue #23
+
+The ratified #4 resource contract takes precedence over the older issue-body route sketch:
+retrieval is `GET /api/v1/parcels`, `GET /api/v1/parcels/{parcel_id}`, and
+`GET /api/v1/parcels/{parcel_id}/timeline`. Detail selectors are UUIDs; exact docket lookup
+is a list filter. Every request requires `organization_id`; optional `franchise_id` can only
+narrow the caller's current live grants. org_admin, franchise_admin, operator, dispatcher and
+read_only receive their R06/R07 read ceiling. Accountant is denied. Delivery-agent assignment
+is not yet persisted, so its conditional grant fails closed rather than widening visibility.
+
+List filters are exact normalized `docket`, closed `status`, `customer_id`, and a half-open
+`from`/`to` confirmed-at interval. Sort is allowlisted to `created_at_desc` (default),
+`created_at_asc`, `docket_asc`, or `docket_desc`; `limit` defaults to 50 and is bounded at
+100. The result is exactly `{items,page}` without a total count. Keyset order always appends
+Parcel UUID as a deterministic tie-breaker. Opaque, authenticated, encrypted cursors expire
+after 15 minutes and bind actor, Organization, permitted Franchise set, live membership
+revision, normalized filters, sort, and schema version. A cursor is continuation state, never
+authorization; every page reauthenticates before decoding or querying.
+
+Detail and timeline queries constrain both Organization and Franchise before ID matching.
+Foreign-but-valid and unknown UUIDs therefore return the identical safe 404. Public Parcel
+DTOs explicitly allowlist current shipment fields and frozen party contact snapshots; they
+omit tenant IDs, command/replay records, pricing/tax evidence and event envelopes. Timeline
+projects only ratified lifecycle event names to safe code/status/label entries and orders by
+`(occurred_at, aggregate_sequence, event_id)`, making equal-time history deterministic.
+
+Migration `1789664400000-booking-retrieval.cjs` backfills first-class event time/sequence from
+the immutable envelope, checks the two representations agree, and retains a compatibility
+insert trigger for rolling deployment of the #22 writer. Owner-first indexes support docket,
+status/booking, created-time, customer/time and Parcel timeline access. Exact index/query
+review and executable acceptance evidence are recorded in
+[Issue #23 verification](issue-23-verification.md).
