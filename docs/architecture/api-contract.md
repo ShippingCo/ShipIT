@@ -72,6 +72,7 @@ minimized server evidence. Never echo a supplied key or invalid value.
 | 409 | FRANCHISE_DISABLED | The authorized target Franchise is disabled; new operational writes are unavailable until an approved lifecycle recovery |
 | 409 | ORGANIZATION_DISABLED | The authorized target Organization is disabled; new operational writes are unavailable until approved internal recovery |
 | 409 | PARCEL_STATE_CONFLICT | Authorized command conflicts with current lifecycle/custody/attempt state |
+| 409 | RTO_NOT_ELIGIBLE | Authorized RTO command lacks configured attempt/reason eligibility and no valid privileged override was supplied |
 | 409 | IDEMPOTENCY_CONFLICT | Same scoped key has different canonical intent; never return original result or fingerprint |
 | 409 | IDEMPOTENCY_IN_PROGRESS | Same intent is still unresolved; retry same key/body, never execute concurrently |
 | 413 | PAYLOAD_TOO_LARGE | Request body exceeds the explicit byte limit; reduce payload |
@@ -133,14 +134,14 @@ recipient-entry or proof policy. No generic status-setter is permitted.
 | Example | Contract input / role | Success and conflict |
 | --- | --- | --- |
 | `POST /api/v1/bookings` | W01 operator/dispatcher/franchise_admin in own F; `Idempotency-Key`; validated customer/commercial input plus one or more parcels | 201 Booking DTO with all child IDs/dockets/versions, all or none; original 201/body on authorized replay; changed intent 409 |
-| `POST /api/v1/parcels/{parcel_id}/dispatch` | W08/T03 roles and F/C scope; `Idempotency-Key`; `expected_version`, `manifest_id`, `dispatch_evidence_ref` | 200 Parcel DTO at committed version; stale new command 409 VERSION_CONFLICT; wrong state 409 PARCEL_STATE_CONFLICT |
+| `POST /api/v1/parcels/{parcel_id}/dispatch` | W08/T03 roles and proven F/C scope; `Idempotency-Key`; `expected_version`, `manifest_id`, `evidence_ref` | 200 Parcel DTO at committed version; stale new command 409 VERSION_CONFLICT; wrong state 409 PARCEL_STATE_CONFLICT |
 | `GET /api/v1/parcels` | R07 projection with current membership; normalized filters, cursor and limit | 200 list DTO; read_only gets permitted basic fields; no directory/history through custody |
 | `GET /api/v1/parcels/{parcel_id}` | R07 current visibility | 200 permitted Parcel DTO; foreign/unknown 404, including docket lookup |
 
 Dispatch fragment (expected current revision 3):
 
 ```json
-{"expected_version":3,"manifest_id":"man_synthetic_01","dispatch_evidence_ref":"evidence_synthetic_01"}
+{"expected_version":3,"manifest_id":"00000000-0000-4000-8000-000000000001","evidence_ref":"00000000-0000-4000-8000-000000000002"}
 ```
 
 ```json
@@ -311,3 +312,30 @@ Authorized replay returns the original 201 DTO. DOCKET_CONFLICT is safe 409 for 
 manual/generated docket, without existing ownership information; all existing pricing,
 tax, version, lifecycle, auth, validation and idempotency errors retain their envelopes.
 No retrieval/search API, lot relationship, issued receipt or payment collection is added.
+
+## Guarded Parcel lifecycle — Issue #24
+
+All routes require `organization_id`, `franchise_id`, authenticated session, CSRF/Origin,
+and exactly one `Idempotency-Key`. All body objects reject unknown fields. Evidence values
+below are UUID references to separately authorized facts, never truthy proof flags or text:
+
+| Route | Strict body after common `expected_version`, `evidence_ref` |
+| --- | --- |
+| `POST /api/v1/parcels/{parcel_id}/check-in` | `location_ref` |
+| `POST /api/v1/parcels/{parcel_id}/dispatch` | `manifest_id` |
+| `POST /api/v1/parcels/{parcel_id}/transit` | `route_id` |
+| `POST /api/v1/parcels/{parcel_id}/failed-attempt` | `attempt_id`, closed `reason_code`; closed `failure_subreason_code` required only for `other_controlled` |
+| `POST /api/v1/parcels/{parcel_id}/rto` | `approval_ref`, `return_plan_ref`; optional closed `override_reason_code` |
+
+Success is the allowlisted Parcel transition DTO: `id`, `booking_id`, `docket`, `version`,
+`status`, `custody`, `attempts_started`, `failed_attempt_count`, `event_id`,
+`transitioned_at`, and `reason_code` only for a failed attempt. Tenant IDs, assignment IDs,
+input evidence, command metadata and event envelopes are omitted. Replay returns the exact
+stored DTO. A new stale command returns VERSION_CONFLICT; wrong edge/attempt/agent returns
+PARCEL_STATE_CONFLICT; ineligible ordinary RTO returns RTO_NOT_ELIGIBLE.
+
+There is no generic Parcel PATCH, delivered command, out-for-delivery command, OTP/proof
+input or timer-triggered RTO. Cross-Franchise C authority requires future durable custody
+evidence and is currently denied; assigned-agent A is enforced for failed-attempt. See
+[ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) and
+[verification](issue-24-verification.md).

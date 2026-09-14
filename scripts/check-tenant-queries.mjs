@@ -37,7 +37,7 @@ export function inspectSource(file, source) {
       // Catch extracted/aliased query methods too; Fastify request.query is data, not a call.
       if (ts.isPropertyAccessExpression(node) && node.name.text === 'query' &&
         !((file.endsWith('/auth/webhook.ts') && node.expression.getText(tree) === 'r') ||
-          (['apps/api/src/modules/bookings/routes.ts', 'apps/api/src/modules/tax/routes.ts', 'apps/api/src/modules/audit/routes.ts', 'apps/api/src/modules/customers/routes.ts', 'apps/api/src/modules/pricing/routes.ts'].includes(file) && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
+          (['apps/api/src/modules/bookings/routes.ts', 'apps/api/src/modules/parcels/routes.ts', 'apps/api/src/modules/tax/routes.ts', 'apps/api/src/modules/audit/routes.ts', 'apps/api/src/modules/customers/routes.ts', 'apps/api/src/modules/pricing/routes.ts'].includes(file) && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
       if (ts.isElementAccessExpression(node) && ((ts.isStringLiteral(node.argumentExpression) && node.argumentExpression.text === 'query') ||
         (!ts.isStringLiteral(node.argumentExpression) && ts.isCallExpression(node.parent) && node.parent.expression === node))) report(node, 'computed executor calls are not approved');
       if (ts.isBindingElement(node) && (node.propertyName?.getText(tree) ?? node.name.getText(tree)) === 'query') report(node, 'extracted query bypasses scopedQuery');

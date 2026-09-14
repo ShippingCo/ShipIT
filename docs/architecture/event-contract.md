@@ -235,3 +235,14 @@ persists none. parcel_set_ref names the Booking's immutable ordered child set (I
 not a lot or an authorization grant. [Booking implementation and verification](bookings.md).
 The table is the durable producer fact for #35; no processing state, leases, worker,
 provider acknowledgement or notification delivery is implemented.
+
+## Issue #24 lifecycle producer implementation
+
+The typed Parcel transaction now produces `parcel.checked_in`, `parcel.dispatched`,
+`parcel.in_transit`, `delivery.attempt_failed` and `parcel.rto_approved` at the same
+aggregate version as its state transition. The existing minimum catalog remains stable.
+For `other_controlled`, `delivery.attempt_failed` adds only the reviewed closed
+`failure_subreason`; privileged RTO adds only closed `override_reason_code`. These optional
+safe fields do not admit narrative content. A deferred database check matches the complete
+payload, event identity, sequence, actor and correlation to its command/transition.
+No consumer, worker, retry start, delivery completion or physical-return event is activated.

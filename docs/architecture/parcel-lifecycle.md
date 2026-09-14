@@ -88,7 +88,7 @@ a physical delivery failure; a real attempt and its outcome must be recorded sep
 | recipient_refusal | Customer refused delivery | Conservative collection/office review T09; no automatic immediate RTO |
 | payment_not_collected | Cash not ready (To Pay) | Retry after collection readiness if one failed attempt; after second, T11 eligible; ledger remains unchanged |
 | operational_issue | New: controlled operational impediment | Retry after remediation if one failed attempt; after second, T11 eligible |
-| other_controlled | New: required controlled subreason/review evidence | Office review T09; no free-text-derived retry or immediate RTO; #24 reviews subreason catalog before implementation |
+| other_controlled | Required closed subreason (`weather_disruption`, `vehicle_breakdown`, `route_access_restricted`, `device_or_network_failure`) and evidence | Office review T09; no free-text-derived retry or ordinary immediate RTO |
 
 A later explicit pickup request moves a retry-path failure to T09; it does not reset
 counts. A collection-path second failure goes through T09 and its complete collection
@@ -152,6 +152,21 @@ proof. Office collection later requires a fresh, approved proof flow via Deliver
 | Count two complete business dates after intake | Approved two-business-day window, UTC/IST boundary; conservative full collection opportunity | #3 interpretation; #8/#66 operating calendar remains unresolved |
 | Reason-to-path mapping above | Preserve useful prototype reasons; implement both approved paths without automatic RTO | #3 conservative mapping; #24 controlled subreasons and exceptional changes require review |
 | No extra financial/proof/job authority inferred | Role name or lifecycle label cannot approve unprovided sensitive policy | #8/#14/#24/#29/#42 own remaining implementation gates |
+
+## Issue #24 implementation boundary
+
+T02–T04, T07 and the T11 two-failure path are implemented as typed, versioned commands.
+Issue #24 also permits a narrow T11 exception: after at least one genuine T07 failure, the
+owning franchise_admin may approve RTO using a closed safety/legal/unserviceable override,
+separate approval and eligibility evidence, and an accountable return plan. This is never
+timer-driven and does not prove physical return completion.
+
+T05/T06 remain reserved for the trusted delivery/proof integration. T08–T10/T12 retain
+their existing owner gates. Cross-Franchise C is not inferred from membership; it remains
+unavailable until a durable custody handover proves it. Unapproved post-movement cancellation,
+expired-hold exceptions and return completion/recall remain denied. See
+[ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) and
+[Issue #24 verification](issue-24-verification.md).
 
 ## Customer-safe projection
 

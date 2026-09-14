@@ -238,3 +238,18 @@ insert trigger for rolling deployment of the #22 writer. Owner-first indexes sup
 status/booking, created-time, customer/time and Parcel timeline access. Exact index/query
 review and executable acceptance evidence are recorded in
 [Issue #23 verification](issue-23-verification.md).
+
+## Guarded Parcel lifecycle — Issue #24
+
+Typed lifecycle commands mutate the #22 Parcel aggregate one optimistic version at a time
+and append facts consumed by the #23 timeline. Check-in, dispatch and transit establish the
+approved office/route custody progression. Failed-attempt consumes only a pre-existing
+trusted active delivery attempt assigned to the authenticated agent; this issue does not
+create assignments, OTP challenges, out-for-delivery state or delivery completion.
+
+The command receipt, aggregate update, transition, event and typed exception evidence share
+one PostgreSQL transaction. Replay is durable and scoped to principal, tenant, operation and
+key. RTO means an approved return workflow started, not physical return completion or a
+financial reversal. Full API, policy and rollout details are in
+[ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) and
+[Issue #24 verification](issue-24-verification.md).

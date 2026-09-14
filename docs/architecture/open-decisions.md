@@ -41,7 +41,7 @@ explicitly marked PARTIAL. No vendor, statutory policy or runtime behavior is in
 - #21/#29/#30: implement #8 exact tax allocation and fixed Booking payable; validate statutory outputs, partial collection allocation, negative credits and reversal/receipt reconciliation before production.
 - #42: implement #8 office-collection proof, resend/exception rules and lineage limits; two physical attempts are not OTP attempt limits.
 - #66: operating calendar values remain unapproved after #8; versioned local settings use W29; no production Mon–Fri assumption or automatic hold expiry without an approved calendar.
-- #24: controlled failure subreasons, unapproved post-movement cancellation, expired-hold exceptions, return completion/recall; all denied until reviewed.
+- #24 resolves controlled failure subreasons in the lifecycle contract. Unapproved post-movement cancellation, expired-hold exceptions and return completion/recall remain denied until reviewed.
 - #14/#19/#23/#31/#72: grant mechanics, matching/merge, exact field/attachment projections and privacy controls.
 - #79: ownership closure/history, in-flight custody strategy, migration/recovery execution after pilot; dual approval is not data movement.
 - Cross-organization custody remains denied under ADR 0003; any future proposal needs a reviewed contract before #24/#53 expose it.

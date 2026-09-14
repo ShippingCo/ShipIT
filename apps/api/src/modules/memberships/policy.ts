@@ -44,6 +44,17 @@ export function shipmentReadScope(kind:'booking'|'parcel',memberships:readonly M
   return [...new Set(active.filter(value=>roles.includes(value.role)).flatMap(value=>value.franchiseIds))].sort();
 }
 
+/** W07-W09/W12/W14. Custodial C and assigned A are deliberately narrower than a role
+ * name; until durable custody grants land, this issue activates owning-franchise F only. */
+export function parcelCommandScope(action:import('../parcels/types.ts').ParcelAction,memberships:readonly Membership[]) {
+  const roles:readonly Role[]=action==='parcels.check_in'?['operator']:
+    action==='parcels.dispatch'?['franchise_admin','operator','dispatcher']:
+    action==='parcels.transit'?['dispatcher']:
+    action==='parcels.fail_delivery'?['delivery_agent']:
+    action==='parcels.approve_rto'?['franchise_admin']:[];
+  return [...new Set(memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}
+
 /** R21 published projection, W27 policy administration, W37 resolution, W01 booking preparation. */
 export function taxScope(action: import('../tax/types.ts').TaxAction, memberships: readonly Membership[], all: readonly string[]) {
   const active = memberships.filter(m => m.lifecycle === 'active');

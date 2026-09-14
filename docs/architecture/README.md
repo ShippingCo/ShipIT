@@ -119,3 +119,11 @@ docket/UUID detail, bounded filtered keyset listing and deterministic safe timel
 the durable #22 facts. [Verification](issue-23-verification.md) records authorization,
 cursor, restart, migration and real PostgreSQL evidence. Lifecycle commands remain #24;
 assignment-aware delivery-agent visibility remains fail-closed until its owning schema exists.
+
+## Parcel lifecycle commands — Issue #24
+
+[Guarded Parcel lifecycle](parcel-lifecycle.md#issue-24-implementation-boundary) implements
+typed check-in, dispatch, transit, failed-attempt and RTO commands with optimistic versions,
+durable scoped replay, atomic events/audit, closed reasons and fail-closed custody authority.
+[ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) records the decision and
+[verification](issue-24-verification.md) maps concurrency, tenant, rollback and PostgreSQL evidence.
