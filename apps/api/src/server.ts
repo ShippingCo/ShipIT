@@ -1,5 +1,7 @@
 import { createBookingService } from './modules/bookings/service.ts';
 import { registerBookings } from './modules/bookings/routes.ts';
+import { createParcelService } from './modules/parcels/service.ts';
+import { registerParcelCommands } from './modules/parcels/routes.ts';
 import { createPricingService } from './modules/pricing/service.ts';
 import { registerPricing } from './modules/pricing/routes.ts';
 import { createTaxService } from './modules/tax/service.ts';
@@ -78,6 +80,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
+      registerParcelCommands(instance,createParcelService(database,pricingClock),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');

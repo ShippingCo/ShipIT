@@ -10,7 +10,7 @@ await test('Issue 20 upgrades forward to tax without changing existing roots and
   const owner = db.ownerPool(); await owner.query("INSERT INTO shipit.organizations(id,display_name) VALUES($1,'Synthetic')",[org]);
   await owner.query("INSERT INTO shipit.franchises(id,organization_id,franchise_code,display_name) VALUES($1,$2,'MAIN','Synthetic')",[A,org]);
   const before = (await owner.query('SELECT * FROM shipit.franchises')).rows;
-  assert.deepEqual(await db.migrate(),{ applied: 3 }); assert.deepEqual(await db.migrate(),{ applied: 0 });
+  assert.deepEqual(await db.migrate(),{ applied: 4 }); assert.deepEqual(await db.migrate(),{ applied: 0 });
   assert.deepEqual((await owner.query('SELECT * FROM shipit.franchises')).rows,before);
   assert.equal((await owner.query('SELECT count(*)::integer AS n FROM shipit.tax_versions')).rows[0]!.n,0);
 });

@@ -335,3 +335,33 @@ migration; a failed unapplied migration rolls back schema/ledger and can be retr
 fresh migrator. Never reset the sequence, erase command evidence, import browser state or
 fall back to localStorage. [Contract](../../docs/architecture/bookings.md) and
 [acceptance/repair tests](../../docs/architecture/issue-22-verification.md).
+
+## Issue #24 guarded Parcel lifecycle grants
+
+Apply `1789750800000-guarded-parcel-lifecycle.cjs` after the Issue #23 retrieval migration.
+It extends Parcel state/version/custody evidence and adds `parcel_commands`,
+`parcel_transitions`, `parcel_failed_attempts` and `parcel_rto_approvals`. It also expands
+the existing domain-event/audit compatibility projections. Existing booked rows require no
+backfill beyond additive defaults.
+
+After resolving the separate deployment runtime identity, grant exactly:
+
+```sql
+GRANT SELECT, INSERT ON shipit.parcel_commands, shipit.parcel_transitions,
+  shipit.parcel_failed_attempts, shipit.parcel_rto_approvals TO runtime_role;
+GRANT UPDATE (status,custody,version,attempts_started,failed_attempt_count,
+  active_attempt_id,assigned_agent_id,last_command_id,updated_at)
+  ON shipit.parcels TO runtime_role;
+GRANT UPDATE (state,http_status,result,committed_at,retain_until)
+  ON shipit.parcel_commands TO runtime_role;
+```
+
+Retain the Issue #22 domain_events SELECT/INSERT and Issue #23 audit_history SELECT grants.
+Grant no table-wide UPDATE, history UPDATE/DELETE/TRUNCATE, DDL, ownership or migration-role
+membership. Fixed triggers need no runtime EXECUTE grant. `prepareBookings()` applies this
+exact model in disposable integration tests.
+
+Deploy schema/grants before compatible API. Rollback disables/reverts API code and preserves
+the additive schema, receipts and evidence. Never down-migrate or erase history; repair an
+applied schema with a new forward migration. See [ADR 0014](../../docs/adr/0014-guarded-parcel-lifecycle-commands.md)
+and [verification](../../docs/architecture/issue-24-verification.md).

@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -425,5 +425,27 @@ export async function withShipmentReadScope<T>(database:DatabasePool,sessionToke
     const scope=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:permitted,organizationWide:false,correlationId,provenance:'membership'});
     return work(scope,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+  });
+}
+
+/** W07-W09/W12/W14 command boundary. It deliberately issues only owning-franchise F;
+ * future custody/assignment services must add C/A authority from durable records. */
+export async function withParcelCommandScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,
+  franchiseId:string,action:import('../parcels/types.ts').ParcelOperation,correlationId:string,
+  work:(scopes:{command:import('../security/scope.ts').TenantAccess;events:import('../security/scope.ts').TenantAccess})=>Promise<T>):Promise<T> {
+  validate.uuid(organizationId);validate.uuid(franchiseId);
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);
+    if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const permitted=parcelCommandScope(action,memberships);
+    if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
+    if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+      organizationWide:false,correlationId,provenance:'membership' as const};
+    return work({command:issueTenantAccess(tx,{...context,action}),events:issueTenantAccess(tx,{...context,action:'parcels.events'})});
   });
 }

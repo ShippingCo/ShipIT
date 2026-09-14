@@ -238,3 +238,13 @@ short-lived authenticated ciphertext bound to identity, current authorization an
 normalized query; they are not transferable and do not replace authorization. See the
 [retrieval contract](../../docs/architecture/bookings.md#tenant-isolated-retrieval--issue-23)
 and [verification](../../docs/architecture/issue-23-verification.md).
+
+## Guarded Parcel lifecycle — Issue #24
+
+`src/modules/parcels/` adds strict check-in, dispatch, transit, failed-attempt and RTO POST
+commands. Live membership, tenant scope, aggregate lock/version, durable idempotency receipt,
+state mutation, audit transition and domain event execute in one transaction. Failure commands
+must match the stored active attempt and assigned agent. Direct delivery/out-for-delivery and
+generic status mutation routes do not exist. See the [lifecycle contract](../../docs/architecture/parcel-lifecycle.md#issue-24-implementation-boundary),
+[ADR](../../docs/adr/0014-guarded-parcel-lifecycle-commands.md) and
+[verification](../../docs/architecture/issue-24-verification.md).
