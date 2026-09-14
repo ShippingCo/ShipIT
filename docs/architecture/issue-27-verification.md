@@ -109,10 +109,16 @@ minimal privileges, old-test preservation and downstream scope. No released migr
 dependency, CI, test runner or production web file changed. The final grant review removed
 unused runtime SELECT on internal dispatch bindings and added an explicit denial assertion;
 both clean/restored full quality runs passed with those final privileges. All 24 gate stages
-passed, with no timeout, runner or assertion relaxation. The immutable final-head CI run,
-job results, PR scope/review
-threads and mergeability will be linked in the PR delivery record; its SHA must match the
-reviewed local commit. This source document cannot embed its own final Git commit hash.
+passed, with no timeout, runner or assertion relaxation.
+
+CI result on the final PR head: the **Final-head delivery record** in
+[PR #110](https://github.com/ShippingCo/ShipIT/pull/110) records the exact reviewed SHA,
+immutable workflow-run link, every job/result, scope, reviews/threads, mergeability and
+issue review status. [PR checks](https://github.com/ShippingCo/ShipIT/pull/110/checks)
+provide the independently fetched GitHub evidence. The record is updated only after those
+checks complete on the final head; it never substitutes an earlier green run. Keeping the
+final SHA/result there avoids a self-referential documentation commit invalidating its own
+CI evidence. Maintainer approval remains separate; this PR must stay open and unmerged.
 
 ## Rollout, rollback and scope
 
