@@ -295,3 +295,11 @@ See [tenant query isolation](architecture/tenant-query-isolation.md) for limitat
 ## Issue #18 production/demo build isolation
 
 The web Vite production build rejects rendered demo modules, including transitive imports, and known demo/secret markers before single-file assembly. `pnpm test:quality` includes isolated positive/negative checker tests. `pnpm db:local verify:gates` additionally injects a live demo store import into a disposable snapshot and requires the real build to fail; other gate drills remain unchanged. No new runtime dependency, SQL exception or migration is introduced. See [Issue #18 verification](architecture/issue-18-verification.md).
+
+## Issue #27 database fixture scheduling
+
+The database runner uses exactly two independent test-file workers on developer and CI
+hosts. This bounds simultaneous disposable-database fixture setup independently of host
+CPU count while preserving every test and the concurrency scenarios within each file.
+The per-file 90-second and per-suite 180-second deadlines, strict complete-suite reporter,
+skip/cancel/todo rejection and cleanup gates are unchanged. See [Issue #27 verification](architecture/issue-27-verification.md).

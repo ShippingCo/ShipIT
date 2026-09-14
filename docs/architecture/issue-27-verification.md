@@ -105,8 +105,7 @@ pnpm 10.34.5, Python 3.12.14 and disposable PostgreSQL 18.6:
 
 The complete tracked/new-file and staged diff was inspected for tenant predicates,
 composite ownership, immutable history, T03 truth, original-result replay, privacy,
-minimal privileges, old-test preservation and downstream scope. No released migration,
-dependency, CI, test runner or production web file changed. The final grant review removed
+minimal privileges, old-test preservation and downstream scope. No released migration, dependency, CI workflow or production web file changed. The final grant review removed
 unused runtime SELECT on internal dispatch bindings and added an explicit denial assertion;
 both clean/restored full quality runs passed with those final privileges. All 24 gate stages
 passed, with no timeout, runner or assertion relaxation.
@@ -114,7 +113,14 @@ passed, with no timeout, runner or assertion relaxation.
 A final acceptance cross-check added explicit Lot/direct concurrency assertions to the
 existing race test, preserving the direct/direct case. The complete focused Route PG
 suite passed 13/13, and lint/typecheck passed again; production code and gate mechanics
-were unchanged. The new PR head reruns all required CI suites.
+were unchanged at that point. The subsequent final-head CI run 34868004174 hit
+DB_TEST_TIMEOUT (the existing 180-second API/database suite deadline), with all five
+non-database jobs passing. Integration-file concurrency is now explicitly two workers
+across hosts; all test cases, in-file races and 90/180-second deadlines are unchanged.
+This scheduler change passed a fresh full `pnpm db:local quality` with the exact counts
+above. The first 24-stage drill preceded that change; repeated gate results for the final
+scheduler and the new final-head CI outcome are recorded in the delivery record below.
+The failed CI run is retained as evidence, rather than retried until green.
 
 CI result on the final PR head: the **Final-head delivery record** in
 [PR #110](https://github.com/ShippingCo/ShipIT/pull/110) records the exact reviewed SHA,
