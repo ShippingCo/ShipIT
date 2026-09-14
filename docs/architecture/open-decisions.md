@@ -85,3 +85,7 @@ intact. The persistence/locking/privilege implementation does not resolve #13 id
 #14 membership/grants, #15 product-wide tenant-context enforcement, #16 durable audit,
 #17 authenticated onboarding or #79 adoption. W41 is submitted for external review;
 neither this document nor the open PR satisfies a downstream merged prerequisite.
+
+Issue #25 proposes [ADR 0015](../adr/0015-bounded-parcel-bulk.md): 50 submitted entries,
+check-in/dispatch only, sequential single-item orchestration and durable outer intent.
+This does not resolve D05 worker policy or broaden #34 operational migration scope.

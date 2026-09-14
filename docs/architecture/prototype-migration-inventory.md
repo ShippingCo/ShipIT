@@ -470,3 +470,22 @@ See [production data access](production-data-access.md) and [verification](issue
 | apps/web/src/test/operator.test.tsx: cross-tab invalidation immediately removes old context and revalidates without echo loops | preserve | seam |
 | apps/web/src/test/operator.test.tsx: sign-in works under Strict Mode effect replay | preserve | seam |
 | apps/web/src/test/operator.test.tsx: malformed successful context becomes controlled recovery without private fields | preserve | seam |
+
+## Issue #25 reviewed inventory change
+
+The fictional PackagesPage bulk toast reports only state, removing its notification claim.
+BulkParcelPanel subscribes to the production scope-owned controller with useSyncExternalStore;
+the explicit browser test fixture uses a synthetic delayed transport. No store authority or
+prototype safety disposition changes. Added regression declarations:
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/parcel-bulk.test.tsx: retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: network loss preserves exact immutable body, outer/item keys, versions and acting scope | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: scope switch aborts/discards late results and purges selection/private results, including repeated scope generations | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: keyboard-reachable selection/action/retry, disabled pending state and live textual partial results | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: malformed/partial/foreign success DTO cannot fabricate completion or expose extra fields | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: refresher cannot reinsert successful A and unavailable failures remain represented when omitted | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: explicit demo composition refuses the production bulk adapter without contacting any endpoint | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: same outer adapter intent is a frozen snapshot and 503 retains command identity | preserve | seam |
+| apps/web/src/test/parcel-bulk.test.tsx: refresh authentication denial purges the prior private selection and result | preserve | seam |

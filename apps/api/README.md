@@ -248,3 +248,10 @@ must match the stored active attempt and assigned agent. Direct delivery/out-for
 generic status mutation routes do not exist. See the [lifecycle contract](../../docs/architecture/parcel-lifecycle.md#issue-24-implementation-boundary),
 [ADR](../../docs/adr/0014-guarded-parcel-lifecycle-commands.md) and
 [verification](../../docs/architecture/issue-24-verification.md).
+
+## Issue #25 bounded Parcel bulk API
+
+POST `/api/v1/parcels/bulk` supports check-in/dispatch only, 1–50 submitted entries,
+strict whole-envelope validation, live per-item authorization and independently atomic
+commands. See [exact wire/retry/rollout contract](../../docs/architecture/parcel-bulk.md)
+and [verification](../../docs/architecture/issue-25-verification.md).

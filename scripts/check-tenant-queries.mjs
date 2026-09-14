@@ -49,7 +49,7 @@ export function inspectSource(file, source) {
         if (!literal || (!/\{\{(?:organization|franchise|membership|invitation):/.test(text) && !bootstrap)) report(node, 'scoped SQL needs an explicit ownership predicate');
         if (/shipit\.(?:customers|customer_commands|customer_audit_events|append_customer_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'customer SQL requires both organization and franchise ownership');
         if (/shipit\.(?:pricing_[a-z_]+|append_pricing_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'pricing SQL requires both organization and franchise ownership');
-        if (/shipit\.(?:bookings|booking_[a-z_]+|parcels|domain_events|append_booking_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'booking SQL requires both organization and franchise ownership');
+        if (/shipit\.(?:bookings|booking_[a-z_]+|parcels|parcel_[a-z_]+|domain_events|append_booking_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'booking SQL requires both organization and franchise ownership');
         if (/shipit\.tax_[a-z_]+\b/.test(text) && !text.includes('{{franchise:')) report(node, 'tax SQL requires both organization and franchise ownership');
         if (!node.arguments[1] || !ts.isArrayLiteralExpression(node.arguments[1]) || !node.arguments[1].elements.length) report(node, 'query must declare a closed action allowlist');
       }
