@@ -184,3 +184,11 @@ Messaging consumes committed safe facts; it cannot infer a new state from a titl
 [Bounded bulk commands](parcel-bulk.md) orchestrate only T02 check-in and T03 dispatch
 through this same authoritative service. No additional edge, role, custody, OTP, payment
 or notification-delivery authority is introduced. Each item retains its own transaction.
+
+## Issue #26 grouping boundary
+
+[Lots](lots.md) changes only historical grouping and lot revisions. T03 manifest_id remains
+opaque dispatch evidence under #24 until #27 validates persistent route/manifests. Grouping
+cannot dispatch, transfer custody, reset Parcel versions or infer delivery. Lot archive
+retains all existing dispatch transitions/envelopes/timeline entries. #27 must reference
+retained lot identities and frozen membership with composite ownership and RESTRICT.

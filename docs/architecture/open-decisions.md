@@ -89,3 +89,16 @@ neither this document nor the open PR satisfies a downstream merged prerequisite
 Issue #25 proposes [ADR 0015](../adr/0015-bounded-parcel-bulk.md): 50 submitted entries,
 check-in/dispatch only, sequential single-item orchestration and durable outer intent.
 This does not resolve D05 worker policy or broaden #34 operational migration scope.
+
+## Issue #26 bounded resolutions
+
+[ADR 0016](../adr/0016-persistent-lots.md) proposes the precise lot active/archived lifecycle,
+scoped counter codes, immutable Booking pricing destination, historical membership, narrower
+post-dispatch dispatcher policy and shared event/audit extension for PR review. It does not
+reopen stack/RBAC/lifecycle authority. No blocking contradiction remains inside #26.
+
+#27 still owns persistent routes/frozen manifests, any active-route archive guard and T03
+integration. Starting main has only opaque manifest evidence, so #26 preserves that evidence
+and all referenced identities instead of inventing route persistence. #34 owns all full
+operational-screen cutovers and destination-mismatch focus/announcement implementation.
+No new messaging, carrier, proof, payment or worker decision is ratified here.

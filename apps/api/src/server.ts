@@ -1,3 +1,5 @@
+import { createLotService } from './modules/lots/service.ts';
+import { registerLots } from './modules/lots/routes.ts';
 import { createParcelBulkService } from './modules/parcels/bulk-service.ts';
 import { createBookingService } from './modules/bookings/service.ts';
 import { registerBookings } from './modules/bookings/routes.ts';
@@ -83,6 +85,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
+      registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');

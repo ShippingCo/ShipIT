@@ -2,7 +2,7 @@ export type DatabaseErrorCode = 'DB_CONFIG_INVALID' | 'DB_CONNECTION_FAILED' | '
   'DB_TIMEOUT' | 'DB_CLOSED' | 'DB_TRANSACTION_FAILED' | 'DB_COMMIT_UNCERTAIN' |
   'DB_ROLLBACK_FAILED' | 'DB_MIGRATION_FAILED' | 'DB_MIGRATION_LOCKED' | 'DB_SHUTDOWN_FAILED';
 
-const conflictConstraints = ['parcels_docket_key', 'parcels_docket_reserved', 'memberships_one_active_role_idx', 'invitations_one_pending_role_idx'] as const;
+const conflictConstraints = ['lot_memberships_one_active_idx','lots_active_code_idx','parcels_docket_key', 'parcels_docket_reserved', 'memberships_one_active_role_idx', 'invitations_one_pending_role_idx'] as const;
 type ConflictConstraint = typeof conflictConstraints[number];
 
 // Only reviewed schema identifiers may survive sanitization. Never driver detail,

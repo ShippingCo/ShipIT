@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -27,6 +27,8 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
         // The indexes remain the final boundary if occupancy changes after a check.
         // Translate inside the transaction so normal rollback must succeed first.
         if(error instanceof DatabaseError && error.code==='DB_QUERY_FAILED' && error.sqlState==='23505') {
+          if(error.constraint==='lot_memberships_one_active_idx') domainError=new HttpError('LOT_MEMBERSHIP_CONFLICT');
+          if(error.constraint==='lots_active_code_idx') domainError=new HttpError('LOT_CODE_CONFLICT');
           if(error.constraint==='memberships_one_active_role_idx') domainError=new HttpError('MEMBERSHIP_CONFLICT');
           if(error.constraint==='invitations_one_pending_role_idx') domainError=new HttpError('INVITATION_CONFLICT');
         }
@@ -447,5 +449,36 @@ export async function withParcelCommandScope<T>(database:DatabasePool,sessionTok
     const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
       organizationWide:false,correlationId,provenance:'membership' as const};
     return work({command:issueTenantAccess(tx,{...context,action}),events:issueTenantAccess(tx,{...context,action:'parcels.events'})});
+  });
+}
+
+/** Lot read/command work and current RBAC share one transaction and independent capabilities. */
+export async function withLotScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:import('../lots/types.ts').LotOperation|'lots.read'|'lots.list',correlationId:string,
+  work:(scopes:import('../lots/types.ts').LotScopes)=>Promise<T>):Promise<T> {
+  const reading=action==='lots.read'||action==='lots.list';
+  return membershipTransaction(database,async tx=>{
+    try {
+      const session=await authenticated(tx,sessionToken);
+      if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+      const parent=await authorityRepository.lockOrganization(tx,organizationId);
+      if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+      const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+      const all=reading&&memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      const permitted=lotScope(action,memberships,all);
+      if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
+      if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+      if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+        organizationWide:false,correlationId,provenance:'membership' as const};
+      return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'lots.audit'}),
+        events:reading?null:issueTenantAccess(tx,{...context,action:'lots.events'}),
+        dispatcher:memberships.some(m=>m.role==='dispatcher'&&m.franchiseIds.includes(franchiseId)),
+        revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
+    } catch(error) {
+      // Only expose a command retry conflict after membershipTransaction confirms rollback.
+      if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
+      throw error;
+    }
   });
 }

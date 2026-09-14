@@ -73,3 +73,9 @@ export async function appendBooking(scope: TenantAccess, booking: string, comman
   await scopedQuery(scope,['bookings.audit'],`SELECT shipit.append_booking_audit($1,$2,$3,$4,$5,$6,$7) WHERE {{franchise:$1:$2}}`,
     [c.organizationId,c.permittedFranchiseIds[0],booking,command,c.actor.id,c.correlationId,time]);
 }
+
+export async function appendLot(scope:TenantAccess,lotId:string,commandId:string,eventId:string) {
+  const c=assertTenantAccess(scope,['lots.audit']);
+  await scopedQuery(scope,['lots.audit'],`SELECT shipit.append_lot_audit($1,$2,$3,$4,$5) WHERE {{franchise:$1:$2}}`,
+    [c.organizationId,c.permittedFranchiseIds[0],lotId,commandId,eventId]);
+}

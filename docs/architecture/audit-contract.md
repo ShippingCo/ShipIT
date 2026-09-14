@@ -235,3 +235,20 @@ Runtime receives EXECUTE on the append function, no direct booking_audit_events 
 PUBLIC execution is revoked, ownership/history is immutable, and reads cannot call the
 write-classified append. Identity-only denial telemetry adds bookings.create / booking,
 without submitted tenant/resource/PII. [Verification](issue-22-verification.md).
+
+## Issue #26 lot producer
+
+`lot_audit_events` adds one immutable source to canonical audit_history, namespaced lot:UUID.
+Its exact actions are lot.created, lot.updated, lot.archived, lot.parcel_added and
+lot.parcel_removed. A move has one source removal and target addition at their committed
+lot revisions, sharing a command; archive is one fact with ended membership evidence.
+The projection uses resource_type lot, reason_code lot_command, IDs/actor/correlation/time
+and version. R28 roles/scope remain unchanged; this grants no operator audit browser.
+
+A fixed-path SECURITY DEFINER append_lot_audit derives fields from reserved command/current
+lot and membership rows. Runtime has EXECUTE only, no direct audit SELECT/INSERT/UPDATE/DELETE.
+The canonical projection remains the read seam. Events and append evidence are checked
+together by deferred completeness. Replay appends nothing; rollback commits nothing.
+Names/destination/contact/notes/body/keys are absent. Security denial allowlists add only the
+eight public lots actions and resource lot; guessed IDs never trigger foreign owner discovery.
+See [verification](issue-26-verification.md) for privacy, history and failure evidence.

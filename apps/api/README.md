@@ -255,3 +255,19 @@ POST `/api/v1/parcels/bulk` supports check-in/dispatch only, 1–50 submitted en
 strict whole-envelope validation, live per-item authorization and independently atomic
 commands. See [exact wire/retry/rollout contract](../../docs/architecture/parcel-bulk.md)
 and [verification](../../docs/architecture/issue-25-verification.md).
+
+## Persistent lots (#26)
+
+The authenticated lots module exposes the [ten endpoints and closed DTOs](../../docs/architecture/lots.md).
+It uses the existing transaction/capability/RBAC boundary, shared error envelope and API
+client contract. No browser screen cutover is activated. Local franchise_admin/operator/
+dispatcher W04 manages pre-dispatch grouping; explicit dispatcher authority gates later
+changes. R08 reads, canonical pricing destinations, stable replay, bounded cursors and safe
+errors are specified in that contract. No Parcel lifecycle status setter is added.
+
+Apply [lot schema and grants](../../packages/db/README.md#issue-26-persistent-lots) first.
+Run `pnpm db:local test:db` for synthetic API/PostgreSQL workflows including A/B/C, dispatch/
+archive, races and lost response. Run `pnpm test:api` for validation/cursor/role tests.
+[Acceptance evidence](../../docs/architecture/issue-26-verification.md) covers the full gates.
+Rollback compatible code while retaining all grouping and audit/event history; never use demo
+state as recovery. Existing #24 manifest evidence stays opaque until #27.

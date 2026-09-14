@@ -133,3 +133,12 @@ durable scoped replay, atomic events/audit, closed reasons and fail-closed custo
 [Bulk contract](parcel-bulk.md) · [ADR 0015](../adr/0015-bounded-parcel-bulk.md) ·
 [Verification](issue-25-verification.md). Independent single-item transactions, durable
 outer intent and reusable partial-result/retry UI; full operational cutover remains #34.
+
+## Implemented persistent lots — Issue #26
+
+[Lot domain/API/state contract](lots.md), [ADR 0016](../adr/0016-persistent-lots.md), and
+[acceptance and rollout evidence](issue-26-verification.md) extend the completed production
+chain through #25. PostgreSQL is the grouping authority; current/historical membership,
+commands, audit and existing domain events commit together. #27 owns route integration
+and #34 owns the operational screen cutover. Earlier scaffold descriptions above are
+historical issue baselines, not the current implementation state.
