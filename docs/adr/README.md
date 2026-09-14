@@ -37,3 +37,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0015: Bounded Parcel bulk orchestration](0015-bounded-parcel-bulk.md) — Issue #25; proposed for PR review.
 
 - [0016: Persistent lots and versioned membership history](0016-persistent-lots.md) — Issue #26; proposed for PR review.
+
+- [0017: Dispatch routes and immutable Parcel manifests](0017-dispatch-route-manifests.md) — Issue #27; proposed for independent PR review.

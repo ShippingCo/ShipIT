@@ -183,3 +183,7 @@ unique-index conflicts translate after successful rollback. COMMIT/connection un
 returns TEMPORARILY_UNAVAILABLE without claiming rollback; retry exact key/body/path.
 Changed intent requires deliberate reconciliation/new key; reused key conflicts. Deferred
 checks match result/state/audit/event and reject incomplete success, including partial move.
+
+## Issue #27 Route receipts
+
+Route commands use version-1 canonical normalized metadata/source/expected-version fingerprints and principal/org/franchise/operation/key-digest receipt scope. Exact authorized retries return the original RouteDto even after later revisions; changed intent conflicts. The result, source delta, immutable snapshot, audit and domain event commit together, with DB completeness checks. At least 24 hours is recorded; no history/receipt deletion job is introduced. Legacy T03 exact receipts replay before the new manifest check. [Contract](routes.md).

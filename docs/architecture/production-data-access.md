@@ -170,3 +170,7 @@ See [mismatch/retry UX contract](lots.md#safe-failures-and-ui-consumer-contract)
 selection, announce corrective guidance, refresh current versions, preserve exact uncertain
 intent, use a new key only for deliberately changed intent, and purge on scope switch.
 No optimistic authority, browser-storage recovery, demo import or provider call is allowed.
+
+## Issue #27 Routes
+
+The Routes module follows HTTP validation → membership-authorized service transaction → parameterized scoped raw SQL. Lot and Parcel resource resolution remain owning-repository seams. New tables use explicit composite RESTRICT ownership constraints, bounded source/manifest reads, immutable snapshots and narrow runtime grants. No new library, ORM, RLS exception, provider adapter or browser persistence. [Contract](routes.md) and [DB operating guide](../../packages/db/README.md#issue-27-dispatch-routes).

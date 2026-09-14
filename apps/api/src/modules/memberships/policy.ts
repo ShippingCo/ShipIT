@@ -82,3 +82,12 @@ export function lotScope(action:import('../lots/types.ts').LotAction,memberships
   const roles:readonly Role[]=read?['franchise_admin','operator','dispatcher','read_only']:['franchise_admin','operator','dispatcher'];
   return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
+
+/** R09/W05/W06. Assignment-only agent snippets await their authoritative projection. */
+export function routeScope(action:import('../routes/types.ts').RouteAction,memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active'),read=action==='routes.read'||action==='routes.list';
+  if(read&&active.some(m=>m.role==='org_admin'))return [...all];
+  const roles:readonly Role[]=read?['franchise_admin','operator','dispatcher','read_only']:
+    action==='routes.archive'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
+  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}

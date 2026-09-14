@@ -102,3 +102,7 @@ integration. Starting main has only opaque manifest evidence, so #26 preserves t
 and all referenced identities instead of inventing route persistence. #34 owns all full
 operational-screen cutovers and destination-mismatch focus/announcement implementation.
 No new messaging, carrier, proof, payment or worker decision is ratified here.
+
+## Issue #27 dispatch foundation resolution
+
+[ADR 0017](../adr/0017-dispatch-route-manifests.md) resolves Route ownership, planning/finalized/archived boundary, normalized source/snapshot provenance, 100-source/1000-Parcel bounds, Lot active-route guard and new T03 authority. The historical #26 deferral above is fulfilled here. D11 remains OPEN for #28 operational delay capacity/locking and #74 load qualification. Later legs and finalized-allocation replacement require their own reviewed lifecycle; no departure/delay/arrival or screen contract is silently activated.

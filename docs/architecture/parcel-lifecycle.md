@@ -192,3 +192,7 @@ opaque dispatch evidence under #24 until #27 validates persistent route/manifest
 cannot dispatch, transfer custody, reset Parcel versions or infer delivery. Lot archive
 retains all existing dispatch transitions/envelopes/timeline entries. #27 must reference
 retained lot identities and frozen membership with composite ownership and RESTRICT.
+
+## Issue #27 T03 authoritative manifest amendment
+
+The historical #24/#26 opaque-evidence boundary above is superseded for new dispatch commands. T03 now requires same-owner finalized Route manifest membership in its own transaction, before version/state disclosure and after authorized original-receipt lookup. The DB creates an immutable parcel_dispatch_manifests binding and rejects arbitrary new UUIDs. Existing opaque receipts/transitions/events remain unchanged and exact authorized retries replay. #25 bulk uses this same T03 service. Finalizing a Route never dispatches a Parcel. [Routes](routes.md#lot-guard-and-t03).

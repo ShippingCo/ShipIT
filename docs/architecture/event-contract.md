@@ -267,3 +267,7 @@ with shared cause. Archive emits one lot fact; membership rows carry detailed cl
 All payload fields are IDs only, no name/destination/body/address/phone/notes/raw key.
 Consumers listed here are future scoped projections (#27/#34/#35), not activated workers
 or messaging sends. Consumers may never reinterpret frozen routes from current membership.
+
+## Issue #27 Route planning facts
+
+Schema-v1 route.created, route.updated, route.archived, route.manifest_finalized, route.lot_attached, route.lot_detached, route.parcel_attached and route.parcel_detached are emitted by the owning Route command, exactly once per revision with transactional audit. Payload is exactly `{manifest_id}` and the normal trusted Route aggregate/actor/correlation/command envelope. The referenced immutable snapshot supplies deduplicated Parcel/provenance truth. These are administrative planning facts; no messaging purpose, worker, status/ETA effect or carrier acceptance is activated. route.departed/delayed/arrived remain #28. New parcel.dispatched manifest references are authoritative; old envelopes remain unchanged. [Contract](routes.md).

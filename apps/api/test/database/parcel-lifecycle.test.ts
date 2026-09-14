@@ -1,3 +1,4 @@
+import { finalizedManifest } from '../route-support.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -16,6 +17,7 @@ function faulty(pool:DatabasePool,point:string):DatabasePool {
 
 async function setup(t:Parameters<typeof bookingSetup>[0]) {
   const s=await bookingSetup(t),created=await s.book();assert.equal(created.statusCode,201,created.body);
+  await s.db.prepareRoutes();
   const parcel=created.json().parcels[0] as {id:string;booking_id:string;version:number;status:string};
   const post=(path:string,payload:unknown,actor:Actor=s.operator,key=randomUUID(),organization=org,franchise=A)=>s.app.inject({method:'POST',
     url:`/api/v1/parcels/${parcel.id}/${path}?`+new URLSearchParams({organization_id:organization,franchise_id:franchise}),
@@ -28,7 +30,8 @@ await test('check-in, dispatch and transit commit exact versioned state, event, 
   const checked=await s.post('check-in',checkBody,s.operator,key);assert.equal(checked.statusCode,200,checked.body);
   assert.deepEqual({version:checked.json().version,status:checked.json().status,custody:checked.json().custody},{version:2,status:'checked_in',custody:'franchise_office'});
   assert.deepEqual((await s.post('check-in',checkBody,s.operator,key)).json(),checked.json());
-  const dispatched=await s.post('dispatch',body(2,{manifest_id:randomUUID()}));assert.equal(dispatched.statusCode,200,dispatched.body);
+  const manifest=await finalizedManifest(s.pool,s.keys.browser,s.operator.token,[s.parcel.id]);
+  const dispatched=await s.post('dispatch',body(2,{manifest_id:manifest}));assert.equal(dispatched.statusCode,200,dispatched.body);
   const dispatcher=await s.grant('dispatcher',[A]);const transit=await s.post('transit',body(3,{route_id:randomUUID()}),dispatcher);assert.equal(transit.statusCode,200,transit.body);
   assert.deepEqual({version:transit.json().version,status:transit.json().status,custody:transit.json().custody},{version:4,status:'in_transit',custody:'route_dispatch'});
   const timeline=await s.app.inject({url:`/api/v1/parcels/${s.parcel.id}/timeline?`+new URLSearchParams({organization_id:org,franchise_id:A}),cookies:s.cookies(s.operator.token)});
@@ -46,7 +49,8 @@ await test('same-version contenders have one winner; same key replays once and c
   const raced=await Promise.all([s.post('check-in',payload,s.operator,key),s.post('check-in',payload,s.operator,key)]);
   assert.ok(raced.every(r=>r.statusCode===200));assert.deepEqual(raced[0]!.json(),raced[1]!.json());
   const changed=await s.post('check-in',{...payload,location_ref:randomUUID()},s.operator,key);assert.equal(changed.statusCode,409,changed.body);assert.equal(changed.json().error.code,'IDEMPOTENCY_CONFLICT');
-  const contenders=await Promise.all([s.post('dispatch',body(2,{manifest_id:randomUUID()})),s.post('dispatch',body(2,{manifest_id:randomUUID()}))]);
+  const manifest=await finalizedManifest(s.pool,s.keys.browser,s.operator.token,[s.parcel.id]);
+  const contenders=await Promise.all([s.post('dispatch',body(2,{manifest_id:manifest})),s.post('dispatch',body(2,{manifest_id:manifest}))]);
   assert.deepEqual(contenders.map(r=>r.statusCode).sort(),[200,409]);assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.parcel_transitions')).rows[0]!.n,2);
 });
 

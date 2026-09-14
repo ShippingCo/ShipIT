@@ -44,6 +44,7 @@ export function createLotService(database:DatabasePool,cursorKey:Buffer) {
         if(lot.state!=='active')throw new HttpError('LOT_STATE_CONFLICT');
         if(lot.version!==(lot.id===id?body.expected_version:body.expected_target_version))throw new HttpError('VERSION_CONFLICT');
       }
+      if(operation!=='lots.update')for(const lot of lots)await repository.guardActiveRoute(s.command,lot.id);
       let restricted=false;
       if(operation!=='lots.update')for(const lot of lots)restricted=(await repository.locked(s.command,lot.id))||restricted;
       if(parcel){

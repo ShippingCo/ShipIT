@@ -1,3 +1,4 @@
+import { finalizedManifest,legacyDispatch } from '../route-support.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -13,7 +14,7 @@ import type { LotDto,LotMembershipResult } from '@shippingco/shared';
 import type { LotOperation } from '../../src/modules/lots/types.ts';
 type Actor={id:string;token:string};
 async function setup(t:Parameters<typeof bookingSetup>[0]) {
-  const s=await bookingSetup(t);await s.db.prepareLots();
+  const s=await bookingSetup(t);await s.db.prepareRoutes();
   const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);const parcel={id:booked.json().parcels[0].id as string,booking_id:booked.json().id as string};
   const request=(method:'POST'|'PATCH'|'GET'|'DELETE',path:string,body?:unknown,actor:Actor=s.operator,key=randomUUID(),organization=org,franchise=A,extra:Record<string,string>={})=>s.app.inject({method,
     url:'/api/v1/'+path+'?'+new URLSearchParams({organization_id:organization,franchise_id:franchise,...extra}),
@@ -95,7 +96,7 @@ await test('dispatcher-only post-dispatch correction and archive preserve member
   const s=await setup(t),a=await s.create(),b=await s.create('B'),dispatcher=await s.grant('dispatcher',[A]);
   const add=await s.request('POST',`lots/${a.id}/parcels`,{parcel_id:s.parcel.id,expected_version:1});assert.equal(add.statusCode,200,add.body);
   const check=await s.request('POST',`parcels/${s.parcel.id}/check-in`,{expected_version:1,evidence_ref:randomUUID(),location_ref:randomUUID()});assert.equal(check.statusCode,200,check.body);
-  const dispatch=await s.request('POST',`parcels/${s.parcel.id}/dispatch`,{expected_version:2,evidence_ref:randomUUID(),manifest_id:randomUUID()});assert.equal(dispatch.statusCode,200,dispatch.body);
+  const dispatch=await s.request('POST',`parcels/${s.parcel.id}/dispatch`,{expected_version:2,evidence_ref:randomUUID(),manifest_id:await finalizedManifest(s.pool,s.keys.browser,s.operator.token,[s.parcel.id])});assert.equal(dispatch.statusCode,200,dispatch.body);
   const beforeTimeline=(await s.request('GET',`parcels/${s.parcel.id}/timeline`)).json();
   const move={membership_id:add.json().membership.id,target_lot_id:b.id,expected_version:2,expected_target_version:1};
   for(const actor of [s.operator,s.local]){
@@ -278,12 +279,16 @@ await test('upgrade preserves existing booking and dispatch events/audit byte-fo
   const transition=(name:string,body:unknown)=>s.app.inject({method:'POST',url:`/api/v1/parcels/${parcelId}/${name}?organization_id=${org}&franchise_id=${A}`,
     headers:{...s.headers,'idempotency-key':randomUUID()},cookies:s.cookies(s.operator.token),payload:JSON.stringify(body)});
   assert.equal((await transition('check-in',{expected_version:1,evidence_ref:randomUUID(),location_ref:randomUUID()})).statusCode,200);
-  assert.equal((await transition('dispatch',{expected_version:2,evidence_ref:randomUUID(),manifest_id:randomUUID()})).statusCode,200);
+  const legacyKey=randomUUID(),legacyBody={expected_version:2,evidence_ref:randomUUID(),manifest_id:randomUUID()};
+  const legacy=await legacyDispatch(s.pool,s.operator.token,parcelId,legacyKey,legacyBody);
   const beforeEvents=(await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows;
   const beforeAudit=(await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows;assert.ok(beforeEvents.length>=4);assert.ok(beforeAudit.length>0);
-  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:1});await db.prepareLots();
+  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:2});await db.prepareRoutes();
   assert.deepEqual((await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows,beforeEvents);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows,beforeAudit);
+  const {createParcelService}=await import('../../src/modules/parcels/service.ts');
+  assert.deepEqual(await createParcelService(db.runtimePool()).execute(s.operator.token,parcelId,{organization_id:org,franchise_id:A},legacyKey,['idempotency-key',legacyKey],legacyBody,'parcels.dispatch',randomUUID()),legacy);
+  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.parcel_dispatch_manifests')).rows[0]!.n,0);
   const created=await createLotService(db.runtimePool(),s.keys.browser).execute(s.operator.token,null,null,{organization_id:org,franchise_id:A},'synthetic-upgrade-lot',['idempotency-key','synthetic-upgrade-lot'],
     {name:'Upgrade lot',destination_key:'SYN_DEST'},'lots.create',randomUUID());assert.equal((created as LotDto).version,1);
   assert.equal((await s.book()).statusCode,201);assert.deepEqual(await db.migrate(),{applied:0});

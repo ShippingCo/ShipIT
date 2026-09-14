@@ -114,3 +114,16 @@ test('lots require both owner predicates; routes cannot execute request query or
   assert.deepEqual(inspectSource('apps/api/src/modules/lots/routes.ts','selection(request.query)'),[]);
   assert.ok(inspectSource('apps/api/src/modules/lots/routes.ts',"request.query('SELECT * FROM shipit.lots')").length);
 });
+
+test('Route/manifest tables require both owners; exact HTTP query-data exception never permits SQL or authority minting',()=>{
+  const file='apps/api/src/modules/routes/repository.ts';
+  for(const table of ['routes','route_commands','route_lots','route_parcels','route_manifests','route_manifest_parcels','route_manifest_sources','route_audit_events','parcel_dispatch_manifests']){
+    assert.deepEqual(inspectSource(file,`scopedQuery(scope,['routes.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+    for(const source of [`db.query('SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['routes.read'],'SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['routes.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+      "import {issueTenantAccess} from '../security/scope.ts'","import {activeMemberships} from '../memberships/authority.ts'","import {query} from '@shippingco/db'"])assert.ok(inspectSource(file,source).length);
+  }
+  assert.deepEqual(inspectSource('apps/api/src/modules/routes/routes.ts','selection(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/routes/routes.ts',"request.query('SELECT * FROM shipit.routes')").length);
+});

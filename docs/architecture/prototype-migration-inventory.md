@@ -498,3 +498,7 @@ its complete cutover. Its optional incompatible-destination selection is intenti
 rejected by production with LOT_DESTINATION_MISMATCH; destructive prototype deletion is
 intentionally archive in production. Message lot remains fictional/deferred, with no provider
 call or new frontend test disposition. Existing hooks exceptions and prototype tests remain.
+
+## Issue #27 production Route replacement evidence
+
+The routes group now has server authority for metadata, typed Route/Lot and direct Parcel associations, immutable deduplicated manifests, archive/finalize, Lot guards and authoritative T03. [Routes](routes.md) replaces browser bookingIds/lotIds authority with physical Parcel snapshots and exact provenance. Carrier code remains inert. RoutesPage/store/postRouteEvent tests remain fictional and unchanged; #28 owns operational events/ETA, #34 owns screen cutover and #35/#41 own downstream processing. No browser import or fallback was introduced.

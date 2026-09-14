@@ -252,3 +252,7 @@ together by deferred completeness. Replay appends nothing; rollback commits noth
 Names/destination/contact/notes/body/keys are absent. Security denial allowlists add only the
 eight public lots actions and resource lot; guessed IDs never trigger foreign owner discovery.
 See [verification](issue-26-verification.md) for privacy, history and failure evidence.
+
+## Issue #27 Route evidence
+
+Route commands append one immutable reference-only route_audit_events fact through append_route_audit in the business transaction. audit_history exposes it through existing R28 scope, resource_type route, actor/action/version/correlation/time and reference IDs. No metadata labels, carrier code, Parcel/customer snapshots or raw receipt is exposed. Route denial actions use the existing sanitized security-audit path. Deferred constraints pair the fact with the exact Route revision/result/event. [Contract](routes.md).

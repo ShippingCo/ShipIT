@@ -1,3 +1,4 @@
+import { finalizedManifest } from '../route-support.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -12,7 +13,7 @@ import { contact } from '../customer-support.ts';
 import { HttpError } from '../../src/plugins/errors.ts';
 const item=(parcel_id:string,version=1):BulkParcelItem=>({parcel_id,idempotency_key:randomUUID(),command:{expected_version:version,evidence_ref:randomUUID(),location_ref:randomUUID()}});
 async function setup(t:Parameters<typeof bookingSetup>[0],n=3) {
-  const s=await bookingSetup(t);
+  const s=await bookingSetup(t);await s.db.prepareRoutes();
   const created=await s.book({...s.body,parcels:Array.from({length:n},(_,i)=>({...s.body.parcels[0],weight_grams:i===n-1?999-n+1:1}))});
   assert.equal(created.statusCode,201,created.body);
   const ids=(created.json().parcels as {id:string}[]).map(p=>p.id).sort();
@@ -107,7 +108,8 @@ await test('exact maximum executes sequentially and two distinct-key batches can
   const s=await setup(t,MAX_BULK_PARCELS);
   const response=await s.post();assert.equal(response.statusCode,200,response.body);assert.deepEqual(response.json().summary,{succeeded:50,failed:0});
   assert.deepEqual(await s.effects(),{transitions:50,events:50,audits:50,commands:50});
-  const dispatch=()=>({action:'dispatch',items:[{parcel_id:s.ids[0],idempotency_key:randomUUID(),command:{expected_version:2,evidence_ref:randomUUID(),manifest_id:randomUUID()}}]});
+  const manifest=await finalizedManifest(s.pool,s.keys.browser,s.operator.token,[s.ids[0]!]);
+  const dispatch=()=>({action:'dispatch',items:[{parcel_id:s.ids[0],idempotency_key:randomUUID(),command:{expected_version:2,evidence_ref:randomUUID(),manifest_id:manifest}}]});
   const race=await Promise.all([s.post(dispatch()),s.post(dispatch())]);
   assert.deepEqual(race.map(r=>r.json().items[0].outcome).sort(),['failed','succeeded']);
   assert.deepEqual(await s.effects(),{transitions:51,events:51,audits:51,commands:51});
@@ -136,7 +138,9 @@ await test('bulk preserves exact action role matrix, wrong-scope denial, state g
 });
 await test('dispatch booked and terminal check-in are controlled state conflicts; HTTP CSRF and batch rate bounds remain active',{timeout:30000},async t=>{
   const s=await setup(t,1),id=s.ids[0]!;
-  const booked=await s.post({action:'dispatch',items:[{parcel_id:id,idempotency_key:randomUUID(),command:{expected_version:1,evidence_ref:randomUUID(),manifest_id:randomUUID()}}]});
+  const routes=(await import('../../src/modules/routes/service.ts')).createRouteService(s.pool,s.keys.browser),k=randomUUID();
+  const planned=await routes.execute(s.operator.token,null,null,{organization_id:org,franchise_id:A},k,['idempotency-key',k],(await import('../route-support.ts')).routeMetadata,'routes.create',randomUUID());
+  const booked=await s.post({action:'dispatch',items:[{parcel_id:id,idempotency_key:randomUUID(),command:{expected_version:1,evidence_ref:randomUUID(),manifest_id:planned.current_manifest_id}}]});
   assert.equal(booked.json().items[0].error.code,'PARCEL_STATE_CONFLICT');
   // Trusted synthetic terminal fixture, following the owning lifecycle suite's setup seam.
   await s.db.adminQuery('ALTER TABLE shipit.parcels DISABLE TRIGGER parcels_lifecycle_guard');

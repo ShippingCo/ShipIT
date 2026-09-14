@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -31,6 +31,10 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
           if(error.constraint==='lots_active_code_idx') domainError=new HttpError('LOT_CODE_CONFLICT');
           if(error.constraint==='memberships_one_active_role_idx') domainError=new HttpError('MEMBERSHIP_CONFLICT');
           if(error.constraint==='invitations_one_pending_role_idx') domainError=new HttpError('INVITATION_CONFLICT');
+        }
+        if(error instanceof DatabaseError&&error.code==='DB_QUERY_FAILED'){
+          if(error.sqlState==='23505'&&['route_manifest_dispatch_once_idx','route_lots_active_idx','route_parcels_active_idx'].includes(error.constraint??''))domainError=new HttpError('ROUTE_MANIFEST_CONFLICT');
+          if(error.sqlState==='23514'&&error.constraint==='lot_active_route_guard')domainError=new HttpError('LOT_ACTIVE_ROUTE');
         }
         throw domainError??error;
       }
@@ -474,6 +478,36 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
       return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'lots.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'lots.events'}),
         dispatcher:memberships.some(m=>m.role==='dispatcher'&&m.franchiseIds.includes(franchiseId)),
+        revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
+    } catch(error) {
+      // Only expose a command retry conflict after membershipTransaction confirms rollback.
+      if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
+      throw error;
+    }
+  });
+}
+
+/** Route read/command work and current RBAC share one transaction and independent capabilities. */
+export async function withRouteScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:import('../routes/types.ts').RouteOperation|'routes.read'|'routes.list',correlationId:string,
+  work:(scopes:import('../routes/types.ts').RouteScopes)=>Promise<T>):Promise<T> {
+  const reading=action==='routes.read'||action==='routes.list';
+  return membershipTransaction(database,async tx=>{
+    try {
+      const session=await authenticated(tx,sessionToken);
+      if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+      const parent=await authorityRepository.lockOrganization(tx,organizationId);
+      if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+      const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+      const all=reading&&memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      const permitted=routeScope(action,memberships,all);
+      if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
+      if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+      if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+        organizationWide:false,correlationId,provenance:'membership' as const};
+      return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'routes.audit'}),
+        events:reading?null:issueTenantAccess(tx,{...context,action:'routes.events'}),
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
     } catch(error) {
       // Only expose a command retry conflict after membershipTransaction confirms rollback.
