@@ -73,3 +73,12 @@ export function pricingScope(action:import('../pricing/types.ts').PricingAction,
     action==='pricing.draft'||action==='pricing.publish'||action==='pricing.override.approve'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
   return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
+
+/** R08 and W04. Dispatcher-only corrections are a separate live grant, never inheritance. */
+export function lotScope(action:import('../lots/types.ts').LotAction,memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active');
+  const read=action==='lots.read'||action==='lots.list';
+  if(read&&active.some(m=>m.role==='org_admin'))return [...all];
+  const roles:readonly Role[]=read?['franchise_admin','operator','dispatcher','read_only']:['franchise_admin','operator','dispatcher'];
+  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}

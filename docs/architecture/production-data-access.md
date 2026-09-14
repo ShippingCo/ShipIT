@@ -159,3 +159,14 @@ switch a production deployment to demo as outage recovery or automatically impor
 adapter, scope-owned controller and accessible M3 panel. It validates confirmed results,
 retains failed selection and immutable uncertain intent, and requires authoritative refresh
 for deliberate failed-item retry. Full operational screen cutover remains #34.
+
+## Issue #26 lot consumer boundary
+
+The [lot service/API](lots.md) is PostgreSQL authority. Shared LotDto/MembershipDto describe
+operational fields without customer PII; the existing Parcel DTO is not broadened. #26 adds
+no browser adapter/controller or screen and changes no approved client transport. #34 must
+use this document's one client → purpose adapter → live-scope controller → component seam.
+See [mismatch/retry UX contract](lots.md#safe-failures-and-ui-consumer-contract): retain safe
+selection, announce corrective guidance, refresh current versions, preserve exact uncertain
+intent, use a new key only for deliberately changed intent, and purge on scope switch.
+No optimistic authority, browser-storage recovery, demo import or provider call is allowed.

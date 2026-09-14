@@ -272,3 +272,13 @@ sort changes, expiry and tampering all invalidate continuation without exposing 
 boundary rows. The sort SQL fragment comes exclusively from a closed server map; every request
 value remains a bound parameter. No raw executor, issuer exception, RLS claim or tenant session
 variable is added. [Retrieval contract and index design](bookings.md#tenant-isolated-retrieval--issue-23).
+
+## Lot capabilities — Issue #26
+
+withLotScope remains within the existing membership-service issuer. R08/W04 produce one
+selected live franchise scope; commands independently issue lots.audit and lots.events.
+Every nested lot/parcel/membership read and private count has first-query owner predicates.
+The lot state policy checks an explicit dispatcher grant without role inheritance. The
+AST gate adds lot tables/append_lot_audit to its both-owner rule and allows only request.query
+data in the exact lot routes file; calls remain rejected. No raw SQL/issuer exception.
+The [verification](issue-26-verification.md) includes A/B/C fixtures and actual SQL races.

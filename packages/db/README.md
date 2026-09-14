@@ -383,3 +383,36 @@ TRUNCATE, DDL or migration-role membership; existing history trigger needs no ru
 EXECUTE privilege. `prepareBookings()` applies these exact test privileges. Apply schema
 and grants before API. Rollback preserves additive schema/committed history; repair forward.
 See [bulk contract](../../docs/architecture/parcel-bulk.md) for retention/recovery obligations.
+
+## Issue #26 persistent lots
+
+Apply `1789923600000-persistent-lots.cjs` after all fourteen released migrations through
+#25. It adds lots, lot_memberships, lot_commands, lot_code_counters and lot_audit_events.
+Composite ownership FKs are RESTRICT; active code and membership use partial unique indexes.
+Triggers enforce server allocation, immutable history, exact versions and complete committed
+state/result/audit/event. Existing domain_events gains nullable lot_id/lot_command_id and
+a nullable booking_id exclusively for lot producers; old booking/parcel predicates are
+retained. audit_history includes the new immutable source. No old history rewrite/backfill.
+
+Resolve the separate deployment runtime identity and grant only:
+
+```sql
+GRANT SELECT, INSERT ON shipit.lots, shipit.lot_memberships, shipit.lot_commands TO runtime_role;
+GRANT UPDATE (name,state,version,updated_at,archived_at,last_command_id)
+  ON shipit.lots TO runtime_role;
+GRANT UPDATE (ended_at,end_command_id,end_reason) ON shipit.lot_memberships TO runtime_role;
+GRANT UPDATE (state,http_status,result,committed_at,retain_until)
+  ON shipit.lot_commands TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid) TO runtime_role;
+```
+
+Retain existing scoped pricing/booking/parcel reads, domain_events SELECT/INSERT and
+audit_history SELECT. No runtime access to the counter or direct lot audit table. No
+DELETE/TRUNCATE/DDL/ownership, trigger disabling, broad UPDATE, new RLS or migration-role
+membership. `prepareLots()` installs exactly these privileges in disposable tests.
+
+Rollout: schema → minimum grants → verify old booking/parcel writers and retained facts →
+API → synthetic A/B/C workflow; #34 screen cutover stays deferred. Rollback compatible API
+only; retain additive schema and operational history, repair forward. No down migration or
+browser import. [Verification](../../docs/architecture/issue-26-verification.md) documents
+fresh migration, previous-main upgrade, failure rollback/retry and repeat no-op.

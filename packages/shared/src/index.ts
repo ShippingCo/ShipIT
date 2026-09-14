@@ -100,3 +100,13 @@ export type BulkParcelFailureCode = typeof bulkParcelFailureCodes[number];
 export type BulkParcelItemResult = { parcel_id: string; outcome: 'succeeded'; result: ParcelTransitionDto } |
   { parcel_id: string; outcome: 'failed'; error: { code: BulkParcelFailureCode } };
 export interface BulkParcelResult { action: BulkParcelAction; items: BulkParcelItemResult[]; summary: { succeeded: number; failed: number } }
+
+/** Issue #26 operational projections: grouping does not expose customer or custody data. */
+export interface LotDto {
+  id:string; code:string; name:string; destination_key:string; state:'active'|'archived'; version:number;
+  created_at:string; updated_at:string; archived_at:string|null; active_member_count:number;
+}
+export interface LotMembershipDto {
+  id:string; lot_id:string; parcel_id:string; started_at:string; ended_at:string|null; end_reason:'removed'|'moved'|'archived'|null;
+}
+export interface LotMembershipResult { lots:LotDto[]; membership:LotMembershipDto|null }

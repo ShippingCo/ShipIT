@@ -20,7 +20,7 @@ an unknown required value. The initial 17 events are all franchise-scoped.
 | schema_version | Positive integer for this event_type's supported wire schema; initially 1 |
 | organization_id | Trusted owning organization from committed source |
 | franchise_id | Trusted owning franchise when applicable; custody/acting franchise is not substituted for ownership |
-| aggregate_type | Closed initial set: booking, parcel, route, payment_obligation |
+| aggregate_type | Closed set: booking, parcel, lot (Issue #26), route, payment_obligation |
 | aggregate_id | Opaque authoritative entity ID; ordering key never uses parent Booking for separate children |
 | aggregate_version | Positive committed revision, same integer bound as public version; allocated by owner, never worker/timestamp |
 | occurred_at | Authoritative server fact instant in canonical UTC format from the API contract; distinct source observations stay protected |
@@ -246,3 +246,24 @@ For `other_controlled`, `delivery.attempt_failed` adds only the reviewed closed
 safe fields do not admit narrative content. A deferred database check matches the complete
 payload, event identity, sequence, actor and correlation to its command/transition.
 No consumer, worker, retry start, delivery completion or physical-return event is activated.
+
+## Issue #26 lot producer catalog
+
+[ADR 0016](../adr/0016-persistent-lots.md) adds lot to the closed aggregate set in the same
+shipit.domain_events store. Each schema-1 fact has exact committed Lot revision, server
+actor/time/correlation, command_id=causation_id, and immutable event ID. Deferred completeness
+checks exact payload/result/audit/state; replay emits zero new facts. No second event store.
+
+| Event | Producer/aggregate | Committed fact | Required payload | Optional payload | Future consumers / ordering | Forbidden authority |
+| --- | --- | --- | --- | --- | --- | --- |
+| lot.created | lots / lot | Scoped code/destination/name committed at revision 1 | {} | none | reports, timeline P/H | No Parcel lifecycle or messaging |
+| lot.updated | lots / lot | Active lot name revision committed | {} | none | reports, timeline P/H | No customer/contact projection |
+| lot.archived | lots / lot | Archived identity, all open grouping ended; history retained | {} | none | reports, timeline P/H | No erased route/Parcel history |
+| lot.parcel_added | lots / lot | One active compatible member established | parcel_id, membership_id | counterpart_lot_id on move | routes, reports, timeline P/H | No dispatch/custody/route propagation |
+| lot.parcel_removed | lots / lot | Original membership ended | parcel_id, membership_id | counterpart_lot_id on move | routes, reports, timeline P/H | No Parcel rewind or manifest rewrite |
+
+A move emits source removal + target addition, one per lot revision in one transaction
+with shared cause. Archive emits one lot fact; membership rows carry detailed closures.
+All payload fields are IDs only, no name/destination/body/address/phone/notes/raw key.
+Consumers listed here are future scoped projections (#27/#34/#35), not activated workers
+or messaging sends. Consumers may never reinterpret frozen routes from current membership.

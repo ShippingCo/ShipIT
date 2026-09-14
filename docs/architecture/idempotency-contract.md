@@ -167,3 +167,19 @@ items replay their original DTO; failed transactions are re-evaluated on explici
 A mixed response is not a frozen receipt of denied commands. Unknown commit outcomes stop
 response construction and require the same immutable request. Sorted unique item sets bind
 outer identity; changed failed-only subsets use a new outer key without including successes.
+
+## Issue #26 lot command receipts
+
+The six `api.v1.lots.*` operations in [lots](lots.md) use the existing canonical v1 digest
+and header grammar. Identity is authenticated user principal + trusted organization +
+franchise + operation + SHA256(key). Every normalized body field and resource ID is in
+intent; move includes both expected lot versions and original membership ID. Metadata,
+archive and grouping are all duplicate-sensitive. The receipt stores original public DTO
+only, retains evidence at least 24 hours, and currently has no cleanup. Exact replay checks
+current scope/role/active roots and recorded dispatcher requirement before returning it.
+
+An organization lock bounds serialization; timeout returns IDEMPOTENCY_IN_PROGRESS. Known
+unique-index conflicts translate after successful rollback. COMMIT/connection uncertainty
+returns TEMPORARILY_UNAVAILABLE without claiming rollback; retry exact key/body/path.
+Changed intent requires deliberate reconciliation/new key; reused key conflicts. Deferred
+checks match result/state/audit/event and reject incomplete success, including partial move.

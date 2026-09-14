@@ -489,3 +489,12 @@ prototype safety disposition changes. Added regression declarations:
 | apps/web/src/test/parcel-bulk.test.tsx: explicit demo composition refuses the production bulk adapter without contacting any endpoint | preserve | seam |
 | apps/web/src/test/parcel-bulk.test.tsx: same outer adapter intent is a frozen snapshot and 503 retains command identity | preserve | seam |
 | apps/web/src/test/parcel-bulk.test.tsx: refresh authentication denial purges the prior private selection and result | preserve | seam |
+
+## Issue #26 lot authority disposition
+
+Production createLot/deleteLot/assignToLot behavior is replaced by the [lot API](lots.md),
+not imported from store.ts. The fictional LotsPage remains behind demo composition; #34 owns
+its complete cutover. Its optional incompatible-destination selection is intentionally
+rejected by production with LOT_DESTINATION_MISMATCH; destructive prototype deletion is
+intentionally archive in production. Message lot remains fictional/deferred, with no provider
+call or new frontend test disposition. Existing hooks exceptions and prototype tests remain.

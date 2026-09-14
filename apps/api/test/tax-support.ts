@@ -12,8 +12,8 @@ export const taxPolicy: TaxPolicyInput = { effective_from: start,effective_to: '
 export const taxFacts: TaxFacts = { service_recipient_ref: 'SYN_BUYER',registration: 'unregistered',recipient_state: null,recipient_gstin: null,
   handover_state: '27',evidence_ref: 'SYN_HANDOVER',special_case: 'none' };
 export const taxPath = (franchise = A,organization = org) => `/api/v1/organizations/${organization}/franchises/${franchise}/tax/versions`;
-export async function taxSetup(t: TestContext) {
-  const s = await pricingSetup(t); await s.db.prepareTax();
+export async function taxSetup(t: TestContext,database?:import('../../../packages/db/test/support.ts').DisposableDatabase) {
+  const s = await pricingSetup(t,database); await s.db.prepareTax();
   const tax = createTaxService(s.pool,s.clock);
   const post = (path: string,body: unknown,token = s.operator.token,key = randomUUID(),franchise = A,organization = org) => s.app.inject({ method: 'POST',
     url: '/api/v1/tax/'+path+'?'+new URLSearchParams({ organization_id: organization,franchise_id: franchise }),

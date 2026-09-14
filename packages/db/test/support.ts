@@ -153,6 +153,7 @@ export interface DisposableDatabase {
   prepareMemberships(): Promise<void>;
   preparePricing(): Promise<void>;
   prepareBookings(): Promise<void>;
+  prepareLots(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -295,6 +296,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(status,custody,version,attempts_started,failed_attempt_count,active_attempt_id,assigned_agent_id,last_command_id,updated_at) ON shipit.parcels TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.parcel_commands TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
+    },
+    async prepareLots() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.lots,shipit.lot_memberships,shipit.lot_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(name,state,version,updated_at,archived_at,last_command_id) ON shipit.lots TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(ended_at,end_command_id,end_reason) ON shipit.lot_memberships TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.lot_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
     },
     async prepareFixtures() {
       validate();

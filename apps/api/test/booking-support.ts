@@ -5,8 +5,8 @@ import { contact } from './customer-support.ts';
 import { org, A } from './audit-support.ts';
 import { createCustomerService } from '../src/modules/customers/service.ts';
 import { createBookingService } from '../src/modules/bookings/service.ts';
-export async function bookingSetup(t: TestContext) {
-  const s = await taxSetup(t); await s.db.prepareBookings(); await s.published();
+export async function bookingSetup(t: TestContext,database?:import('../../../packages/db/test/support.ts').DisposableDatabase) {
+  const s = await taxSetup(t,database); await s.db.prepareBookings(); await s.published();
   const customer = createCustomerService(s.pool,s.keys.browser);
   const source = await customer.create(s.operator.token,org,A,randomUUID(),contact,randomUUID());
   const prepared = await s.prepared();

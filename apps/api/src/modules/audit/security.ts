@@ -7,6 +7,9 @@ import { denialReasons, type DenialAction, type DenialReason, type ResourceType 
 import type { SecurityTelemetry } from './telemetry.ts';
 
 function category(route:string,method:string):[DenialAction,ResourceType] {
+  if(route.includes('/lots')||route.endsWith('/lot-membership'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/lots'?'lots.list':'lots.read'):
+    method==='PATCH'?'lots.update':route.endsWith('/archive')?'lots.archive':route.endsWith('/move')?'lots.membership.move':
+    route.endsWith('/remove')?'lots.membership.remove':route.endsWith('/parcels')?'lots.membership.add':'lots.create','lot'];
   if(route==='/api/v1/bookings')return ['bookings.create','booking'];
   if(route.includes('/tax/'))return [route.includes('resolution')?'tax.resolve':route.includes('calculations')?'tax.calculate':route.includes('intents')?'tax.prepare':route.endsWith('/publish')?'tax.publish':method==='GET'&&!route.endsWith('/:version_id')?'tax.read':'tax.draft','tax'];
   if(route.includes('/pricing'))return [route.endsWith('/quote')?'pricing.quote':route.endsWith('/publish')?'pricing.publish':method==='GET'?'pricing.read':'pricing.draft','pricing'];

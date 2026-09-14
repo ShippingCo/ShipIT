@@ -345,3 +345,22 @@ evidence and is currently denied; assigned-agent A is enforced for failed-attemp
 [Bulk Parcel v1](parcel-bulk.md) defines POST `/api/v1/parcels/bulk`, required trusted-scope
 selectors, strict 1–50 entries, check_in/dispatch allowlist, sorted unique per-item 200
 results and canonical request-level failures. It reuses #24 command bodies and transition DTOs.
+
+## Issue #26 lot endpoint activation
+
+The exact ten endpoints, closed bodies, operation IDs and DTOs are ratified in the
+[lot API contract](lots.md#api-and-optimistic-concurrency). They use this contract's session,
+CSRF, no-store, canonical Idempotency-Key and error envelope. All select one authorized
+organization/franchise; paginated lists contain items/page, never unauthorized totals.
+R08 is lots.read/lots.list; W04 is lots.create/update/archive and
+lots.membership.add/move/remove. Internal lots.audit/events are independent capabilities.
+
+New 409 codes: LOT_STATE_CONFLICT (choose an active lot), LOT_MEMBERSHIP_CONFLICT (refresh
+current membership), LOT_CODE_CONFLICT (refresh/reconcile allocation), and
+LOT_DESTINATION_MISMATCH (choose/create the correct destination lot). Stale versions use
+VERSION_CONFLICT; delivered/rto entry uses PARCEL_STATE_CONFLICT. Unknown/foreign nested
+IDs use RESOURCE_NOT_FOUND without values. Fixed mismatch text and #34 corrective interaction
+are specified in [safe failures](lots.md#safe-failures-and-ui-consumer-contract).
+New validation fields are lot_id, target_lot_id, membership_id, expected_target_version and state.
+Existing name, destination_key, parcel_id, expected_version, limit, cursor and
+selectors retain their declared meanings. No generic Parcel mutation or destructive DELETE.

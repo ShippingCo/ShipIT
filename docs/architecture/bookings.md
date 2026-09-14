@@ -74,8 +74,9 @@ are independent shipment snapshots and never directory records. Service-recipien
 facts remain distinct from sender, consignee and payer; no automatic jurisdiction inference.
 
 `lot_id` is unknown at every level, including a valid foreign fixture UUID. No lot can
-be attached. Persistent lots and tenant-aware lot/parcel relationship validation begin
-in #26. `payment_mode`, `paid`, `settled`, collected amounts, client ownership/status,
+be attached during creation. [Issue #26 lot commands](lots.md) attach confirmed Parcels
+through separate scoped/versioned membership transactions. Their destination is this
+Booking's frozen tax_intent.pricing_input.destination_key; this does not change booking intent. `payment_mode`, `paid`, `settled`, collected amounts, client ownership/status,
 versions, totals, tax components, confirmation time, audit and event metadata are rejected.
 The existing JSON parser also rejects duplicate keys and inaccurate numeric lexemes.
 

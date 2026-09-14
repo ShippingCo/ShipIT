@@ -12,9 +12,9 @@ export const draft:PricingDraftInput={effective_from:start,effective_to:end,quot
   ]};
 export const input:PricingQuoteInput={destination_key:'SYN_DEST',service:'standard',weight_grams:999};
 export const pricingPath=(franchise=A,organization=org)=>`/api/v1/organizations/${organization}/franchises/${franchise}/pricing/versions`;
-export async function pricingSetup(t:TestContext) {
+export async function pricingSetup(t:TestContext,database?:import('../../../packages/db/test/support.ts').DisposableDatabase) {
   let now=new Date('2098-12-31T23:00:00Z');const clock=()=>new Date(now);
-  const s=await auditSetup(t,clock);await s.db.preparePricing();
+  const s=await auditSetup(t,clock,database);await s.db.preparePricing();
   const pricing=createPricingService(s.pool,clock),local=await s.grant('franchise_admin',[A]),operator=await s.grant('operator',[A]);
   const boot=await s.app.inject('/auth/bootstrap'),browser=boot.cookies[0]!;
   const headers={'content-type':'application/json',origin:'http://localhost:5173','x-csrf-token':boot.json().csrf_token};

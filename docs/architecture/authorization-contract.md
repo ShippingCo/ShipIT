@@ -309,3 +309,20 @@ within-tolerance overrides for franchise_admin/operator/dispatcher. R21 permits 
 quote/policy reads for org_admin (O), franchise_admin/operator/dispatcher/accountant (F);
 read_only and delivery_agent remain denied. W27 controls drafts/replacement/publication
 and draft/history administration. No inherited org_admin write or eighth role.
+
+## Issue #26 R08/W04 activation and narrower state policy
+
+R08 activates lots.read/list for org_admin O (explicit selected franchise) and
+franchise_admin/operator/dispatcher/read_only F. Accountant has no operational lot read;
+delivery_agent A-only label resolution awaits its owning assignment projection and grants
+no general lot endpoint. W04 activates lots.create/update/archive and
+lots.membership.add/move/remove only for franchise_admin/operator/dispatcher F.
+No org_admin inheritance. Independent lots.audit/events are command-internal, never
+standalone user actions. All scopes are single-franchise, live membership-issued capabilities.
+
+[Exact state/action matrix](lots.md#membership-and-state-policy): booked/checked_in grouping
+is local W04; any post-dispatch membership or historically locked-lot membership/archive
+requires an explicit dispatcher role. Delivered/rto cannot enter even for dispatcher.
+Removing a terminal association is a dispatcher grouping correction and does not rewind
+lifecycle. Active-lot rename remains W04. Replay retains any original dispatcher restriction
+and rechecks live grants and active roots. These are narrower checks, not a new role grant.

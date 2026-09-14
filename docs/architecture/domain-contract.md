@@ -324,3 +324,11 @@ commands. Denials/conflict outcomes need safe security evidence, never a success
 event; #16 owns persistence/retention mechanics. Corrections append new facts and reference
 prior facts. No update/delete of history; no OTPs, tokens, verifiers, full addresses,
 raw sensitive payloads or unnecessary customer data. Audit reads are scoped too.
+
+## Issue #26 lot implementation refinement
+
+[Persistent lots](lots.md) owns active/archived destination grouping and its own revision.
+Membership is a retained association with a one-way end, not a new Parcel state/custody.
+Canonical destination equals the Booking's frozen pricing-input destination_key; addresses
+and browser city labels are not authority. Archive retains identity/history and ends open
+grouping. [ADR 0016](../adr/0016-persistent-lots.md) records the policy and downstream boundaries.

@@ -13,8 +13,8 @@ import { parseEnvironment } from '../src/env.ts';
 import { seedTenancy, tenancyFixture } from './tenancy-support.ts';
 export const f=tenancyFixture,org=f.organizations.alpha.id,A=f.franchises.alpha1.id,B=f.franchises.alpha2.id,
   otherOrg=f.organizations.beta.id,C=f.franchises.beta1.id;
-export async function auditSetup(t:TestContext,pricingClock?:()=>Date) {
-  const db=await provisionDatabase(t);await db.prepareMemberships();const pool=db.runtimePool();await seedTenancy(pool);
+export async function auditSetup(t:TestContext,pricingClock?:()=>Date,database?:import('../../../packages/db/test/support.ts').DisposableDatabase) {
+  const db=database??await provisionDatabase(t);await db.prepareMemberships();const pool=db.runtimePool();await seedTenancy(pool);
   const keys={version:'test',verifier:randomBytes(32),encryption:randomBytes(32),browser:randomBytes(32)};
   const auth=createAuthService(pool,keys),memberships=createMembershipService(pool),audit=createAuditService(pool,keys.browser);
   const logs:string[]=[],telemetry=createSecurityCounters();

@@ -103,3 +103,14 @@ test('booking and parcel repositories require both owners and cannot mint capabi
   assert.deepEqual(inspectSource('apps/api/src/modules/bookings/routes.ts','selection(request.query)'),[]);
   assert.ok(inspectSource('apps/api/src/modules/bookings/routes.ts',"request.query('SELECT * FROM shipit.bookings')").length);
 });
+test('lots require both owner predicates; routes cannot execute request query or mint authority',()=>{
+  const file='apps/api/src/modules/lots/repository.ts';
+  for(const table of ['lots','lot_commands','lot_memberships','lot_audit_events','lot_code_counters']){
+    assert.deepEqual(inspectSource(file,`scopedQuery(scope,['lots.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+    for(const source of [`db.query('SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['lots.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+      "import {issueTenantAccess} from '../security/scope.ts'","import {activeMemberships} from '../memberships/authority.ts'"])assert.ok(inspectSource(file,source).length);
+  }
+  assert.deepEqual(inspectSource('apps/api/src/modules/lots/routes.ts','selection(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/lots/routes.ts',"request.query('SELECT * FROM shipit.lots')").length);
+});
