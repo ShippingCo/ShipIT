@@ -39,20 +39,20 @@ await test('twenty concurrent same-key HTTP creates return original 201 DTO with
 });
 await test('twenty distinct-key creates across independent pools allocate globally unique dockets',{timeout:30000},async t=>{
   const s=await bookingSetup(t);const pools=Array.from({length:4},()=>s.db.runtimePool({maxConnections:5,connectionTimeoutMs:5000}));
-  const services=pools.map(pool=>createBookingService(pool,s.clock));
+  const services=pools.map(pool=>createBookingService(pool,s.keys.browser,s.clock));
   const results=await Promise.all(Array.from({length:20},(_,i)=>services[i%4]!.create(s.operator.token,org,A,randomUUID(),s.body,randomUUID())));
   assert.equal(new Set(results.flatMap(r=>r.parcels.map(p=>p.docket))).size,20);assert.equal((await s.counts())!.bookings,20);assert.equal((await s.counts())!.events,40);
 });
 await test('lost COMMIT acknowledgement reconciles from durable receipt through fresh service and pool',{timeout:30000},async t=>{
-  const s=await bookingSetup(t),key=randomUUID();const lost=createBookingService(faulty(s.pool,'COMMIT'),s.clock);
+  const s=await bookingSetup(t),key=randomUUID();const lost=createBookingService(faulty(s.pool,'COMMIT'),s.keys.browser,s.clock);
   await assert.rejects(lost.create(s.operator.token,org,A,key,s.body,randomUUID()),{code:'TEMPORARILY_UNAVAILABLE'});
   const original=(await s.db.adminQuery('SELECT result FROM shipit.booking_commands')).rows[0]!.result;
-  const restart=createBookingService(s.db.runtimePool(),s.clock);assert.deepEqual(await restart.create(s.operator.token,org,A,key,s.body,randomUUID()),original);
+  const restart=createBookingService(s.db.runtimePool(),s.keys.browser,s.clock);assert.deepEqual(await restart.create(s.operator.token,org,A,key,s.body,randomUUID()),original);
   assert.equal((await s.counts())!.bookings,1);
 });
 for(const point of ['FROM shipit.customers','FROM shipit.pricing_quotes','FROM shipit.tax_calculations','INSERT INTO shipit.bookings','INSERT INTO shipit.parcels','INSERT INTO shipit.booking_obligations','append_booking_audit','INSERT INTO shipit.domain_events','UPDATE shipit.booking_commands']) {
   await test('atomic rollback and same-key recovery after injected '+point,{timeout:30000},async t=>{
-    const s=await bookingSetup(t),key=randomUUID(),before=await s.counts();const bad=createBookingService(faulty(s.pool,point),s.clock);
+    const s=await bookingSetup(t),key=randomUUID(),before=await s.counts();const bad=createBookingService(faulty(s.pool,point),s.keys.browser,s.clock);
     await assert.rejects(bad.create(s.operator.token,org,A,key,s.body,randomUUID()),{code:'TEMPORARILY_UNAVAILABLE'});assert.deepEqual(await s.counts(),before);
     assert.equal((await s.book(s.body,key)).statusCode,201);
   });
@@ -145,4 +145,65 @@ await test('privileged pricing confirmation additionally requires live W43 while
   const response=await s.book(body,key);assert.equal(response.statusCode,201,response.body);
   await s.memberships.revokeMembership(s.admin.token,approval.id,{expected_version:approval.version});
   assert.equal((await s.book(body,key)).statusCode,403);assert.equal((await s.counts())!.bookings,1);
+});
+
+await test('tenant-scoped parcel list uses stable keyset pages and excludes a later insertion until refresh',{timeout:30000},async t=>{
+  const s=await bookingSetup(t),created=[];
+  for(let i=0;i<3;i++){const response=await s.book();assert.equal(response.statusCode,201,response.body);created.push(response.json().parcels[0].id);}
+  const list=(extra:Record<string,string>={})=>s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:org,franchise_id:A,...extra}),cookies:s.cookies(s.operator.token)});
+  const first=await list({limit:'2'});assert.equal(first.statusCode,200,first.body);assert.equal(first.json().items.length,2);assert.equal(first.json().page.has_more,true);
+  s.setNow('2099-01-01T00:01:00Z');const later=await s.book();assert.equal(later.statusCode,201,later.body);
+  const second=await list({limit:'2',cursor:first.json().page.next_cursor});assert.equal(second.statusCode,200,second.body);assert.equal(second.json().items.length,1);
+  const traversed=[...first.json().items,...second.json().items].map((item:{id:string})=>item.id);
+  assert.deepEqual(new Set(traversed),new Set(created));assert.ok(!traversed.includes(later.json().parcels[0].id));
+  const refreshed=await list({limit:'1'});assert.equal(refreshed.json().items[0].id,later.json().parcels[0].id);
+});
+
+await test('docket, UUID, status, customer and date reads return only allowlisted parcel and timeline projections',{timeout:30000},async t=>{
+  const s=await bookingSetup(t),created=await s.book();assert.equal(created.statusCode,201,created.body);const parcel=created.json().parcels[0];
+  const base={organization_id:org,franchise_id:A};
+  const list=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({...base,docket:parcel.docket,status:'booked',customer_id:s.source.id,
+    from:'2099-01-01T00:00:00Z',to:'2099-01-01T00:01:00Z',sort:'docket_asc'}),cookies:s.cookies(s.operator.token)});
+  assert.equal(list.statusCode,200,list.body);assert.equal(list.json().items.length,1);assert.equal(list.json().items[0].id,parcel.id);
+  const detail=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
+  assert.equal(detail.statusCode,200,detail.body);assert.deepEqual(Object.keys(detail.json()).sort(),['booking_id','confirmed_at','custody','docket','id','recipient','sender','status','version','weight_grams']);
+  const timeline=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'/timeline?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
+  assert.equal(timeline.statusCode,200,timeline.body);assert.deepEqual(timeline.json().items.map((item:{sequence:number;code:string;label:string})=>[item.sequence,item.code,item.label]),[[1,'parcel.booked','Booking received']]);
+  const surfaces=list.body+detail.body+timeline.body;
+  for(const prohibited of ['key_digest','fingerprint','token_hash','challenge','verifier','supplier_gstin','recipient_gstin','private_note'])assert.ok(!surfaces.includes(prohibited));
+  for(const query of [{sort:'created_at_desc;SELECT 1'},{docket:'SYN%'},{status:'anything'},{limit:'101'},{from:'not-a-date'}]) {
+    const invalid=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams(Object.fromEntries(Object.entries({...base,...query}).map(([key,value])=>[key,String(value)]))),cookies:s.cookies(s.operator.token)});
+    assert.equal(invalid.statusCode,422,invalid.body);
+  }
+});
+
+await test('foreign and unknown parcel selectors are indistinguishable and cursors cannot cross scope or filters',{timeout:30000},async t=>{
+  const s=await bookingSetup(t),created=await s.book();assert.equal(created.statusCode,201,created.body);const parcel=created.json().parcels[0];
+  await s.book();const first=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:org,franchise_id:A,limit:'1'}),cookies:s.cookies(s.operator.token)});
+  const cursor=first.json().page.next_cursor;assert.equal(typeof cursor,'string');
+  const sibling=await s.grant('read_only',[B]),foreign=await s.beta('read_only'),missing=randomUUID(),errors:Array<Record<string,unknown>>=[];
+  for(const [actor,organization,franchise,id] of [[sibling,org,B,parcel.id],[sibling,org,B,missing],[foreign,otherOrg,C,parcel.id],[foreign,otherOrg,C,missing]] as const) {
+    const response=await s.app.inject({url:'/api/v1/parcels/'+id+'?'+new URLSearchParams({organization_id:organization,franchise_id:franchise}),cookies:s.cookies(actor.token)});
+    assert.equal(response.statusCode,404,response.body);const error=response.json().error;delete error.correlation_id;errors.push(error);
+  }
+  assert.ok(errors.every(error=>JSON.stringify(error)===JSON.stringify(errors[0])));
+  const crossed=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:org,franchise_id:B,limit:'1',cursor}),cookies:s.cookies(sibling.token)});
+  assert.equal(crossed.statusCode,422,crossed.body);assert.equal(crossed.json().error.code,'CURSOR_INVALID');
+  const changed=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:org,franchise_id:A,limit:'1',status:'booked',cursor}),cookies:s.cookies(s.operator.token)});
+  assert.equal(changed.statusCode,422,changed.body);assert.equal(changed.json().error.code,'CURSOR_INVALID');
+});
+
+await test('parcel reads survive pool restart while revoked and unapproved roles fail closed',{timeout:30000},async t=>{
+  const s=await bookingSetup(t),created=await s.book();assert.equal(created.statusCode,201,created.body);const parcel=created.json().parcels[0];
+  const readOnly=await s.grant('read_only',[A]),agent=await s.grant('delivery_agent',[A]),accountant=await s.grant('accountant',[A]);
+  const replacement=s.db.runtimePool(),service=createBookingService(replacement,s.keys.browser,s.clock);
+  const detail=await service.read(readOnly.token,parcel.id,{organization_id:org,franchise_id:A},randomUUID());assert.equal(detail.id,parcel.id);
+  assert.deepEqual((await service.timeline(readOnly.token,parcel.id,{organization_id:org,franchise_id:A},randomUUID())).items.map(x=>x.code),['parcel.booked']);
+  for(const actor of [agent,accountant]) {
+    await assert.rejects(service.read(actor.token,parcel.id,{organization_id:org,franchise_id:A},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+    await assert.rejects(service.list(actor.token,{organization_id:org,franchise_id:A},randomUUID()),{code:'ACTION_FORBIDDEN'});
+  }
+  await s.memberships.revokeMembership(s.admin.token,readOnly.member.id,{expected_version:readOnly.member.version});
+  await assert.rejects(service.read(readOnly.token,parcel.id,{organization_id:org,franchise_id:A},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+  await replacement.close();
 });

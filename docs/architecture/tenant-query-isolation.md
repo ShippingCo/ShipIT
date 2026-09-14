@@ -255,3 +255,20 @@ The AST gate requires both owners for Booking, Parcel, receipt, obligation, even
 SQL. The only new allowance is request.query **data** in the exact booking route file; calls
 remain rejected. No new raw SQL or issuer exception, ORM, global lookup or RLS claim.
 [Booking scope, concrete tests and known limits](bookings.md).
+
+## Parcel read capabilities — Issue #23
+
+The same membership-service issuer adds bookings.read/list and parcels.read/list/timeline.
+Capabilities contain the current actor, one Organization, and the exact sorted permitted
+Franchise set; an optional selector only narrows it. All Parcel, Booking and domain-event SQL
+uses both owner macros before user-controlled filters or IDs. Object reads intentionally map
+an absent collection grant to the same 404 path as unknown and foreign IDs; collection reads
+without a permitted grant remain 403. Conditional delivery-agent custody/assignment access
+is unavailable in the current schema and therefore denied.
+
+Cursor state binds the membership revision and Franchise set, while each continuation still
+performs live authentication and authorization. Revocation, scope changes, filter changes,
+sort changes, expiry and tampering all invalidate continuation without exposing counts or
+boundary rows. The sort SQL fragment comes exclusively from a closed server map; every request
+value remains a bound parameter. No raw executor, issuer exception, RLS claim or tenant session
+variable is added. [Retrieval contract and index design](bookings.md#tenant-isolated-retrieval--issue-23).

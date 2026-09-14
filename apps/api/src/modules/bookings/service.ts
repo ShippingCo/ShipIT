@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { createHash,randomUUID } from 'node:crypto';
 import { DatabaseError, type DatabasePool } from '@shippingco/db';
 import { customerSnapshot } from '@shippingco/shared';
 import { HttpError } from '../../plugins/errors.ts';
-import { withBookingTenantScope } from '../memberships/service.ts';
+import { withBookingTenantScope,withShipmentReadScope } from '../memberships/service.ts';
 import { snapshot } from '../customers/repository.ts';
 import { customerDto } from '../customers/types.ts';
 import { validatePricingSnapshot } from '../pricing/service.ts';
@@ -10,13 +10,47 @@ import { validateTaxSnapshot } from '../tax/service.ts';
 import { appendBooking } from '../audit/repository.ts';
 import { insert as insertParcel } from '../parcels/repository.ts';
 import { instant } from '../pricing/types.ts';
-import { bookingDto, charges, obligation, type BookingDto } from './types.ts';
-import { create, idempotencyKey } from './validation.ts';
+import { bookingDto,charges,obligation,parcelReadDto,timelineDto,type BookingDto,type ParcelBoundary } from './types.ts';
+import { create,idempotencyKey,parcelList,parcelSelection,parcelId } from './validation.ts';
 import { fingerprint, keyDigest } from './idempotency.ts';
 import { envelope, persist } from './events.ts';
 import * as r from './repository.ts';
-export function createBookingService(database: DatabasePool, clock?: () => Date) {
-  return { create(session: string, organization: string, franchise: string, key: unknown, input: unknown, correlation: string) {
+import { parcelCursorCodec } from './cursor.ts';
+export function createBookingService(database: DatabasePool, cursorKey:Buffer, clock?: () => Date) {
+  const codec=parcelCursorCodec(cursorKey);
+  return {
+    async list(session:string,input:unknown,correlation:string) {
+      const filter=parcelList(input);
+      return withShipmentReadScope(database,session,filter.organizationId,filter.franchiseId,'parcels.list',correlation,async (scope,revision)=>{
+        const binding=createHash('sha256').update(JSON.stringify({actor:scope.context.actor,organization:scope.context.organizationId,
+          franchises:scope.context.permittedFranchiseIds,revision,filter:{...filter,cursor:null},version:1})).digest('hex');
+        const boundary=filter.cursor?codec.decode(filter.cursor,binding):null;
+        if(boundary) {
+          const valid=filter.sort.startsWith('created_at')
+            ? /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(boundary.value)&&Number.isFinite(Date.parse(boundary.value))
+            : /^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(boundary.value);
+          if(!valid)throw new HttpError('CURSOR_INVALID');
+        }
+        const rows=await r.listParcels(scope,filter,boundary),visible=rows.slice(0,filter.limit),last=visible.at(-1),hasMore=rows.length>filter.limit;
+        const value=(row:NonNullable<typeof last>)=>filter.sort.startsWith('created_at')?row.confirmed_at.toISOString():row.docket;
+        return {items:visible.map(parcelReadDto),page:{has_more:hasMore,next_cursor:hasMore&&last
+          ?codec.encode(binding,{value:value(last),id:last.id} satisfies ParcelBoundary):null}};
+      });
+    },
+    async read(session:string,idInput:unknown,input:unknown,correlation:string) {
+      const id=parcelId(idInput),selection=parcelSelection(input);
+      return withShipmentReadScope(database,session,selection.organizationId,selection.franchiseId,'parcels.read',correlation,async scope=>{
+        const row=await r.findParcel(scope,id);if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return parcelReadDto(row);
+      });
+    },
+    async timeline(session:string,idInput:unknown,input:unknown,correlation:string) {
+      const id=parcelId(idInput),selection=parcelSelection(input);
+      return withShipmentReadScope(database,session,selection.organizationId,selection.franchiseId,'parcels.timeline',correlation,async scope=>{
+        if(!await r.findParcel(scope,id))throw new HttpError('RESOURCE_NOT_FOUND');
+        return {items:(await r.parcelTimeline(scope,id)).map(timelineDto)};
+      });
+    },
+    create(session: string, organization: string, franchise: string, key: unknown, input: unknown, correlation: string) {
     const body = create(input), keyHash = keyDigest(idempotencyKey(key));
     return withBookingTenantScope(database,session,organization,franchise,correlation,async s => {
       try {
@@ -53,5 +87,6 @@ export function createBookingService(database: DatabasePool, clock?: () => Date)
         throw error;
       }
     });
-  } };
+    }
+  };
 }

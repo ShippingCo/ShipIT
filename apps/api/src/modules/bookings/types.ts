@@ -2,6 +2,23 @@ import type { CustomerSnapshot, PricingQuoteDto, TaxCalculationDto } from '@ship
 import type { TenantAccess } from '../security/scope.ts';
 import type { ParcelInput } from './validation.ts';
 export interface BookingScopes { bookings: TenantAccess; parcels: TenantAccess; customer: TenantAccess; pricing: TenantAccess; tax: TenantAccess; audit: TenantAccess; events: TenantAccess }
+export type ParcelStatus = 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto';
+export type ParcelSort = 'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';
+export interface ParcelFilter {
+  organizationId:string;franchiseId:string|null;docket:string|null;status:ParcelStatus|null;
+  customerId:string|null;from:string|null;to:string|null;sort:ParcelSort;limit:number;cursor:string|null;
+}
+export interface ParcelBoundary { value:string;id:string }
+export interface ParcelReadRow {
+  id:string;booking_id:string;organization_id:string;franchise_id:string;version:number;status:ParcelStatus;custody:string;
+  docket:string;weight_grams:string|number;sender_snapshot:CustomerSnapshot;recipient_snapshot:ParcelInput['recipient'];confirmed_at:Date;
+}
+export interface ParcelReadDto {
+  id:string;booking_id:string;version:number;status:ParcelStatus;custody:string;docket:string;weight_grams:number;confirmed_at:string;
+  sender:CustomerSnapshot;recipient:ParcelInput['recipient'];
+}
+export interface TimelineRow { event_id:string;event_type:string;aggregate_sequence:string|number;occurred_at:Date }
+export interface TimelineDto { event_id:string;sequence:number;occurred_at:string;code:string;status:ParcelStatus;label:string }
 export interface ParcelDto { id: string; version: 1; status: 'booked'; custody: 'awaiting_intake'; docket: string; weight_grams: number; sender: CustomerSnapshot; recipient: ParcelInput['recipient']; event_id: string }
 export interface BookingDto {
   id: string; version: 1; state: 'active'; organization_id: string; franchise_id: string; customer: CustomerSnapshot;
@@ -41,4 +58,32 @@ export function bookingDto(value: BookingDto): BookingDto {
     payment_obligation:pick(value.payment_obligation,['id','currency','total_paise','collected_paise','outstanding_paise','state']),
     parcels:value.parcels.map(p=>({...pick(p,['id','version','status','custody','docket','weight_grams','event_id']),sender:party(p.sender),
       recipient:pick(p.recipient,['name','phone_normalized','phone_display','address'])})) };
+}
+
+function safeInteger(value:string|number) {
+  const parsed=typeof value==='number'?value:Number(value);
+  if(!Number.isSafeInteger(parsed)||parsed<0)throw new Error('PARCEL_PROJECTION_INVALID');
+  return parsed;
+}
+export function parcelReadDto(row:ParcelReadRow):ParcelReadDto {
+  return {id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
+    weight_grams:safeInteger(row.weight_grams),confirmed_at:row.confirmed_at.toISOString(),sender:party(row.sender_snapshot),
+    recipient:pick(row.recipient_snapshot,['name','phone_normalized','phone_display','address'])};
+}
+const timelineProjection:Readonly<Record<string,{status:ParcelStatus;label:string}>>={
+  'parcel.booked':{status:'booked',label:'Booking received'},'parcel.checked_in':{status:'checked_in',label:'Received at office'},
+  'parcel.dispatched':{status:'dispatched',label:'Dispatched'},'parcel.in_transit':{status:'in_transit',label:'In transit'},
+  'delivery.attempt_started':{status:'out_for_delivery',label:'Out for delivery'},
+  'delivery.attempt_failed':{status:'failed_attempt',label:'Delivery attempt unsuccessful'},
+  'delivery.retry_started':{status:'out_for_delivery',label:'Another delivery attempt arranged'},
+  'parcel.held_at_office':{status:'held_at_office',label:'Available for collection'},
+  'delivery.completed':{status:'delivered',label:'Delivered'},'delivery.collected':{status:'delivered',label:'Collected at office'},
+  'parcel.rto_approved':{status:'rto',label:'Return to sender initiated'},
+  'delivery.reversed':{status:'held_at_office',label:'Delivery record corrected; available for collection'},
+};
+export function timelineDto(row:TimelineRow):TimelineDto {
+  const projection=timelineProjection[row.event_type];
+  if(!projection)throw new Error('TIMELINE_EVENT_UNSUPPORTED');
+  return {event_id:row.event_id,sequence:safeInteger(row.aggregate_sequence),occurred_at:row.occurred_at.toISOString(),
+    code:row.event_type,status:projection.status,label:projection.label};
 }

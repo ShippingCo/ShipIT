@@ -33,6 +33,17 @@ export function customerScope(memberships: readonly Membership[]) {
     (m.role === 'franchise_admin' || m.role === 'operator')).flatMap(m => m.franchiseIds))].sort();
 }
 
+/** R06/R07 owning-franchise reads. Custody/assignment-only grants remain unavailable
+ * until their authoritative records land; a role label never fabricates C/A scope. */
+export function shipmentReadScope(kind:'booking'|'parcel',memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(value=>value.lifecycle==='active');
+  if(active.some(value=>value.role==='org_admin'))return [...all].sort();
+  const roles:readonly Role[]=kind==='booking'
+    ? ['franchise_admin','operator','dispatcher','read_only']
+    : ['franchise_admin','operator','dispatcher','read_only'];
+  return [...new Set(active.filter(value=>roles.includes(value.role)).flatMap(value=>value.franchiseIds))].sort();
+}
+
 /** R21 published projection, W27 policy administration, W37 resolution, W01 booking preparation. */
 export function taxScope(action: import('../tax/types.ts').TaxAction, memberships: readonly Membership[], all: readonly string[]) {
   const active = memberships.filter(m => m.lifecycle === 'active');

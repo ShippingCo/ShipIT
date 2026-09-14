@@ -219,3 +219,22 @@ See [full request/response and failure contract](../../docs/architecture/booking
 [synthetic tests and rollout](../../docs/architecture/issue-22-verification.md).
 Apply migration and explicit runtime grants first. No frontend production booking flow,
 search API, worker, lot, payment collection or issued customer receipt is enabled here.
+
+## Parcel retrieval — Issue #23
+
+Authenticated staff retrieval uses the ratified resource routes:
+
+```text
+GET /api/v1/parcels?organization_id=<uuid>&franchise_id=<uuid>&docket=<docket>&status=<status>&customer_id=<uuid>&from=<UTC>&to=<UTC>&sort=<allowlisted>&limit=<1..100>&cursor=<opaque>
+GET /api/v1/parcels/<parcel_uuid>?organization_id=<uuid>&franchise_id=<uuid>
+GET /api/v1/parcels/<parcel_uuid>/timeline?organization_id=<uuid>&franchise_id=<uuid>
+```
+
+Only `organization_id` is required; each other list filter is optional. The first endpoint
+has an additional 30 requests/minute/process search budget. Responses use explicit safe
+Parcel/timeline projections and `Cache-Control: no-store` through the authenticated boundary.
+Lists return `{items,page:{next_cursor,has_more}}`, never a tenant-wide total. Cursors are
+short-lived authenticated ciphertext bound to identity, current authorization and the exact
+normalized query; they are not transferable and do not replace authorization. See the
+[retrieval contract](../../docs/architecture/bookings.md#tenant-isolated-retrieval--issue-23)
+and [verification](../../docs/architecture/issue-23-verification.md).

@@ -1,8 +1,11 @@
 import { expect, it } from 'vitest';
-import { randomUUID } from 'node:crypto';
-import { create, docket } from '../../src/modules/bookings/validation.ts';
+import { randomBytes,randomUUID } from 'node:crypto';
+import { create,docket,parcelList,parcelSelection,parcelId } from '../../src/modules/bookings/validation.ts';
 import { fingerprint } from '../../src/modules/bookings/idempotency.ts';
-import { obligation } from '../../src/modules/bookings/types.ts';
+import { obligation,parcelReadDto,timelineDto } from '../../src/modules/bookings/types.ts';
+import { parcelCursorCodec } from '../../src/modules/bookings/cursor.ts';
+import { shipmentReadScope } from '../../src/modules/memberships/policy.ts';
+import type { Membership } from '../../src/modules/memberships/types.ts';
 import { input } from '../pricing-support.ts';
 import { taxFacts } from '../tax-support.ts';
 import { idempotencyKey } from '../../src/modules/customers/validation.ts';
@@ -57,4 +60,44 @@ it('safe DTO projection drops private additions from receipts and nested pricing
   const value={id:'booking',version:1 as const,state:'active' as const,organization_id:'org',franchise_id:'franchise',customer:snapshot,charges:charges(quote,computed,start),payment_obligation:obligation('obligation',13400),event_id:'event',
     parcels:[{id:'parcel',version:1 as const,status:'booked' as const,custody:'awaiting_intake' as const,docket:'SYN-1',weight_grams:999,sender:snapshot,recipient:{name:'Synthetic',phone_normalized:'+12025550101',phone_display:'+1 202-555-0101',address:'',secret:'MUST_NOT_LEAK'},event_id:'child-event'}],internal:'MUST_NOT_LEAK'};
   const mapped=bookingDto(value);expect(JSON.stringify(mapped)).not.toContain('MUST_NOT_LEAK');expect(JSON.stringify(mapped)).not.toContain('fingerprint');expect(mapped.charges.tax.final_payable_paise).toBe(13400);
+});
+
+it('validates bounded parcel filters and allowlisted sort without accepting SQL-like structure',()=>{
+  const organization_id=randomUUID(),franchise_id=randomUUID(),customer_id=randomUUID();
+  expect(parcelList({organization_id,franchise_id,docket:' syn-1 ',status:'booked',customer_id,
+    from:'2099-01-01T00:00:00Z',to:'2099-01-02T00:00:00Z',sort:'docket_asc',limit:'100'})).toMatchObject({
+      organizationId:organization_id,franchiseId:franchise_id,docket:'SYN-1',status:'booked',customerId:customer_id,sort:'docket_asc',limit:100,cursor:null});
+  expect(parcelSelection({organization_id})).toEqual({organizationId:organization_id,franchiseId:null});
+  expect(parcelId(franchise_id)).toBe(franchise_id);
+  for(const change of [{sort:'created_at desc;select 1'},{status:'unknown'},{limit:'101'},{limit:'01'},{cursor:''},
+    {from:'2099-01-02T00:00:00Z',to:'2099-01-01T00:00:00Z'},{offset:'1'},{docket:'A%'}])
+    expect(()=>parcelList({organization_id,...change})).toThrow();
+});
+
+it('parcel cursor is encrypted, expiring, purpose/query bound and tamper evident',()=>{
+  let now=10_000;const key=randomBytes(32),codec=parcelCursorCodec(key,()=>now),boundary={value:'2099-01-01T00:00:00.000Z',id:randomUUID()};
+  const token=codec.encode('scope-and-filter',boundary);expect(codec.decode(token,'scope-and-filter')).toEqual(boundary);
+  expect(Buffer.from(token,'base64url').toString()).not.toContain(boundary.id);
+  for(const candidate of [token.slice(1),token+'=',token+'\n','!'])expect(()=>codec.decode(candidate,'scope-and-filter')).toThrow('CURSOR_INVALID');
+  expect(()=>codec.decode(token,'other-query')).toThrow('CURSOR_INVALID');now+=900_000;expect(()=>codec.decode(token,'scope-and-filter')).toThrow('CURSOR_INVALID');
+});
+
+it('R06/R07 role ceilings grant owned franchise reads without inventing agent custody',()=>{
+  const franchise=randomUUID(),all=[franchise,randomUUID()];
+  for(const role of ['org_admin','franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only'] as const) {
+    const membership={role,franchiseIds:[franchise],lifecycle:'active'} as Membership;
+    const expected=role==='org_admin'?[...all].sort():['franchise_admin','operator','dispatcher','read_only'].includes(role)?[franchise]:[];
+    expect(shipmentReadScope('parcel',[membership],all)).toEqual(expected);
+    expect(shipmentReadScope('booking',[{...membership,lifecycle:'revoked'}],all)).toEqual([]);
+  }
+});
+
+it('read and timeline projections allowlist nested parties and deterministic public facts',()=>{
+  const id=randomUUID(),party={source_customer_id:randomUUID(),source_customer_version:1,name:'Synthetic',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Fictional',secret:'NO'};
+  const parcel=parcelReadDto({id,booking_id:randomUUID(),organization_id:randomUUID(),franchise_id:randomUUID(),version:1,status:'booked',custody:'awaiting_intake',docket:'SYN-1',weight_grams:'999',
+    sender_snapshot:party,recipient_snapshot:{name:'Recipient',phone_normalized:'+12025550101',phone_display:'+1 202-555-0101',address:'Fictional',secret:'NO'} as never,confirmed_at:new Date('2099-01-01T00:00:00Z')});
+  expect(JSON.stringify(parcel)).not.toContain('secret');expect(JSON.stringify(parcel)).not.toContain('organization_id');expect(parcel.weight_grams).toBe(999);
+  expect(timelineDto({event_id:id,event_type:'parcel.booked',aggregate_sequence:'1',occurred_at:new Date('2099-01-01T00:00:00Z')})).toEqual({
+    event_id:id,sequence:1,occurred_at:'2099-01-01T00:00:00.000Z',code:'parcel.booked',status:'booked',label:'Booking received'});
+  expect(()=>timelineDto({event_id:id,event_type:'private.raw',aggregate_sequence:2,occurred_at:new Date()})).toThrow('TIMELINE_EVENT_UNSUPPORTED');
 });

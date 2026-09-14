@@ -111,3 +111,11 @@ pricing/tax, uncollected obligation, global permanent dockets, original-result r
 transactional audit/events. [Verification](issue-22-verification.md) maps acceptance to
 unit, real PostgreSQL and HTTP tests. Retrieval, lifecycle, lots, collections, receipts,
 production booking UI and relay remain #23/#24/#26/#29/#30/#33/#35 respectively.
+
+## Parcel retrieval backend — Issue #23
+
+[Tenant-isolated Parcel retrieval](bookings.md#tenant-isolated-retrieval--issue-23) adds
+docket/UUID detail, bounded filtered keyset listing and deterministic safe timelines over
+the durable #22 facts. [Verification](issue-23-verification.md) records authorization,
+cursor, restart, migration and real PostgreSQL evidence. Lifecycle commands remain #24;
+assignment-aware delivery-agent visibility remains fail-closed until its owning schema exists.

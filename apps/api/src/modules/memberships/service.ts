@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -403,5 +403,27 @@ export async function withBookingTenantScope<T>(database: DatabasePool, sessionT
       audit:issueTenantAccess(tx,{...context,action:'bookings.audit'}),events:issueTenantAccess(tx,{...context,action:'bookings.events'}) };
     await bookingActive(scopes.bookings);
     return work(scopes);
+  });
+}
+
+/** R06/R07 read coordinator. Every request/page resolves live identity, grants and
+ * Organization-owned franchise scope before a selector or cursor can reach SQL. */
+export async function withShipmentReadScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,
+  franchiseId:string|null,action:'bookings.read'|'bookings.list'|'parcels.read'|'parcels.list'|'parcels.timeline',
+  correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
+  validate.uuid(organizationId);if(franchiseId)validate.uuid(franchiseId);
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    const object=action.endsWith('.read')||action==='parcels.timeline';
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError(object?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
+    if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError(object?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    let permitted=shipmentReadScope(action.startsWith('bookings.')?'booking':'parcel',memberships,all);
+    if(!permitted.length)throw new HttpError(object?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
+    if(franchiseId){if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');permitted=[franchiseId];}
+    const scope=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:permitted,organizationWide:false,correlationId,provenance:'membership'});
+    return work(scope,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
   });
 }
