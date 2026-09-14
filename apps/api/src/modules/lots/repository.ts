@@ -125,3 +125,26 @@ export async function membershipById(scope:TenantAccess,id:string) {
     WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.id=$1`,[id])).rows[0];
   if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
+
+/** Routes consumes the owning Lot authority in the caller's transaction. */
+export async function routeLot(scope:TenantAccess,id:string) {
+  const c=assertTenantAccess(scope,['routes.lot.attach','routes.lot.detach','routes.update','routes.finalize','routes.parcel.attach','routes.parcel.detach']);
+  const row=(await scopedQuery<{id:string;state:string}>(scope,[c.action],`SELECT id,state FROM shipit.lots
+    WHERE {{franchise:organization_id:franchise_id}} AND id=$1 FOR UPDATE`,[id])).rows[0];
+  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
+}
+export async function routeMembers(scope:TenantAccess,id:string) {
+  const c=assertTenantAccess(scope,['routes.lot.attach','routes.lot.detach','routes.update','routes.finalize','routes.parcel.attach','routes.parcel.detach']);
+  return (await scopedQuery<{parcel_id:string;booking_id:string;status:string;booking_state:string;lot_membership_id:string}>(scope,[c.action],
+    `SELECT p.id AS parcel_id,p.booking_id,p.status,b.state AS booking_state,m.id AS lot_membership_id FROM shipit.lot_memberships m
+      JOIN shipit.parcels p ON p.organization_id=m.organization_id AND p.franchise_id=m.franchise_id AND p.booking_id=m.booking_id AND p.id=m.parcel_id
+      JOIN shipit.bookings b ON b.organization_id=p.organization_id AND b.franchise_id=p.franchise_id AND b.id=p.booking_id
+      WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.lot_id=$1 AND m.ended_at IS NULL ORDER BY p.id LIMIT 1001 FOR UPDATE OF p`,[id])).rows;
+}
+export async function guardActiveRoute(scope:TenantAccess,id:string) {
+  const c=lotContext(scope);
+  const row=(await scopedQuery<{active:boolean}>(scope,[c.action],`SELECT EXISTS(SELECT 1 FROM shipit.route_lots s
+    JOIN shipit.routes r ON r.organization_id=s.organization_id AND r.franchise_id=s.franchise_id AND r.id=s.route_id
+    WHERE {{franchise:s.organization_id:s.franchise_id}} AND s.lot_id=$1 AND s.ended_at IS NULL AND r.state='planning') AS active`,[id])).rows[0];
+  if(row?.active)throw new HttpError('LOT_ACTIVE_ROUTE');
+}

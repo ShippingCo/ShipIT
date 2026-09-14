@@ -1,3 +1,4 @@
+import { dispatchManifest } from '../routes/repository.ts';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
@@ -33,7 +34,9 @@ export function createParcelService(database:DatabasePool,clock?:()=>Date) {
     const key=keyDigest(idempotencyKey(keyInput,rawHeaders)),intent=fingerprint(operation,id,body);
     return withParcelCommandScope(database,session,selected.organizationId,selected.franchiseId,operation,correlation,async scopes=>{
       const previous=await repository.replay(scopes.command,id,operation,key,intent);if(previous)return previous;
-      const before=await repository.load(scopes.command,id);guard(before,operation,body,scopes.command.context.actor.id);
+      const before=await repository.load(scopes.command,id);
+      if(operation==='parcels.dispatch')await dispatchManifest(scopes.command,body.manifest_id!,id);
+      guard(before,operation,body,scopes.command.context.actor.id);
       if(operation==='parcels.approve_rto'&&!body.override_reason_code){
         const last=await repository.lastFailureReason(scopes.command,id);
         if(before.failed_attempt_count!==2||!retryReasons.has(last??''))throw new HttpError('RTO_NOT_ELIGIBLE');

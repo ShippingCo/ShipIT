@@ -364,3 +364,7 @@ are specified in [safe failures](lots.md#safe-failures-and-ui-consumer-contract)
 New validation fields are lot_id, target_lot_id, membership_id, expected_target_version and state.
 Existing name, destination_key, parcel_id, expected_version, limit, cursor and
 selectors retain their declared meanings. No generic Parcel mutation or destructive DELETE.
+
+## Issue #27 Route API activation
+
+[Routes](routes.md#http-and-dtos) defines the 12 implemented endpoints, strict metadata/version/source bodies and bounded current/historical manifest pages. Planning/finalized/archived are the only Route states. Every new T03 manifest_id must identify a same-scope finalized manifest containing the Parcel; exact pre-#27 receipts still replay. Unknown/foreign manifests return RESOURCE_NOT_FOUND, visible ineligible manifests PARCEL_STATE_CONFLICT. No `/routes/:id/events` endpoint is activated.

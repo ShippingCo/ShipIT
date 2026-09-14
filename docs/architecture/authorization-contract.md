@@ -326,3 +326,7 @@ requires an explicit dispatcher role. Delivered/rto cannot enter even for dispat
 Removing a terminal association is a dispatcher grouping correction and does not rewind
 lifecycle. Active-lot rename remains W04. Replay retains any original dispatcher restriction
 and rechecks live grants and active roots. These are narrower checks, not a new role grant.
+
+## Issue #27 R09/W05/W06 activation
+
+R09 Route list/detail and manifest pages permit org_admin O through an explicit single-franchise selection and franchise_admin/operator/dispatcher/read_only F. Accountant is denied; agent A snippets await assignment authority and confer no full-manifest access. W05 covers create, full metadata update, Lot/direct-Parcel attach/detach and manifest finalization for franchise_admin/operator/dispatcher F. W06 Route archive is franchise_admin F only and requires an unexecuted planning Route; all source/history evidence is retained. Finalized Route edits/archive are denied. Planning Route attachment blocks Lot grouping/archive for every role; rename is unchanged. T03 consumes the authoritative manifest through W08, without an independent R09 requirement. [Exact contract](routes.md).

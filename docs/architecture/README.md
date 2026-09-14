@@ -142,3 +142,7 @@ chain through #25. PostgreSQL is the grouping authority; current/historical memb
 commands, audit and existing domain events commit together. #27 owns route integration
 and #34 owns the operational screen cutover. Earlier scaffold descriptions above are
 historical issue baselines, not the current implementation state.
+
+## Issue #27 Route authority
+
+[Dispatch routes and immutable manifests](routes.md), [ADR 0017](../adr/0017-dispatch-route-manifests.md), and [verification](issue-27-verification.md) activate persistent initial-dispatch planning, typed sources, frozen deduplicated manifests, Lot guards and authoritative T03 references. #28 events and #34 screens remain downstream.

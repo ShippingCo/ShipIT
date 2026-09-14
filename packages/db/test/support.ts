@@ -154,6 +154,7 @@ export interface DisposableDatabase {
   preparePricing(): Promise<void>;
   prepareBookings(): Promise<void>;
   prepareLots(): Promise<void>;
+  prepareRoutes(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -295,6 +296,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.parcel_commands,shipit.parcel_transitions,shipit.parcel_failed_attempts,shipit.parcel_rto_approvals TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(status,custody,version,attempts_started,failed_attempt_count,active_attempt_id,assigned_agent_id,last_command_id,updated_at) ON shipit.parcels TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.parcel_commands TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.routes') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT ON shipit.routes,shipit.route_lots,shipit.route_manifests,shipit.route_manifest_parcels TO ${identifier(resource.runtimeRole)}`);
       } finally { await owner.close(); pools.delete(owner); }
     },
     async prepareLots() {
@@ -306,6 +308,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(ended_at,end_command_id,end_reason) ON shipit.lot_memberships TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.lot_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareRoutes() {
+      await handle.prepareLots();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.routes,shipit.route_commands,shipit.route_lots,shipit.route_parcels,shipit.route_manifests,shipit.route_manifest_parcels,shipit.route_manifest_sources TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(origin,destination,mode,carrier_code,scheduled_departure_at,state,version,current_manifest_id,last_command_id,updated_at) ON shipit.routes TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(ended_at,end_command_id) ON shipit.route_lots,shipit.route_parcels TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.route_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareFixtures() {

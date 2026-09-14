@@ -110,3 +110,15 @@ export interface LotMembershipDto {
   id:string; lot_id:string; parcel_id:string; started_at:string; ended_at:string|null; end_reason:'removed'|'moved'|'archived'|null;
 }
 export interface LotMembershipResult { lots:LotDto[]; membership:LotMembershipDto|null }
+
+/** Route planning/finalization is distinct from physical departure and Parcel lifecycle. */
+export interface RouteDto {
+  id:string; origin:string; destination:string; mode:'road'|'rail'|'air'|'sea'; carrier_code:string|null;
+  scheduled_departure_at:string; state:'planning'|'finalized'|'archived'; version:number;
+  current_manifest_id:string; created_at:string; updated_at:string;
+}
+export interface RouteManifestDto {id:string;route_id:string;version:number;finalized:boolean;parcel_count:number;created_at:string}
+export interface RouteManifestItem {
+  parcel_id:string;
+  sources:({kind:'direct';source_id:string}|{kind:'lot';source_id:string;lot_id:string;lot_membership_id:string})[];
+}

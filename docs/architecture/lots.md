@@ -156,3 +156,7 @@ API; run synthetic A/B/C create/move/remove/dispatch/archive/replay; leave UI cu
 Rollback reverts compatible API, retains additive schema and all history, and repairs schema
 with a new forward migration. Never delete evidence, import browser JSON or fall back to demo.
 [Verification](issue-26-verification.md) records actual checks and acceptance evidence.
+
+## Issue #27 active Route amendment
+
+Issue #27 implements the previously deferred Route relationship. Open Route/Lot sources on planning Routes block Lot grouping add/move/remove and archive for all roles, through the owning service plus SQL triggers. Rename remains allowed. Detach, Route archive or finalization releases the guard. Route manifests snapshot exact retained Lot membership IDs and never reinterpret history from later grouping. Old T03 evidence remains intact; new T03 requires authoritative finalized manifest membership. [Routes](routes.md).

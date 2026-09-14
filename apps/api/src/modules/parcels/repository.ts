@@ -131,3 +131,13 @@ export async function complete(scope:TenantAccess,commandId:string,result:Parcel
     committed_at=date_trunc('milliseconds',clock_timestamp()),retain_until=date_trunc('milliseconds',clock_timestamp())+interval '24 hours'
     WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND state='reserved'`,[commandId,result]);
 }
+
+/** Minimal Parcel reference for initial dispatch planning, never shipment PII. */
+export async function routeParcel(scope:TenantAccess,id:string) {
+  const c=assertTenantAccess(scope,['routes.lot.attach','routes.lot.detach','routes.update','routes.finalize','routes.parcel.attach','routes.parcel.detach']);
+  const row=(await scopedQuery<{parcel_id:string;booking_id:string;status:string;booking_state:string}>(scope,[c.action],
+    `SELECT p.id AS parcel_id,p.booking_id,p.status,b.state AS booking_state FROM shipit.parcels p
+      JOIN shipit.bookings b ON b.organization_id=p.organization_id AND b.franchise_id=p.franchise_id AND b.id=p.booking_id
+      WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=$1 FOR UPDATE OF p`,[id])).rows[0];
+  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
+}

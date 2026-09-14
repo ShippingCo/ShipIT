@@ -271,3 +271,7 @@ archive, races and lost response. Run `pnpm test:api` for validation/cursor/role
 [Acceptance evidence](../../docs/architecture/issue-26-verification.md) covers the full gates.
 Rollback compatible code while retaining all grouping and audit/event history; never use demo
 state as recovery. Existing #24 manifest evidence stays opaque until #27.
+
+## Issue #27 Routes and manifests
+
+Normal authenticated buildServer composition registers the [12 Route endpoints](../../docs/architecture/routes.md#http-and-dtos), including planning metadata, typed source commands, archive/finalize and bounded immutable manifest reads. Deploy the additive Route migration and exact runtime grants first. New T03 dispatch requires a same-scope finalized manifest containing the Parcel; legacy exact receipt replay remains valid. Carrier metadata performs no external work. No route-event endpoint or production screen is introduced. [Verification](../../docs/architecture/issue-27-verification.md).

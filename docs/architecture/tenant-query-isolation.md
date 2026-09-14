@@ -282,3 +282,7 @@ The lot state policy checks an explicit dispatcher grant without role inheritanc
 AST gate adds lot tables/append_lot_audit to its both-owner rule and allows only request.query
 data in the exact lot routes file; calls remain rejected. No raw SQL/issuer exception.
 The [verification](issue-26-verification.md) includes A/B/C fixtures and actual SQL races.
+
+## Issue #27 scope coverage
+
+The checker now recognizes routes, route_commands, route_lots, route_parcels, route_manifests, route_manifest_parcels, route_manifest_sources, route_audit_events and parcel_dispatch_manifests as franchise-owned private tables. `routes/routes.ts` has only the existing exact request.query-as-data exception; executable query access remains forbidden. Negative tests cover missing/broad owner predicates, raw pool access and capability/authority imports. Route scopes are live single-franchise membership capabilities; T03 uses a parcels.dispatch-only internal manifest projection. [Contract](routes.md).

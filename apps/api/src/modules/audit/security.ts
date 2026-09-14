@@ -7,6 +7,10 @@ import { denialReasons, type DenialAction, type DenialReason, type ResourceType 
 import type { SecurityTelemetry } from './telemetry.ts';
 
 function category(route:string,method:string):[DenialAction,ResourceType] {
+  if(route.startsWith('/api/v1/routes'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/routes'?'routes.list':'routes.read'):
+    method==='PATCH'?'routes.update':route.endsWith('/archive')?'routes.archive':route.endsWith('/finalize')?'routes.finalize':
+    route.includes('/lots')?(route.endsWith('/remove')?'routes.lot.detach':'routes.lot.attach'):
+    route.includes('/parcels')?(route.endsWith('/remove')?'routes.parcel.detach':'routes.parcel.attach'):'routes.create','route'];
   if(route.includes('/lots')||route.endsWith('/lot-membership'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/lots'?'lots.list':'lots.read'):
     method==='PATCH'?'lots.update':route.endsWith('/archive')?'lots.archive':route.endsWith('/move')?'lots.membership.move':
     route.endsWith('/remove')?'lots.membership.remove':route.endsWith('/parcels')?'lots.membership.add':'lots.create','lot'];

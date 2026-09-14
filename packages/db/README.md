@@ -416,3 +416,43 @@ API → synthetic A/B/C workflow; #34 screen cutover stays deferred. Rollback co
 only; retain additive schema and operational history, repair forward. No down migration or
 browser import. [Verification](../../docs/architecture/issue-26-verification.md) documents
 fresh migration, previous-main upgrade, failure rollback/retry and repeat no-op.
+
+## Issue #27 dispatch routes
+
+Apply `1790010000000-dispatch-route-manifests.cjs` after the 15 released migrations.
+It adds routes, route_commands, route_lots, route_parcels, route_manifests,
+route_manifest_parcels, route_manifest_sources, route_audit_events and
+parcel_dispatch_manifests. Composite RESTRICT ownership/provenance FKs, partial source
+uniqueness, one finalized initial-dispatch manifest per Parcel, immutable history and
+deferred exact command/snapshot/event/audit checks enforce the contract independently.
+Existing domain_events and audit_history are extended without rewriting old facts.
+
+Retain the #24/#25/#26 privileges and apply these exact additions to the separately resolved
+runtime identity (not the owner or PUBLIC):
+
+```sql
+GRANT SELECT, INSERT ON shipit.routes, shipit.route_commands,
+  shipit.route_lots, shipit.route_parcels, shipit.route_manifests,
+  shipit.route_manifest_parcels, shipit.route_manifest_sources TO runtime_role;
+GRANT UPDATE (origin,destination,mode,carrier_code,scheduled_departure_at,state,
+  version,current_manifest_id,last_command_id,updated_at) ON shipit.routes TO runtime_role;
+GRANT UPDATE (ended_at,end_command_id) ON shipit.route_lots,shipit.route_parcels TO runtime_role;
+GRANT UPDATE (state,http_status,result,committed_at,retain_until)
+  ON shipit.route_commands TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO runtime_role;
+```
+
+Audit reads use the existing audit_history view grant. Runtime has no direct Route-audit
+read/insert, binding read/insert, snapshot update, ownership update, DELETE/TRUNCATE/DDL or
+trigger-disabling privilege. Fixed-search-path SECURITY DEFINER functions validate their
+command context; function execution is revoked from PUBLIC. `prepareRoutes()` exercises
+these grants. Legacy test setup grants scoped Route reads needed by owning Lot guards/T03
+only when the new schema exists; it introduces no production bypass.
+
+Rollout is schema → grants → API → synthetic Route/finalize/T03 smoke and exact replay.
+The new dispatch-command trigger rejects old producers supplying opaque references.
+Already committed opaque receipts/events remain unchanged; no binding backfill. Rollback
+stops new Route/dispatch writes and preserves all schema/history for forward repair; do
+not deploy an old opaque writer expecting compatibility or disable constraints. Failed
+migration transactions roll back completely, then retry; tracked repeat is a no-op.
+[Contract](../../docs/architecture/routes.md) · [Verification](../../docs/architecture/issue-27-verification.md).
