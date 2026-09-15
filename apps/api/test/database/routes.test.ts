@@ -41,7 +41,7 @@ await test('route persistence, UTC/Kolkata instant, inert carrier metadata, upda
   const archiveKey=randomUUID(),archive={expected_version:2};const archived=await s.request('POST',`routes/${route.id}/archive`,archive,s.local,archiveKey);assert.equal(archived.statusCode,200,archived.body);
   assert.equal(archived.json().state,'archived');assert.deepEqual((await s.request('POST',`routes/${route.id}/archive`,archive,s.local,archiveKey)).json(),archived.json());
   assert.equal((await s.request('POST',`routes/${route.id}/finalize`,{expected_version:3})).json().error.code,'ROUTE_STATE_CONFLICT');
-  assert.equal((await s.request('POST',`routes/${route.id}/events`,{})).statusCode,404);assert.equal((await s.request('DELETE',`routes/${route.id}`,{})).statusCode,404);
+  assert.equal((await s.request('POST',`routes/${route.id}/events`,{})).statusCode,422);assert.equal((await s.request('DELETE',`routes/${route.id}`,{})).statusCode,404);
   assert.deepEqual(await s.effects(),{routes:1,commands:3,lots:0,direct:0,manifests:2,parcels:0,sources:0,audits:3,events:3});
   const col=(await s.db.adminQuery("SELECT data_type FROM information_schema.columns WHERE table_schema='shipit' AND table_name='routes' AND column_name='scheduled_departure_at'")).rows[0];assert.equal(col!.data_type,'timestamp with time zone');assert.equal(provider.mock.callCount(),0);
 });

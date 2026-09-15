@@ -303,3 +303,18 @@ hosts. This bounds simultaneous disposable-database fixture setup independently 
 CPU count while preserving every test and the concurrency scenarios within each file.
 The per-file 90-second and per-suite 180-second deadlines, strict complete-suite reporter,
 skip/cancel/todo rejection and cleanup gates are unchanged. See [Issue #27 verification](architecture/issue-27-verification.md).
+
+## Issue #28 expanded database regression budget
+
+The runner now allows 180 seconds per file and 600 seconds per suite. The 50 DB and
+173 API/PostgreSQL tests include repeated forward migrations and a new 1,000-Parcel
+departure/delay transaction test. On the Windows Docker fixture the new file alone
+takes about 87 seconds; the complete diagnostic took 390 seconds with four files
+cancelled by the old 90-second limit. The gate verifier allows 15 minutes per stage,
+matching the existing CI job budget, so full quality can include both DB suites.
+The disposable PostgreSQL wrapper allows 45 minutes for `verify:gates` (two full
+quality runs plus installation/failure drills); other commands retain 30 minutes.
+Individual tests retain their explicit 20/30/60-second deadlines, two file workers,
+strict complete-suite reporting, skip/cancel/todo rejection and resource cleanup.
+The timeout/termination tests still exercise short injected deadlines. See
+[Issue #28 verification](architecture/issue-28-verification.md) for final results.

@@ -271,3 +271,7 @@ or messaging sends. Consumers may never reinterpret frozen routes from current m
 ## Issue #27 Route planning facts
 
 Schema-v1 route.created, route.updated, route.archived, route.manifest_finalized, route.lot_attached, route.lot_detached, route.parcel_attached and route.parcel_detached are emitted by the owning Route command, exactly once per revision with transactional audit. Payload is exactly `{manifest_id}` and the normal trusted Route aggregate/actor/correlation/command envelope. The referenced immutable snapshot supplies deduplicated Parcel/provenance truth. These are administrative planning facts; no messaging purpose, worker, status/ETA effect or carrier acceptance is activated. route.departed/delayed/arrived remain #28. New parcel.dispatched manifest references are authoritative; old envelopes remain unchanged. [Contract](routes.md).
+
+## Issue #28 operational Route producers
+
+`route.departed`, `route.delayed`, `route.arrived` now commit with the frozen manifest affected set. Payload is exactly `{manifest_id,affected_set_ref}`; the latter is the event UUID. Correlated Parcel T04 events link from immutable effects. Consumers never mutate ETA. [Contract](route-events.md).

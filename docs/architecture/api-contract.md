@@ -368,3 +368,7 @@ selectors retain their declared meanings. No generic Parcel mutation or destruct
 ## Issue #27 Route API activation
 
 [Routes](routes.md#http-and-dtos) defines the 12 implemented endpoints, strict metadata/version/source bodies and bounded current/historical manifest pages. Planning/finalized/archived are the only Route states. Every new T03 manifest_id must identify a same-scope finalized manifest containing the Parcel; exact pre-#27 receipts still replay. Unknown/foreign manifests return RESOURCE_NOT_FOUND, visible ineligible manifests PARCEL_STATE_CONFLICT. No `/routes/:id/events` endpoint is activated.
+
+## Issue #28 Route event API
+
+POST `/routes/:route_id/events` and GET latest/event-detail endpoints use the [typed Route event contract](route-events.md). Strict W18 plus per-effect W09, immutable outcomes and explicit unavailable route-leg ETA apply.

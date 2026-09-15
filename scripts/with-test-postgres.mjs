@@ -129,7 +129,8 @@ try {
   const args = process.argv.slice(2);
   console.log('Disposable PostgreSQL 18.6 is ready on loopback.');
   const child = await run(process.execPath, [pnpm, ...(args.length ? args : ['quality'])], {
-    inherit: true, timeout: 30 * 60_000,
+    // Gate verification includes two full quality runs plus installation/drills.
+    inherit: true, timeout: (args.includes('verify:gates') ? 45 : 30) * 60_000,
     env: {
       ...process.env, NODE_ENV: 'test', TEST_DATABASE_IDENTITY: 'db_test',
       TEST_DATABASE_URL: `postgresql://shipit_bootstrap:${password}@127.0.0.1:${port}/shipit_control_test`,

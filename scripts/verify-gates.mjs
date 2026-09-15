@@ -37,7 +37,7 @@ let sequence = 0;
 function run(label, args, expectedFailure, overrides = {}) {
   const env = { ...process.env, CI: 'true', ...overrides };
   const child = spawnSync(process.execPath, [pnpm, ...args], {
-    cwd: project, encoding: 'utf8', timeout: 600_000, maxBuffer: 30 * 1024 * 1024,
+    cwd: project, encoding: 'utf8', timeout: 900_000, maxBuffer: 30 * 1024 * 1024,
     env,
   });
   let output = (child.stdout || '') + (child.stderr || '');

@@ -2,7 +2,7 @@ import { assertTenantAccess,scopedQuery,type TenantAccess } from '../security/sc
 import { HttpError } from '../../plugins/errors.ts';
 import type { RouteRow,ManifestRow,RouteOperation,RouteInput,RouteFilter,RouteBoundary,SourceRow,Contribution,RouteDto,RouteManifestItem } from './types.ts';
 const columns='r.id,r.origin,r.destination,r.mode,r.carrier_code,r.scheduled_departure_at,r.state,r.version,r.current_manifest_id,r.created_at,r.updated_at';
-function context(scope:TenantAccess) {return assertTenantAccess(scope,['routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach']);}
+function context(scope:TenantAccess) {return assertTenantAccess(scope,['routes.departure','routes.delay','routes.arrival','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach']);}
 export async function active(scope:TenantAccess) {
   const c=context(scope),row=(await scopedQuery<{lifecycle:string;now:Date}>(scope,[c.action],`SELECT lifecycle,date_trunc('milliseconds',clock_timestamp()) AS now
     FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`)).rows[0];
@@ -98,11 +98,11 @@ export async function complete(scope:TenantAccess,id:string,result:RouteDto,crea
     committed_at=date_trunc('milliseconds',clock_timestamp()),retain_until=date_trunc('milliseconds',clock_timestamp())+interval '24 hours'
     WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND state='reserved'`,[id,created?201:200,result]);
 }
-export async function appendEvent(scope:TenantAccess,route:RouteRow,command:string,event:string,type:string,time:string) {
+export async function appendEvent(scope:TenantAccess,route:RouteRow,command:string,event:string,type:string,time:string,payload:Record<string,string>={manifest_id:route.current_manifest_id}) {
   const c=assertTenantAccess(scope,['routes.events']);
   const envelope={event_id:event,event_type:type,schema_version:1,organization_id:c.organizationId,franchise_id:c.permittedFranchiseIds[0],
     aggregate_type:'route',aggregate_id:route.id,aggregate_version:route.version,occurred_at:time,actor:{type:'user',id:c.actor.id},
-    correlation_id:c.correlationId,causation_id:command,command_id:command,payload:{manifest_id:route.current_manifest_id}};
+    correlation_id:c.correlationId,causation_id:command,command_id:command,payload};
   await scopedQuery(scope,['routes.events'],`INSERT INTO shipit.domain_events
     (event_id,organization_id,franchise_id,route_id,route_command_id,command_id,event_type,aggregate_id,envelope,occurred_at,aggregate_sequence)
     SELECT $1,{{organization}},$2,$3,$4,$4,$5,$3,$6,$7,$8 WHERE {{franchise:$9:$2}}`,
@@ -110,9 +110,10 @@ export async function appendEvent(scope:TenantAccess,route:RouteRow,command:stri
 }
 /** Internal T03 authority; no independent Route-read grant or client-owned scope. */
 export async function dispatchManifest(scope:TenantAccess,id:string,parcel:string) {
-  const m=(await scopedQuery<{finalized:boolean;contains:boolean}>(scope,['parcels.dispatch'],`SELECT m.finalized,
+  const m=(await scopedQuery<{finalized:boolean;contains:boolean;execution_state:string}>(scope,['parcels.dispatch'],`SELECT m.finalized,r.execution_state,
     EXISTS(SELECT 1 FROM shipit.route_manifest_parcels p WHERE p.organization_id=m.organization_id AND p.franchise_id=m.franchise_id
       AND p.manifest_id=m.id AND p.parcel_id=$2) AS contains FROM shipit.route_manifests m
+    JOIN shipit.routes r ON r.organization_id=m.organization_id AND r.franchise_id=m.franchise_id AND r.id=m.route_id
     WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.id=$1`,[id,parcel])).rows[0];
-  if(!m)throw new HttpError('RESOURCE_NOT_FOUND');if(!m.finalized||!m.contains)throw new HttpError('PARCEL_STATE_CONFLICT');
+  if(!m)throw new HttpError('RESOURCE_NOT_FOUND');if(!m.finalized||!m.contains||m.execution_state!=='pending')throw new HttpError('PARCEL_STATE_CONFLICT');
 }

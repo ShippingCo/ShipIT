@@ -122,3 +122,15 @@ export interface RouteManifestItem {
   parcel_id:string;
   sources:({kind:'direct';source_id:string}|{kind:'lot';source_id:string;lot_id:string;lot_membership_id:string})[];
 }
+
+/** Typed Route facts and leg estimates; never a recipient-delivery promise. */
+export type RouteEventKind = 'departure' | 'delay' | 'arrival';
+export interface RouteEventInput {
+  kind: RouteEventKind; expected_version: number; manifest_id: string; manifest_version: number;
+  effective_at: string; evidence_ref: string; base_eta_at?: string | null; total_delay_minutes?: number;
+}
+export interface RouteEventResult {
+  event_id: string; route_id: string; version: number; manifest_id: string; manifest_version: number;
+  kind: RouteEventKind; effective_at: string; updated_count: number; skipped_count: number;
+  eta: { state: 'available' | 'unavailable' | 'arrived'; base_at: string | null; revised_at: string | null; total_delay_minutes: number };
+}

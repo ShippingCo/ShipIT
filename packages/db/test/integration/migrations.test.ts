@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 16 });
+  assert.deepEqual(await database.migrate(), { applied: 17 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 16);
+  assert.equal(initial.length, 17);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -75,7 +75,7 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
     ...['invitation_franchise_scopes','lot_audit_events','lot_code_counters','lot_commands','lot_memberships','lots','membership_audit_events','membership_franchise_scopes','membership_invitations','memberships'].map(name=>({schema:'shipit',name})),
     { schema: 'shipit', name: 'onboarding_commands' }, { schema: 'shipit', name: 'organizations' },
     ...['parcel_bulk_requests','parcel_commands','parcel_dispatch_manifests','parcel_failed_attempts','parcel_rto_approvals','parcel_transitions','parcels'].map(name=>({schema:'shipit',name})),
-    ...['pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','route_audit_events','route_commands','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcels','routes','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
+    ...['pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','route_audit_events','route_commands','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
 });
 
 await test('released Issue 10 infrastructure upgrades to tenancy and repeated migration preserves roots', { timeout: 20000 }, async (t) => {
@@ -85,14 +85,14 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 15 });
+  assert.deepEqual(await database.migrate(), { applied: 16 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.equal((await owner.query<{ count: string }>('SELECT count(*) FROM shipit.organizations')).rows[0]?.count, '1');
   assert.deepEqual(await migrationNames(database), [
     '1788868800000-infrastructure-schema', '1788872400000-organization-franchise-tenancy', '1788958800000-operator-authentication',
-    '1789045200000-memberships-authorization', '1789059600000-tenant-audit-ownership', '1789146000000-append-only-audit', '1789232400000-independent-onboarding', '1789318800000-tenant-private-customers', '1789405200000-versioned-pricing', '1789491600000-tax-proposals', '1789578000000-atomic-bookings', '1789664400000-booking-retrieval', '1789750800000-guarded-parcel-lifecycle', '1789837200000-bounded-parcel-bulk', '1789923600000-persistent-lots', '1790010000000-dispatch-route-manifests',
+    '1789045200000-memberships-authorization', '1789059600000-tenant-audit-ownership', '1789146000000-append-only-audit', '1789232400000-independent-onboarding', '1789318800000-tenant-private-customers', '1789405200000-versioned-pricing', '1789491600000-tax-proposals', '1789578000000-atomic-bookings', '1789664400000-booking-retrieval', '1789750800000-guarded-parcel-lifecycle', '1789837200000-bounded-parcel-bulk', '1789923600000-persistent-lots', '1790010000000-dispatch-route-manifests', '1790096400000-atomic-route-events',
   ]);
 });
 
@@ -182,5 +182,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 16 });
+  assert.deepEqual(await database.migrate(), { applied: 17 });
 });

@@ -39,3 +39,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0016: Persistent lots and versioned membership history](0016-persistent-lots.md) — Issue #26; proposed for PR review.
 
 - [0017: Dispatch routes and immutable Parcel manifests](0017-dispatch-route-manifests.md) — Issue #27; proposed for independent PR review.
+
+- [0018: Atomic route events and ETA revisions](0018-atomic-route-events.md) — Issue #28; review pending.

@@ -187,3 +187,7 @@ checks match result/state/audit/event and reject incomplete success, including p
 ## Issue #27 Route receipts
 
 Route commands use version-1 canonical normalized metadata/source/expected-version fingerprints and principal/org/franchise/operation/key-digest receipt scope. Exact authorized retries return the original RouteDto even after later revisions; changed intent conflicts. The result, source delta, immutable snapshot, audit and domain event commit together, with DB completeness checks. At least 24 hours is recorded; no history/receipt deletion job is introduced. Legacy T03 exact receipts replay before the new manifest check. [Contract](routes.md).
+
+## Issue #28 Route event receipts
+
+Typed departure/delay/arrival have operation-scoped principal/tenant key digests and normalized intent fingerprints. Original result replay precedes stale-state checks after current authorization. Absolute delay revisions, expected versions and event/Parcel uniqueness prevent compound ETA updates. [Contract](route-events.md).

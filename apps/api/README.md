@@ -275,3 +275,7 @@ state as recovery. Existing #24 manifest evidence stays opaque until #27.
 ## Issue #27 Routes and manifests
 
 Normal authenticated buildServer composition registers the [12 Route endpoints](../../docs/architecture/routes.md#http-and-dtos), including planning metadata, typed source commands, archive/finalize and bounded immutable manifest reads. Deploy the additive Route migration and exact runtime grants first. New T03 dispatch requires a same-scope finalized manifest containing the Parcel; legacy exact receipt replay remains valid. Carrier metadata performs no external work. No route-event endpoint or production screen is introduced. [Verification](../../docs/architecture/issue-27-verification.md).
+
+## Issue #28 Route events
+
+[Operational Route contract](../../docs/architecture/route-events.md) adds typed departure/delay/arrival POST and bounded latest/event-detail GET endpoints. It uses W18 plus exact Parcel W09, immutable manifest effects, explicit nullable route-leg ETA and original-response replay. Screens and notifications remain with their downstream owners.
