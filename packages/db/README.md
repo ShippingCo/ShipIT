@@ -456,3 +456,9 @@ stops new Route/dispatch writes and preserves all schema/history for forward rep
 not deploy an old opaque writer expecting compatibility or disable constraints. Failed
 migration transactions roll back completely, then retry; tracked repeat is a no-op.
 [Contract](../../docs/architecture/routes.md) · [Verification](../../docs/architecture/issue-27-verification.md).
+
+## Issue #28 Route events
+
+After migration `1790096400000-atomic-route-events.cjs` and the existing #24/#27 grants, grant the deployment runtime role SELECT/INSERT on `shipit.route_parcel_effects` and UPDATE only `(execution_state,last_effective_at,base_eta_at,total_delay_minutes)` on `shipit.routes`. No UPDATE/DELETE/TRUNCATE grant on effects, no function EXECUTE grant and no DDL privilege is added. Existing Route receipt/audit/event and Parcel T04 grants remain necessary.
+
+The migration adds four execution columns and one immutable affected-set table, extends the closed operation/event/denial catalogs, and retains released planning guards with a separately checked operational branch. Composite ownership FKs and deferred completion checks require one outcome per frozen manifest Parcel. Existing records and envelopes are retained unchanged; no data backfill, table replacement or down migration. Rollback stops event writes, preserves history and repairs forward. [Contract](../../docs/architecture/route-events.md).

@@ -9,6 +9,22 @@ import { command } from './validation.ts';
 import { fingerprint,keyDigest } from './idempotency.ts';
 import type { ParcelCommandInput,ParcelLifecycleRow,ParcelOperation,ParcelTransitionDto } from './types.ts';
 import * as repository from './repository.ts';
+import type { TenantAccess } from '../security/scope.ts';
+
+/** Owning-domain T04 seam for a Route coordinator's existing transaction. */
+export async function transitForRoute(command:TenantAccess, events:TenantAccess, parcelId:string, routeId:string, evidence:string, time:string) {
+  const before=await repository.load(command,parcelId);
+  const input={expected_version:before.version,evidence_ref:evidence,route_id:routeId};
+  guard(before,'parcels.transit',input,command.context.actor.id);
+  const commandId=randomUUID(),eventId=randomUUID();
+  await repository.reserve(command,commandId,before,'parcels.transit',keyDigest(evidence+':'+parcelId),fingerprint('parcels.transit',parcelId,input),input);
+  const after=await repository.mutate(command,before,commandId,'parcels.transit',time);
+  if(!after)throw new HttpError('VERSION_CONFLICT');
+  await repository.appendTransition(command,commandId,eventId,before,after,'parcels.transit',input,time);
+  await repository.appendEvent(events,commandId,eventId,after,'parcels.transit',input,time);
+  await repository.complete(command,commandId,dto(after,eventId,time,input));
+  return eventId;
+}
 
 const source:Readonly<Record<ParcelOperation,string>>={
   'parcels.check_in':'booked','parcels.dispatch':'checked_in','parcels.transit':'dispatched',

@@ -196,3 +196,7 @@ retained lot identities and frozen membership with composite ownership and RESTR
 ## Issue #27 T03 authoritative manifest amendment
 
 The historical #24/#26 opaque-evidence boundary above is superseded for new dispatch commands. T03 now requires same-owner finalized Route manifest membership in its own transaction, before version/state disclosure and after authorized original-receipt lookup. The DB creates an immutable parcel_dispatch_manifests binding and rejects arbitrary new UUIDs. Existing opaque receipts/transitions/events remain unchanged and exact authorized retries replay. #25 bulk uses this same T03 service. Finalizing a Route never dispatches a Parcel. [Routes](routes.md#lot-guard-and-t03).
+
+## Issue #28 Route coordination
+
+Route departure may invoke T04 through the Parcel service in the same transaction with exact W09 authority. Route arrival/delay never imply another lifecycle edge. Terminal/other ineligible statuses receive skipped immutable outcomes. [Contract](route-events.md).

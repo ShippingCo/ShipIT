@@ -184,3 +184,7 @@ the frozen manifest UUID/version without expanding current Lots. There is no rou
 HTTP endpoint here. #34 owns production screen cutover; prototype RoutesPage/store/tests
 remain fictional migration evidence. Workers, carrier integrations, messaging, OTP/proof,
 payments, reporting and provider credentials remain with their owning downstream issues.
+
+## Issue #28 operational extension
+
+[Route events](route-events.md) implements the departure/delay/arrival boundary deferred above. It advances the Route version without changing its frozen manifest or planning DTO.

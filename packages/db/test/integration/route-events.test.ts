@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp,cp,readFile,writeFile,rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join,dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { provisionDatabase } from '../support.ts';
+import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
+import { createRouteService } from '../../../../apps/api/src/modules/routes/service.ts';
+import { routeMetadata } from '../../../../apps/api/test/route-support.ts';
+import { org,A } from '../../../../apps/api/test/audit-support.ts';
+import { randomUUID } from 'node:crypto';
+await test('Issue 27 populated Route upgrades atomically without rewriting receipts, manifests or event envelopes',{timeout:30000},async t=>{
+  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:16}),{applied:16});
+  const migrate=db.migrate;db.migrate=async()=>({applied:0});
+  const s=await bookingSetup(t,db);await db.prepareRoutes();const service=createRouteService(s.pool,s.keys.browser),key=randomUUID();
+  const args=[s.operator.token,null,null,{organization_id:org,franchise_id:A},key,['idempotency-key',key],routeMetadata,'routes.create' as const,randomUUID()] as const;
+  const route=await service.execute(...args);
+  const snapshot=async()=>({commands:(await db.adminQuery('SELECT * FROM shipit.route_commands')).rows,
+    manifests:(await db.adminQuery('SELECT * FROM shipit.route_manifests')).rows,events:(await db.adminQuery('SELECT * FROM shipit.domain_events')).rows});
+  const before=await snapshot();db.migrate=migrate;
+  const directory=fileURLToPath(new URL('../../migrations/',import.meta.url));
+  const temporary=await mkdtemp(join(tmpdir(),'shipit-route-events-upgrade-'));
+  t.after(async()=>{if(dirname(temporary)!==tmpdir())throw new Error('Unexpected fixture path');await rm(temporary,{recursive:true,force:true});});
+  await cp(directory,temporary,{recursive:true});const path=join(temporary,'1790096400000-atomic-route-events.cjs');
+  await writeFile(path,(await readFile(path,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
+  await assert.rejects(db.migrate({dir:temporary}),{code:'DB_MIGRATION_FAILED'});
+  assert.equal((await db.adminQuery("SELECT to_regclass('shipit.route_parcel_effects') AS relation")).rows[0]!.relation,null);
+  assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareRoutes();
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await service.execute(...args),route);
+  assert.equal((await db.adminQuery('SELECT execution_state FROM shipit.routes WHERE id=$1',[route.id])).rows[0]!.execution_state,'pending');
+  await assert.rejects(s.pool.query('TRUNCATE shipit.route_parcel_effects'));
+  await assert.rejects(s.pool.query('UPDATE shipit.routes SET base_eta_at=clock_timestamp() WHERE id=$1',[route.id]));
+});

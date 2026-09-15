@@ -1,8 +1,13 @@
 import type { FastifyInstance,FastifyRequest } from 'fastify';
 import type { createRouteService } from './service.ts';
 import type { RouteOperation } from './types.ts';
-export function registerRoutes(app:FastifyInstance,service:ReturnType<typeof createRouteService>,secure:boolean) {
+import type { createRouteEventService } from './event-service.ts';
+export function registerRoutes(app:FastifyInstance,service:ReturnType<typeof createRouteService>,secure:boolean,events:ReturnType<typeof createRouteEventService>) {
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  app.post<{Params:{route_id:string}}>('/api/v1/routes/:route_id/events',request=>events.execute(session(request),request.params.route_id,
+    request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
+  app.get<{Params:{route_id:string}}>('/api/v1/routes/:route_id/events',request=>events.read(session(request),request.params.route_id,request.query,request.id));
+  app.get<{Params:{route_id:string;event_id:string}}>('/api/v1/routes/:route_id/events/:event_id',request=>events.detail(session(request),request.params.route_id,request.params.event_id,request.query,request.id));
   const command=(method:'POST'|'PATCH',path:string,operation:RouteOperation)=>app.route<{Params:{route_id?:string;lot_id?:string;parcel_id?:string}}>({method,url:path,
     async handler(request,reply){const result=await service.execute(session(request),request.params.route_id,request.params.lot_id??request.params.parcel_id,
       request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,operation,request.id);

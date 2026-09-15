@@ -489,7 +489,7 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
 
 /** Route read/command work and current RBAC share one transaction and independent capabilities. */
 export async function withRouteScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
-  action:import('../routes/types.ts').RouteOperation|'routes.read'|'routes.list',correlationId:string,
+  action:import('../routes/types.ts').RouteOperation|import('../routes/event-types.ts').RouteEventOperation|'routes.read'|'routes.list',correlationId:string,
   work:(scopes:import('../routes/types.ts').RouteScopes)=>Promise<T>):Promise<T> {
   const reading=action==='routes.read'||action==='routes.list';
   return membershipTransaction(database,async tx=>{
@@ -508,6 +508,8 @@ export async function withRouteScope<T>(database:DatabasePool,sessionToken:strin
         organizationWide:false,correlationId,provenance:'membership' as const};
       return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'routes.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'routes.events'}),
+        transit:action==='routes.departure'&&parcelCommandScope('parcels.transit',memberships).includes(franchiseId)?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
+        parcelEvents:action==='routes.departure'?issueTenantAccess(tx,{...context,action:'parcels.events'}):null,
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
     } catch(error) {
       // Only expose a command retry conflict after membershipTransaction confirms rollback.

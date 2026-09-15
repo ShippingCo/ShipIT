@@ -15,7 +15,7 @@ await test('lot upgrade from all 14 released migrations, failed additive rollbac
   await assert.rejects(db.migrate({dir:temp}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await owner.query("SELECT to_regclass('shipit.lots') relation")).rows[0]!.relation,null);
   assert.equal((await owner.query('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,14);
-  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await owner.query('SELECT * FROM shipit.audit_history')).rows,prior);
   const definitions=(await owner.query("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='shipit' AND indexname IN ('lots_active_code_idx','lot_memberships_one_active_idx') ORDER BY indexname")).rows;
   assert.equal(definitions.length,2);assert.match(String(definitions[0]!.indexdef),/UNIQUE.*organization_id, franchise_id, parcel_id.*ended_at IS NULL/);

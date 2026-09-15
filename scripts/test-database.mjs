@@ -53,7 +53,7 @@ async function stopGroup(child, graceMs) {
 }
 
 // Test-only protocol seam. The command always performs guarded real-PG preflight.
-export async function executeDatabaseTests(files, registry, { signal, timeoutMs = 180_000, graceMs = 3000 } = {}) {
+export async function executeDatabaseTests(files, registry, { signal, timeoutMs = 600_000, graceMs = 3000 } = {}) {
   if (files.length === 0) throw new Error('DB_TEST_SUITE_EMPTY');
   if (signal?.aborted) throw new Error('DB_TEST_INTERRUPTED');
   files = await Promise.all(files.map(file => realpath(file)));
@@ -63,7 +63,9 @@ export async function executeDatabaseTests(files, registry, { signal, timeoutMs 
   delete env.NODE_TEST_CONTEXT;
   // Bound independent fixture load consistently across developer and CI hosts.
   // Domain races inside each file retain their own concurrent requests/connections.
-  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-concurrency=2', '--test-timeout=90000',
+  // Aggregate budgets include repeated migrations and the 1000-Parcel event test.
+  // Individual tests keep their explicit 20/30/60-second deadlines.
+  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-concurrency=2', '--test-timeout=180000',
     `--test-reporter=${pathToFileURL(reporter).href}`, ...files], {
     cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32',
   });

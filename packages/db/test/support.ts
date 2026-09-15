@@ -316,6 +316,10 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.routes,shipit.route_commands,shipit.route_lots,shipit.route_parcels,shipit.route_manifests,shipit.route_manifest_parcels,shipit.route_manifest_sources TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(origin,destination,mode,carrier_code,scheduled_departure_at,state,version,current_manifest_id,last_command_id,updated_at) ON shipit.routes TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.route_parcel_effects') AS present")).rows[0]?.present){
+          await owner.query(`GRANT SELECT,INSERT ON shipit.route_parcel_effects TO ${identifier(resource.runtimeRole)}`);
+          await owner.query(`GRANT UPDATE(execution_state,last_effective_at,base_eta_at,total_delay_minutes) ON shipit.routes TO ${identifier(resource.runtimeRole)}`);
+        }
         await owner.query(`GRANT UPDATE(ended_at,end_command_id) ON shipit.route_lots,shipit.route_parcels TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.route_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);

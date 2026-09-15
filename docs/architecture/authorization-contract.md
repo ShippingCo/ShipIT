@@ -330,3 +330,7 @@ and rechecks live grants and active roots. These are narrower checks, not a new 
 ## Issue #27 R09/W05/W06 activation
 
 R09 Route list/detail and manifest pages permit org_admin O through an explicit single-franchise selection and franchise_admin/operator/dispatcher/read_only F. Accountant is denied; agent A snippets await assignment authority and confer no full-manifest access. W05 covers create, full metadata update, Lot/direct-Parcel attach/detach and manifest finalization for franchise_admin/operator/dispatcher F. W06 Route archive is franchise_admin F only and requires an unexecuted planning Route; all source/history evidence is retained. Finalized Route edits/archive are denied. Planning Route attachment blocks Lot grouping/archive for every role; rename is unchanged. T03 consumes the authoritative manifest through W08, without an independent R09 requirement. [Exact contract](routes.md).
+
+## Issue #28 W18 execution
+
+W18 permits franchise_admin/operator/dispatcher F. Departure effects additionally require W09; the membership coordinator issues a transit capability only for a live dispatcher grant. Reads use R09. Arrival grants no delivery/custody authority. [Details](route-events.md).

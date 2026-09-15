@@ -8,7 +8,7 @@ import type { SecurityTelemetry } from './telemetry.ts';
 
 function category(route:string,method:string):[DenialAction,ResourceType] {
   if(route.startsWith('/api/v1/routes'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/routes'?'routes.list':'routes.read'):
-    method==='PATCH'?'routes.update':route.endsWith('/archive')?'routes.archive':route.endsWith('/finalize')?'routes.finalize':
+    route.endsWith('/events')?'routes.event':method==='PATCH'?'routes.update':route.endsWith('/archive')?'routes.archive':route.endsWith('/finalize')?'routes.finalize':
     route.includes('/lots')?(route.endsWith('/remove')?'routes.lot.detach':'routes.lot.attach'):
     route.includes('/parcels')?(route.endsWith('/remove')?'routes.parcel.detach':'routes.parcel.attach'):'routes.create','route'];
   if(route.includes('/lots')||route.endsWith('/lot-membership'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/lots'?'lots.list':'lots.read'):
