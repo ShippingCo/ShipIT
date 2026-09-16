@@ -155,6 +155,7 @@ export interface DisposableDatabase {
   prepareBookings(): Promise<void>;
   prepareLots(): Promise<void>;
   prepareRoutes(): Promise<void>;
+  preparePayments(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -323,6 +324,18 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(ended_at,end_command_id) ON shipit.route_lots,shipit.route_parcels TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.route_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async preparePayments() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.payment_commands,shipit.payment_entries TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,entry_id,http_status,result,committed_at,retain_until) ON shipit.payment_commands TO ${identifier(resource.runtimeRole)}`);
+        // PostgreSQL requires a column UPDATE privilege for FOR UPDATE. The immutable
+        // obligation trigger still rejects every actual UPDATE, including id=id.
+        await owner.query(`GRANT UPDATE(id) ON shipit.booking_obligations TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareFixtures() {

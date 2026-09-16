@@ -256,3 +256,12 @@ See [verification](issue-26-verification.md) for privacy, history and failure ev
 ## Issue #27 Route evidence
 
 Route commands append one immutable reference-only route_audit_events fact through append_route_audit in the business transaction. audit_history exposes it through existing R28 scope, resource_type route, actor/action/version/correlation/time and reference IDs. No metadata labels, carrier code, Parcel/customer snapshots or raw receipt is exposed. Route denial actions use the existing sanitized security-audit path. Deferred constraints pair the fact with the exact Route revision/result/event. [Contract](routes.md).
+
+## Issue #29 financial producer
+
+Payments appends payment_audit_events through the restricted append_payment_audit function
+inside the ledger transaction. audit_history adds payment:UUID records whose resource is
+payment_obligation, with entry identity, sequence, actor/scope/time, closed reason and
+correlation. No request narrative or contact data. Accountant R28 includes only these
+financial facts; mixed financial/administrative scopes are filtered before pagination.
+Replay adds no money-success audit. [Payments](payments.md).

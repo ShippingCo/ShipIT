@@ -107,8 +107,7 @@ All consumers are **planned**, and references do not imply their services alread
 | payment.settled | payments | payment_obligation / payment | Authoritative append-only collection evidence satisfies the Booking obligation under approved finance policy; no delivery inferred | 1 | booking_id, settlement_ref | reports, receipts | Scoped finance projection/receipt reconciliation under owning policy | No parcel delivery, automatic receipt reissue or invented refund/partial-allocation policy | P/R | Reference-only; current scoped resolution |
 
 `payment.settled` is the already-justified settlement fact owned by Payments, versioning
-the Booking's payment obligation, not the physical Parcel. Its emission remains disabled
-until #8/#21/#29 approve the concrete financial/collection policy. Mere obligation creation,
+the Booking's payment obligation, not the physical Parcel. Its emission is activated by #29 under [ADR 0019](../adr/0019-payment-ledger.md). Mere obligation creation,
 partial delivery, provider receipt or a To-Pay flag cannot emit it. Receipts consumes only
 within #30's approved issue/reconciliation policy; it cannot silently reissue an artifact.
 Route facts are authoritative typed observations under #28, not carrier-title parsing;
@@ -275,3 +274,14 @@ Schema-v1 route.created, route.updated, route.archived, route.manifest_finalized
 ## Issue #28 operational Route producers
 
 `route.departed`, `route.delayed`, `route.arrived` now commit with the frozen manifest affected set. Payload is exactly `{manifest_id,affected_set_ref}`; the latter is the event UUID. Correlated Parcel T04 events link from immutable effects. Consumers never mutate ETA. [Contract](route-events.md).
+
+## Issue #29 payment settlement revisions
+
+Every immutable payment entry allocates one obligation revision. A positive-outstanding to
+zero collection emits schema-1 payment.settled with unchanged booking_id/settlement_ref
+payload; settlement_ref is the collection entry UUID. Partial collection and financial
+reversal advance revision without settlement events. Recollection after explicit reversal
+may produce a later genuine settlement event for the same obligation. Uniqueness is scoped
+obligation/revision and command, not obligation alone; replay emits none. Zero-gross opening
+has no money event. P/R consumers reconcile the scoped ledger before deriving current truth;
+settlement never delivers, refunds, or reissues a receipt. [Full contract](payments.md).

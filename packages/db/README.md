@@ -462,3 +462,34 @@ migration transactions roll back completely, then retry; tracked repeat is a no-
 After migration `1790096400000-atomic-route-events.cjs` and the existing #24/#27 grants, grant the deployment runtime role SELECT/INSERT on `shipit.route_parcel_effects` and UPDATE only `(execution_state,last_effective_at,base_eta_at,total_delay_minutes)` on `shipit.routes`. No UPDATE/DELETE/TRUNCATE grant on effects, no function EXECUTE grant and no DDL privilege is added. Existing Route receipt/audit/event and Parcel T04 grants remain necessary.
 
 The migration adds four execution columns and one immutable affected-set table, extends the closed operation/event/denial catalogs, and retains released planning guards with a separately checked operational branch. Composite ownership FKs and deferred completion checks require one outcome per frozen manifest Parcel. Existing records and envelopes are retained unchanged; no data backfill, table replacement or down migration. Rollback stops event writes, preserves history and repairs forward. [Contract](../../docs/architecture/route-events.md).
+
+## Issue #29 payment ledger
+
+Apply `1790182800000-payment-ledger.cjs` before enabling Payments. It preserves the #22
+opening obligation and adds payment_commands, payment_entries, payment_audit_events,
+canonical audit projection and payment ownership/event constraints. No backfill or mutable
+balance cache. PostgreSQL guards lock the scoped obligation and enforce net/target capacity,
+sequence, receipt completion and audit/settlement consistency. Failed migration rolls back;
+repeat is a no-op; repair applied schema only through a new forward migration.
+
+Resolve the separate runtime role and apply these additional grants:
+
+```sql
+GRANT SELECT, INSERT ON shipit.payment_commands, shipit.payment_entries TO runtime_role;
+GRANT UPDATE(state,entry_id,http_status,result,committed_at,retain_until)
+  ON shipit.payment_commands TO runtime_role;
+GRANT UPDATE(id) ON shipit.booking_obligations TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO runtime_role;
+```
+
+UPDATE(id) exists only because PostgreSQL FOR UPDATE requires a column UPDATE privilege.
+The unchanged #22 immutable trigger rejects every actual update, including id=id; test
+both runtime and owner rejection. Never disable the guard or grant table-wide UPDATE.
+Retain existing domain_events INSERT and audit_history SELECT privileges. No ledger UPDATE,
+DELETE/TRUNCATE, base-audit access, PUBLIC function execution, schema ownership or DDL.
+`preparePayments()` supplies exactly these grants in the guarded test fixture.
+
+Receipt retention is infinite for the pilot without pruning or key rebinding. #72 owns
+future coordinated retention policy. Rollback disables/reverts Payments code, retains all
+financial history and compatible Booking writers, and repairs schema forward. The scoped
+projection and downstream receipt/report boundary are in [Payments](../../docs/architecture/payments.md).

@@ -53,9 +53,12 @@ await test('R28 scope and equal-time keysets exclude sibling/foreign rows, bound
 
 await test('R28 denies general roles and accountant administrative history, reauthorizes every page',{timeout:30000},async t=>{
   const s=await auditSetup(t);
-  for(const role of ['operator','dispatcher','delivery_agent','read_only','accountant']) {
+  for(const role of ['operator','dispatcher','delivery_agent','read_only']) {
     const actor=await s.grant(role,[A]);assert.equal((await s.list(actor.token)).statusCode,403);
   }
+  const accountant=await s.grant('accountant',[A]);
+  const finance=await s.list(accountant.token);assert.equal(finance.statusCode,200);assert.deepEqual(finance.json().items,[]);
+  assert.equal((await s.list(accountant.token,{resource_type:'franchise',resource_id:A})).statusCode,404);
   const reader=await s.grant('franchise_admin',[A]),first=await s.list(reader.token,{limit:'1'});
   assert.equal(first.statusCode,200);const cursor=first.json().page.next_cursor;assert.ok(cursor);
   await s.memberships.updateMembership(s.admin.token,reader.member.id,{role:'franchise_admin',franchise_ids:[A,B],expected_version:1});

@@ -134,3 +134,21 @@ export interface RouteEventResult {
   kind: RouteEventKind; effective_at: string; updated_count: number; skipped_count: number;
   eta: { state: 'available' | 'unavailable' | 'arrived'; base_at: string | null; revised_at: string | null; total_delay_minutes: number };
 }
+
+/** Payments v1: actual manually recorded money, independent of Parcel lifecycle. */
+export interface PaymentCollectionInput {
+  amount_paise:number; currency:'INR'; context:'paid_counter'|'to_pay'; method:'cash'|'upi'; collection_reference:string;
+}
+export interface PaymentReversalInput {
+  amount_paise:number; currency:'INR'; reason_code:'duplicate_recording'|'incorrect_amount'|'collection_not_received';
+}
+export interface PaymentProjection {
+  booking_id:string; obligation_id:string; currency:'INR'; gross_paise:number; collected_paise:number;
+  outstanding_paise:number; state:'uncollected'|'partially_collected'|'settled'; version:number;
+}
+export interface PaymentEntryDto {
+  id:string; kind:'collection'|'reversal'; amount_paise:number; currency:'INR';
+  context:'paid_counter'|'to_pay'; method:'cash'|'upi'; collection_reference:string|null;
+  reversal_of:string|null; reason_code:PaymentReversalInput['reason_code']|null; version:number; occurred_at:string;
+}
+export interface PaymentResult { payment:PaymentProjection; entry:PaymentEntryDto }

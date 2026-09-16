@@ -247,3 +247,12 @@ result for the same intent. Onboarding never requires a national carrier to join
 5. Replay the command and event: command result stays singular; consumer/purpose/recipient
    identity deduplicates intents; attempts preserve logical identity. Confirm the ledger,
    booking and ETA never change merely because delivery of a notification failed.
+
+## Issue #29 payment command boundary
+
+The future combined Booking/receipt walkthrough above is not a combined public endpoint.
+[Payments](payments.md) now records Paid counter and To-Pay money through the same explicit
+post-booking collection command against #22's immutable opening. No booking mode or delivery
+implicitly collects. #30 retains receipt coordination. One Payments transaction holds the
+obligation lock through receipt, ledger, audit and any genuine settlement event; external
+provider work and Parcel mutation are absent.

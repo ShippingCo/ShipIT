@@ -279,3 +279,11 @@ Normal authenticated buildServer composition registers the [12 Route endpoints](
 ## Issue #28 Route events
 
 [Operational Route contract](../../docs/architecture/route-events.md) adds typed departure/delay/arrival POST and bounded latest/event-detail GET endpoints. It uses W18 plus exact Parcel W09, immutable manifest effects, explicit nullable route-leg ETA and original-response replay. Screens and notifications remain with their downstream owners.
+
+## Issue #29 Payments
+
+The authenticated [Payments module](../../docs/architecture/payments.md) registers collection,
+linked reversal, current balance and safe entry reads under Booking payments. W20/W21 remain
+franchise_admin only; accountant has financial reads. Deploy the additive migration/grants
+first. Both Paid counter and To-Pay use one row-locked, append-only ledger; no payment UI,
+provider execution, automatic delivery settlement or receipt issuance is introduced.

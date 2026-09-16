@@ -7,6 +7,7 @@ import { denialReasons, type DenialAction, type DenialReason, type ResourceType 
 import type { SecurityTelemetry } from './telemetry.ts';
 
 function category(route:string,method:string):[DenialAction,ResourceType] {
+  if(route.includes('/payments'))return [(method==='GET'||method==='HEAD')?'payments.read':route.endsWith('/reversals')?'payments.reverse':'payments.collect','payment_obligation'];
   if(route.startsWith('/api/v1/routes'))return [(method==='GET'||method==='HEAD')?(route==='/api/v1/routes'?'routes.list':'routes.read'):
     route.endsWith('/events')?'routes.event':method==='PATCH'?'routes.update':route.endsWith('/archive')?'routes.archive':route.endsWith('/finalize')?'routes.finalize':
     route.includes('/lots')?(route.endsWith('/remove')?'routes.lot.detach':'routes.lot.attach'):

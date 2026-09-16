@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, paymentScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -337,20 +337,20 @@ export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken
   });
 }
 
-/** R28 general administrative projection. Finance producers remain with their domains;
- * accountant has no permission for the administrative facts currently stored here. */
+/** R28: accountants receive only financial facts within their explicit franchises. */
 export async function withAuditScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,
-  correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
+  correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,revision:string,administrativeFranchises:readonly string[])=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,sessionToken);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('ACTION_FORBIDDEN');
     if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('ACTION_FORBIDDEN');
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
     const authority=managementAuthority(memberships);
-    if(!authority)throw new HttpError('ACTION_FORBIDDEN');
+    const finance=memberships.filter(m=>m.role==='accountant').flatMap(m=>m.franchiseIds);
+    if(!authority&&!finance.length)throw new HttpError('ACTION_FORBIDDEN');
     const scope=issueTenantAccess(tx,{action:'audit.read',actor:{type:'user',id:session.user_id},organizationId,
-      permittedFranchiseIds:authority.franchiseIds,organizationWide:authority.organizationWide,correlationId,provenance:'membership'});
-    return work(scope,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+      permittedFranchiseIds:[...new Set([...(authority?.franchiseIds??[]),...finance])].sort(),organizationWide:authority?.organizationWide??false,correlationId,provenance:'membership'});
+    return work(scope,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])),authority?.franchiseIds??[]);
   });
 }
 
@@ -513,6 +513,34 @@ export async function withRouteScope<T>(database:DatabasePool,sessionToken:strin
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
     } catch(error) {
       // Only expose a command retry conflict after membershipTransaction confirms rollback.
+      if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
+      throw error;
+    }
+  });
+}
+
+/** Financial commands and R11 reads use live membership and one scoped transaction. */
+export async function withPaymentScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:import('../payments/types.ts').PaymentOperation|'payments.read',correlationId:string,
+  work:(scopes:import('../payments/types.ts').PaymentScopes)=>Promise<T>):Promise<T> {
+  const reading=action==='payments.read';
+  return membershipTransaction(database,async tx=>{
+    try {
+      const session=await authenticated(tx,sessionToken);
+      if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+      const parent=await authorityRepository.lockOrganization(tx,organizationId);
+      if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+      const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+      const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      // Check membership scope before role so guessed foreign selectors remain 404.
+      if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+      if(!paymentScope(action,memberships,all).includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+      if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+        organizationWide:false,correlationId,provenance:'membership' as const};
+      return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'payments.audit'}),
+        events:reading?null:issueTenantAccess(tx,{...context,action:'payments.events'})});
+    } catch(error) {
       if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
       throw error;
     }

@@ -127,3 +127,16 @@ test('Route/manifest tables require both owners; exact HTTP query-data exception
   assert.deepEqual(inspectSource('apps/api/src/modules/routes/routes.ts','selection(request.query)'),[]);
   assert.ok(inspectSource('apps/api/src/modules/routes/routes.ts',"request.query('SELECT * FROM shipit.routes')").length);
 });
+
+test('payment balances, references and receipts require franchise scope and cannot mint authority',()=>{
+  const file='apps/api/src/modules/payments/repository.ts';
+  for(const table of ['payment_entries','payment_commands','payment_audit_events']) {
+    assert.deepEqual(inspectSource(file,`scopedQuery(scope,['payments.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+    for(const source of [`db.query('SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['payments.read'],'SELECT * FROM shipit.${table}')`,
+      `scopedQuery(scope,['payments.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+      "import {issueTenantAccess} from '../security/scope.ts'","import {query} from '@shippingco/db'"])assert.ok(inspectSource(file,source).length);
+  }
+  assert.deepEqual(inspectSource('apps/api/src/modules/payments/routes.ts','selection(request.query)'),[]);
+  assert.ok(inspectSource('apps/api/src/modules/payments/routes.ts',"request.query('SELECT * FROM shipit.payment_entries')").length);
+});

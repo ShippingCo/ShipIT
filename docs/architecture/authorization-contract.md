@@ -184,8 +184,8 @@ without changing held_at_office or starting a doorstep attempt; the agent still 
 proof and deadline eligibility. Assignment cannot forge physical receipt or extend a hold.
 
 W20/W21 do not silently settle payment from delivery. Accountant and agent **visibility**
-of collection facts is not an unapproved collection-command grant. #8/#29 must explicitly
-review any additional cashier/agent collection permissions before implementation. W22's
+of collection facts is not an unapproved collection-command grant. #29 explicitly preserves
+the existing W20/W21 grants; any future cashier/agent expansion requires separate review. W22's
 agent scope allows only their assigned proof upload, never booking-wide attachment edit.
 W24 cannot override customer consent or reveal secrets; W25 cannot blindly resend uncertain
 provider acceptance; W26 cannot import a foreign tenant or assert delivered/paid state.
@@ -334,3 +334,13 @@ R09 Route list/detail and manifest pages permit org_admin O through an explicit 
 ## Issue #28 W18 execution
 
 W18 permits franchise_admin/operator/dispatcher F. Departure effects additionally require W09; the membership coordinator issues a transit capability only for a live dispatcher grant. Reads use R09. Arrival grants no delivery/custody authority. [Details](route-events.md).
+
+## Issue #29 R11/W20/W21 activation
+
+[ADR 0019](../adr/0019-payment-ledger.md) explicitly preserves W20 and W21 as
+franchise_admin F only. No cashier/agent expansion, accountant mutation, inherited org_admin
+write or manager role. Issue #29's older “accountant/manager” wording is superseded by this
+reviewed execution decision. R11 permits selected-franchise reads for org_admin O and
+franchise_admin/accountant F. R28 accountant queries now include only financial payment
+facts inside its scope; independent administrative privileges stay independently filtered.
+[Payments](payments.md) records exact commands, replay reauthorization and denial behavior.
