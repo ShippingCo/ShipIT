@@ -199,7 +199,7 @@
       "apps/web/src/pages/business/PackagesPage.tsx": "b356832e5e09406b3961b868389cdaa05c0eb354a62101f8f0123acea00989df",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "ea740e755afabc3a1b8a28e6534bcc963a39d50f8497ecc9e86ad0def31d0dda",
+      "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
       "apps/web/src/test/operator.test.tsx": "8378107b4f8950af118c165cc60ce14e3fa5962ef835ebb7547ab366dfc9d9f9",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7"
@@ -910,6 +910,11 @@
       },
       {
         "file": "apps/web/src/test/app.test.tsx",
+        "name": "awaits native hash navigation, including repeated destinations and return to launcher",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
         "name": "renders the three headline numbers, dispatch board and ledger",
         "cases": null
       },
@@ -1362,6 +1367,10 @@
       {
         "file": "apps/web/src/test/app.test.tsx",
         "kind": "localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "kind": "window.addEventListener"
       },
       {
         "file": "apps/web/src/test/app.test.tsx",
@@ -1996,6 +2005,14 @@
       "group": "demo",
       "disposition": "demo_only",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "awaits native hash navigation, including repeated destinations and return to launcher",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Await native navigation and React commits without extending timeouts; retain same-route and return-to-launcher coverage with isolated browser history."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",

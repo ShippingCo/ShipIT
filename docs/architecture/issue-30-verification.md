@@ -131,3 +131,35 @@ client adapter; #47/#62 consumers, #61/#63 reports, settings, messaging and #72 
 remain deferred. Apply additive schema/grants before API; rollback compatible receipt code
 and retain evidence/sequence, repairing schema only forward. No merge, issue closure,
 auto-merge, branch deletion or downstream work is authorized by this verification.
+
+## Post-merge browser test isolation repair
+
+After PR #113 merged, main run
+[35119003001](https://github.com/ShippingCo/ShipIT/actions/runs/35119003001)
+at `aa403ec2803330aa3805142d6c1f12930bd5d575` failed the existing Dashboard test:
+the app-bar title remained absent while the launcher was rendered. The web result
+was 100 passed / 1 failed; PostgreSQL, planning, lint, types and builds passed.
+The required aggregate correctly failed because the tests job failed.
+
+The app harness changed `location.hash` without awaiting native navigation inside
+React `act`, and retained the previous test's URL. The follow-up resets history
+synchronously before each app test, awaits native `hashchange` and React transitions,
+and keeps the existing page-title assertions and timeouts. No production behavior,
+receipt contract, migration, dependency, workflow or gate is changed.
+
+Evidence:
+
+- Before the fix, `pnpm --filter @shippingco/web test src/test/app.test.tsx --sequence.shuffle --sequence.seed=3`
+  reproducibly failed the Launcher assertion with 24 passes / 1 failure, demonstrating
+  shared URL state. After the fix, all 26 tests pass for fixed seeds 1, 2, 3, 4, 5 and 30.
+- `awaits native hash navigation, including repeated destinations and return to launcher`
+  asserts committed UI immediately after each awaited navigation, including same-route
+  no-op, Dashboard, Receipts and return to launcher. A temporary negative control that
+  restored the unawaited hash assignment failed this regression; the working helper
+  was restored before full verification. Tests excluded by that targeted negative
+  control are not counted as passes.
+- Complete current-head quality and CI results are recorded in the follow-up PR.
+
+The original successful pre-merge run and local evidence above remain historical
+facts. This follow-up documents and repairs the later test-harness failure rather
+than hiding it through retries, timeout increases, skipped tests or weaker assertions.

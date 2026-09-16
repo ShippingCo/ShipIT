@@ -1,10 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../DemoApp';
 import { resetDemo, db, updateStatus, queueMsg, createRoute, postRouteEvent, findByDocket, addBooking, setEwayBill, ewayState, ewayValidDays } from '../data/store';
 
-beforeEach(() => resetDemo());
+beforeEach(() => {
+  // Reset synchronously: assigning location.hash would queue an event for the next render.
+  window.history.replaceState(null, '', '/');
+  resetDemo();
+});
 
 describe('fresh-browser startup (blank screen regression)', () => {
   it('store seeds itself before first render even with empty localStorage', async () => {
@@ -45,8 +49,21 @@ const PAGE_TITLE = {
   '/business/settings': 'Settings',
 };
 
+async function navigateHash(hash: string) {
+  if (window.location.hash === `#${hash}`) return;
+  // Hash navigation queues native popstate/hashchange events. Keep their React
+  // transitions inside act rather than racing waitFor's polling against them.
+  await act(async () => {
+    const changed = new Promise<void>(resolve => {
+      window.addEventListener('hashchange', () => resolve(), { once: true });
+    });
+    window.location.hash = hash;
+    await changed;
+  });
+}
+
 async function goto(hash) {
-  window.location.hash = hash;
+  await navigateHash(hash);
   const want = PAGE_TITLE[hash.split('?')[0]] || 'ShippingCo';   // the shell falls back the same way
   await waitFor(() => expect(document.querySelector('.appbar-title')?.textContent).toBe(want));
 }
@@ -66,6 +83,19 @@ describe('Launcher', () => {
 });
 
 describe('Dashboard', () => {
+  it('awaits native hash navigation, including repeated destinations and return to launcher', async () => {
+    render(<App />);
+    expect(screen.getByText('Business Console')).toBeInTheDocument();
+    await navigateHash('/business');
+    expect(document.querySelector('.appbar-title')).toHaveTextContent('Dashboard');
+    await navigateHash('/business');
+    expect(screen.getByText('Parcels moving')).toBeInTheDocument();
+    await navigateHash('/business/receipts');
+    expect(document.querySelector('.appbar-title')).toHaveTextContent('Receipts');
+    await navigateHash('/');
+    expect(screen.getByText('Business Console')).toBeInTheDocument();
+  });
+
   it('renders the three headline numbers, dispatch board and ledger', async () => {
     render(<App />);
     await goBusiness();
@@ -213,7 +243,7 @@ describe('Automation feed', () => {
 describe('Customer WhatsApp view', () => {
   it('persona auto-selected, bot replies, proactive outbox lands in chat', async () => {
     render(<App />);
-    window.location.hash = '/customer';
+    await navigateHash('/customer');
     await screen.findByText(/AI BOT/);
 
     const seedCount = document.querySelectorAll('.msg').length;
@@ -267,7 +297,7 @@ describe('fictional demo isolation', () => {
     try {
       localStorage.setItem('shippingco_v1','untouched legacy');
       localStorage.setItem('shipit_demo_persona_v1','fictional persona');
-      window.location.hash='/';render(<App/>);await screen.findByText('Business Console');
+      render(<App/>);await screen.findByText('Business Console');
       fireEvent.click(screen.getByRole('button',{name:/Reset demo data/i}));
       const dialog=await screen.findByRole('dialog');
       fireEvent.click(Array.from(dialog.querySelectorAll('button')).find(button=>button.textContent?.includes('Reset'))!);

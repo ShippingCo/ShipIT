@@ -302,6 +302,7 @@ Parameterized cases are preserved in full in JSON. Tests remain unchanged during
 | apps/web/src/test/app.test.tsx: store seeds itself before first render even with empty localStorage | demo_only | demo |
 | apps/web/src/test/app.test.tsx: heals corrupted persisted state | demo_only | demo |
 | apps/web/src/test/app.test.tsx: renders both entry cards | demo_only | demo |
+| apps/web/src/test/app.test.tsx: awaits native hash navigation, including repeated destinations and return to launcher | preserve | presentation |
 | apps/web/src/test/app.test.tsx: renders the three headline numbers, dispatch board and ledger | replace | reports |
 | apps/web/src/test/app.test.tsx: route %s renders | preserve | presentation |
 | apps/web/src/test/app.test.tsx: creates a booking; packages list updates live | replace | booking |
