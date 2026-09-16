@@ -86,7 +86,7 @@ The downloaded official Node archive's SHA256 was verified. Host defaults were n
 | pnpm typecheck / pnpm lint | Passed in full final quality; all five workspaces, tenant-query gate and ESLint |
 | pnpm db:local quality | Passed: tooling 23; testkit 22 + DB unit 12; API 343 (37 new Payments rule/validation/policy cases); browser 95; PostgreSQL 51 DB + 190 API; production API/web builds passed |
 | pnpm db:local verify:gates | Passed all 24 stages: empty-store install, clean quality, all deliberate failure/final-gate controls, restored quality; both snapshots repeated the same passing test counts and builds |
-| Current PR-head CI | Pending PR creation; local quality and gate verification complete |
+| Current PR-head CI | [PR #112 verification record](https://github.com/ShippingCo/ShipIT/pull/112#issuecomment-5692900776) binds the final pushed head to its Actions run, individual checks, review threads and mergeability; verify that SHA against the current PR head |
 
 Exact focused command: `DB_TEST_RESOURCE_REGISTRY=<temporary registry> pnpm db:local exec node --experimental-strip-types --test apps/api/test/database/payments.test.ts packages/db/test/integration/payments.test.ts packages/db/test/integration/migrations.test.ts packages/db/test/integration/route-events.test.ts`.
 Full commands above use PATH selecting pinned Node and PYTHON selecting pinned Python. The complete PostgreSQL run has zero failed/skipped/cancelled/todo tests. The focused run includes 8 migration/upgrade regressions. Fresh/repeat migration applies all 18 migrations and is included in the 51 DB tests; the new populated upgrade covers failure rollback and unchanged opening evidence. Existing browser React act warnings remain visible.
@@ -117,3 +117,17 @@ Production payment UI, receipts, reports, proof-backed delivery, WhatsApp, gatew
 execution and retention policy work remain with their downstream owners. No throughput or
 provider verification claim is made. Zero gross has an empty settled projection and no event.
 The PR must remain open, with no auto-merge or manual Issue #29 closure.
+
+## Remote PR evidence
+
+[PR #112](https://github.com/ShippingCo/ShipIT/pull/112) targets main and contains `Closes #29`.
+Implementation commit: `f46c4e9f855f6034905f73599ec4ed7eeba8fea4`.
+The following documentation-only commit adds the PR evidence links; final-head verification
+is kept in the linked PR comment so it can name the exact final commit without changing
+that commit again. Its [checks](https://github.com/ShippingCo/ShipIT/pull/112/checks) must show
+all five Quality jobs, PostgreSQL integration, and Planning and prototype checks successful
+for that same head. Superseded runs do not substitute for final-head evidence.
+
+The final record also confirms current main compatibility, no unresolved review threads,
+mergeability, Issue #29 open in review state, no auto-merge, and no merge/branch deletion.
+Independent maintainer review and merge remain outstanding by design.
