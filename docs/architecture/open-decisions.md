@@ -124,3 +124,11 @@ projection supplies #30/#61/#63 reconciliation. The implementation is documented
 exports, production screens, statutory validation or provider refunds. D12's downstream
 receipt/report work remains open. Pilot replay evidence is retained without pruning; #72
 must review any coordinated retention change before deleting finance/replay evidence.
+
+## Issue #30 bounded receipt decision
+
+[ADR 0020](../adr/0020-immutable-issued-receipts.md) resolves the receipt portion of D06/D12
+for independent review: first authorized canonical GET materialization, global immutable
+numbering, frozen minimal issuer/Booking/tax evidence, separate entry-only collection
+acknowledgements and linked immutable reversal documents. This does not resolve report
+queries, statutory outputs, settings, retention or downstream screen decisions.

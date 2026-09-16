@@ -99,3 +99,10 @@ export function paymentScope(action:import('../payments/types.ts').PaymentAction
   const roles:readonly Role[]=action==='payments.read'?['franchise_admin','accountant']:['franchise_admin'];
   return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
+
+/** R13: one minimum finance artifact, never the R06/R11 operational/ledger grants. */
+export function receiptScope(memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active');
+  if(active.some(m=>m.role==='org_admin'))return [...all];
+  return [...new Set(active.filter(m=>['franchise_admin','operator','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}

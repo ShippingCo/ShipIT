@@ -278,3 +278,16 @@ describe('fictional demo isolation', () => {
     } finally {vi.unstubAllGlobals();}
   });
 });
+
+describe('explicit fictional receipt printing',()=>{
+  it('cancelled reprint preserves the saved booking, payments and outbox',async()=>{
+    const before=structuredClone(db());let printed='';
+    const print=vi.spyOn(window,'print').mockImplementation(()=>{printed=document.getElementById('print-root')?.textContent??'';});
+    try {
+      render(<App/>);await goBusiness();await goto('/business/receipts');expect(print).not.toHaveBeenCalled();
+      fireEvent.click(screen.getAllByRole('button',{name:/Reprint/i})[0]!);
+      expect(print).toHaveBeenCalledOnce();expect(printed).toContain('Fictional demo receipt');expect(printed).toContain('Booked total');expect(printed).not.toContain('Total paid');
+      expect(db()).toEqual(before);expect(document.getElementById('print-root')).toBeNull();
+    } finally {print.mockRestore();}
+  });
+});

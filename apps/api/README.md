@@ -287,3 +287,31 @@ linked reversal, current balance and safe entry reads under Booking payments. W2
 franchise_admin only; accountant has financial reads. Deploy the additive migration/grants
 first. Both Paid counter and To-Pay use one row-locked, append-only ledger; no payment UI,
 provider execution, automatic delivery settlement or receipt issuance is introduced.
+
+## Issue #30 immutable issued receipt retrieval
+
+Authenticated R13 routes (each requires organization_id/franchise_id query selectors):
+
+- `GET /api/v1/bookings/:booking_id/receipt`
+- `GET /api/v1/bookings/:booking_id/payments/:payment_id/receipt`
+- `GET /api/v1/receipts/:receipt_id`
+
+The first two materialize one canonical immutable artifact on first authorized retrieval;
+subsequent retrievals return its original ID, number, issued time and snapshot. This
+explicit GET persistence exception is recorded in ADR 0020. No HEAD issuance, request
+body, Idempotency-Key, public URL or PDF service. Direct ID only reads existing artifacts.
+Use no-store JSON for explicit local printing; never fall back to browser store data.
+
+R13 allows org_admin in an explicitly selected own-org franchise, and franchise_admin,
+operator and accountant in their own granted franchise. Dispatcher, delivery_agent and
+read_only are denied. Foreign/unknown nested IDs share 404; malformed query/UUID is 422,
+missing session 401, denied role 403, dependency/invariant/uncertain commit 503. Historical
+reads remain available on disabled roots, subject to live membership/session checks.
+
+Booking documents say Booked total; collection/reversal documents copy one actual ledger
+entry and do not claim current settlement. Delivery has no effect on them. No payment,
+event or messaging side effect. Apply migration and minimum DB grants before rollout;
+missing schema fails closed. Roll back compatible receipt code, retain issued evidence.
+[Contract](../../docs/architecture/receipts.md), [ADR 0020](../../docs/adr/0020-immutable-issued-receipts.md),
+[verification](../../docs/architecture/issue-30-verification.md). #33 retains full production
+screen/client-adapter migration; the existing demo calls its explicitly fictional adapter.

@@ -174,7 +174,7 @@
       "apps/web/src/pages/business/RoutesPage.tsx",
       "apps/web/src/test/app.test.tsx",
       "apps/web/src/test/operator.test.tsx",
-      "apps/web/src/utils/receipt.ts"
+      "apps/web/src/utils/demo-receipt.ts"
     ],
     "fingerprints": {
       "apps/web/src/App.tsx": "5478cba782f17d158f57908bec9930e70e9a46d3c26a2e7bf266c4c7d3007339",
@@ -194,15 +194,15 @@
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
-      "apps/web/src/pages/business/MiscPages.tsx": "e29360b8189ab907debf28bfc6919171aeb6f9b80219d07752b2970a4fd21fe9",
-      "apps/web/src/pages/business/NewBookingPage.tsx": "7802ebd7677b6cd698551f74fc2ba2fa309c42145ba20116a909bbb316b29107",
-      "apps/web/src/pages/business/PackagesPage.tsx": "0db6443191eca763eebc787de4f56797134ddf6b4a580fb76e420aa201832451",
+      "apps/web/src/pages/business/MiscPages.tsx": "aad9e1cf823bd1507e9a694ac7b195391c1292e683fcbca907eaa9b2d82c6527",
+      "apps/web/src/pages/business/NewBookingPage.tsx": "d0d64a83e77738aaec4befc58314d11361fbb414459f5dc84d142728a16b6007",
+      "apps/web/src/pages/business/PackagesPage.tsx": "b356832e5e09406b3961b868389cdaa05c0eb354a62101f8f0123acea00989df",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "21fffc0f1b57cc1ccc299da464fcae59c3e5464e2cd684c335d23312735a6ea0",
+      "apps/web/src/test/app.test.tsx": "ea740e755afabc3a1b8a28e6534bcc963a39d50f8497ecc9e86ad0def31d0dda",
       "apps/web/src/test/operator.test.tsx": "8378107b4f8950af118c165cc60ce14e3fa5962ef835ebb7547ab366dfc9d9f9",
-      "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7",
-      "apps/web/src/utils/receipt.ts": "2bcad0e9d719240eb051d31c33e2535842295ccdfdfbe2ed7338f6536aefddd5"
+      "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
+      "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7"
     },
     "imports": {
       "apps/web/src/App.tsx": [
@@ -563,8 +563,8 @@
           "syntax": "import { db, fmtMoney, fmtDT, waFmt, markAllBizSeen, updateBusiness, resetDemo, openEscalations, resolveEscalation, replyWindow, prettyPhone, grossOf } from '../../data/store';"
         },
         {
-          "target": "apps/web/src/utils/receipt.ts",
-          "syntax": "import { printReceipt } from '../../utils/receipt';"
+          "target": "apps/web/src/utils/demo-receipt.ts",
+          "syntax": "import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';"
         },
         {
           "target": "apps/web/src/context/AppContext.tsx",
@@ -633,8 +633,8 @@
           "syntax": "import type { Step } from '../../components/m3/Journey';"
         },
         {
-          "target": "apps/web/src/utils/receipt.ts",
-          "syntax": "import { printReceipt } from '../../utils/receipt';"
+          "target": "apps/web/src/utils/demo-receipt.ts",
+          "syntax": "import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';"
         },
         {
           "target": "apps/web/src/components/m3/Controls.tsx",
@@ -683,8 +683,8 @@
           "syntax": "import { updateStatus, verifyDeliveryOTP, confirmDelivered, assignToLot, queueMsg, activeDelayFor, recordPayment, resendDeliveryOTP, revealOTP, markFailedAttempt, markRTO, FAILURE_REASONS, OTP_MAX_ATTEMPTS, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';"
         },
         {
-          "target": "apps/web/src/utils/receipt.ts",
-          "syntax": "import { printReceipt } from '../../utils/receipt';"
+          "target": "apps/web/src/utils/demo-receipt.ts",
+          "syntax": "import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';"
         },
         {
           "target": "apps/web/src/components/m3/Controls.tsx",
@@ -811,10 +811,18 @@
           "syntax": "import { ApiFailure as OperatorError } from '../data-access/errors';"
         }
       ],
-      "apps/web/src/utils/receipt.ts": [
+      "apps/web/src/utils/demo-receipt.ts": [
         {
           "target": "apps/web/src/data/store.ts",
-          "syntax": "import { findByDocket, db, fmtMoney, fmtDT, esc, grossOf } from '../data/store';"
+          "syntax": "import { findByDocket, db, fmtMoney, fmtDT, grossOf } from '../data/store';"
+        },
+        {
+          "target": "apps/web/src/utils/receipt.ts",
+          "syntax": "import { printReceiptView, renderReceiptView, type ReceiptView } from './receipt';"
+        },
+        {
+          "target": "apps/web/src/data/types.ts",
+          "syntax": "import type { Booking, Business } from '../data/types';"
         }
       ]
     },
@@ -958,6 +966,11 @@
       {
         "file": "apps/web/src/test/app.test.tsx",
         "name": "resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "cancelled reprint preserves the saved booking, payments and outbox",
         "cases": null
       },
       {
@@ -1194,6 +1207,31 @@
         "file": "apps/web/src/test/parcel-bulk.test.tsx",
         "name": "same outer adapter intent is a frozen snapshot and 503 retains command identity",
         "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "renders booked paise and saved rounding without settlement or a moving ETA",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "keeps partial collection and reversal entry labels separate from booked total and settlement",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "escapes every layout text context and ignores foreign download and executable logo URLs",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "cleans up private print markup even when browser print throws",
+        "cases": null
       }
     ],
     "effects": [
@@ -1416,10 +1454,6 @@
       {
         "file": "apps/web/src/test/setup.ts",
         "kind": "sessionStorage.clear"
-      },
-      {
-        "file": "apps/web/src/utils/receipt.ts",
-        "kind": "setTimeout"
       }
     ]
   },
@@ -1720,7 +1754,7 @@
         "docs/architecture/domain-contract.md",
         "docs/architecture/authorization-contract.md"
       ],
-      "current": "Receipt reads mutable booking/business and recomputes ETA at print time.",
+      "current": "Pure server ReceiptDto renderer and explicit print action; fictional demo pages use a separate demo adapter. No print-time ETA, arbitrary logo URL or false Total paid label.",
       "target": "Preserve optional print/layout/escaping using an authorized immutable issued snapshot.",
       "verification": "No automatic print; reprint content stable after settings/time changes; denied foreign receipt.",
       "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
@@ -1934,7 +1968,7 @@
     "apps/web/src/test/operator.test.tsx": [
       "seam"
     ],
-    "apps/web/src/utils/receipt.ts": [
+    "apps/web/src/utils/demo-receipt.ts": [
       "receipts"
     ]
   },
@@ -2058,6 +2092,14 @@
       "group": "demo",
       "disposition": "demo_only",
       "reason": "Issue 18 demo reset only mutates the explicit fictional namespace and performs zero network requests."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "cancelled reprint preserves the saved booking, payments and outbox",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "demo_only",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
@@ -2434,6 +2476,46 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "renders booked paise and saved rounding without settlement or a moving ETA",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "keeps partial collection and reversal entry labels separate from booked total and settlement",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "escapes every layout text context and ignores foreign download and executable logo URLs",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "cleans up private print markup even when browser print throws",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     }
   ],
   "safety": {

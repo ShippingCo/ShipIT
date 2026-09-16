@@ -152,3 +152,5 @@ export interface PaymentEntryDto {
   reversal_of:string|null; reason_code:PaymentReversalInput['reason_code']|null; version:number; occurred_at:string;
 }
 export interface PaymentResult { payment:PaymentProjection; entry:PaymentEntryDto }
+
+export type { ReceiptDto, BookingReceiptDto, CollectionReceiptDto, ReversalReceiptDto, ReceiptIssuer, ReceiptBooking, ReceiptTax } from './receipt.ts';

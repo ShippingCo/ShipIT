@@ -156,6 +156,7 @@ export interface DisposableDatabase {
   prepareLots(): Promise<void>;
   prepareRoutes(): Promise<void>;
   preparePayments(): Promise<void>;
+  prepareReceipts(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -336,6 +337,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         // obligation trigger still rejects every actual UPDATE, including id=id.
         await owner.query(`GRANT UPDATE(id) ON shipit.booking_obligations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareReceipts() {
+      await handle.preparePayments();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.issued_receipts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT(id,organization_id,franchise_id,booking_id,obligation_id,kind,payment_entry_id,booking_receipt_id,correction_of,actor_id,correlation_id) ON shipit.issued_receipts TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareFixtures() {

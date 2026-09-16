@@ -163,7 +163,7 @@ This inventory describes existing code and future responsibilities, not implemen
 ### receipts
 
 - Decision: **replace**. Owners: #30, #33.
-- Today: Receipt reads mutable booking/business and recomputes ETA at print time.
+- Today: Pure server ReceiptDto renderer and explicit print action; fictional demo pages use a separate demo adapter. No print-time ETA, arbitrary logo URL or false Total paid label.
 - Target: Preserve optional print/layout/escaping using an authorized immutable issued snapshot.
 - Required evidence: No automatic print; reprint content stable after settings/time changes; denied foreign receipt.
 - Retirement: Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo.
@@ -291,7 +291,7 @@ The JSON evidence also records resolved import declarations. Full-file fingerpri
 | apps/web/src/pages/business/RoutesPage.tsx | routes, messaging |
 | apps/web/src/test/app.test.tsx | demo, booking, proof, routes, reports, eway |
 | apps/web/src/test/setup.ts | demo, booking, proof, routes, reports, eway |
-| apps/web/src/utils/receipt.ts | receipts |
+| apps/web/src/utils/demo-receipt.ts | receipts |
 
 ## Existing regression declarations
 
@@ -502,3 +502,19 @@ call or new frontend test disposition. Existing hooks exceptions and prototype t
 ## Issue #27 production Route replacement evidence
 
 The routes group now has server authority for metadata, typed Route/Lot and direct Parcel associations, immutable deduplicated manifests, archive/finalize, Lot guards and authoritative T03. [Routes](routes.md) replaces browser bookingIds/lotIds authority with physical Parcel snapshots and exact provenance. Carrier code remains inert. RoutesPage/store/postRouteEvent tests remain fictional and unchanged; #28 owns operational events/ETA, #34 owns screen cutover and #35/#41 own downstream processing. No browser import or fallback was introduced.
+
+## Issue #30 reviewed receipt boundary
+
+The production renderer no longer transitively imports the demo store. Demo receipt callers
+explicitly import demo-receipt.ts; only that adapter reads browser bookings/business. The
+reviewed inventory removes the print cleanup timer and historical moving ETA. No unrelated
+prototype business behavior changes.
+
+| Regression | Disposition | Group | Reason |
+| --- | --- | --- | --- |
+| apps/web/src/test/app.test.tsx: cancelled reprint preserves the saved booking, payments and outbox | demo_only | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: renders booked paise and saved rounding without settlement or a moving ETA | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: keeps partial collection and reversal entry labels separate from booked total and settlement | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: escapes every layout text context and ignores foreign download and executable logo URLs | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: cleans up private print markup even when browser print throws | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |

@@ -9,7 +9,7 @@ import { Dialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
 import { useDB } from '../../context/AppContext';
 import { updateStatus, verifyDeliveryOTP, confirmDelivered, assignToLot, queueMsg, activeDelayFor, recordPayment, resendDeliveryOTP, revealOTP, markFailedAttempt, markRTO, FAILURE_REASONS, OTP_MAX_ATTEMPTS, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';
-import { printReceipt } from '../../utils/receipt';
+import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';
 import { SearchBar, FilterChips, DateFilter, dateWindow } from '../../components/m3/Controls';
 import type { Booking, ParcelStatus } from '../../data/types';
 import type { CustomRange, DatePreset } from '../../components/m3/Controls';

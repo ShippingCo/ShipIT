@@ -154,3 +154,12 @@ historical issue baselines, not the current implementation state.
 ## Payments — Issue #29
 
 [Payments](payments.md), [ADR 0019](../adr/0019-payment-ledger.md) and [verification](issue-29-verification.md) implement Booking-level partial collection, append-only correction, scoped replay and genuine settlement without changing delivery.
+
+## Issue #30 — immutable issued receipts
+
+[Receipt ownership, snapshot, R13 and retrieval contract](receipts.md),
+[ADR 0020](../adr/0020-immutable-issued-receipts.md), and
+[acceptance evidence](issue-30-verification.md). Implements immutable Booking-charge,
+collection and linked reversal documents from #21/#22/#23/#29 authority. First authorized
+GET materializes canonical evidence; later retrieval/printing preserves identity and
+amounts. #33 retains the full production receipt-screen migration.

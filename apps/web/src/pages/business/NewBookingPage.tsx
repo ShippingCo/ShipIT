@@ -13,7 +13,7 @@ import { useDB } from '../../context/AppContext';
 import type { Attachment, Booking } from '../../data/types';
 import type { PaymentMode, ServiceType } from '../../data/types';
 import type { Step } from '../../components/m3/Journey';
-import { printReceipt } from '../../utils/receipt';
+import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';
 import { AttachmentPicker } from '../../components/m3/Controls';
 import { StepTrack } from '../../components/m3/Journey';
 

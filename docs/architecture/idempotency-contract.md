@@ -200,3 +200,12 @@ replays the original effect; a distinct retry key is durably bound by an alias r
 no extra ledger/audit/event. Pilot receipts retain indefinitely without pruning. Existing
 current-authorization and uncertain-COMMIT rules apply. GET returns a current ledger-derived
 projection, while POST replay preserves the original revision/result. [ADR 0019](../adr/0019-payment-ledger.md).
+
+## Issue #30 canonical issued documents
+
+Receipt GET materialization is the documented ADR 0020 exception: source identity
+(tenant + Booking original, or immutable payment entry) permanently determines one
+artifact. No client intent/body/version or idempotency header; authorization is repeated
+on every retrieval. Locks, logical uniqueness and atomic snapshot/audit persistence
+make concurrent first reads converge and uncertain commit retries recover the same
+number after process/pool restart. No receipt/message/payment business effect repeats.

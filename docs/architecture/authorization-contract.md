@@ -344,3 +344,15 @@ reviewed execution decision. R11 permits selected-franchise reads for org_admin 
 franchise_admin/accountant F. R28 accountant queries now include only financial payment
 facts inside its scope; independent administrative privileges stay independently filtered.
 [Payments](payments.md) records exact commands, replay reauthorization and denial behavior.
+
+## Issue #30 R13 implementation
+
+[ADR 0020](../adr/0020-immutable-issued-receipts.md) activates existing R13 without changing
+its role matrix. org_admin explicitly selects one own-organization franchise; franchise_admin,
+operator and accountant retrieve the same minimum finance artifact in their granted franchise.
+Dispatcher, delivery_agent and read_only remain denied. First authorized retrieval privately
+issues canonical materialization capability; no staff create/edit financial command or
+arbitrary snapshot input is exposed. The internal Payments entry-only read port confers no
+R11 ledger/projection permission. Disabled roots retain historical reads, including first
+materialization; revoked sessions/memberships cannot access artifacts. Reference-only receipt
+issuance audit is within the accountant finance projection. See [receipts](receipts.md).

@@ -493,3 +493,31 @@ Receipt retention is infinite for the pilot without pruning or key rebinding. #7
 future coordinated retention policy. Rollback disables/reverts Payments code, retains all
 financial history and compatible Booking writers, and repairs schema forward. The scoped
 projection and downstream receipt/report boundary are in [Payments](../../docs/architecture/payments.md).
+
+## Issue #30 issued receipts
+
+Apply `1790269200000-immutable-issued-receipts.cjs`, retaining prerequisite grants, then
+add only the following for the resolved runtime role:
+
+```sql
+GRANT SELECT ON shipit.issued_receipts TO runtime_role;
+GRANT INSERT (id,organization_id,franchise_id,booking_id,obligation_id,kind,
+  payment_entry_id,booking_receipt_id,correction_of,actor_id,correlation_id)
+  ON shipit.issued_receipts TO runtime_role;
+```
+
+The fixed-search-path SECURITY DEFINER insert trigger derives number, schema/version,
+issued time and bounded snapshot exclusively from same-owner authoritative sources.
+Its AFTER trigger appends reference-only audit in the same transaction. Runtime cannot
+supply those generated columns, access the number sequence, mutate/delete/truncate
+issued evidence, write base audit, execute the trigger functions directly, or disable
+triggers. Existing audit_history SELECT exposes the authorized reference projection.
+`prepareReceipts()` exercises these exact grants; no PUBLIC grants or new runtime
+function execution grant. Ordinary owner UPDATE/DELETE is also rejected by triggers.
+
+The global noncycling bigint number sequence permits rollback gaps, never reuse.
+Composite ownership FKs and logical uniqueness cover Booking originals, payment entries
+and correction links. No backfill: old Bookings receive an actual first-issuance time.
+Fresh/populated/failed/repeated migration tests preserve all prerequisite evidence.
+Rollback compatible code while retaining tables, history, sequence and grants; repair
+schema forward. [Receipt contract](../../docs/architecture/receipts.md).

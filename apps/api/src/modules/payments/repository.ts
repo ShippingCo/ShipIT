@@ -3,7 +3,7 @@ import { HttpError } from '../../plugins/errors.ts';
 import { instant } from '../pricing/types.ts';
 import { balance } from './rules.ts';
 import type { LedgerRow, ObligationRow, PaymentProjection, PaymentEntryDto, PaymentResult, PaymentCollectionInput, PaymentReversalInput } from './types.ts';
-function context(scope:TenantAccess) {return assertTenantAccess(scope,['payments.collect','payments.reverse','payments.read']);}
+function context(scope:TenantAccess) {return assertTenantAccess(scope,['payments.collect','payments.reverse','payments.read','payments.receipt.read']);}
 export async function active(scope:TenantAccess) {
   const c=assertTenantAccess(scope,['payments.collect','payments.reverse']);
   const row=(await scopedQuery<{lifecycle:string;now:Date}>(scope,[c.action],`SELECT lifecycle,date_trunc('milliseconds',clock_timestamp()) AS now
@@ -19,7 +19,7 @@ export async function obligation(scope:TenantAccess,booking:string,lock=false):P
   if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
 export async function projection(scope:TenantAccess,o:ObligationRow):Promise<PaymentProjection> {
-  const c=context(scope);
+  const c=assertTenantAccess(scope,['payments.collect','payments.reverse','payments.read']);
   const row=(await scopedQuery<{collected:string;version:number}>(scope,[c.action],`SELECT
     COALESCE(sum(CASE WHEN kind='collection' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0)::text AS collected,
     COALESCE(max(sequence),0)::integer AS version FROM shipit.payment_entries
@@ -85,4 +85,10 @@ export async function settled(scope:TenantAccess,result:PaymentResult,command:st
     (event_id,organization_id,franchise_id,booking_id,command_id,payment_command_id,obligation_id,event_type,aggregate_id,envelope)
     SELECT $1,{{organization}},$2,$3,$4,$4,$5,'payment.settled',$5,$6 WHERE {{franchise:$7:$2}}`,
     [event,c.permittedFranchiseIds[0],p.booking_id,command,p.obligation_id,envelope,c.organizationId]);
+}
+
+/** R13 internal port: immutable entry only, never current balance or unrelated history. */
+export async function receiptEntry(scope:TenantAccess,o:ObligationRow,id:string):Promise<PaymentEntryDto> {
+  assertTenantAccess(scope,['payments.receipt.read']);
+  return entryDto(await entry(scope,o,id));
 }
