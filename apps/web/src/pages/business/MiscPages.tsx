@@ -8,7 +8,7 @@ import { ConfirmDialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
 import { db, fmtMoney, fmtDT, waFmt, markAllBizSeen, updateBusiness, resetDemo, openEscalations, resolveEscalation, replyWindow, prettyPhone, grossOf } from '../../data/store';
 
-import { printReceipt } from '../../utils/receipt';
+import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';
 import { useDB } from '../../context/AppContext';
 import type { CustomRange, DatePreset } from '../../components/m3/Controls';
 import { downscaleImage } from '../../utils/image';

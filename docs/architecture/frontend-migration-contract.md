@@ -227,3 +227,12 @@ See [verification](prototype-migration-verification.md) for actual results and a
 
 These principles fit the accepted modular monolith. No cloud platform, extra service or
 company-scale migration infrastructure is selected by citing them.
+
+## Issue #30 print boundary
+
+`utils/receipt-view.ts` maps only a server-issued ReceiptDto into an escaped pure print
+layout; `utils/receipt.ts` exposes an explicit user-invoked print action with private-DOM
+cleanup. It performs no network/store lookup, tax/price/balance calculation or ETA inference.
+`utils/demo-receipt.ts` is an explicit fictional adapter used only by existing demo pages.
+No failed API→browser fallback exists. #33 owns the authenticated receipt client adapter,
+full screen states, scope invalidation and production receipt-screen migration.

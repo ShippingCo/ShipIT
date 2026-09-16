@@ -37,7 +37,7 @@ export function inspectSource(file, source) {
       // Catch extracted/aliased query methods too; Fastify request.query is data, not a call.
       if (ts.isPropertyAccessExpression(node) && node.name.text === 'query' &&
         !((file.endsWith('/auth/webhook.ts') && node.expression.getText(tree) === 'r') ||
-          (['apps/api/src/modules/payments/routes.ts', 'apps/api/src/modules/routes/routes.ts', 'apps/api/src/modules/lots/routes.ts', 'apps/api/src/modules/bookings/routes.ts', 'apps/api/src/modules/parcels/routes.ts', 'apps/api/src/modules/tax/routes.ts', 'apps/api/src/modules/audit/routes.ts', 'apps/api/src/modules/customers/routes.ts', 'apps/api/src/modules/pricing/routes.ts'].includes(file) && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
+          (['apps/api/src/modules/receipts/routes.ts', 'apps/api/src/modules/payments/routes.ts', 'apps/api/src/modules/routes/routes.ts', 'apps/api/src/modules/lots/routes.ts', 'apps/api/src/modules/bookings/routes.ts', 'apps/api/src/modules/parcels/routes.ts', 'apps/api/src/modules/tax/routes.ts', 'apps/api/src/modules/audit/routes.ts', 'apps/api/src/modules/customers/routes.ts', 'apps/api/src/modules/pricing/routes.ts'].includes(file) && node.expression.getText(tree) === 'request' && !(ts.isCallExpression(node.parent) && node.parent.expression === node)))) report(node, 'raw query method bypasses scopedQuery');
       if (ts.isElementAccessExpression(node) && ((ts.isStringLiteral(node.argumentExpression) && node.argumentExpression.text === 'query') ||
         (!ts.isStringLiteral(node.argumentExpression) && ts.isCallExpression(node.parent) && node.parent.expression === node))) report(node, 'computed executor calls are not approved');
       if (ts.isBindingElement(node) && (node.propertyName?.getText(tree) ?? node.name.getText(tree)) === 'query') report(node, 'extracted query bypasses scopedQuery');
@@ -53,6 +53,7 @@ export function inspectSource(file, source) {
         if (/shipit\.(?:lots|lot_[a-z_]+|append_lot_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'lot SQL requires both organization and franchise ownership');
         if (/shipit\.(?:routes|route_[a-z_]+|append_route_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'route SQL requires both organization and franchise ownership');
         if (/shipit\.(?:payment_[a-z_]+|append_payment_audit)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'payment SQL requires both organization and franchise ownership');
+        if (/shipit\.(?:issued_receipts|receipt_audit_events)\b/.test(text) && !text.includes('{{franchise:')) report(node, 'receipt SQL requires both organization and franchise ownership');
         if (/shipit\.tax_[a-z_]+\b/.test(text) && !text.includes('{{franchise:')) report(node, 'tax SQL requires both organization and franchise ownership');
         if (!node.arguments[1] || !ts.isArrayLiteralExpression(node.arguments[1]) || !node.arguments[1].elements.length) report(node, 'query must declare a closed action allowlist');
       }

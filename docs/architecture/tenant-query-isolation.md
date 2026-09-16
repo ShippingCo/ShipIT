@@ -286,3 +286,15 @@ The [verification](issue-26-verification.md) includes A/B/C fixtures and actual 
 ## Issue #27 scope coverage
 
 The checker now recognizes routes, route_commands, route_lots, route_parcels, route_manifests, route_manifest_parcels, route_manifest_sources, route_audit_events and parcel_dispatch_manifests as franchise-owned private tables. `routes/routes.ts` has only the existing exact request.query-as-data exception; executable query access remains forbidden. Negative tests cover missing/broad owner predicates, raw pool access and capability/authority imports. Route scopes are live single-franchise membership capabilities; T03 uses a parcels.dispatch-only internal manifest projection. [Contract](routes.md).
+
+## Issue #30 issued receipts
+
+`withReceiptScope` rechecks live R13 and the explicitly selected own-org franchise under
+existing membership/Organization serialization. Separate opaque read/materialize capabilities
+confine the owning service; a narrow `payments.receipt.read` capability reads only opening
+identity and one immutable entry through Payments. It cannot call current projection or
+write ledger SQL. Receipt repositories require both-owner macros before Booking/entry/UUID
+predicates. The AST gate covers issued_receipts and receipt_audit_events, including negative
+controls for organization-only/raw SQL and capability minting. Direct IDs, nested payment IDs
+and correction IDs disclose no foreign records/counts; number lookup is absent. Same-owner
+SQL triggers/FKs protect source and correction relationships. [Evidence](issue-30-verification.md).

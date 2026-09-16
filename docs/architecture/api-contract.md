@@ -379,3 +379,15 @@ POST `/routes/:route_id/events` and GET latest/event-detail endpoints use the [t
 nested reversals, plus current balance and immutable-entry GET projections. Closed INR
 integer-paise input replaces any browser paid/settled authority. The existing 400 syntax /
 422 semantic-validation distinction, authenticated scoped errors and retry rules remain.
+
+## Issue #30 receipt retrieval
+
+[Receipts](receipts.md) and [ADR 0020](../adr/0020-immutable-issued-receipts.md) ratify
+GET `/api/v1/bookings/:booking_id/receipt`, GET
+`/api/v1/bookings/:booking_id/payments/:payment_id/receipt`, and GET
+`/api/v1/receipts/:receipt_id`, each with required organization_id/franchise_id selectors.
+The first two have a bounded persistence exception: the owner materializes the one
+canonical snapshot and issuance audit on first authorized retrieval; retries reuse it.
+HEAD is not exposed. No client-supplied content/version, request key, public URL or print
+success command. The direct ID route reads existing evidence only. No money/message/event
+effect. All use live R13, no-store, minimal allowlisted DTOs and existing controlled errors.

@@ -265,3 +265,13 @@ payment_obligation, with entry identity, sequence, actor/scope/time, closed reas
 correlation. No request narrative or contact data. Accountant R28 includes only these
 financial facts; mixed financial/administrative scopes are filtered before pagination.
 Replay adds no money-success audit. [Payments](payments.md).
+
+## Issue #30 issuance evidence
+
+First canonical materialization appends one immutable `receipt:<UUID>` record to the
+existing audit_history projection: `receipts.issued`, resource `receipt`, success,
+`receipt_issued`, actor/tenant/Booking correlation references, issued time and version.
+No document content, amounts, addresses, phones, tokens or raw DTO. Retrieving an existing
+artifact appends no business audit. Existing access telemetry and safe `receipts.read`
+denial audit apply. Accountant reads may include this minimum financial audit reference.
+No printed/downloaded domain event or assertion that physical printing succeeded.

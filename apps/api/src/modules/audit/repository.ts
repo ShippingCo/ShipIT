@@ -27,7 +27,7 @@ export async function list(scope:TenantAccess,filter:AuditFilter,boundary:AuditB
     a.previous_lifecycle,a.new_lifecycle,a.committed_version,a.role
     FROM shipit.audit_history a WHERE {{organization:a.organization_id}}
       AND ({{organizationWide}}::boolean OR (cardinality(a.franchise_ids)>0 AND a.franchise_ids <@ {{franchises}}::uuid[]))
-      AND (a.resource_type='payment_obligation' OR {{organizationWide}}::boolean OR a.franchise_ids <@ $9::uuid[])
+      AND (a.resource_type IN ('payment_obligation','receipt') OR {{organizationWide}}::boolean OR a.franchise_ids <@ $9::uuid[])
       AND ($1::uuid IS NULL OR $1=ANY(a.franchise_ids))
       AND ($2::text IS NULL OR a.resource_type=$2) AND ($3::uuid IS NULL OR a.resource_id=$3)
       AND ($4::timestamptz IS NULL OR a.occurred_at >= $4) AND ($5::timestamptz IS NULL OR a.occurred_at < $5)

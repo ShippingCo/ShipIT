@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, paymentScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, paymentScope, receiptScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -544,5 +544,23 @@ export async function withPaymentScope<T>(database:DatabasePool,sessionToken:str
       if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
       throw error;
     }
+  });
+}
+
+/** R13 retrieval owns only canonical materialization and a minimum immutable payment entry. */
+export async function withReceiptScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  correlationId:string,work:(scopes:import('../receipts/types.ts').ReceiptScopes)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!receiptScope(memberships,all).includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+      organizationWide:false,correlationId,provenance:'membership' as const};
+    return work({read:issueTenantAccess(tx,{...context,action:'receipts.read'}),
+      materialize:issueTenantAccess(tx,{...context,action:'receipts.materialize'}),payment:issueTenantAccess(tx,{...context,action:'payments.receipt.read'})});
   });
 }

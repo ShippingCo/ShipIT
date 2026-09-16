@@ -1,7 +1,7 @@
 import type { TenantAccess } from '../security/scope.ts';
 export type { PaymentCollectionInput, PaymentReversalInput, PaymentProjection, PaymentEntryDto, PaymentResult } from '@shippingco/shared';
 export type PaymentOperation = 'payments.collect' | 'payments.reverse';
-export type PaymentAction = PaymentOperation | 'payments.read' | 'payments.audit' | 'payments.events';
+export type PaymentAction = PaymentOperation | 'payments.receipt.read' | 'payments.read' | 'payments.audit' | 'payments.events';
 export interface PaymentScopes { command: TenantAccess; audit: TenantAccess|null; events: TenantAccess|null }
 export interface ObligationRow { id:string; booking_id:string; total_paise:string }
 export interface LedgerRow {
