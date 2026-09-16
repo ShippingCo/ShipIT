@@ -3,6 +3,9 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  PAYMENT_OVER_COLLECTION:[409,'Collection exceeds the outstanding amount.'],
+  PAYMENT_REVERSAL_EXCEEDED:[409,'Reversal exceeds the unreversed collection amount.'],
+  PAYMENT_REFERENCE_CONFLICT:[409,'Collection reference was already used for a different intent.'],
   ROUTE_STATE_CONFLICT:[409,'Route state does not permit this command.'],
   ROUTE_MANIFEST_CONFLICT:[409,'Route sources or manifest conflict. Refresh before trying again.'],
   ROUTE_LIMIT_EXCEEDED:[409,'Route exceeds the supported source or parcel limit.'],
@@ -48,7 +51,7 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
-export type ValidationField = 'event_id'|'kind'|'manifest_version'|'effective_at'|'base_eta_at'|'total_delay_minutes'| 'origin'|'destination'|'mode'|'carrier_code'|'scheduled_departure_at'| 'lot_id'|'target_lot_id'|'membership_id'|'expected_target_version'|'state'| 'action'|'items'| 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | 'failure_subreason_code' | 'override_reason_code' | 'evidence_ref' | 'location_ref' | 'manifest_id' | 'route_id' | 'attempt_id' | 'return_plan_ref' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
+export type ValidationField = 'amount_paise'|'currency'|'context'|'method'|'collection_reference'|'payment_id'| 'event_id'|'kind'|'manifest_version'|'effective_at'|'base_eta_at'|'total_delay_minutes'| 'origin'|'destination'|'mode'|'carrier_code'|'scheduled_departure_at'| 'lot_id'|'target_lot_id'|'membership_id'|'expected_target_version'|'state'| 'action'|'items'| 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | 'failure_subreason_code' | 'override_reason_code' | 'evidence_ref' | 'location_ref' | 'manifest_id' | 'route_id' | 'attempt_id' | 'return_plan_ref' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
 export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
 export class FieldValidationError extends HttpError {
   readonly details: { field: ValidationField; code: ValidationCode }[];

@@ -35,7 +35,7 @@ export function parseStrictJson(source: string, exactIntegers = false): unknown 
       while (i + 1 < source.length && ![' ', '\t', '\n', '\r', ',', '}', ']'].includes(source[i + 1]!)) i++;
       const token=source.slice(start,i+1);
       if (!Number.isFinite(Number(token))) refuse();
-      // Pricing schemas permit only integers. Inspect original decimal digits before
+      // Pricing and Payments schemas permit only integers. Inspect original decimal digits before
       // JSON.parse precision loss can turn 9007199254740991.1 or 1e-999 into an integer.
       if(exactIntegers) {
         const match=/^-?(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(token)!;
@@ -51,7 +51,7 @@ export function parseStrictJson(source: string, exactIntegers = false): unknown 
 export function registerJson(app: FastifyInstance) {
   app.removeAllContentTypeParsers();
   app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: JSON_BODY_LIMIT }, (request, body, done) => {
-    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), (request.routeOptions.url??'').includes('/pricing/'))); }
+    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), /\/(?:pricing|payments)(?:\/|$)/.test(request.routeOptions.url??''))); }
     catch(error) { done(error instanceof FieldValidationError?error:new HttpError('MALFORMED_REQUEST')); }
   });
   app.addHook('onRequest', async (request) => {

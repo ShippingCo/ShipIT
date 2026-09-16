@@ -39,7 +39,7 @@ it('telemetry stores only closed dimensions and cannot retain injected labels',(
 });
 it('audit repositories reject missing/forged capabilities before private SQL',async()=>{
   for(const scope of [undefined,{}, {context:{organizationId:org,action:'audit.read'}}]) {
-    await expect(list(scope as TenantAccess,filterInput({organization_id:org}),null)).rejects.toThrow('ACTION_FORBIDDEN');
+    await expect(list(scope as TenantAccess,filterInput({organization_id:org}),null,[])).rejects.toThrow('ACTION_FORBIDDEN');
     await expect(appendTenancy(scope as TenantAccess,{} as TenancyAuditFact)).rejects.toThrow('ACTION_FORBIDDEN');
   }
 });

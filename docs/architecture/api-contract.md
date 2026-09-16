@@ -372,3 +372,10 @@ selectors retain their declared meanings. No generic Parcel mutation or destruct
 ## Issue #28 Route event API
 
 POST `/routes/:route_id/events` and GET latest/event-detail endpoints use the [typed Route event contract](route-events.md). Strict W18 plus per-effect W09, immutable outcomes and explicit unavailable route-leg ETA apply.
+
+## Issue #29 Payments
+
+[Payments](payments.md#api-intent-and-safe-responses) activates POST Booking payments and
+nested reversals, plus current balance and immutable-entry GET projections. Closed INR
+integer-paise input replaces any browser paid/settled authority. The existing 400 syntax /
+422 semantic-validation distinction, authenticated scoped errors and retry rules remain.

@@ -20,7 +20,7 @@ await test('bulk additive upgrade from Issue 24, repeated no-op and failed migra
   await assert.rejects(db.migrate({dir:temp}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await owner.query("SELECT to_regclass('shipit.parcel_bulk_requests') AS table")).rows[0]!.table,null);
   assert.equal((await owner.query('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,13);
-  assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await owner.query('SELECT * FROM shipit.organizations')).rows,before);
 });
 await test('bulk receipt runtime least privilege, immutable intent, bounded fields and composite owner constraint',{timeout:30000},async t=>{

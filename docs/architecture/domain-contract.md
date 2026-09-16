@@ -25,7 +25,7 @@ precedence over Issue #3's original one-parcel suggestion and the browser record
 | Route / dispatch | Physical movement and its validated parcel manifest | Owned by operating franchise; can contain authorized sibling-owned parcels under custody |
 | Delivery assignment | Time-bounded responsibility of one delivery agent | Parcel + current responsible franchise + current member agent; no access after reassignment |
 | Delivery attempt / proof | One physical attempt and its protected evidence | Parcel-scoped; OTP verification failures are separate counters; Deliveries approves completion |
-| Payment obligation / ledger | Commercial amount owed and append-only collection/reconciliation facts | Booking-owned; partial parcel delivery does not settle it; approved collection allocations owned by #29 |
+| Payment obligation / ledger | Commercial amount owed and append-only collection/reconciliation facts | Booking-owned; partial parcel delivery does not settle it; Booking-level ledger under [ADR 0019](../adr/0019-payment-ledger.md) |
 | Customer timeline | Safe projection of immutable shipment facts | Parcel-scoped; never a dump of internal events, customer history or proof |
 
 Organization has one or more franchises in the active operating model. A standalone
@@ -266,9 +266,9 @@ For a nonnegative final customer amount `p` in paise, once all approved calculat
 complete: `rounded_paise = ((p + 50) // 100) * 100`; `rounding_adjustment_paise = rounded_paise - p`.
 Thus 12,549 → 12,500 (−49), 12,550 → 12,600 (+50), 12,551 → 12,600 (+49).
 Keep the unrounded amount, adjustment and final collectible snapshot so reports reconcile.
-Do not re-round each parcel, tax component, installment, resend or payment retry. #29/#30
-must define the collection boundary/allocation for partial multi-parcel fulfillment before
-implementation; negative credit/refund rounding remains #8/#29, not inferred from this formula.
+Do not re-round each parcel, tax component, installment, resend or payment retry. #29 [ADR 0019](../adr/0019-payment-ledger.md) fixes partial collection at Booking level,
+with no Parcel allocation or negative credits. #30 retains receipt reconciliation; external
+refund execution stays outside the pilot, not inferred from this formula.
 Delivery state, payment settlement and notification delivery are independent facts.
 
 A docket is globally unique across **all ShipIT organizations/franchises**, permanent,

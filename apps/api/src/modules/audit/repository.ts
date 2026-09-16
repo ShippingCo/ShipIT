@@ -18,22 +18,22 @@ export async function appendTenancy(scope:TenantAccess,fact:Readonly<TenancyAudi
     fact.previous_lifecycle,fact.new_lifecycle,fact.committed_version]);
 }
 
-export async function list(scope:TenantAccess,filter:AuditFilter,boundary:AuditBoundary|null) {
+export async function list(scope:TenantAccess,filter:AuditFilter,boundary:AuditBoundary|null,administrativeFranchises:readonly string[]) {
   assertTenantAccess(scope,['audit.read']);
-  // All current facts are administrative/identity. The financial projection has
-  // no producers yet; accountant authority never becomes general audit authority.
+  // Financial-only grants cannot reveal administrative or operational history.
   return (await scopedQuery<AuditRow>(scope,['audit.read'],`SELECT a.id,a.organization_id,a.franchise_ids,
     a.actor_type,a.actor_id,a.action,a.resource_type,a.resource_id,a.result,a.reason_code,a.correlation_id,
     to_char(a.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS occurred_at,
     a.previous_lifecycle,a.new_lifecycle,a.committed_version,a.role
     FROM shipit.audit_history a WHERE {{organization:a.organization_id}}
       AND ({{organizationWide}}::boolean OR (cardinality(a.franchise_ids)>0 AND a.franchise_ids <@ {{franchises}}::uuid[]))
+      AND (a.resource_type='payment_obligation' OR {{organizationWide}}::boolean OR a.franchise_ids <@ $9::uuid[])
       AND ($1::uuid IS NULL OR $1=ANY(a.franchise_ids))
       AND ($2::text IS NULL OR a.resource_type=$2) AND ($3::uuid IS NULL OR a.resource_id=$3)
       AND ($4::timestamptz IS NULL OR a.occurred_at >= $4) AND ($5::timestamptz IS NULL OR a.occurred_at < $5)
       AND ($6::timestamptz IS NULL OR (a.occurred_at,a.id COLLATE "C") < ($6,$7::text COLLATE "C"))
     ORDER BY a.occurred_at DESC,a.id COLLATE "C" DESC LIMIT $8`,
-  [filter.franchiseId,filter.resourceType,filter.resourceId,filter.from,filter.to,boundary?.time??null,boundary?.id??null,filter.limit+1])).rows;
+  [filter.franchiseId,filter.resourceType,filter.resourceId,filter.from,filter.to,boundary?.time??null,boundary?.id??null,filter.limit+1,administrativeFranchises])).rows;
 }
 
 export async function appendMembership(tx:TenantAccess,input:{organizationId:string;actorType:'user'|'service';actorUserId:string|null;
@@ -84,4 +84,11 @@ export async function appendRoute(scope:TenantAccess,route:string,command:string
   const c=assertTenantAccess(scope,['routes.audit']);
   await scopedQuery(scope,['routes.audit'],`SELECT shipit.append_route_audit($1,$2,$3,$4,$5) WHERE {{franchise:$1:$2}}`,
     [c.organizationId,c.permittedFranchiseIds[0],route,command,event]);
+}
+
+/** Financial audit is linked to immutable ledger evidence, with no request narrative. */
+export async function appendPayment(scope:TenantAccess,booking:string,command:string,entry:string) {
+  const c=assertTenantAccess(scope,['payments.audit']);
+  await scopedQuery(scope,['payments.audit'],`SELECT shipit.append_payment_audit($1,$2,$3,$4,$5) WHERE {{franchise:$1:$2}}`,
+    [c.organizationId,c.permittedFranchiseIds[0],booking,command,entry]);
 }

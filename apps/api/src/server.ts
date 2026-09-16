@@ -1,3 +1,5 @@
+import { createPaymentService } from './modules/payments/service.ts';
+import { registerPayments } from './modules/payments/routes.ts';
 import { createRouteService } from './modules/routes/service.ts';
 import { createRouteEventService } from './modules/routes/event-service.ts';
 import { registerRoutes } from './modules/routes/routes.ts';
@@ -89,6 +91,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
+      registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');

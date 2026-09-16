@@ -91,3 +91,11 @@ export function routeScope(action:import('../routes/types.ts').RouteAction,membe
     action==='routes.archive'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
   return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
+
+/** R11 and W20/W21: no role inheritance or additional cashier/agent grant. */
+export function paymentScope(action:import('../payments/types.ts').PaymentAction,memberships:readonly Membership[],all:readonly string[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active');
+  if(action==='payments.read'&&active.some(m=>m.role==='org_admin'))return [...all];
+  const roles:readonly Role[]=action==='payments.read'?['franchise_admin','accountant']:['franchise_admin'];
+  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}

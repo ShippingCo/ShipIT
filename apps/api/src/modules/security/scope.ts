@@ -5,7 +5,7 @@ import type { ApprovedTenancyContext } from '../tenancy/types.ts';
 
 export type BookingAction = 'bookings.create'|'parcels.create'|'customer.snapshot.read'|'bookings.audit'|'bookings.events'|
   'bookings.read'|'bookings.list'|'parcels.read'|'parcels.list'|'parcels.timeline';
-export type PrivateAction = import('../routes/types.ts').RouteAction | import('../lots/types.ts').LotAction | BookingAction | import('../parcels/types.ts').ParcelAction | import('../tax/types.ts').TaxAction | import('../pricing/types.ts').PricingAction | CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
+export type PrivateAction = import('../payments/types.ts').PaymentAction | import('../routes/types.ts').RouteAction | import('../lots/types.ts').LotAction | BookingAction | import('../parcels/types.ts').ParcelAction | import('../tax/types.ts').TaxAction | import('../pricing/types.ts').PricingAction | CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
   'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
 export interface PrivateContext extends Omit<ApprovedTenancyContext, 'action'> {
   readonly action: PrivateAction;
@@ -17,7 +17,7 @@ const brand: unique symbol = Symbol('TenantAccess');
 export interface TenantAccess { readonly [brand]: true; readonly context: PrivateContext }
 const capabilities = new WeakMap<TenantAccess, { executor: QueryExecutor; transaction: boolean }>();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const actions: readonly PrivateAction[] = ['routes.departure','routes.delay','routes.arrival','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach','routes.audit','routes.events','lots.read','lots.list','lots.create','lots.update','lots.archive','lots.membership.add','lots.membership.move','lots.membership.remove','lots.audit','lots.events','bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events','bookings.read','bookings.list','parcels.read','parcels.list','parcels.timeline',
+const actions: readonly PrivateAction[] = ['payments.collect','payments.reverse','payments.read','payments.audit','payments.events','routes.departure','routes.delay','routes.arrival','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach','routes.audit','routes.events','lots.read','lots.list','lots.create','lots.update','lots.archive','lots.membership.add','lots.membership.move','lots.membership.remove','lots.audit','lots.events','bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events','bookings.read','bookings.list','parcels.read','parcels.list','parcels.timeline',
   'parcels.check_in','parcels.dispatch','parcels.transit','parcels.fail_delivery','parcels.approve_rto','parcels.events',
   'tax.read','tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate','organization.bootstrap','franchise.create','organization.profile.update',
   'organization.lifecycle.manage','organization.profile.read','franchise.profile.read','franchise.profile.list',
@@ -39,7 +39,7 @@ export function issueTenantAccess(executor: QueryExecutor, input: PrivateContext
     (input.organizationId === null ? input.action !== 'organization.bootstrap' : !uuid.test(input.organizationId))) {
     throw new HttpError('ACTION_FORBIDDEN');
   }
-  if ((['bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events'].includes(input.action) || input.action.startsWith('routes.') || input.action.startsWith('lots.') || input.action.startsWith('parcels.') || input.action.startsWith('tax.') || input.action.startsWith('pricing.') || ['customer.read','customer.list','customer.create','customer.update'].includes(input.action)) &&
+  if ((['bookings.create','parcels.create','customer.snapshot.read','bookings.audit','bookings.events'].includes(input.action) || input.action.startsWith('payments.') || input.action.startsWith('routes.') || input.action.startsWith('lots.') || input.action.startsWith('parcels.') || input.action.startsWith('tax.') || input.action.startsWith('pricing.') || ['customer.read','customer.list','customer.create','customer.update'].includes(input.action)) &&
     (input.provenance !== 'membership' || input.actor.type !== 'user' || input.organizationWide || input.permittedFranchiseIds.length !== 1)) {
     throw new HttpError('ACTION_FORBIDDEN');
   }
@@ -76,7 +76,7 @@ export function scopedQuery<Row extends object = Record<string, unknown>>(
   if (!actions.length) throw new HttpError('ACTION_FORBIDDEN');
   const context = assertTenantAccess(access, actions);
   const command = sql.trimStart().match(/^(SELECT|INSERT|UPDATE|DELETE)\b/i)?.[1]?.toUpperCase();
-  const writes = command !== 'SELECT' || /\bshipit\.append_(?:tenancy_audit|security_denial|customer_audit|pricing_audit|booking_audit|lot_audit|route_audit)\s*\(/i.test(sql);
+  const writes = command !== 'SELECT' || /\bshipit\.append_(?:payment_audit|tenancy_audit|security_denial|customer_audit|pricing_audit|booking_audit|lot_audit|route_audit)\s*\(/i.test(sql);
   if (!command || sql.includes(';') ||
     ((writes || /FOR\s+(UPDATE|SHARE)/i.test(sql)) && !capabilities.get(access)!.transaction) || (writes && /(?:\.read|\.list|\.export)$/.test(context.action))) {
     throw new HttpError('ACTION_FORBIDDEN');

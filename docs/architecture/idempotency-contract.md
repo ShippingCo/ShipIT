@@ -191,3 +191,12 @@ Route commands use version-1 canonical normalized metadata/source/expected-versi
 ## Issue #28 Route event receipts
 
 Typed departure/delay/arrival have operation-scoped principal/tenant key digests and normalized intent fingerprints. Original result replay precedes stale-state checks after current authorization. Absolute delay revisions, expected versions and event/Parcel uniqueness prevent compound ETA updates. [Contract](route-events.md).
+
+## Issue #29 financial receipts
+
+[Payments](payments.md) uses canonical v1 intent and principal/tenant/operation/key digests
+for api.v1.payments.collect and api.v1.payments.reverse. Identical scoped collection reference
+replays the original effect; a distinct retry key is durably bound by an alias receipt with
+no extra ledger/audit/event. Pilot receipts retain indefinitely without pruning. Existing
+current-authorization and uncertain-COMMIT rules apply. GET returns a current ledger-derived
+projection, while POST replay preserves the original revision/result. [ADR 0019](../adr/0019-payment-ledger.md).

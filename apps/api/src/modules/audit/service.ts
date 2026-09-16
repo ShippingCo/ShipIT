@@ -10,14 +10,14 @@ export function createAuditService(database:DatabasePool,key:Buffer) {
   const codec=auditCursorCodec(key);
   return {async list(sessionToken:string,input:unknown,correlationId:string) {
     const filter=filterInput(input);
-    return withAuditScope(database,sessionToken,filter.organizationId,correlationId,async (scope,revision)=>{
+    return withAuditScope(database,sessionToken,filter.organizationId,correlationId,async (scope,revision,administrativeFranchises)=>{
       const c=scope.context;
       if(filter.franchiseId && !c.organizationWide && !c.permittedFranchiseIds.includes(filter.franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
       const binding=createHash('sha256').update(JSON.stringify({actor:c.actor,organization:c.organizationId,
         franchises:c.permittedFranchiseIds,organizationWide:c.organizationWide,revision,
         filter:{...filter,cursor:null},sort:'occurred_at_desc',version:1})).digest('hex');
       const boundary=filter.cursor?codec.decode(filter.cursor,binding):null;
-      const rows=await repository.list(scope,filter,boundary);
+      const rows=await repository.list(scope,filter,boundary,administrativeFranchises);
       if(!boundary&&!rows.length&&(filter.resourceId||filter.franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
       const hasMore=rows.length>filter.limit,visible=rows.slice(0,filter.limit),last=visible.at(-1);
       // Explicit public projection: never spread database rows or include free text.

@@ -281,7 +281,7 @@ provenance explicitly. The prototype `Date.now() + days` remains demo-only under
 | --- | --- |
 | #20/#21 | Exact pricing/tax engine, current evidence-backed rates/classifications, grouping, effective selection and statutory output reconciliation; no production rate selected here |
 | #22/#30 | Atomic booking snapshots and immutable receipts, safe correction compatibility |
-| #29 | Payment ledger/settlement, partial/multi-parcel collection allocation, negative credits/refunds and reversal reconciliation. Final Booking payable fixed here; no installment re-rounding. Unspecified credit/partial flows remain disabled |
+| #29 | [ADR 0019](../adr/0019-payment-ledger.md) implements partial Booking-level collection without installment re-rounding, linked positive corrections and ledger reconciliation. Negative credits and external refunds are disabled; receipts/statutory outputs remain downstream |
 | #42 | Secure challenges, lineage counters, fake-clock boundary/race tests, exceptional/office proof and cleanup; no provider/storage implementation here |
 | #66 | W27/W29 settings and approved effective-dated operating weekdays/holidays; collection calendar stays unresolved, no Mon–Fri default |
 | #72 | Legal applicability validation, field retention/holds permissions and execution, notices/deletion plans, processor/backup erasure with #69 |
