@@ -108,3 +108,7 @@ The snapshot validator reloads stored evidence and recomputes against current im
 rules and live privilege, rejecting expired/tampered proposals. Tests include direct runtime
 privileges, missing/expired capabilities, sibling/unrelated IDs, lost COMMIT acknowledgement,
 per-step rollback and audit/log inspection. No new provider, secret or application role.
+
+## T09 implementation evidence (#31)
+
+[ADR 0021](../adr/0021-private-attachment-storage.md) resolves the application control: private conditional S3 writes, opaque immutable keys, composite scoped metadata, bounded stream and aggregate quotas, detected MIME plus fail-closed clamd quarantine, session-bound 60-second grants with live revocation, and confirmed-delete temporary cleanup. [Verification](issue-31-verification.md) maps malicious bytes, real foreign identities, runtime-role constraints, provider contracts and browser/log privacy tests. Header detection is not complete media sanitization; #68 must maintain real scanner signatures and private encrypted infrastructure. Ready evidence destruction and holds require #72.

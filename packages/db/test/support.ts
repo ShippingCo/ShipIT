@@ -157,6 +157,7 @@ export interface DisposableDatabase {
   prepareRoutes(): Promise<void>;
   preparePayments(): Promise<void>;
   prepareReceipts(): Promise<void>;
+  prepareAttachments(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -338,6 +339,16 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(id) ON shipit.booking_obligations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareAttachments() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.attachments,shipit.attachment_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,scan_state,actual_size,detected_type,digest,linked_at,cleanup_due_at,upload_lease_until,upload_attempt,uploaded_at,validated_at,deleted_at,cleanup_attempts,version,actor_type,actor_id,correlation_id) ON shipit.attachments TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(id) ON shipit.bookings TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.attachment_cleanup_scope(timestamptz) TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close(); }
     },
     async prepareReceipts() {
       await handle.preparePayments();

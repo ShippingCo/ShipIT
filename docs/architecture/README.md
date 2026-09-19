@@ -163,3 +163,5 @@ historical issue baselines, not the current implementation state.
 collection and linked reversal documents from #21/#22/#23/#29 authority. First authorized
 GET materializes canonical evidence; later retrieval/printing preserves identity and
 amounts. #33 retains the full production receipt-screen migration.
+
+- [Private attachments](attachments.md), [ADR 0021](../adr/0021-private-attachment-storage.md), [dependency review](issue-31-dependency-review.md), and [Issue #31 verification](issue-31-verification.md).

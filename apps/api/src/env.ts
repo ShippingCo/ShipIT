@@ -14,6 +14,7 @@ export interface RuntimeConfig {
   readonly databaseSecretRef: string;
   readonly databaseTls: DatabaseTls;
   readonly authSecretRef?: string;
+  readonly storageSecretRef?: string;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
 export class ConfigurationError extends Error {
@@ -90,10 +91,16 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const authSecretRef=env.AUTH_SECRET_REF;
   if (authSecretRef !== undefined && (!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(authSecretRef) || authSecretRef.includes('://'))) issue('AUTH_SECRET_REF','INVALID_FORMAT');
   if (authSecretRef?.startsWith('local:') && (environment!=='developer' || authSecretRef!=='local:auth')) issue('AUTH_SECRET_REF','INCONSISTENT');
+  const storageSecretRef=env.STORAGE_CREDENTIAL_REF;
+  if ((environment==='staging'||environment==='production')&&!storageSecretRef) issue('STORAGE_CREDENTIAL_REF','REQUIRED');
+  if (storageSecretRef!==undefined&&(!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(storageSecretRef)||storageSecretRef.includes('://'))) issue('STORAGE_CREDENTIAL_REF','INVALID_FORMAT');
+  if (storageSecretRef?.startsWith('local:')&&(environment!=='developer'||storageSecretRef!=='local:storage')) issue('STORAGE_CREDENTIAL_REF','INCONSISTENT');
+  if (env.LOCAL_STORAGE_CREDENTIAL!==undefined&&(environment!=='developer'||storageSecretRef!=='local:storage')) issue('LOCAL_STORAGE_CREDENTIAL','INCONSISTENT');
   if (issues.length) throw new ConfigurationError(issues);
   return Object.freeze({ environment: environment!, host, port, logLevel: logLevel as RuntimeConfig['logLevel'],
     allowedOrigins: Object.freeze(allowedOrigins), trustedProxyHops, trustedProxyAddresses: Object.freeze(trustedProxyAddresses), databaseSecretRef,
     databaseTls: Object.freeze(tls === 'verify-full' ? { mode: 'verify-full', ...(ca ? { ca } : {}) } : { mode: 'disable' }),
     ...(authSecretRef ? {authSecretRef} : {}),
+    ...(storageSecretRef ? {storageSecretRef} : {}),
   });
 }

@@ -298,3 +298,7 @@ predicates. The AST gate covers issued_receipts and receipt_audit_events, includ
 controls for organization-only/raw SQL and capability minting. Direct IDs, nested payment IDs
 and correction IDs disclose no foreign records/counts; number lookup is absent. Same-owner
 SQL triggers/FKs protect source and correction relationships. [Evidence](issue-30-verification.md).
+
+## Attachment scopes (#31)
+
+All attachments/attachment_commands/attachment_audit_events SQL uses both authoritative owners through scopedQuery. The only new raw discovery expression is the exact security/jobs.ts call to `attachment_cleanup_scope($1)`: a fixed-search-path, PUBLIC-revoked definer function yielding at most one due owner pair, never keys or content. Its worker issues only attachments.cleanup for that pair; no request selector is accepted. Gate tests reject unscoped, organization-only, raw-executor and issuer imports. No attachment directory exemption exists.

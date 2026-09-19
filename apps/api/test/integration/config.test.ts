@@ -10,7 +10,7 @@ describe('fail-closed runtime configuration', () => {
     expect(config.environment).toBe('developer'); expect(Object.isFrozen(config)).toBe(true);
     expect(Object.isFrozen(config.allowedOrigins)).toBe(true);
     for (const mode of ['demo', 'staging', 'production']) {
-      expect(parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, DATABASE_SECRET_REF: 'managed/db/version-1',
+      expect(parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/db/version-1',
         DATABASE_TLS_MODE: 'verify-full', ALLOWED_ORIGINS: 'https://console.example.test' }).environment).toBe(mode);
     }
   });
@@ -41,7 +41,7 @@ describe('fail-closed runtime configuration', () => {
   it('rejects local resolution, HTTP origins and disabled TLS outside developer', async () => {
     for (const mode of ['demo', 'staging', 'production']) {
       expect(() => parseEnvironment({ ...syntheticEnv, NODE_ENV: mode })).toThrow(ConfigurationError);
-      const config = parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, DATABASE_SECRET_REF: 'managed/version-1',
+      const config = parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/version-1',
         ALLOWED_ORIGINS: 'https://example.test', DATABASE_TLS_MODE: 'verify-full' });
       expect(() => developerSecretResolver(config, 'SYN_SECRET')).toThrow(ConfigurationError);
       await expect(startRuntime({ config, secretResolver: { kind: 'developer-local', resolve: async () => 'SYN_SECRET' } })).rejects.toThrow(ConfigurationError);
@@ -78,4 +78,11 @@ it('secret resolution timeout aborts the resolver and fails without secret-beari
     await vi.advanceTimersByTimeAsync(10_000); await rejected;
     expect(receivedSignal?.aborted).toBe(true);
   } finally { vi.useRealTimers(); }
+});
+it('hosted attachment configuration cannot silently disable the feature or use local secrets',async()=>{
+ const hosted={...syntheticEnv,NODE_ENV:'production',ALLOWED_ORIGINS:'https://console.example.test',DATABASE_SECRET_REF:'managed/db/version-1',DATABASE_TLS_MODE:'verify-full',AUTH_SECRET_REF:'managed/auth/version-1'};
+ expect(()=>parseEnvironment(hosted)).toThrow(ConfigurationError);
+ for(const bad of ['local:storage','https://user:SYN_SECRET@example.test'])expect(()=>parseEnvironment({...hosted,STORAGE_CREDENTIAL_REF:bad})).toThrow(ConfigurationError);
+ const config=parseEnvironment({...hosted,STORAGE_CREDENTIAL_REF:'managed/storage/version-1'}),resolve=vi.fn();
+ await expect(startRuntime({config:{...config,storageSecretRef:undefined},secretResolver:{kind:'managed',resolve}})).rejects.toThrow(ConfigurationError);expect(resolve).not.toHaveBeenCalled();
 });

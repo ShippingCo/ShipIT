@@ -144,3 +144,7 @@ appropriate access, but prohibit credentials, tokens, OTPs/verifiers, full addre
 raw sensitive provider payloads. Fixtures here use labels only. WhatsApp is never called
 directly from the frontend. Customer phone/docket input and LLM text are untrusted input,
 not proof of identity, payment, delivery or permission.
+
+## Private evidence boundary (#31)
+
+The API owns attachment metadata and streams bounded private objects through an S3-compatible port. A separate clamd-compatible scanner must approve each object before linking. Authenticated application grants reauthorize every read; no browser/provider URL establishes authority. API cleanup removes only unlinked temporary objects. [Attachments](attachments.md) defines the protocol; #68 provisions storage, TLS scanner and capacity, #69 recovery, #72 legal deletion.

@@ -75,3 +75,7 @@ not accepted statutory policy. No product test is rewritten to pretend a future 
 exists. #7/#18 isolate the demo; #22/#24/#42/#46 add meaningful production invariants at
 implementation. The [synthetic contract checks](domain-verification.md) verify documents
 and examples only, never actual server authorization or PostgreSQL behavior.
+
+## Attachment boundary after #31
+
+The historical `{kind,url,name,size}` record remains fictional demo input only. Production references use server Attachment IDs and minimal metadata; Blob/grant values are transient and never serialized with a Booking. The reusable production uploader is available for #33. The demo logo and demo picker explicitly import `demo-image.ts`; the production `image.ts` helper returns a Blob.

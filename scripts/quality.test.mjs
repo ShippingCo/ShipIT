@@ -338,7 +338,7 @@ test('legacy hook exceptions remain narrow, explained and counted', () => {
 
 test('normal tests include testkit, API and web while frontend remains independent', () => {
   const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
-  assert.equal(manifest.scripts.test, 'pnpm test:unit && pnpm test:api && pnpm test:web');
+  assert.equal(manifest.scripts.test, 'pnpm test:unit && pnpm test:api && pnpm test:web && pnpm test:attachments');
   assert.equal(manifest.scripts['test:unit'], 'pnpm --filter @shippingco/testkit test && pnpm --filter @shippingco/db test:unit');
   assert.equal(manifest.scripts['test:api'], 'pnpm --filter @shippingco/api test');
   assert.equal(manifest.scripts['test:web'], 'pnpm --filter @shippingco/web test');

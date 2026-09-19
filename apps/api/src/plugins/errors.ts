@@ -3,6 +3,14 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  ATTACHMENT_LIMIT_EXCEEDED: [413, 'Attachment storage limit exceeded.'],
+  ATTACHMENT_TYPE_UNSUPPORTED: [422, 'Choose a supported photo, voice note or video.'],
+  ATTACHMENT_CONTENT_MISMATCH: [422, 'File content does not match the upload.'],
+  ATTACHMENT_NOT_READY: [409, 'Attachment is not ready for access.'],
+  ATTACHMENT_UPLOAD_EXPIRED: [409, 'Upload has expired. Start a new upload.'],
+  ATTACHMENT_UPLOAD_FAILED: [503, 'Upload could not be confirmed. Retry the same upload.'],
+  ATTACHMENT_SCAN_FAILED: [503, 'File remains quarantined. Retry validation later.'],
+  ATTACHMENT_REJECTED: [422, 'File did not pass safety validation.'],
   PAYMENT_OVER_COLLECTION:[409,'Collection exceeds the outstanding amount.'],
   PAYMENT_REVERSAL_EXCEEDED:[409,'Reversal exceeds the unreversed collection amount.'],
   PAYMENT_REFERENCE_CONFLICT:[409,'Collection reference was already used for a different intent.'],

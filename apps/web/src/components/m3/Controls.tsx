@@ -261,7 +261,7 @@ export function AttachmentPicker({ items, onChange, onError }: AttachmentPickerP
     try {
       let url: string;
       if (kind === 'image') {
-        const { downscaleImage } = await import('../../utils/image');
+        const { downscaleImage } = await import('../../utils/demo-image');
         url = await downscaleImage(file);
       } else {
         url = await new Promise<string>((res, rej) => {

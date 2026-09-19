@@ -180,7 +180,7 @@
       "apps/web/src/App.tsx": "5478cba782f17d158f57908bec9930e70e9a46d3c26a2e7bf266c4c7d3007339",
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
-      "apps/web/src/components/m3/Controls.tsx": "2fc205e1a8d3604569f3e81da35d73fbb7e8c51383505ba8786acc5f51f34c10",
+      "apps/web/src/components/m3/Controls.tsx": "f68a01f147784901f94b078b036584112c32206dcb9336a9f67132dfae94559d",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
@@ -194,7 +194,7 @@
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
-      "apps/web/src/pages/business/MiscPages.tsx": "aad9e1cf823bd1507e9a694ac7b195391c1292e683fcbca907eaa9b2d82c6527",
+      "apps/web/src/pages/business/MiscPages.tsx": "d7da7d40536c529b73d768d679b5e09cd07a2385114ee2ee67842eb2d59e9a77",
       "apps/web/src/pages/business/NewBookingPage.tsx": "d0d64a83e77738aaec4befc58314d11361fbb414459f5dc84d142728a16b6007",
       "apps/web/src/pages/business/PackagesPage.tsx": "b356832e5e09406b3961b868389cdaa05c0eb354a62101f8f0123acea00989df",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
@@ -202,7 +202,7 @@
       "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
       "apps/web/src/test/operator.test.tsx": "8378107b4f8950af118c165cc60ce14e3fa5962ef835ebb7547ab366dfc9d9f9",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
-      "apps/web/src/utils/image.ts": "d847b8095c06ca436795e1945520f50768950f876bf709adfdbbe5fed1fd2aa7"
+      "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
     "imports": {
       "apps/web/src/App.tsx": [
@@ -575,8 +575,8 @@
           "syntax": "import type { CustomRange, DatePreset } from '../../components/m3/Controls';"
         },
         {
-          "target": "apps/web/src/utils/image.ts",
-          "syntax": "import { downscaleImage } from '../../utils/image';"
+          "target": "apps/web/src/utils/demo-image.ts",
+          "syntax": "import { downscaleImage } from '../../utils/demo-image';"
         },
         {
           "target": "apps/web/src/components/m3/Controls.tsx",
@@ -979,6 +979,61 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "selects, shows progress and pending scan, then retains only approved metadata",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "cancels in-flight bytes, revokes preview, and sends durable cancel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "retries the same intent after network failure and announces unsafe responses without rendering bytes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "purges and aborts previews on %s",
+        "cases": "['scope switch','logout','unmount']"
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "validates selection and provides native keyboard buttons and associated async text",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "loads durable metadata and fetches bytes only on explicit preview",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "public metadata discards unsafe extra fields and rejects a forged ready result",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "XHR uses current CSRF/session, progress, abort and safe response projection",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "photo decoding errors and aborts revoke the temporary object URL",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "download adapter bounds bytes and rejects a foreign signed URL before sending credentials",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "replacing the attachment client clears prior booking previews before the next list resolves",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/data-access.test.ts",
         "name": "defaults to production and accepts only explicit demo or safe canonical API origins",
         "cases": null
@@ -1277,6 +1332,14 @@
         "kind": "useSyncExternalStore"
       },
       {
+        "file": "apps/web/src/data-access/attachments.ts",
+        "kind": "signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/data-access/attachments.ts",
+        "kind": "c.ticket.signal.addEventListener"
+      },
+      {
         "file": "apps/web/src/data/store.ts",
         "kind": "localStorage.setItem"
       },
@@ -1405,6 +1468,10 @@
         "kind": "localStorage.getItem"
       },
       {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "kind": "signal.addEventListener"
+      },
+      {
         "file": "apps/web/src/test/data-access.test.ts",
         "kind": "expect(localStorage.length).toBe"
       },
@@ -1463,6 +1530,10 @@
       {
         "file": "apps/web/src/test/setup.ts",
         "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/utils/image.ts",
+        "kind": "signal?.addEventListener"
       }
     ]
   },
@@ -1780,7 +1851,7 @@
         "docs/architecture/security-threat-model.md",
         "docs/architecture/authorization-contract.md"
       ],
-      "current": "Image helper and picker create inline browser data URLs.",
+      "current": "Fictional demo picker/logo use demo-image data URLs. Production attachment adapter/uploader retain server metadata and ephemeral Blob previews; image.ts returns a Blob.",
       "target": "Private validated/quarantined storage with scoped attachment references and approved retention; input UX retained.",
       "verification": "Foreign download denied; rejected upload cannot become usable attachment; logout drops object URLs and previews.",
       "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
@@ -2117,6 +2188,94 @@
       "group": "receipts",
       "disposition": "demo_only",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "selects, shows progress and pending scan, then retains only approved metadata",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "cancels in-flight bytes, revokes preview, and sends durable cancel",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "retries the same intent after network failure and announces unsafe responses without rendering bytes",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "purges and aborts previews on %s",
+      "cases": "['scope switch','logout','unmount']",
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "validates selection and provides native keyboard buttons and associated async text",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "loads durable metadata and fetches bytes only on explicit preview",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "public metadata discards unsafe extra fields and rejects a forged ready result",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "XHR uses current CSRF/session, progress, abort and safe response projection",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "photo decoding errors and aborts revoke the temporary object URL",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "download adapter bounds bytes and rejects a foreign signed URL before sending credentials",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "replacing the attachment client clears prior booking previews before the next list resolves",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Clear a previous Booking preview during asynchronous client replacement."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",

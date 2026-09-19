@@ -1,28 +1,14 @@
-/**
- * Downscales a picked image and returns it as a JPEG data URL.
- *
- * Counter staff photograph parcels on whatever phone is behind the till, and a modern
- * phone camera produces several megabytes per shot. The whole app persists into
- * localStorage, which is a handful of megabytes in total, so a full-size photo would
- * fill the quota after a few bookings. Downscaling on the way in is what makes
- * attachments survivable at all.
- */
-export function downscaleImage(file: Blob, maxW = 720, quality = 0.68): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const sc = Math.min(1, maxW / img.width);
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * sc);
-      c.height = Math.round(img.height * sc);
-      const ctx = c.getContext('2d');
-      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('Canvas 2D context unavailable')); return; }
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', quality));
-    };
-    img.onerror = reject;
-    img.src = url;
+/** Ephemeral JPEG derivative. Canvas omits common EXIF, but is not a full metadata sanitizer. */
+export function downscaleImageBlob(file:Blob,maxWidth=1280,quality=0.8,signal?:AbortSignal):Promise<Blob> {
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();let settled=false;
+    const finish=(blob?:Blob)=>{if(settled)return;settled=true;URL.revokeObjectURL(url);signal?.removeEventListener('abort',abort);img.onload=null;img.onerror=null;if(blob&&!signal?.aborted)resolve(blob);else reject(new Error('IMAGE_UNAVAILABLE'));};
+    const abort=()=>{img.src='';finish();};signal?.addEventListener('abort',abort,{once:true});
+    img.onload=()=>{try{
+      if(!img.width||!img.height||img.width*img.height>40_000_000){finish();return;}
+      const scale=Math.min(1,maxWidth/img.width),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+      const context=canvas.getContext('2d');if(!context){finish();return;}context.drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>finish(blob??undefined),'image/jpeg',quality);
+    }catch{finish();}};
+    img.onerror=()=>finish();if(signal?.aborted){abort();return;}img.src=url;
   });
 }
