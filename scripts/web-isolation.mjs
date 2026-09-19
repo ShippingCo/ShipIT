@@ -2,13 +2,14 @@ import path from 'node:path';
 // Applied to the actual rendered Rollup graph, after tree shaking. Includes transitive/alias imports.
 export function demoModule(id) {
   const file = id.replaceAll('\\', '/').split('?')[0];
-  return /\/src\/(demo\/|data\/|context\/AppContext\.|DemoApp\.|pages\/(Launcher\.|CustomerWhatsApp\.|business\/DemoBusinessShell\.))/.test(file);
+  return /\/src\/(demo\/|data\/|utils\/demo-image\.|context\/AppContext\.|DemoApp\.|pages\/(Launcher\.|CustomerWhatsApp\.|business\/DemoBusinessShell\.))/.test(file);
 }
 const forbiddenMarkers = ['shippingco_v1', 'setu_courier_v2', 'shippingco_current_phone', 'shipit_demo_', 'Reset demo data', 'revealOTP',
-  'AUTH_SECRET_REF', 'OTP_PEPPER_REF', 'SESSION_SIGNING_KEY_REF', 'WHATSAPP_ACCESS_TOKEN_REF', 'DATABASE_SECRET_REF', 'LOCAL_AUTH_JSON'];
+  'AUTH_SECRET_REF', 'OTP_PEPPER_REF', 'SESSION_SIGNING_KEY_REF', 'WHATSAPP_ACCESS_TOKEN_REF', 'DATABASE_SECRET_REF', 'LOCAL_AUTH_JSON', 'STORAGE_CREDENTIAL_REF', 'LOCAL_STORAGE_CREDENTIAL', 'SYN_STORAGE_CREDENTIAL', 'SYN_ATTACHMENT_SIGNING_KEY'];
 export function assertProductionOutput(modules, source) {
   const leaked = modules.find(demoModule);
   if (leaked) throw new Error(`Production bundle includes demo module: ${path.relative(process.cwd(), leaked)}`);
+  if(modules.some(id=>/\/(apps\/api\/src|packages\/db\/src|@aws-sdk|@smithy)\//.test(id.replaceAll('\\','/'))))throw new Error('Production bundle includes server-only module');
   const marker = forbiddenMarkers.find(marker => source.includes(marker));
   if (marker) throw new Error(`Production bundle contains forbidden marker: ${marker}`);
 }

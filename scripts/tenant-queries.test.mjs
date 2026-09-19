@@ -152,3 +152,19 @@ test('issued receipt queries require both owners and the HTTP query exception ca
  assert.deepEqual(inspectSource('apps/api/src/modules/receipts/routes.ts','selection(request.query)'),[]);
  assert.ok(inspectSource('apps/api/src/modules/receipts/routes.ts',"request.query('SELECT id FROM shipit.issued_receipts')").length);
 });
+
+test('attachment tables require both owners and exact cleanup discovery cannot become a raw-query escape',()=>{
+ const file='apps/api/src/modules/attachments/repository.ts';
+ for(const table of ['attachments','attachment_commands','attachment_audit_events']){
+  assert.deepEqual(inspectSource(file,`scopedQuery(scope,['attachments.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  for(const code of [`db.query('SELECT * FROM shipit.${table} WHERE id=$1')`,
+   `scopedQuery(scope,['attachments.read'],'SELECT * FROM shipit.${table} WHERE id=$1')`,
+   `scopedQuery(scope,['attachments.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+   "import {issueTenantAccess} from '../security/scope.ts'","import {query} from '@shippingco/db'"])
+   assert.ok(inspectSource(file,code).length,code);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/attachments/routes.ts','service.list(request.query)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/attachments/routes.ts',"request.query('SELECT * FROM shipit.attachments')").length);
+ for(const path of [file,'apps/api/src/modules/security/jobs.ts'])
+  assert.ok(inspectSource(path,"client.query('SELECT object_key FROM shipit.attachments')").length);
+});

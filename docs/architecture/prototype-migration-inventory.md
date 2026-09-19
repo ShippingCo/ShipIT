@@ -172,7 +172,7 @@ This inventory describes existing code and future responsibilities, not implemen
 ### attachments
 
 - Decision: **replace**. Owners: #31, #33, #42, #72.
-- Today: Image helper and picker create inline browser data URLs.
+- Today: Fictional demo picker/logo use demo-image data URLs. Production attachment adapter/uploader retain server metadata and ephemeral Blob previews; image.ts returns a Blob.
 - Target: Private validated/quarantined storage with scoped attachment references and approved retention; input UX retained.
 - Required evidence: Foreign download denied; rejected upload cannot become usable attachment; logout drops object URLs and previews.
 - Retirement: Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo.
@@ -519,3 +519,21 @@ prototype business behavior changes.
 | apps/web/src/test/receipt.test.tsx: escapes every layout text context and ignores foreign download and executable logo URLs | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: cleans up private print markup even when browser print throws | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+
+## Issue #31 reviewed inventory change
+
+Demo picker/logo imports now name the isolated demo-image helper; production image processing returns a Blob. No Store export, Store member, caller, route or existing regression was removed. New effects are abort listeners in bounded attachment transport/image preparation. New tests below protect the production seam; full screen migration remains #33. Fingerprints change only for these reviewed imports and image helper.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/attachments.test.tsx: selects, shows progress and pending scan, then retains only approved metadata | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: cancels in-flight bytes, revokes preview, and sends durable cancel | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: retries the same intent after network failure and announces unsafe responses without rendering bytes | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: purges and aborts previews on %s | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: validates selection and provides native keyboard buttons and associated async text | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: loads durable metadata and fetches bytes only on explicit preview | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: public metadata discards unsafe extra fields and rejects a forged ready result | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: XHR uses current CSRF/session, progress, abort and safe response projection | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: photo decoding errors and aborts revoke the temporary object URL | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: download adapter bounds bytes and rejects a foreign signed URL before sending credentials | preserve | attachments |
+| apps/web/src/test/attachments.test.tsx: replacing the attachment client clears prior booking previews before the next list resolves | preserve | attachments |

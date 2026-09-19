@@ -45,3 +45,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0019: Payment ledger, settlement and financial corrections](0019-payment-ledger.md) — Issue #29; independent review pending.
 
 - [0020: Immutable issued receipt snapshots](0020-immutable-issued-receipts.md) — Issue #30; first-retrieval materialization, R13, global numbering, entry-only acknowledgements and immutable reversal linkage; independent review pending.
+
+- [0021 — Private attachment storage and validation](0021-private-attachment-storage.md): D09 application protocol, quarantine, exact limits, live access and temporary cleanup.

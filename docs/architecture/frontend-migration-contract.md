@@ -236,3 +236,7 @@ cleanup. It performs no network/store lookup, tax/price/balance calculation or E
 `utils/demo-receipt.ts` is an explicit fictional adapter used only by existing demo pages.
 No failed API→browser fallback exists. #33 owns the authenticated receipt client adapter,
 full screen states, scope invalidation and production receipt-screen migration.
+
+## Attachment seam delivered by #31
+
+`AttachmentUploader` and `data-access/attachments.ts` use approved metadata, bounded binary transport and ephemeral Blob previews. Scope/logout/unmount abort requests and revoke previews; retry preserves command intent. `utils/image.ts` creates a Blob derivative, while the former data-URL helper is explicitly `utils/demo-image.ts` for fictional demo screens. No production adapter imports demo/store or automatically migrates localStorage. #33 owns full Booking screen integration; #42 owns delivery completion.

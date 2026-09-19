@@ -315,3 +315,7 @@ missing schema fails closed. Roll back compatible receipt code, retain issued ev
 [Contract](../../docs/architecture/receipts.md), [ADR 0020](../../docs/adr/0020-immutable-issued-receipts.md),
 [verification](../../docs/architecture/issue-30-verification.md). #33 retains full production
 screen/client-adapter migration; the existing demo calls its explicitly fictional adapter.
+
+## Private attachments
+
+[Attachment guide](../../docs/architecture/attachments.md) covers routes and [ADR 0021](../../docs/adr/0021-private-attachment-storage.md) exact quotas. Resolve `STORAGE_CREDENTIAL_REF` at startup alongside database/auth secrets; hosted runtime requires it. See the configuration contract for strict secret JSON. Apply migration 1790355600000 first. Runtime cleanup starts after one second, processes at most 100 due rows per tick and schedules another tick five minutes after completion; failure remains durable/retryable. Graceful shutdown waits for the active tick. Monitor backlog; network outages extend cleanup latency. `pnpm test:attachments` starts a digest-pinned private MinIO test service with generated local credentials, runs the real provider contract and removes the container. No production credentials are needed.

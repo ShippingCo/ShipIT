@@ -59,6 +59,8 @@ export function registerJson(app: FastifyInstance) {
     catch { throw new HttpError('MALFORMED_REQUEST'); }
     if (request.method === 'OPTIONS' && (!request.headers.origin || !request.headers['access-control-request-method'])) throw new HttpError('MALFORMED_REQUEST');
     const contentType = request.headers['content-type'];
+    const attachmentBinary = request.method === 'PUT' && request.routeOptions.url === '/api/v1/bookings/:booking_id/attachments/uploads/:upload_id/content';
+    if (attachmentBinary) { if (contentType !== 'application/octet-stream') throw new HttpError('UNSUPPORTED_MEDIA_TYPE'); return; }
     if (contentType && !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(contentType)) throw new HttpError('UNSUPPORTED_MEDIA_TYPE');
   });
 }

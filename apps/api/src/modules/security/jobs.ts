@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
@@ -32,4 +33,18 @@ export async function withTrustedJobScope<T>(database: DatabasePool, resolver: T
       return work(scope);
     });
   } catch { throw new HttpError(denied ? 'ACTION_FORBIDDEN' : 'TEMPORARILY_UNAVAILABLE'); }
+}
+
+/** Global scheduler sees only one due owner pair from the fixed definer function.
+ * No client selector, object identity/key, issuer or executor crosses this boundary. */
+export async function withNextAttachmentCleanupScope<T>(database:DatabasePool,now:Date,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    const row=(await tx.query<{organization_id:string;franchise_id:string}>(
+      'SELECT organization_id,franchise_id FROM shipit.attachment_cleanup_scope($1)',[now])).rows[0];
+    if(!row)return null;
+    const scope=issueTenantAccess(tx,{action:'attachments.cleanup',actor:{type:'service',id:'attachment-cleanup'},
+      organizationId:row.organization_id,permittedFranchiseIds:[row.franchise_id],organizationWide:false,
+      correlationId:randomUUID(),provenance:'trusted-event'});
+    return work(scope);
+  });
 }

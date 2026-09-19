@@ -356,3 +356,7 @@ arbitrary snapshot input is exposed. The internal Payments entry-only read port 
 R11 ledger/projection permission. Disabled roots retain historical reads, including first
 materialization; revoked sessions/memberships cannot access artifacts. Reference-only receipt
 issuance audit is within the accountant finance projection. See [receipts](receipts.md).
+
+## Executable attachment R14/W22 (#31)
+
+[ADR 0021](../adr/0021-private-attachment-storage.md) implements R14 and W22 independently. Org-admin O reads metadata only. Franchise-admin/operator have W22 F; franchise-admin/operator/dispatcher have R14 F. Delivery-agent A requires current persisted assignment, active out-for-delivery attempt and parcel_proof; booking-wide evidence is denied. Accountant/read_only get neither. C remains fail-closed because current custody data cannot establish cross-franchise ownership (ADR 0014). Mixed roles contribute independent grants, never implicit org-admin byte access. Replay and signed-byte endpoints repeat live authority checks.

@@ -275,3 +275,7 @@ No document content, amounts, addresses, phones, tokens or raw DTO. Retrieving a
 artifact appends no business audit. Existing access telemetry and safe `receipts.read`
 denial audit apply. Accountant reads may include this minimum financial audit reference.
 No printed/downloaded domain event or assertion that physical printing succeeded.
+
+## Issue #31 attachment evidence
+
+Attachment state changes append one reference-only attachment_audit_events row through an immutable trigger; grant issuance appends a separate safe fact in the same command transaction. The canonical audit_history projection contains only scope/resource, actor, closed action/result, version/correlation and time. It contains no filename, digest, key, URL, scan text or bytes. Replay appends no duplicate success fact. Controlled denials use the existing security.request audit; HTTP telemetry logs route templates, never private grant queries. No general domain event is emitted.

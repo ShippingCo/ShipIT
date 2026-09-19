@@ -1,3 +1,6 @@
+import { createAttachmentService } from './modules/attachments/service.ts';
+import { registerAttachments } from './modules/attachments/routes.ts';
+import type { AttachmentDependencies } from './modules/attachments/types.ts';
 import { createReceiptService } from './modules/receipts/service.ts';
 import { registerReceipts } from './modules/receipts/routes.ts';
 import { createPaymentService } from './modules/payments/service.ts';
@@ -41,8 +44,8 @@ import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date }
-export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies }
+export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -93,6 +96,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
+      if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');

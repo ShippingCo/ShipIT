@@ -564,3 +564,28 @@ export async function withReceiptScope<T>(database:DatabasePool,sessionToken:str
       materialize:issueTenantAccess(tx,{...context,action:'receipts.materialize'}),payment:issueTenantAccess(tx,{...context,action:'payments.receipt.read'})});
   });
 }
+
+/** R14/W22: explicit independent grants; assigned proof never implies Booking access. */
+export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:'attachments.read'|'attachments.write'|'attachments.download',correlationId:string,
+  work:(scope:import('../attachments/types.ts').AttachmentScope)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);
+    if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const organizationAdmin=memberships.some(m=>m.role==='org_admin');
+    const all=organizationAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+    const staff=local.some(m=>(action==='attachments.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
+    const agent=local.some(m=>m.role==='delivery_agent');
+    const metadata=action==='attachments.read'&&organizationAdmin;
+    if(!staff&&!agent&&!metadata)throw new HttpError('ACTION_FORBIDDEN');
+    if(action!=='attachments.read'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+    return work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),
+      agentOnly:!staff&&!metadata,metadataOnly:metadata&&!staff&&!agent});
+  });
+}

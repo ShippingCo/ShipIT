@@ -318,3 +318,10 @@ Individual tests retain their explicit 20/30/60-second deadlines, two file worke
 strict complete-suite reporting, skip/cancel/todo rejection and resource cleanup.
 The timeout/termination tests still exercise short injected deadlines. See
 [Issue #28 verification](architecture/issue-28-verification.md) for final results.
+
+Issue #31 adds `pnpm test:attachments` to `pnpm test` and therefore the required CI tests
+job. It needs Docker and the digest-pinned disposable MinIO image; startup or contract
+failure fails the gate. Generated test credentials stay server-side and the exact owned
+container is removed, including interrupted runs. No hosted credentials or skip fallback.
+Clamd wire tests run in `pnpm test:api`; attachment ownership/migration tests run in
+`pnpm db:local test:db`. See the [verification record](architecture/issue-31-verification.md).

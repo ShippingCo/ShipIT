@@ -521,3 +521,7 @@ and correction links. No backfill: old Bookings receive an actual first-issuance
 Fresh/populated/failed/repeated migration tests preserve all prerequisite evidence.
 Rollback compatible code while retaining tables, history, sequence and grants; repair
 schema forward. [Receipt contract](../../docs/architecture/receipts.md).
+
+## Private attachment migration (#31)
+
+`1790355600000-private-attachments.cjs` adds scoped metadata, immutable command receipts, append-only audit and narrow cleanup discovery, with no backfill or released-migration edits. Composite Booking/Parcel foreign keys, immutable identity, clean-ready constraints and locked quotas enforce persistence invariants. Runtime needs SELECT/INSERT on attachments/commands, UPDATE only mutable lifecycle columns (see `prepareAttachments` in test/support.ts), UPDATE(id) on Booking for row locking, canonical audit-view read and EXECUTE on attachment_cleanup_scope. No direct audit-table read/write, DELETE, TRUNCATE or DDL is granted. #68 provisions the existing runtime role with these least privileges before rollout. Ready rows are immutable; #72 must introduce reviewed retention/hold authority before deletion.

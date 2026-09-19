@@ -11,7 +11,7 @@ import { db, fmtMoney, fmtDT, waFmt, markAllBizSeen, updateBusiness, resetDemo, 
 import { printDemoReceipt as printReceipt } from '../../utils/demo-receipt';
 import { useDB } from '../../context/AppContext';
 import type { CustomRange, DatePreset } from '../../components/m3/Controls';
-import { downscaleImage } from '../../utils/image';
+import { downscaleImage } from '../../utils/demo-image';
 import { SearchBar, FilterChips, DateFilter, dateWindow } from '../../components/m3/Controls';
 import { LANGS } from '../../data/messages';
 import { GST_MODES } from '../../data/store';
