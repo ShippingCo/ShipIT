@@ -4,6 +4,18 @@ import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
 import type { InboxInput } from '../whatsapp/webhook-payload.ts';
 
+/** References are resolved from the durable outbound ledger, never from client ownership. */
+export async function withOutboundScope<T>(database:DatabasePool,target:string|null,now:Date|null,work:(scope:TenantAccess,id:string)=>Promise<T>,attention=false):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    await tx.query("SET LOCAL transaction_timeout = '25s'");
+    const row=(await tx.query<{organization_id:string;franchise_id:string;intent_id:string}>(
+      'SELECT organization_id,franchise_id,intent_id FROM shipit.whatsapp_outbound_scope($1,$2,$3)',[target,now,attention])).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.intent_id);
+  });
+}
+
 /** Called only after raw-byte authentication/normalization. No caller-supplied tenant scope. */
 export async function persistBusinessWebhook(database:DatabasePool,events:readonly InboxInput[],wabas:readonly string[],correlation:string) {
   return withTransaction(database,async tx=>{

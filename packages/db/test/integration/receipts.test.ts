@@ -24,7 +24,7 @@ await test('populated pre-30 migration rolls back on failure, preserves source f
  await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});assert.equal((await db.adminQuery("SELECT to_regclass('shipit.issued_receipts') relation")).rows[0]!.relation,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,18);assert.deepEqual(await snapshot(),before);
- assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
+ assert.deepEqual(await db.migrate(),{applied:8});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.issued_receipts')).rows[0]!.n,0);assert.deepEqual(await snapshot(),before);
  const dto=await createReceiptService(s.pool).read(s.local.token,booking.json().id,paid.entry.id,{organization_id:org,franchise_id:A},randomUUID());
  assert.equal(dto.kind,'collection_acknowledgement');assert.notEqual(dto.issued_at,booking.json().confirmed_at);assert.deepEqual(await snapshot(),before);

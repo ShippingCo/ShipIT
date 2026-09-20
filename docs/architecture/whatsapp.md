@@ -81,7 +81,7 @@ Errors are closed and omit provider bodies: WHATSAPP_CREDENTIAL_INVALID,
 WHATSAPP_PROVIDER_UNAVAILABLE, WHATSAPP_IDENTITY_MISMATCH, WHATSAPP_CONFIGURATION_CHANGED,
 WHATSAPP_INSTALLATION_DISABLED, plus shared validation/version/idempotency errors.
 Capability gives `available`, an actionable `reason`, current safe template metadata and
-`customer_sends_enabled:false`. Reasons include installation_disabled,
+`customer_sends_enabled:false` because registry capability alone never authorizes a customer send. The independently enabled [outbound worker](whatsapp-outbound.md) owns dispatch. Reasons include installation_disabled,
 installation_configuration_changed, owner_disabled, template_language_missing, template_not_approved,
 template_shape_unavailable, template_category_unavailable, template_validation_stale and
 template_variables_invalid. Correct the named condition and resynchronize; no language fallback.
@@ -90,7 +90,7 @@ template_variables_invalid. Correct the named condition and resynchronize; no la
 
 Provider contract: validate registered WABA/phone; retrieve exact template capability;
 send an already authorized application request and return normalized outcome. Send is
-currently an unwired port, tested with fictional HTTP responses only. Its caller must be
+wired to the durable outbound worker and tested with fictional HTTP responses. Its caller is
 #39's durable post-commit worker after #38's consent/window evaluation and current installation/
 template recheck. The #35 receipt protocol cannot make an external HTTP side effect atomic.
 
@@ -143,4 +143,4 @@ for repeatable synthetic exercises.
 Issue #37 now implements [signed business callbacks and durable inbox processing](whatsapp-webhooks.md) using the optional webhook catalog property. Provider configuration alone still does not enable customer sends.
 
 Issue #38 implements [consent evidence and current policy](messaging-consent.md).
-#39 must invoke this policy at queue and dispatch and record verified disclosure delivery.
+#39 invokes this policy at queue and dispatch and records verified disclosure delivery; see [outbound operations](whatsapp-outbound.md).

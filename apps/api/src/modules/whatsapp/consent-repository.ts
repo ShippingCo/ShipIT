@@ -1,9 +1,15 @@
 import { scopedQuery, type TenantAccess } from '../security/scope.ts';
 import type { Installation, RegisteredTemplate } from './types.ts';
 
-export async function lockInstallation(scope:TenantAccess) {
+export async function lockInstallation(scope:TenantAccess,dispatch=false) {
   await scopedQuery(scope,['whatsapp.consent.read','outbox.work'],`SELECT id FROM shipit.organizations o WHERE {{organization:o.id}} FOR SHARE`);
   await scopedQuery(scope,['whatsapp.consent.read','outbox.work'],`SELECT id FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}} FOR SHARE`);
+  // Dispatch conflicts with ingress's SHARE lock as well as the consent consumer.
+  // Acquire UPDATE directly: upgrading two concurrent SHARE locks would deadlock.
+  if(dispatch)return (await scopedQuery<Installation & {owner_active:boolean}>(scope,['outbox.work'],
+    `SELECT i.*,f.lifecycle='active' AND o.lifecycle='active' AS owner_active FROM shipit.whatsapp_installations i
+     JOIN shipit.franchises f ON f.organization_id=i.organization_id AND f.id=i.franchise_id JOIN shipit.organizations o ON o.id=i.organization_id
+     WHERE {{franchise:i.organization_id:i.franchise_id}} AND {{franchise:f.organization_id:f.id}} AND {{organization:o.id}} FOR UPDATE OF i`)).rows[0];
   return (await scopedQuery<Installation & {owner_active:boolean}>(scope,['whatsapp.consent.read','outbox.work'],
     `SELECT i.*,f.lifecycle='active' AND o.lifecycle='active' AS owner_active FROM shipit.whatsapp_installations i
      JOIN shipit.franchises f ON f.organization_id=i.organization_id AND f.id=i.franchise_id JOIN shipit.organizations o ON o.id=i.organization_id

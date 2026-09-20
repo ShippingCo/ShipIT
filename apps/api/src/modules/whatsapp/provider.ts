@@ -6,7 +6,13 @@ type Json=Record<string,unknown>;
 const record=(v:unknown):v is Json=>!!v&&typeof v==='object'&&!Array.isArray(v);
 class ProviderFailure extends Error {
   readonly status:number;
-  constructor(status:number){super('WHATSAPP_PROVIDER_FAILURE');this.status=status;}
+  readonly retryAfter:number|undefined;
+  constructor(status:number,retryAfter?:number){super('WHATSAPP_PROVIDER_FAILURE');this.status=status;this.retryAfter=retryAfter;}
+}
+export function parseRetryAfter(value:string|null,now=Date.now()):number|undefined {
+  if(value===null)return undefined;
+  if(/^\d+$/.test(value))return Number(value);
+  const date=Date.parse(value);return Number.isFinite(date)?Math.max(0,Math.ceil((date-now)/1000)):undefined;
 }
 
 export function createMetaProvider({configuration,secrets,transport=fetch}:AdapterOptions):Provider {
@@ -23,7 +29,7 @@ export function createMetaProvider({configuration,secrets,transport=fetch}:Adapt
         for(const [k,v] of Object.entries(params))url.searchParams.set(k,v);
         const response=await transport(url,{method:body===undefined?'GET':'POST',redirect:'error',signal:controller.signal,
           headers:{authorization:`Bearer ${token}`,...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
-        if(!response.ok){await response.body?.cancel();throw new ProviderFailure(response.status);}
+        if(!response.ok){await response.body?.cancel();throw new ProviderFailure(response.status,parseRetryAfter(response.headers.get('retry-after')));}
         if(!response.body)throw new ProviderFailure(0);
         const reader=response.body.getReader();const chunks:Uint8Array[]=[];let length=0;
         try {while(true){const next=await reader.read();if(next.done)break;length+=next.value.length;if(length>262144)throw new ProviderFailure(0);chunks.push(next.value);}}
@@ -51,7 +57,24 @@ export function createMetaProvider({configuration,secrets,transport=fetch}:Adapt
     throw new ProviderFailure(0);
   }
   const safe=(error:unknown):never=>{throw new HttpError(error instanceof ProviderFailure&&[401,403].includes(error.status)?'WHATSAPP_CREDENTIAL_INVALID':'WHATSAPP_PROVIDER_UNAVAILABLE');};
+  async function submit(binding:Binding,body:unknown):Promise<SendOutcome> {
+    try {
+      const value=await request(binding,`${binding.phone_number_id}/messages`,{},body),messages=value.messages;
+      if(!Array.isArray(messages)||messages.length!==1||!record(messages[0])||typeof messages[0].id!=='string'||!/^wamid\.[A-Za-z0-9_+=/-]{1,190}$/.test(messages[0].id))return {kind:'uncertain',reason:'acceptance_unknown'};
+      return {kind:'accepted',provider_message_id:messages[0].id};
+    }catch(error){
+      const status=error instanceof ProviderFailure?error.status:0;
+      if([401,403].includes(status))return {kind:'configuration_failure',reason:'credential_rejected'};
+      if(status===429)return {kind:'retryable_not_accepted',reason:'rate_limited',...(error instanceof ProviderFailure&&error.retryAfter!==undefined?{retry_after_seconds:error.retryAfter}:{})};
+      if(status>=400&&status<500&&status!==408)return {kind:'permanent_failure',reason:'request_rejected'};
+      return {kind:'uncertain',reason:'acceptance_unknown'};
+    }
+  }
   return {
+    async sendText(binding,recipient,text) {
+      if(!/^\+[1-9][0-9]{7,14}$/.test(recipient)||!text.trim()||text.length>4096)return {kind:'permanent_failure',reason:'invalid_message_parameters'};
+      return submit(binding,{messaging_product:'whatsapp',to:recipient.slice(1),type:'text',text:{preview_url:false,body:text}});
+    },
     async validate(binding) {
       try {
         const phones=await collection(binding,`${binding.waba_id}/phone_numbers`,{fields:'id,code_verification_status,platform_type'},v=>v.id===binding.phone_number_id);
@@ -71,19 +94,8 @@ export function createMetaProvider({configuration,secrets,transport=fetch}:Adapt
       const reason=templateReason(template);
       if(reason)return {kind:'unavailable',reason};
       if(!validVariables(template,variables)||!/^\+[1-9][0-9]{7,14}$/.test(recipient))return {kind:'permanent_failure',reason:'invalid_message_parameters'};
-      try {
-        const value=await request(binding,`${binding.phone_number_id}/messages`,{}, {messaging_product:'whatsapp',to:recipient.slice(1),type:'template',
+      return submit(binding,{messaging_product:'whatsapp',to:recipient.slice(1),type:'template',
           template:{name:template.name,language:{code:template.language},components:variables.length?[{type:'body',parameters:variables.map(text=>({type:'text',text}))}]:[]}});
-        const messages=value.messages;
-        if(!Array.isArray(messages)||messages.length!==1||!record(messages[0])||typeof messages[0].id!=='string'||!/^wamid\.[A-Za-z0-9_+=/-]{1,240}$/.test(messages[0].id))return {kind:'uncertain',reason:'acceptance_unknown'};
-        return {kind:'accepted',provider_message_id:messages[0].id};
-      }catch(error){
-        const status=error instanceof ProviderFailure?error.status:0;
-        if([401,403].includes(status))return {kind:'configuration_failure',reason:'credential_rejected'};
-        if(status===429)return {kind:'retryable_not_accepted',reason:'rate_limited'};
-        if(status>=400&&status<500&&status!==408)return {kind:'permanent_failure',reason:'request_rejected'};
-        return {kind:'uncertain',reason:'acceptance_unknown'};
-      }
     },
   };
 }

@@ -337,3 +337,5 @@ Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and templat
 [Operational WhatsApp webhooks](../../docs/architecture/whatsapp-webhooks.md) add an optional signed business inbox, database-only processing, and scoped health/detail. Apply migration 24 and runtime grants before adding the webhook catalog property; this does not enable customer sends.
 
 Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) documents signed consent consumption, R16 history, policy evaluation and #39 integration.
+
+[Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. #40 owns event automation registration.

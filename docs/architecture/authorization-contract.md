@@ -396,3 +396,5 @@ the dedicated whatsapp.inbox.work service capability cannot be minted from a mem
 See [business webhook operations](whatsapp-webhooks.md).
 
 Issue #38 implements R16 selected-franchise customer consent history/policy for org_admin, franchise_admin, operator and dispatcher. Assignment/custody-specific projections remain with their owning workflows; this endpoint grants no general customer access to delivery_agent. W34 consent overrides remain denied. Source mutations use only signed installation-bound inbox authority. See [consent operations](messaging-consent.md).
+
+Issue #39 applies the existing R18 operational reads and W44 controlled recovery to outbound WhatsApp intents. R18 permits scoped org_admin and local franchise_admin; W44 permits local franchise_admin only. Explicit uncertain redrive acknowledges possible duplicate provider delivery and does not override current consent. W34 remains denied. See [outbound operations](whatsapp-outbound.md).

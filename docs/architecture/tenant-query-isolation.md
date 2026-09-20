@@ -312,3 +312,5 @@ Issue #36: whatsapp_installations, whatsapp_templates and whatsapp_commands requ
 Issue #37 adds two exact global ingress/scheduler calls in security/jobs.ts. The ingress import is restricted to the signed webhook boundary, and scheduling to its worker. The dedicated whatsapp.inbox.work capability requires the trusted service identity and exactly one franchise. All ordinary inbox reads still use both ownership predicates. No directory-wide raw-SQL exemption is introduced.
 
 Issue #38 restricts withNextConsentScope to consent-worker.ts and its exact database selector. Consent repositories require franchise predicates; policy evaluation accepts only membership consent-read or trusted outbox-work scope. No phone selector creates tenant authority.
+
+Issue #39 adds one exact trusted scheduler call, whatsapp_outbound_scope(uuid,timestamptz,boolean), in security/jobs.ts. It resolves persisted owner references and issues existing outbox.work authority. Only outbound-worker.ts may import its adapter. Outbound SQL requires both owner predicates; public history and redrive use the current membership boundary. No raw executor is exported.

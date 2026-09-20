@@ -55,7 +55,7 @@ export function normalizeBusinessWebhook(body:Buffer,config:BusinessWebhookConfi
         const values=kind==='inbound'?value.messages:value.statuses;if(values===undefined)continue;
         for(const item of list(values,100)) {
           if(result.length>=100)return fail();
-          const event=record(item),id=string(event.id,200,/^[A-Za-z0-9._:=-]+$/);
+          const event=record(item),id=string(event.id,200,/^[A-Za-z0-9._:=+/-]+$/);
           const timestamp=string(event.timestamp,12,/^[0-9]+$/),seconds=Number(timestamp);
           if(seconds<1||seconds>253402300799)return fail();
           const occurred=new Date(seconds*1000).toISOString();
@@ -79,7 +79,7 @@ export function normalizeBusinessWebhook(body:Buffer,config:BusinessWebhookConfi
                 const reply=record(interactive[replyType]);content.reply_id=string(reply.id,256);content.text=string(reply.title,4096);
               }else type='unsupported';
             }else type='unsupported';
-            if(event.context!==undefined)content.context_id=string(record(event.context).id,200,/^[A-Za-z0-9._:=-]+$/);
+            if(event.context!==undefined)content.context_id=string(record(event.context).id,200,/^[A-Za-z0-9._:=+/-]+$/);
           }
           const eventKey=kind==='inbound'?`inbound:${id}`:`status:${id}:${status}`;
           // A plain hash would permit offline guesses of short text (including codes).

@@ -199,3 +199,5 @@ Issue #35 adds the [durable outbox worker and operational API](outbox.md), with 
 [Signed WhatsApp webhooks](whatsapp-webhooks.md) implement operational callback ingestion and durable inbox processing; see [Issue #37 verification](issue-37-verification.md).
 
 [Messaging consent](messaging-consent.md) implements #38's independent source consumption, safe history and current policy checks; [verification](issue-38-verification.md).
+
+[Outbound WhatsApp](whatsapp-outbound.md) implements durable intents, controlled provider attempts, monotone delivery history and audited recovery; [verification](issue-39-verification.md).

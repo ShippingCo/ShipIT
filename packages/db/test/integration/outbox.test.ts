@@ -22,7 +22,7 @@ await test('outbox upgrade preserves populated producers and audit; failed migra
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
   await assert.rejects(db.migrate({dir:directory}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.outbox_jobs') value")).rows[0]!.value,null);
-  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual(await snapshot(),before);await db.prepareOutbox();
   const event=booked.json().event_id;
   await assert.rejects(db.adminQuery(`INSERT INTO shipit.outbox_jobs(organization_id,franchise_id,event_id,consumer_id) VALUES($1,$2,$3,'synthetic')`,[org,B,event]));
