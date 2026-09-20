@@ -1,8 +1,13 @@
 import type { FastifyInstance,FastifyRequest } from 'fastify';
 import { idempotencyKey } from '../customers/validation.ts';
 import type { createWhatsappService } from './service.ts';
-export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean) {
+import type { createConsentService } from './consent-service.ts';
+export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  if(consent) {
+    app.get<{Params:{id:string}}>('/api/v1/whatsapp/consent/customers/:id',{exposeHeadRoute:false},request=>consent.history(session(request),request.params.id,request.query,request.id));
+    app.post<{Params:{id:string}}>('/api/v1/whatsapp/consent/customers/:id/policy',request=>consent.policy(session(request),request.params.id,request.query,request.body,request.id));
+  }
   app.get('/api/v1/whatsapp/inbox/health',{exposeHeadRoute:false},request=>service.inbox(session(request),null,request.query,request.id));
   app.get<{Params:{id:string}}>('/api/v1/whatsapp/inbox/:id',{exposeHeadRoute:false},request=>service.inbox(session(request),request.params.id,request.query,request.id));
   app.get('/api/v1/whatsapp/installation',{exposeHeadRoute:false},request=>service.read(session(request),request.query,request.id));

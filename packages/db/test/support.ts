@@ -161,6 +161,7 @@ export interface DisposableDatabase {
   prepareEway(): Promise<void>;
   prepareWhatsapp(): Promise<void>;
   prepareWhatsappInbox(): Promise<void>;
+  prepareWhatsappConsent(): Promise<void>;
   prepareOutbox(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
@@ -367,6 +368,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT ON shipit.whatsapp_inbox,shipit.whatsapp_inbox_attempts,shipit.whatsapp_delivery_observations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.whatsapp_receive(jsonb,text[],uuid),shipit.whatsapp_inbox_next(),shipit.whatsapp_inbox_process(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareWhatsappConsent() {
+      await handle.prepareWhatsappInbox();await handle.prepareCustomers();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.whatsapp_consent_state,shipit.whatsapp_consent_receipts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.whatsapp_consent_next(),shipit.whatsapp_consent_apply(uuid,uuid,uuid,text,text,text,text,text) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareOutbox() {

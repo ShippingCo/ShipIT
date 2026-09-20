@@ -55,3 +55,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0024: WhatsApp provider registry](0024-whatsapp-provider-registry.md): Scoped installations, versioned templates and server-only Meta adapter for Issue #36; independent review pending.
 
 - [0025: Signed WhatsApp inbox](0025-signed-whatsapp-inbox.md): Raw-byte authentication, trusted installation scope, durable inbox jobs and monotone callback evidence for Issue #37.
+
+- [0026: Scoped messaging consent](0026-scoped-messaging-consent.md): Evidence, contact identity, deterministic withdrawal and current dispatch policy for Issue #38.

@@ -197,3 +197,5 @@ Issue #35 adds the [durable outbox worker and operational API](outbox.md), with 
 [WhatsApp installations and templates](whatsapp.md) documents the #36 provider boundary; see [ADR 0024](../adr/0024-whatsapp-provider-registry.md).
 
 [Signed WhatsApp webhooks](whatsapp-webhooks.md) implement operational callback ingestion and durable inbox processing; see [Issue #37 verification](issue-37-verification.md).
+
+[Messaging consent](messaging-consent.md) implements #38's independent source consumption, safe history and current policy checks; [verification](issue-38-verification.md).

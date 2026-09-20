@@ -310,3 +310,5 @@ Fixed security/jobs owner-discovery functions return only stored organization/fr
 Issue #36: whatsapp_installations, whatsapp_templates and whatsapp_commands require both organization and franchise macros. Only the existing membership authority issues whatsapp.read/write capabilities; no new raw-query exemption exists.
 
 Issue #37 adds two exact global ingress/scheduler calls in security/jobs.ts. The ingress import is restricted to the signed webhook boundary, and scheduling to its worker. The dedicated whatsapp.inbox.work capability requires the trusted service identity and exactly one franchise. All ordinary inbox reads still use both ownership predicates. No directory-wide raw-SQL exemption is introduced.
+
+Issue #38 restricts withNextConsentScope to consent-worker.ts and its exact database selector. Consent repositories require franchise predicates; policy evaluation accepts only membership consent-read or trusted outbox-work scope. No phone selector creates tenant authority.

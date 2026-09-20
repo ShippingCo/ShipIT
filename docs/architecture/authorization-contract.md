@@ -394,3 +394,5 @@ ciphertext, provider message IDs or global quarantine counts. No mutation permis
 added. Signed ingress derives ownership from the registered provider installation;
 the dedicated whatsapp.inbox.work service capability cannot be minted from a membership.
 See [business webhook operations](whatsapp-webhooks.md).
+
+Issue #38 implements R16 selected-franchise customer consent history/policy for org_admin, franchise_admin, operator and dispatcher. Assignment/custody-specific projections remain with their owning workflows; this endpoint grants no general customer access to delivery_agent. W34 consent overrides remain denied. Source mutations use only signed installation-bound inbox authority. See [consent operations](messaging-consent.md).

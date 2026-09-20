@@ -69,7 +69,7 @@ export async function withOutboxScope<T>(database:DatabasePool,token:string,orga
 }
 /** R29 safe configuration reads and W45 local installation administration; no org-admin write inheritance. */
 export async function withWhatsappScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
-  action:'whatsapp.read'|'whatsapp.write',correlationId:string,
+  action:'whatsapp.read'|'whatsapp.write'|'whatsapp.consent.read',correlationId:string,
   work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,token);
@@ -81,7 +81,7 @@ export async function withWhatsappScope<T>(database:DatabasePool,token:string,or
     const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    if(!local.some(m=>m.role==='franchise_admin')&&!(action==='whatsapp.read'&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if(!local.some(m=>(action==='whatsapp.consent.read'?['franchise_admin','operator','dispatcher']:['franchise_admin']).includes(m.role))&&!((action==='whatsapp.read'||action==='whatsapp.consent.read')&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
     if(action==='whatsapp.write'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});

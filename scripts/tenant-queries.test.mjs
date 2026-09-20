@@ -223,9 +223,9 @@ test('business inbox only exposes fixed ingress and scheduler calls through trus
   assert.ok(inspectSource(other,`tx.query('${sql}')`).length);
  }
  assert.ok(inspectSource(adapter,"tx.query('SELECT * FROM shipit.whatsapp_inbox')").length);
- for(const name of ['persistBusinessWebhook','withNextInboxScope'])assert.ok(inspectSource(other,`import {${name}} from '../security/jobs.ts'`).length);
+ for(const name of ['persistBusinessWebhook','withNextInboxScope','withNextConsentScope'])assert.ok(inspectSource(other,`import {${name}} from '../security/jobs.ts'`).length);
  assert.ok(inspectSource(other,"import * as jobs from '../security/jobs.ts'").length);
  assert.ok(inspectSource(other,"export * from '../security/jobs.ts'").length);
- for(const table of ['whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_delivery_observations'])
+ for(const table of ['whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_delivery_observations','whatsapp_consent_state','whatsapp_consent_receipts','whatsapp_consent_disclosures'])
   assert.ok(inspectSource(other,`scopedQuery(scope,['whatsapp.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
 });
