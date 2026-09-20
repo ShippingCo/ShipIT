@@ -173,6 +173,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx",
       "apps/web/src/pages/business/RoutesPage.tsx",
       "apps/web/src/test/app.test.tsx",
+      "apps/web/src/test/counter.test.tsx",
       "apps/web/src/test/operator.test.tsx",
       "apps/web/src/utils/demo-receipt.ts"
     ],
@@ -200,7 +201,8 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
-      "apps/web/src/test/operator.test.tsx": "8378107b4f8950af118c165cc60ce14e3fa5962ef835ebb7547ab366dfc9d9f9",
+      "apps/web/src/test/counter.test.tsx": "9b6afdd01a85574d610d53087c4ca1604d333d681f6f5578c9645df1107aca83",
+      "apps/web/src/test/operator.test.tsx": "6cef3119ea956062aaa286fd72541e6b9ef4bc303ea70f8171131c2385adccd3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -797,6 +799,40 @@
           "syntax": "import('../data/store')"
         }
       ],
+      "apps/web/src/test/counter.test.tsx": [
+        {
+          "target": "apps/web/src/App.tsx",
+          "syntax": "import App from '../App';"
+        },
+        {
+          "target": "apps/web/src/operator/scope.ts",
+          "syntax": "import { createScopeController } from '../operator/scope';"
+        },
+        {
+          "target": "apps/web/src/data-access/scoped-api.ts",
+          "syntax": "import { scopedApi } from '../data-access/scoped-api';"
+        },
+        {
+          "target": "apps/web/src/booking/workflow.ts",
+          "syntax": "import { createBookingWorkflow } from '../booking/workflow';"
+        },
+        {
+          "target": "apps/web/src/data-access/receipts.ts",
+          "syntax": "import { receiptDto } from '../data-access/receipts';"
+        },
+        {
+          "target": "apps/web/src/data-access/commercial.ts",
+          "syntax": "import { quoteDto, taxDto } from '../data-access/commercial';"
+        },
+        {
+          "target": "apps/web/src/data-access/customers.ts",
+          "syntax": "import { customerDto } from '../data-access/customers';"
+        },
+        {
+          "target": "apps/web/src/test/counter-fixture.ts",
+          "syntax": "import * as f from './counter-fixture';"
+        }
+      ],
       "apps/web/src/test/operator.test.tsx": [
         {
           "target": "apps/web/src/App.tsx",
@@ -1031,6 +1067,106 @@
       {
         "file": "apps/web/src/test/attachments.test.tsx",
         "name": "replacing the attachment client clears prior booking previews before the next list resolves",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/attachments.test.tsx",
+        "name": "a booking attachment client cannot rebind to a newly selected franchise",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "network outage preserves draft and never fabricates a receipt or local booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "discards late franchise A search at viewport %i through real scope generation",
+        "cases": "[1280,375]"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "repeat selection fills empty values while preserving deliberate edits",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "Paid Now uses server obligation and stable reference; failed payment never undoes saved booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "receipt outage has an independent retry and retains booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "keyboard form submission focuses first invalid field and describes the error",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "scope change cancels late %s and prevents private totals repaint",
+        "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "scope change cancels late receipt and drops its private snapshot",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "malformed successes fail safely and unknown private fields are projected out",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "handles safe %s without losing the draft or claiming success",
+        "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "malformed committed response is uncertain and retry uses its original identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "401 purges private form and requires sign in without local fallback",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "reload with an unresolved marker forbids fresh-key booking and contains no persisted body",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "receipt discovery supports empty and safe denied/retry states",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
         "cases": null
       },
       {
@@ -1296,6 +1432,26 @@
     ],
     "effects": [
       {
+        "file": "apps/web/src/booking/NewBooking.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/booking/NewBooking.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/booking/recovery.ts",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/booking/recovery.ts",
+        "kind": "sessionStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/booking/recovery.ts",
+        "kind": "sessionStorage.removeItem"
+      },
+      {
         "file": "apps/web/src/components/CommandPalette.tsx",
         "kind": "document.addEventListener"
       },
@@ -1338,6 +1494,14 @@
       {
         "file": "apps/web/src/data-access/attachments.ts",
         "kind": "c.ticket.signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/data-access/scoped-api.ts",
+        "kind": "scope.signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/data-access/scoped-api.ts",
+        "kind": "signal?.addEventListener"
       },
       {
         "file": "apps/web/src/data/store.ts",
@@ -1470,6 +1634,58 @@
       {
         "file": "apps/web/src/test/attachments.test.tsx",
         "kind": "signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(sessionStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.key"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(sessionStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(JSON.stringify(sessionStorage)).not.toMatch"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.key"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "expect(sessionStorage.getItem(sessionStorage.key(0)!)).toBe"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "kind": "sessionStorage.key"
       },
       {
         "file": "apps/web/src/test/data-access.test.ts",
@@ -2045,6 +2261,9 @@
       "reports",
       "eway"
     ],
+    "apps/web/src/test/counter.test.tsx": [
+      "seam"
+    ],
     "apps/web/src/test/operator.test.tsx": [
       "seam"
     ],
@@ -2276,6 +2495,166 @@
       "group": "attachments",
       "disposition": "preserve",
       "reason": "Clear a previous Booking preview during asynchronous client replacement."
+    },
+    {
+      "file": "apps/web/src/test/attachments.test.tsx",
+      "name": "a booking attachment client cannot rebind to a newly selected franchise",
+      "cases": null,
+      "group": "attachments",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "network outage preserves draft and never fabricates a receipt or local booking",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "discards late franchise A search at viewport %i through real scope generation",
+      "cases": "[1280,375]",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "repeat selection fills empty values while preserving deliberate edits",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "Paid Now uses server obligation and stable reference; failed payment never undoes saved booking",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "receipt outage has an independent retry and retains booking",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "keyboard form submission focuses first invalid field and describes the error",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "scope change cancels late %s and prevents private totals repaint",
+      "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "scope change cancels late receipt and drops its private snapshot",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "malformed successes fail safely and unknown private fields are projected out",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "handles safe %s without losing the draft or claiming success",
+      "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "malformed committed response is uncertain and retry uses its original identity",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "401 purges private form and requires sign in without local fallback",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "reload with an unresolved marker forbids fresh-key booking and contains no persisted body",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "receipt discovery supports empty and safe denied/retry states",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #33: old-scope dispatched mutation retains opaque recovery and cannot replay under a new franchise."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",

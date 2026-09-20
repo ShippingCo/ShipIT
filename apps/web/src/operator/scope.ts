@@ -3,7 +3,7 @@ import { ApiFailure } from '../data-access/errors';
 import { createScopeRuntime } from '../data-access/scope-runtime';
 import { createOperatorDataSource } from './data-source';
 import type { OperatorDataSource } from './data-source';
-export type ScopeState = { status: 'loading' | 'signed_out' | 'error' | 'loaded'; context: OperatorContext | null; path: string };
+export type ScopeState = { status: 'loading' | 'signed_out' | 'error' | 'loaded'; context: OperatorContext | null; path: string; notice?: string };
 
 /** #17's shell controller owns one generalized private lifetime for all future domain adapters. */
 export function createScopeController(source: OperatorDataSource = createOperatorDataSource()) {
@@ -37,6 +37,25 @@ export function createScopeController(source: OperatorDataSource = createOperato
         }
       } catch (error) {
         if (runtime.isCurrent(current)) clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error', path);
+      }
+    },
+    async revalidate(selected?: string) {
+      const current = runtime.ticket();
+      if (state.status !== 'loaded') return;
+      try {
+        const context = await source.loadContext(selected, current.signal);
+        if (!runtime.isCurrent(current)) return;
+        if (JSON.stringify(context) !== JSON.stringify(state.context)) {
+          clear('loading');
+          const active = context.franchises.find(f => f.id === context.active_franchise_id);
+          runtime.bind({ userId: context.user_id, organizationId: active?.organization.id ?? null,
+            franchiseId: active?.id ?? null, permissions: JSON.stringify(active?.roles ?? []) });
+          set({ status: 'loaded', context, path: state.path });
+        } else if (state.notice) set({ ...state, notice: undefined });
+      } catch (error) {
+        if (!runtime.isCurrent(current)) return;
+        if (error instanceof ApiFailure && ['UNAUTHENTICATED', 'ACTION_FORBIDDEN', 'RESOURCE_NOT_FOUND'].includes(error.code)) denied(error);
+        else set({ ...state, notice: 'Workspace access could not be refreshed. Each action still requires server authorization.' });
       }
     },
     async command<T>(work: () => Promise<T>): Promise<T> {

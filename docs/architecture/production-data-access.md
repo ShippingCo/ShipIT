@@ -174,3 +174,27 @@ No optimistic authority, browser-storage recovery, demo import or provider call 
 ## Issue #27 Routes
 
 The Routes module follows HTTP validation → membership-authorized service transaction → parameterized scoped raw SQL. Lot and Parcel resource resolution remain owning-repository seams. New tables use explicit composite RESTRICT ownership constraints, bounded source/manifest reads, immutable snapshots and narrow runtime grants. No new library, ORM, RLS exception, provider adapter or browser persistence. [Contract](routes.md) and [DB operating guide](../../packages/db/README.md#issue-27-dispatch-routes).
+
+## Issue #33 counter composition
+
+`data-access/{customers,commercial,bookings,payments,receipts}.ts` are small domain adapters
+on `scoped-api.ts`, `createApiClient`, immutable command intents and the existing scope runtime.
+`dto.ts` projects allowlisted runtime fields, recursively discarding unknown response data.
+Malformed successful mutations stay uncertain. No DTO cast substitutes for response validation.
+Recoverable feature errors preserve drafts; 401 purges the session. Unchanged focus/visibility
+revalidation preserves the current generation; changed access invalidates it and remounts
+private features. Transient focus revalidation failure retains the draft with an access-refresh notice; every command still authorizes at the server. Explicit scope changes and cross-tab invalidation still purge immediately.
+
+The counter controller owns independent customer, pricing, tax, booking and payment phases.
+A synchronous intent latch protects rapid submit events. Uncertain path/body/key/scope stay
+frozen in memory; retries are explicit. Safe corrected requests create fresh keys. Session
+storage contains only an opaque operation/key/optional booking reference under the original
+user/org/franchise key. Reload without the exact body blocks replacement creation and directs
+the operator to authorized reconciliation; there is no public raw-key lookup. The booking
+contract's support process remains necessary for that case. An old-scope response cannot
+clear that recovery marker or paint into the current scope. No PII draft is persisted.
+
+Receipts use explicit retrieval and printing. The receipt discovery adapter projects only
+Parcel id, Booking id, docket and confirmation time, deduplicating Booking references.
+A confirmed booking binds the existing private attachment client to that scope generation.
+See [Issue #33 verification](issue-33-verification.md) for tests, known limits and rollback.

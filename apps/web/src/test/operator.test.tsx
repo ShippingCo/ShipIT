@@ -8,7 +8,7 @@ import { ApiFailure as OperatorError } from '../data-access/errors';
 
 const A='00000000-0000-4000-8000-000000000001',B='00000000-0000-4000-8000-000000000002';
 const user='00000000-0000-4000-8000-000000000003';
-const franchise=(id:string,name:string)=>({id,display_name:name,organization:{id:'synthetic-org',display_name:'Synthetic shop'},roles:['org_admin' as const]});
+const franchise=(id:string,name:string)=>({id,display_name:name,organization:{id:'00000000-0000-4000-8000-000000000004',display_name:'Synthetic shop'},roles:['org_admin' as const]});
 const ready:OperatorContext={user_id:user,state:'ready',active_franchise_id:A,franchises:[franchise(A,'Counter A'),franchise(B,'Counter B')]};
 const empty:OperatorContext={user_id:user,state:'onboarding_required',active_franchise_id:null,franchises:[]};
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
@@ -236,9 +236,12 @@ describe('production operator flow',()=>{
     expect(calls.filter(c=>c.path==='/auth/challenges/verify')).toHaveLength(1);
   });
   it('malformed successful context becomes controlled recovery without private fields', async () => {
-    responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({state:'ready',franchises:'private malformed body'})):undefined;
-    render(<App/>);await screen.findByRole('heading',{name:'Workspace access unavailable'});
-    expect(screen.queryByText('private malformed body')).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    for(const malformed of [{state:'ready',franchises:'private malformed body'}, {...ready,user_id:'private malformed body'},
+      {...ready,franchises:ready.franchises.map(f=>({...f,organization:{...f.organization,id:'private malformed body'}}))}]) {
+      responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json(malformed)):undefined;
+      const view=render(<App/>);await screen.findByRole('heading',{name:'Workspace access unavailable'});
+      expect(screen.queryByText('private malformed body')).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();view.unmount();
+    }
   });
 
 });

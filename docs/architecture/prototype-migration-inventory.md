@@ -537,3 +537,37 @@ Demo picker/logo imports now name the isolated demo-image helper; production ima
 | apps/web/src/test/attachments.test.tsx: photo decoding errors and aborts revoke the temporary object URL | preserve | attachments |
 | apps/web/src/test/attachments.test.tsx: download adapter bounds bytes and rejects a foreign signed URL before sending credentials | preserve | attachments |
 | apps/web/src/test/attachments.test.tsx: replacing the attachment client clears prior booking previews before the next list resolves | preserve | attachments |
+
+## Issue #33 reviewed production composition
+
+Production counter and receipt modules use the scope runtime and purpose-specific API adapters. No demo consumer or business authority moved into production. These added regressions cover real production App rendering with synthetic transport; the PostgreSQL walkthrough separately proves durable results.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/attachments.test.tsx: a booking attachment client cannot rebind to a newly selected franchise | preserve | attachments |
+| apps/web/src/test/counter.test.tsx: creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery | preserve | seam |
+| apps/web/src/test/counter.test.tsx: double click and lost commit acknowledgement retain identical path/body/key with one displayed result | preserve | seam |
+| apps/web/src/test/counter.test.tsx: network outage preserves draft and never fabricates a receipt or local booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity | preserve | seam |
+| apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
+| apps/web/src/test/counter.test.tsx: repeat selection fills empty values while preserving deliberate edits | preserve | seam |
+| apps/web/src/test/counter.test.tsx: Paid Now uses server obligation and stable reference; failed payment never undoes saved booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: keyboard form submission focuses first invalid field and describes the error | preserve | seam |
+| apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
+| apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
+| apps/web/src/test/counter.test.tsx: malformed successes fail safely and unknown private fields are projected out | preserve | seam |
+| apps/web/src/test/counter.test.tsx: focus revalidation preserves draft for unchanged permissions; revocation purges actual generation | preserve | seam |
+| apps/web/src/test/counter.test.tsx: handles safe %s without losing the draft or claiming success | preserve | seam |
+| apps/web/src/test/counter.test.tsx: malformed committed response is uncertain and retry uses its original identity | preserve | seam |
+| apps/web/src/test/counter.test.tsx: 401 purges private form and requires sign in without local fallback | preserve | seam |
+| apps/web/src/test/counter.test.tsx: reload with an unresolved marker forbids fresh-key booking and contains no persisted body | preserve | seam |
+| apps/web/src/test/counter.test.tsx: receipt discovery supports empty and safe denied/retry states | preserve | seam |
+
+| Transitive test caller | Owners |
+| --- | --- |
+| apps/web/src/test/counter.test.tsx | seam |
+
+| Additional regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: scope switch during a dispatched booking retains opaque recovery and never replays under B | preserve | seam |

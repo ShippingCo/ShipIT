@@ -95,7 +95,7 @@ Issue #17: [independent onboarding and operator context](independent-onboarding.
 [Tenant-private customers](customers.md) defines R05/W03 contact persistence, bounded lookup,
 optimistic edits, scoped replay, immutable audit and the future Booking snapshot boundary.
 [Verification](issue-19-verification.md) records real PostgreSQL/HTTP/security evidence.
-Production customer UI migration remains #33; Booking persistence remains #22.
+Production customer UI is consumed by the #33 counter; Booking persistence belongs to #22.
 
 ## Pricing backend — Issue #20
 
@@ -162,7 +162,7 @@ historical issue baselines, not the current implementation state.
 [acceptance evidence](issue-30-verification.md). Implements immutable Booking-charge,
 collection and linked reversal documents from #21/#22/#23/#29 authority. First authorized
 GET materializes canonical evidence; later retrieval/printing preserves identity and
-amounts. #33 retains the full production receipt-screen migration.
+amounts. #33 now exposes production booking and receipt discovery/printing screens.
 
 - [Private attachments](attachments.md), [ADR 0021](../adr/0021-private-attachment-storage.md), [dependency review](issue-31-dependency-review.md), and [Issue #31 verification](issue-31-verification.md).
 
@@ -174,3 +174,12 @@ membership boundary, prospective check policy and exact v1 endpoints. [ADR 0022]
 records the application decision. [Issue #32 verification](issue-32-verification.md)
 contains the migration, PostgreSQL, HTTP, tenant-isolation and privacy evidence. The
 production E-way Bills screen remains #34; compliance/report reconciliation remains #67.
+
+## Issue #33 production counter composition
+
+[Counter verification](issue-33-verification.md) records the implementation, recovery model,
+API/DTO boundary, reproducible synthetic browser and PostgreSQL scenarios, accessibility,
+privacy evidence and rollout. New Booking and Receipts use #18's scope generation and
+immutable command seam without demo imports. Pricing/tax/booking/payment/receipts retain
+server authority; attachments attach only to a confirmed Booking. No schema migration,
+business rule, role grant or dependency was added. Full operational screens remain #34.

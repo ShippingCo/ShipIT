@@ -8,7 +8,7 @@
 .operator-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 24px; }
 .operator-invitation { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .operator-message { padding: 24px; text-align: center; }
-.operator-mobile-nav { display: none; gap: 24px; }
+.operator-mobile-nav { display: none; gap: 16px; flex-wrap: wrap; }
 @media (max-width: 900px) {
   .operator-shell .drawer-pane { display: none; }
   .operator-shell .main-area { margin-left: 0; }
@@ -18,3 +18,5 @@
   .operator-invitation { width: 100%; }
   .operator-invitation .tf { width: 100%; }
 }
+
+.operator-shell .appbar { background: var(--md-surface, #fff); }

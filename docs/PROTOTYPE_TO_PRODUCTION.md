@@ -86,7 +86,7 @@ are bounded to operator entry; general domain adapters remain with #18.
 
 ## Issue #18 data-access boundary
 
-Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). Later domain screens remain with #33/#34/#44 and their prerequisites.
+Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). The #33 counter/receipt cutover is described below; remaining operational and messaging screens belong to #34/#44.
 
 ## Issue #32 e-way backend handoff
 
@@ -95,3 +95,24 @@ versioned corrections, declared-value inputs and reminder-state queries. EwayPag
 fictional localStorage calculation remain unchanged. #34 owns the production screen migration;
 #67 owns broader compliance/report reconciliation. No automatic browser-data import, government
 filing or reminder sending is introduced.
+
+## Issue #33 production counter and receipts
+
+[Verification and reproducible fixtures](architecture/issue-33-verification.md) cover
+`/business/new-booking` and `/business/receipts`. Purpose-specific async adapters compose
+#19 customer → #20 quote → #21 tax → #22 booking → #29 payment → #30 receipt, with #31
+private uploads bound only to a confirmed Booking. #23 provides narrow receipt discovery
+and fresh Parcel persistence verification. No schema, backend business rule or dependency changed.
+
+Customer is the sender snapshot source; the parcel recipient is separate. Repeat selection
+fills only empty fields and explicit edits use the customer version contract. Phone is an
+international contact value, never identity/authorization. Docket allocation/uniqueness,
+freight/packing, GST facts/rules, ledger balance and receipt contents remain server authority.
+The form collects actual service-recipient/tax evidence and an explicit cash/UPI method for
+Paid now. To Pay records no collection. Failed payment, receipt or upload cannot undo a saved booking.
+
+Production has no client tax/rate calculator, docket scan, settled boolean, local attachment
+bytes, demo receipt lookup or WhatsApp-sent claim. Lot assignment, e-way capture (including
+the separately owned goods declaration) and package lifecycle controls are intentionally
+omitted from this counter slice. Full Packages/Lots/Routes/Dashboard/E-way and operational
+To-Pay views remain #34. The explicit fictional demo is unchanged and still builds separately.
