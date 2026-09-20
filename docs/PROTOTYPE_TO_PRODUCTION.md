@@ -86,13 +86,13 @@ are bounded to operator entry; general domain adapters remain with #18.
 
 ## Issue #18 data-access boundary
 
-Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). The #33 counter/receipt cutover is described below; remaining operational and messaging screens belong to #34/#44.
+Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). The #33 counter/receipt cutover and #34 operational cutover are described below; messaging remains downstream.
 
 ## Issue #32 e-way backend handoff
 
 The [production e-way domain](architecture/eway.md) now provides external-record capture,
 versioned corrections, declared-value inputs and reminder-state queries. EwayPage and its
-fictional localStorage calculation remain unchanged. #34 owns the production screen migration;
+fictional localStorage calculation remain unchanged. #34 adds the production screen migration;
 #67 owns broader compliance/report reconciliation. No automatic browser-data import, government
 filing or reminder sending is introduced.
 
@@ -114,5 +114,15 @@ Paid now. To Pay records no collection. Failed payment, receipt or upload cannot
 Production has no client tax/rate calculator, docket scan, settled boolean, local attachment
 bytes, demo receipt lookup or WhatsApp-sent claim. Lot assignment, e-way capture (including
 the separately owned goods declaration) and package lifecycle controls are intentionally
-omitted from this counter slice. Full Packages/Lots/Routes/Dashboard/E-way and operational
-To-Pay views remain #34. The explicit fictional demo is unchanged and still builds separately.
+omitted from this counter slice. The explicit fictional demo is unchanged and still builds separately.
+
+## Issue #34 production operations
+
+The production shell now exposes API-backed Dashboard, Packages, Lots, Dispatch Routes,
+To-Pay ledger collection and E-way screens. Closed response projections, scope-generation
+cancellation and immutable command intents extend the #18/#33 stack; no second client or
+browser authority was added. Dashboard numbers are labelled bounded pages, Lot removal is
+reconciled through current membership, payment collection triggers a fresh ledger GET, and
+Route ETA is always read from server events. Production has no OTP reveal, generic delivered
+action, local paid flag, Lot delete, message queue claim, legal threshold or fixed e-way
+reference format. See [verification and synthetic walkthrough](architecture/issue-34-verification.md).

@@ -7,6 +7,7 @@ export const instant: Decoder<string> = value => typeof value === 'string' && /^
 export const integer = (min = 0): Decoder<number> => value => typeof value === 'number' && Number.isSafeInteger(value) && value >= min ? value : protocol();
 export const choice = <T extends string | number | boolean>(...values: readonly T[]): Decoder<T> => value => values.some(v => v === value) ? value as T : protocol();
 export const nullable = <T>(decode: Decoder<T>): Decoder<T | null> => value => value === null ? null : decode(value);
+export const optional = <T>(decode: Decoder<T>): Decoder<T | undefined> => value => value === undefined ? undefined : decode(value);
 export const array = <T>(decode: Decoder<T>, max = 100): Decoder<T[]> => value => Array.isArray(value) && value.length <= max ? value.map(decode) : protocol();
 /** Allowlist projection, including nested values. Unknown response fields never enter UI state. */
 export function object<S extends Record<string, Decoder<unknown>>>(shape: S): Decoder<{ [K in keyof S]: ReturnType<S[K]> }> {
