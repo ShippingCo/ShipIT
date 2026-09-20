@@ -132,3 +132,12 @@ for independent review: first authorized canonical GET materialization, global i
 numbering, frozen minimal issuer/Booking/tax evidence, separate entry-only collection
 acknowledgements and linked immutable reversal documents. This does not resolve report
 queries, statutory outputs, settings, retention or downstream screen decisions.
+
+## Issue #32 bounded e-way decision
+
+[ADR 0022](../adr/0022-external-eway-records.md) resolves the external observation model,
+nullable declared-goods-value gap, append-only corrections, explicit separate estimates and
+effective-dated maintenance check policies for independent review. It approves no legal
+threshold, transport-category rule or government verification. D06 statutory applicability
+validation remains gated with #67 and the compliance owner; #34 owns the production screen,
+#72 retention. No settings-management role is added.

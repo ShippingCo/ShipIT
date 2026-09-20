@@ -267,6 +267,38 @@ audit facts have composite Customer FKs and unique command/version constraints. 
 backfill. Apply schema/grants before code; revert compatible code while retaining applied
 schema/data, and repair using a new forward migration. [Customer contract](../../docs/architecture/customers.md).
 
+## Issue #32 external e-way records
+
+`1790442000000-external-eway-records.cjs` adds Booking-owned `eway_records`, immutable
+`eway_record_revisions` and `eway_commands`, and append-only maintenance `eway_policies`.
+Composite owner FKs, deferred command/revision completeness checks and fixed-search-path
+triggers enforce identity, version, history and separate estimate provenance. The scoped
+Booking keyset index supports reminder pages; owner/expiry and revision indexes support
+lookups. No commercial Booking column changes or historical-value backfill occur.
+
+After the prior domain grants, resolve the deployment runtime role and grant exactly:
+
+```sql
+GRANT SELECT ON shipit.eway_records, shipit.eway_record_revisions,
+  shipit.eway_commands, shipit.eway_policies TO runtime_role;
+GRANT INSERT ON shipit.eway_records, shipit.eway_commands TO runtime_role;
+GRANT UPDATE(version,declared_goods_value_paise,declaration_source_ref,issuer,
+  external_reference,source_ref,source_issued_at,official_valid_until,validity_evidence_ref,
+  vehicle_number,distance_km,estimate,estimate_policy_id,actor_id,captured_at,reason_code,
+  reason_ref,command_id,correlation_id) ON shipit.eway_records TO runtime_role;
+```
+
+Retain the existing authorized `audit_history` SELECT. No direct history/audit insertion,
+policy mutation, ownership update, DELETE, TRUNCATE, DDL or function EXECUTE is granted.
+PUBLIC has no new privileges. `prepareEway()` reproduces these exact runtime grants.
+Maintenance policy insertion uses the separately controlled migration identity and recorded
+approval, never API runtime credentials. Policies reject backdated effective instants and
+nonincreasing versions. No production preset is installed. See [e-way rollout and maintenance](../../docs/architecture/eway.md#policy-maintenance-and-rollout).
+
+The upgrade test preserves populated twenty-migration Booking/Parcel/attachment-era facts,
+checks failure rollback and repeat/no-op, and demonstrates a synthetic NEW forward repair.
+Rollback disables compatible application code, retains evidence, and repairs schema forward.
+
 ## Issue #20 pricing migration and runtime grants
 
 `1789405200000-versioned-pricing.cjs` adds pricing_cards, pricing_versions, pricing_rules,

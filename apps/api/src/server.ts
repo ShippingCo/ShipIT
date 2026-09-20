@@ -1,3 +1,5 @@
+import { createEwayService } from './modules/eway/service.ts';
+import { registerEway } from './modules/eway/routes.ts';
 import { createAttachmentService } from './modules/attachments/service.ts';
 import { registerAttachments } from './modules/attachments/routes.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
@@ -97,6 +99,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
+      registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');

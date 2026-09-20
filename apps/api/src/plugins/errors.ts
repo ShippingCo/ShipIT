@@ -3,6 +3,7 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  EWAY_ESTIMATE_UNAVAILABLE: [409, 'No approved estimate rule or distance is available. Verify the external source.'],
   ATTACHMENT_LIMIT_EXCEEDED: [413, 'Attachment storage limit exceeded.'],
   ATTACHMENT_TYPE_UNSUPPORTED: [422, 'Choose a supported photo, voice note or video.'],
   ATTACHMENT_CONTENT_MISMATCH: [422, 'File content does not match the upload.'],

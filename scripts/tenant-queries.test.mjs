@@ -168,3 +168,17 @@ test('attachment tables require both owners and exact cleanup discovery cannot b
  for(const path of [file,'apps/api/src/modules/security/jobs.ts'])
   assert.ok(inspectSource(path,"client.query('SELECT object_key FROM shipit.attachments')").length);
 });
+
+test('e-way current, history, receipts and policy require both owners and membership-only authority',()=>{
+ const file='apps/api/src/modules/eway/repository.ts';
+ for(const table of ['eway_records','eway_record_revisions','eway_commands','eway_policies']){
+  assert.deepEqual(inspectSource(file,`scopedQuery(scope,['eway.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  for(const code of [`db.query('SELECT * FROM shipit.${table}')`,`scopedQuery(scope,['eway.read'],'SELECT * FROM shipit.${table} WHERE id=$1')`,
+   `scopedQuery(scope,['eway.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+   `scopedQuery(scope,['eway.read'],'SELECT * FROM shipit.${table} WHERE franchise_id=$1')`,
+   "import {issueTenantAccess} from '../security/scope.ts'","import {query} from '@shippingco/db'"])
+   assert.ok(inspectSource(file,code).length,code);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/eway/routes.ts','service.read(request.query)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/eway/routes.ts',"request.query('SELECT * FROM shipit.eway_records')").length);
+});

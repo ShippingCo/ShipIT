@@ -589,3 +589,31 @@ export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:
       agentOnly:!staff&&!metadata,metadataOnly:metadata&&!staff&&!agent});
   });
 }
+
+/** R15/W23: one selected owner chain, no operational role inheritance. */
+export async function withEwayScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:import('../eway/types.ts').EwayAction,correlationId:string,
+  work:(scope:import('../eway/types.ts').EwayScope)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    try {
+      const session=await authenticated(tx,sessionToken);
+      if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+      const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+      const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+      const organizationAdmin=memberships.some(m=>m.role==='org_admin');
+      const all=organizationAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+      if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+      const operational=local.some(m=>(action==='eway.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
+      const orgRead=action==='eway.read'&&organizationAdmin,finance=action==='eway.read'&&local.some(m=>m.role==='accountant');
+      if(!operational&&!orgRead&&!finance)throw new HttpError('ACTION_FORBIDDEN');
+      if(action==='eway.write'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      return await work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+        permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),
+        accountantOnly:finance&&!operational&&!orgRead,revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
+    }catch(error){
+      if(action==='eway.write'&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');
+      throw error;
+    }
+  });
+}

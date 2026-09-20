@@ -87,3 +87,11 @@ are bounded to operator entry; general domain adapters remain with #18.
 ## Issue #18 data-access boundary
 
 Production operator UI now consumes purpose-specific async operations through the shared browser API client and scope runtime. Demo uses an explicit fictional namespace with no legacy import or production fallback. The production build checks transitive module isolation; reset is tested with zero network calls. See [architecture](architecture/production-data-access.md) and [verification](architecture/issue-18-verification.md). Later domain screens remain with #33/#34/#44 and their prerequisites.
+
+## Issue #32 e-way backend handoff
+
+The [production e-way domain](architecture/eway.md) now provides external-record capture,
+versioned corrections, declared-value inputs and reminder-state queries. EwayPage and its
+fictional localStorage calculation remain unchanged. #34 owns the production screen migration;
+#67 owns broader compliance/report reconciliation. No automatic browser-data import, government
+filing or reminder sending is introduced.

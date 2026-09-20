@@ -332,3 +332,11 @@ Membership is a retained association with a one-way end, not a new Parcel state/
 Canonical destination equals the Booking's frozen pricing-input destination_key; addresses
 and browser city labels are not authority. Archive retains identity/history and ends open
 grouping. [ADR 0016](../adr/0016-persistent-lots.md) records the policy and downstream boundaries.
+
+## Issue #32 e-way authority
+
+The [e-way aggregate](eway.md) owns external observations, optional declared physical-goods
+value in INR paise, separate estimates and immutable revisions for one Booking owner chain.
+Unknown historical value stays null; no freight/payment/tax field supplies it. External
+capture remains unverified_external even with source-supported validity. [ADR 0022](../adr/0022-external-eway-records.md)
+ratifies correction, reminder-policy and API semantics without changing Booking commercial truth.

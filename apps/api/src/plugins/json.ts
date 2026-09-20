@@ -51,7 +51,7 @@ export function parseStrictJson(source: string, exactIntegers = false): unknown 
 export function registerJson(app: FastifyInstance) {
   app.removeAllContentTypeParsers();
   app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: JSON_BODY_LIMIT }, (request, body, done) => {
-    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), /\/(?:pricing|payments)(?:\/|$)/.test(request.routeOptions.url??''))); }
+    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), /\/(?:pricing|payments|eway)(?:\/|$)/.test(request.routeOptions.url??''))); }
     catch(error) { done(error instanceof FieldValidationError?error:new HttpError('MALFORMED_REQUEST')); }
   });
   app.addHook('onRequest', async (request) => {
