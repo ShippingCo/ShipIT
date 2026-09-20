@@ -8,7 +8,8 @@ export const providerIdPattern=/^[1-9][0-9]{0,31}$/;
 export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnvironment):WhatsappConfiguration {
   try {
     if(raw.length>262144||environment==='demo')throw new Error();
-    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook']);
+    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled']);
+    if(input.outbound_enabled!==undefined&&(typeof input.outbound_enabled!=='boolean'||(input.outbound_enabled&&!input.webhook)))throw new Error();
     // Explicit deployment pin; never silently adopt Meta's latest version.
     if(typeof input.graph_version!=='string'||!/^v[1-9][0-9]\.0$/.test(input.graph_version)||!Array.isArray(input.bindings)||input.bindings.length>1000)throw new Error();
     const keys=new Set<string>(),owners=new Map<string,string>();
@@ -36,6 +37,6 @@ export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnviron
         w.waba_ids.some(id=>typeof id!=='string'||!providerIdPattern.test(id)))throw new Error();
       webhook=Object.freeze({app_secret:w.app_secret,verify_token:w.verify_token,encryption_key:w.encryption_key,fingerprint_key:w.fingerprint_key,key_version:w.key_version,waba_ids:Object.freeze(w.waba_ids as string[])});
     }
-    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{})});
+    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{})});
   }catch{throw new ConfigurationError([{field:'WHATSAPP_CONFIG_REF',code:'INVALID_FORMAT'}]);}
 }

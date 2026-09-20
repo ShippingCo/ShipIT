@@ -1,5 +1,6 @@
 import { createWhatsappService } from './modules/whatsapp/service.ts';
 import { createConsentService } from './modules/whatsapp/consent-service.ts';
+import { createOutboundService } from './modules/whatsapp/outbound-service.ts';
 import { registerBusinessWebhook } from './modules/whatsapp/webhook.ts';
 import { registerWhatsapp } from './modules/whatsapp/routes.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
@@ -108,7 +109,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
-      if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp));
+      if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp),createOutboundService(database,auth.keys.browser));
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');

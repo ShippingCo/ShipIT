@@ -57,3 +57,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0025: Signed WhatsApp inbox](0025-signed-whatsapp-inbox.md): Raw-byte authentication, trusted installation scope, durable inbox jobs and monotone callback evidence for Issue #37.
 
 - [0026: Scoped messaging consent](0026-scoped-messaging-consent.md): Evidence, contact identity, deterministic withdrawal and current dispatch policy for Issue #38.
+
+- [0027: Durable WhatsApp outbound](0027-durable-whatsapp-outbound.md): Stable intents, fenced dispatch, uncertainty, delivery reconciliation and disclosure proof for Issue #39.

@@ -84,7 +84,7 @@ export function scopedQuery<Row extends object = Record<string, unknown>>(
   if (!actions.length) throw new HttpError('ACTION_FORBIDDEN');
   const context = assertTenantAccess(access, actions);
   const command = sql.trimStart().match(/^(SELECT|INSERT|UPDATE|DELETE)\b/i)?.[1]?.toUpperCase();
-  const writes = command !== 'SELECT' || /\bshipit\.(?:outbox_(?:relay|claim|receipt|finish|redrive)|whatsapp_consent_apply|whatsapp_inbox_process|append_(?:payment_audit|tenancy_audit|security_denial|customer_audit|pricing_audit|booking_audit|lot_audit|route_audit))\s*\(/i.test(sql);
+  const writes = command !== 'SELECT' || /\bshipit\.(?:outbox_(?:relay|claim|receipt|finish|redrive)|whatsapp_outbound_disclose|whatsapp_consent_apply|whatsapp_inbox_process|append_(?:payment_audit|tenancy_audit|security_denial|customer_audit|pricing_audit|booking_audit|lot_audit|route_audit))\s*\(/i.test(sql);
   if (!command || sql.includes(';') ||
     ((writes || /FOR\s+(UPDATE|SHARE)/i.test(sql)) && !capabilities.get(access)!.transaction) || (writes && /(?:\.read|\.list|\.export)$/.test(context.action))) {
     throw new HttpError('ACTION_FORBIDDEN');

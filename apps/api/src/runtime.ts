@@ -2,6 +2,7 @@ import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
 import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createInboxWorker } from './modules/whatsapp/inbox-worker.ts';
 import { createConsentWorker } from './modules/whatsapp/consent-worker.ts';
+import { createOutboundWorker } from './modules/whatsapp/outbound-worker.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
@@ -69,6 +70,19 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   catch { attachments?.store.close?.(); await database.close(); throw new Error('STARTUP_FAILED'); }
   if(attachments)app.addHook('onClose',async()=>{attachments.store.close?.();});
   const lifecycle = attachLifecycle(app, database);
+  if(whatsapp?.configuration.outbound_enabled) {
+    const worker=createOutboundWorker(database,whatsapp);
+    let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve(),cycles=0;
+    const cycle=async()=>{
+      try {
+        const result=await worker.tick();
+        if(result==='failed'||result==='uncertain'||(cycles++%60===0&&await worker.attention()))app.log.warn({event:'whatsapp_outbound_attention',code:'MANUAL_REVIEW_REQUIRED'},'Outbound message needs franchise administrator review');
+      }catch{app.log.error({event:'whatsapp_outbound_failed',code:'TEMPORARILY_UNAVAILABLE'},'Outbound processing unavailable');}
+      if(!stopped)timer=setTimeout(()=>{pending=cycle();},1000);
+    };
+    app.addHook('onReady',async()=>{timer=setTimeout(()=>{pending=cycle();},1000);});
+    app.addHook('preClose',async()=>{stopped=true;clearTimeout(timer);await pending;});
+  }
   if(whatsapp?.configuration.webhook) {
     const worker=createInboxWorker(database);
     const consent=createConsentWorker(database,whatsapp.configuration.webhook);

@@ -77,7 +77,7 @@ No operator can manufacture one through this issue's API. For synthetic verifica
 the fixture's privileged migration identity inserts fictional evidence; it does not
 represent a live provider send. A missing disclosure, stale policy, expired reference,
 foreign contact or pre-STOP disclosure leaves START unconfirmed. This intentionally
-keeps live grant collection disabled until the outbound integration exists.
+fails closed without delivered disclosure proof. [Issue #39](whatsapp-outbound.md) now provides that integration; downstream conversation orchestration must request it through the trusted enqueue boundary.
 
 Deploy schema/grants first, then compatible code; verify a synthetic signed callback
 and safe history in development/staging. Roll back compatible code/configuration and

@@ -27,7 +27,7 @@ await test('Issue 27 populated Route upgrades atomically without rewriting recei
   await assert.rejects(db.migrate({dir:temporary}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.route_parcel_effects') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:9});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareRoutes();
+  assert.deepEqual(await db.migrate(),{applied:10});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareRoutes();
   assert.deepEqual(await snapshot(),before);assert.deepEqual(await service.execute(...args),route);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.domain_events WHERE obligation_id IS NOT NULL OR payment_command_id IS NOT NULL')).rows[0]!.n,0);
   assert.equal((await db.adminQuery('SELECT execution_state FROM shipit.routes WHERE id=$1',[route.id])).rows[0]!.execution_state,'pending');

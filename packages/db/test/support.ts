@@ -162,6 +162,7 @@ export interface DisposableDatabase {
   prepareWhatsapp(): Promise<void>;
   prepareWhatsappInbox(): Promise<void>;
   prepareWhatsappConsent(): Promise<void>;
+  prepareWhatsappOutbound(): Promise<void>;
   prepareOutbox(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
@@ -368,6 +369,15 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT ON shipit.whatsapp_inbox,shipit.whatsapp_inbox_attempts,shipit.whatsapp_delivery_observations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.whatsapp_receive(jsonb,text[],uuid),shipit.whatsapp_inbox_next(),shipit.whatsapp_inbox_process(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareWhatsappOutbound() {
+      await handle.prepareWhatsappConsent();await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.whatsapp_outbound,shipit.whatsapp_outbound_attempts,shipit.whatsapp_outbound_redrives TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,reason_code,version,attempts,cycle_attempts,attempt_id,lease_until,available_at,sealed_payload) ON shipit.whatsapp_outbound TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.whatsapp_outbound_scope(uuid,timestamptz,boolean),shipit.whatsapp_outbound_disclose(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareWhatsappConsent() {

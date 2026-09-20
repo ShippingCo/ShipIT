@@ -414,3 +414,7 @@ Issue #36 adds masked installation reads and idempotent connect/rotate/disable/t
 [Signed operational webhooks](whatsapp-webhooks.md) define GET/POST /webhooks/whatsapp and R29-scoped inbox health/detail. Signed provider identity owns ingress scope; callbacks never establish operator authentication. The POST acknowledges only durable inbox/quarantine persistence.
 
 Issue #38: [consent read and policy HTTP contract](messaging-consent.md) adds customer-scoped safe history and current eligibility. No public consent mutation or phone-based authorization endpoint is added.
+
+## Issue #39 outbound operations
+
+[Outbound API and runbook](whatsapp-outbound.md) specifies R18 history/health and W44 revision-checked, idempotent redrive under /api/v1/whatsapp/outbound. Enqueue is a trusted consumer service only; no staff or browser provider-send endpoint is added.

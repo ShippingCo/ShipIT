@@ -593,3 +593,5 @@ Migration 23 adds scoped installations, immutable template revisions and command
 Migration 24 adds the [signed WhatsApp inbox](../../docs/architecture/whatsapp-webhooks.md), immutable attempt/quarantine evidence and monotone delivery observations. Its fixed ingress/scheduler/processor functions require explicit EXECUTE grants; runtime gets no direct inbox or projection DML.
 
 Migration 25 adds scoped WhatsApp consent evidence and customer contact identities. Apply the [consent runtime grants](../../docs/architecture/messaging-consent.md) before enabling its consumer; prior migrations are unchanged.
+
+Issue #39 migration 26 adds the outbound intent, attempt and redrive ledger. Apply the restricted [outbound grants and rollout](../../docs/architecture/whatsapp-outbound.md) before enabling dispatch. Released migrations remain unchanged; no producer backfill occurs.
