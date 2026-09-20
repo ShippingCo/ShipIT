@@ -6,6 +6,26 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { inspectSource, checkTenantQueries } from './check-tenant-queries.mjs';
 const file = 'apps/api/src/modules/example/repository.ts';
+
+test('outbox owner predicates and exact discovery exceptions cannot become raw SQL escapes',()=>{
+ const path='apps/api/src/modules/outbox/repository.ts';
+ for(const table of ['outbox_jobs','outbox_schedule','outbox_streams','outbox_receipts','outbox_attempts','outbox_redrives']){
+  assert.deepEqual(inspectSource(path,`scopedQuery(scope,['outbox.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  for(const code of [`db.query('SELECT * FROM shipit.${table}')`,
+   `scopedQuery(scope,['outbox.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+   "import {issueTenantAccess} from '../security/scope.ts'","import {query} from '@shippingco/db'"])
+   assert.ok(inspectSource(path,code).length,code);
+ }
+ const jobs='apps/api/src/modules/security/jobs.ts';
+ for(const sql of ['SELECT organization_id,franchise_id FROM shipit.outbox_next_scope($1,$2,$3,$4)',
+  'SELECT organization_id,franchise_id FROM shipit.outbox_job_scope($1)']){
+  assert.deepEqual(inspectSource(jobs,`tx.query('${sql}')`),[]);
+  assert.ok(inspectSource(path,`tx.query('${sql}')`).length);
+  assert.ok(inspectSource(jobs,`tx.query('${sql}; SELECT * FROM shipit.domain_events')`).length);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/outbox/routes.ts','service.list(request.query)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/outbox/routes.ts',"request.query('SELECT * FROM shipit.outbox_jobs')").length);
+});
 test('tenant AST gate accepts maintained sources and a scoped positive control', () => {
   assert.deepEqual(checkTenantQueries(), []);
   assert.deepEqual(inspectSource(file, `import {scopedQuery as run} from '../security/scope.ts';

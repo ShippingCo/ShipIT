@@ -557,3 +557,31 @@ schema forward. [Receipt contract](../../docs/architecture/receipts.md).
 ## Private attachment migration (#31)
 
 `1790355600000-private-attachments.cjs` adds scoped metadata, immutable command receipts, append-only audit and narrow cleanup discovery, with no backfill or released-migration edits. Composite Booking/Parcel foreign keys, immutable identity, clean-ready constraints and locked quotas enforce persistence invariants. Runtime needs SELECT/INSERT on attachments/commands, UPDATE only mutable lifecycle columns (see `prepareAttachments` in test/support.ts), UPDATE(id) on Booking for row locking, canonical audit-view read and EXECUTE on attachment_cleanup_scope. No direct audit-table read/write, DELETE, TRUNCATE or DDL is granted. #68 provisions the existing runtime role with these least privileges before rollout. Ready rows are immutable; #72 must introduce reviewed retention/hold authority before deletion.
+
+## Durable outbox migration (#35)
+
+Apply `1790528400000-durable-outbox.cjs` before worker/API rollout. Retain existing
+membership, domain_events read and audit_history read grants. The additional grants,
+using the actual resolved runtime role instead of the placeholder below, are:
+
+```sql
+GRANT SELECT ON shipit.outbox_jobs,shipit.outbox_receipts,shipit.outbox_attempts,
+  shipit.outbox_redrives,shipit.outbox_streams TO runtime_role;
+GRANT INSERT ON shipit.outbox_streams TO runtime_role;
+GRANT UPDATE(high_water) ON shipit.outbox_streams TO runtime_role;
+GRANT UPDATE(id) ON shipit.outbox_jobs TO runtime_role;
+GRANT EXECUTE ON FUNCTION
+  shipit.outbox_next_scope(text,text[],text,timestamptz),shipit.outbox_job_scope(uuid),
+  shipit.outbox_relay(uuid,uuid,text,text[]),shipit.outbox_claim(uuid,uuid,text,timestamptz),
+  shipit.outbox_receipt(uuid,uuid,uuid,uuid,text,timestamptz),
+  shipit.outbox_finish(uuid,uuid,uuid,uuid,text,integer,timestamptz),
+  shipit.outbox_redrive(uuid,uuid,uuid,uuid,uuid,text,text,integer,text) TO runtime_role;
+```
+
+UPDATE(id) permits row locks; the immutable identity trigger denies changing the ID.
+Do not grant job-state UPDATE, direct history INSERT/UPDATE, DELETE, TRUNCATE, sequence
+access, DDL or PUBLIC function execution. Definer functions use a fixed pg_catalog
+search path and explicit owners; API/service capability checks remain mandatory.
+`prepareOutbox()` tests these grants. No automatic role provisioning or data backfill.
+Roll back compatible code, preserve evidence and repair schema forward. See the
+[outbox guide](../../docs/architecture/outbox.md) for lock considerations and rollout.

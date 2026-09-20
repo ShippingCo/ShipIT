@@ -219,10 +219,10 @@ truths; neither is Parcel delivery or payment truth. Carrier observations and LL
 cannot authorize lifecycle/ledger changes. Worker dedupe and leases cannot establish
 universal exactly-once external delivery.
 
-D05 stays **OPEN**: #35 owns lease duration, recovery, concurrency, polling, retry/backoff,
-fairness, poison/redrive mechanics; #39 owns messaging processing/provider ambiguity;
-#40 owns consumer dedupe persistence. No numeric worker values, queue library, production
-table, adapter, timer or daemon are introduced by these contracts.
+D05's worker mechanics are implemented for review in [ADR 0023](../adr/0023-durable-outbox-worker.md)
+and the [outbox operations contract](outbox.md): PostgreSQL leases, bounded retries,
+fair scheduling, receipts and controlled redrive. #39 still owns provider ambiguity;
+#40 owns notification identity/fanout beyond the infrastructure event-consumer receipt.
 
 ## Issue #22 producer implementation
 

@@ -319,3 +319,13 @@ screen/client-adapter migration; the existing demo calls its explicitly fictiona
 ## Private attachments
 
 [Attachment guide](../../docs/architecture/attachments.md) covers routes and [ADR 0021](../../docs/adr/0021-private-attachment-storage.md) exact quotas. Resolve `STORAGE_CREDENTIAL_REF` at startup alongside database/auth secrets; hosted runtime requires it. See the configuration contract for strict secret JSON. Apply migration 1790355600000 first. Runtime cleanup starts after one second, processes at most 100 due rows per tick and schedules another tick five minutes after completion; failure remains durable/retryable. Graceful shutdown waits for the active tick. Monitor backlog; network outages extend cleanup latency. `pnpm test:attachments` starts a digest-pinned private MinIO test service with generated local credentials, runs the real provider contract and removes the container. No production credentials are needed.
+
+## Durable outbox worker (#35)
+
+`pnpm --filter @shippingco/api start:worker` starts the separate developer worker with
+the normal validated environment and local database resolver. Its code-owned registry
+is initially empty; downstream issues add business consumers. No provider credentials
+or network sends are introduced. The API exposes R18 scoped health/job reads and W44
+privileged quarantined-job redrive. Apply the migration and minimum runtime grants
+first. [Operations](../../docs/architecture/outbox.md) covers exact endpoints, reasons,
+lease/retry/order policy, graceful stop and the synthetic reproducible fixture.

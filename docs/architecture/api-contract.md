@@ -402,3 +402,7 @@ effect. All use live R13, no-store, minimal allowlisted DTOs and existing contro
 ## Attachment binary exception (#31)
 
 [Attachments](attachments.md#api-and-public-model) defines seven versioned endpoints beneath `/api/v1/bookings/:booking_id/attachments`. Only PUT upload content accepts `application/octet-stream`; it has a dedicated bounded streaming parser, session/CSRF and W22. The normal 256 KiB JSON limit is unchanged. Initiate/finalize/cancel/download-grant commands require Idempotency-Key and live authorization on replay. Responses explicitly project safe metadata; private grants and bytes are no-store. No attachment domain event is added.
+
+## Outbox operations (#35)
+
+[Outbox operations](outbox.md#api-and-permissions) defines session-protected health, bounded job listing/detail and CSRF-protected redrive. R18 governs reads and W44 governs privileged redrive; live scope checks precede original-result replay. No raw event or lease token is returned.

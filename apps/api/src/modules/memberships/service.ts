@@ -44,6 +44,28 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
     throw new HttpError('TEMPORARILY_UNAVAILABLE');
   }
 }
+
+/** R18 sanitized operations and W44 controlled redrive; no org-admin write inheritance. */
+export async function withOutboxScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+  action:'outbox.read'|'outbox.redrive',correlationId:string,
+  work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,token);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);
+    if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const orgAdmin=memberships.some(m=>m.role==='org_admin');
+    const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!local.some(m=>m.role==='franchise_admin')&&!(action==='outbox.read'&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if(action==='outbox.redrive'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+    const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
+    return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+  });
+}
 async function authenticated(tx:TransactionExecutor,sessionToken:string,lock=true) {
   if(!/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) throw new HttpError('UNAUTHENTICATED');
   const session=await new AuthRepository(tx).session(digest(sessionToken),lock);
