@@ -588,9 +588,16 @@ production Packages composition; it is disposed with the active component/scope.
 | --- | --- | --- |
 | apps/web/src/test/operations.test.tsx: projects parcel data, rejects malformed success and binds exact scoped command identity | preserve | parcels |
 | apps/web/src/test/operations.test.tsx: builds versioned lot/route/e-way intents and accepts the restricted accountant e-way projection | preserve | eway |
+| apps/web/src/test/operations.test.tsx: executes only the three exact canonical route-event identities and rejects a generic or mismatched operation | preserve | routes |
+| apps/web/src/test/operations.test.tsx: round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary | preserve | routes |
 | apps/web/src/test/operations.test.tsx: announces dashboard loading then renders bounded accessible cards and an honest empty result | preserve | seam |
 | apps/web/src/test/operations.test.tsx: offers controlled dashboard retry after an API failure without local fallback | preserve | seam |
 | apps/web/src/test/operations.test.tsx: uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read | preserve | parcels |
 | apps/web/src/test/operations.test.tsx: removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server | preserve | lots |
+| apps/web/src/test/operations.test.tsx: loads an authoritative active target lot and sends its server version in the move command | preserve | lots |
+| apps/web/src/test/operations.test.tsx: refreshes source and target after a stale target conflict and requires a deliberate new submission | preserve | lots |
+| apps/web/src/test/operations.test.tsx: keeps malformed and foreign target lots safely unavailable | preserve | lots |
+| apps/web/src/test/operations.test.tsx: shows authoritative archived target details but prevents move submission | preserve | lots |
+| apps/web/src/test/operations.test.tsx: shows a route instant as Kolkata wall time and preserves it when only metadata changes | preserve | routes |
 | apps/web/src/test/operations.test.tsx: re-reads and displays the server ETA after a full route component remount without inferring parcel delivery | preserve | routes |
-| apps/web/src/test/operations.test.tsx: separates official e-way validity from a labelled estimate and renders an unverified short external reference | preserve | eway |
+| apps/web/src/test/operations.test.tsx: separates official e-way validity and renders every immutable revision with a stable revision identity | preserve | eway |

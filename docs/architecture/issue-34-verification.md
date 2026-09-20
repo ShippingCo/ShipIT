@@ -36,6 +36,37 @@ The screens consume the ratified endpoints from #23–#29/#32:
 - Booking payment projection and manual To-Pay collection.
 - E-way current/history/reminders, capture/correction and explicit estimate.
 
+## Final review fixes
+
+The final PR review found four correctness/consistency gaps, all fixed without a dependency,
+endpoint or migration change.
+
+1. Route `datetime-local` controls now cross one explicit `Asia/Kolkata` boundary.
+   `instantToKolkataInput` converts an RFC3339 instant into Kolkata wall-clock fields, and
+   `kolkataInputToInstant` parses those fields with the fixed UTC+05:30 India Standard Time
+   offset instead of the browser timezone. India currently has no daylight-saving transitions;
+   that assumption is documented at the helper. Seconds/milliseconds are retained when
+   present. `2026-09-20T12:00:00.000Z` therefore renders as `2026-09-20T17:30` and an
+   unrelated Route metadata edit sends `2026-09-20T12:00:00.000Z` again. Tests also cover a
+   UTC→Kolkata calendar-date boundary and non-zero millisecond precision.
+2. Lot move no longer accepts a hand-transcribed target version. A valid target UUID triggers
+   the same scoped `GET /api/v1/lots/:target_lot_id`; the form displays its code, name,
+   destination, version and state, permits only an active distinct target, and sends that
+   returned version as `expected_target_version`. On `VERSION_CONFLICT`, source and target are
+   reread, the command is not automatically retried, and the operator must resubmit deliberately.
+   Foreign/unknown targets retain the same safe unavailable presentation.
+3. E-way history keys now use immutable revision identity (`record_id:version`), so versions
+   of the same aggregate reconcile as separate rows.
+4. Route event intent identity is derived from the closed event kind and is exactly one of
+   `api.v1.routes.departure`, `api.v1.routes.delay` or `api.v1.routes.arrival`. Execution
+   decoding rejects the old generic name, arbitrary route prefixes and operation/result-kind
+   mismatches. Existing immutable-intent retry rules continue to retain operation, path,
+   body, key and scope.
+
+The event form continues to expose W18 to franchise admin, operator and dispatcher. It states
+that departure effects which transition dispatched Parcels additionally require dispatcher
+authority; the T04 server guard remains authoritative, and arrival never means delivered.
+
 ## Scope, cache and mutation recovery
 
 Every adapter is created from the active `ScopeController`. `scopedApi` captures a scope
@@ -90,7 +121,10 @@ The demo pages and fictional Store are unchanged behind explicit demo compositio
 | Guarantee | Evidence |
 | --- | --- |
 | ETA survives reload and arrival is not delivery | `operations.test.tsx` remounts Routes, observes a second event GET and changed absolute server ETA; route-event DB tests cover restart persistence |
+| Kolkata Route edit round trip | Direct helpers cover UTC→Kolkata→UTC, date rollover and milliseconds; the rendered edit field/request-body test changes only origin and proves the scheduled instant is unchanged |
+| Canonical Route event identities | Adapter tests assert departure/delay/arrival identities, accept only those operations and reject generic/mismatched decoding; general command tests prove exact uncertain retry |
 | Removal becomes authoritative ungrouped | Lots waits for `GET /parcels/:id/lot-membership === null`; component test exercises the keyboard button |
+| Authoritative Lot move target | Component tests cover scoped target detail load, automatic target version, conflict refresh plus deliberate resubmission, safe foreign/invalid target and archived-target denial |
 | Bulk partial retry | Existing `parcel-bulk.test.tsx` covers retained failures, refreshed versions, exact uncertain retry and scope disposal |
 | No foreign cache after scope switch | Existing operator/data-access/bulk scope-race tests cover A → B → late A → fresh A |
 | Ledger refresh | Packages component test records collection and requires at least two payment GETs before `settled` |
@@ -98,7 +132,7 @@ The demo pages and fictional Store are unchanged behind explicit demo compositio
 | No OTP/delivered bypass | Packages and Routes component assertions plus production import/marker build gate |
 | Accessible honest Dashboard | Component test covers announced loading, empty state, numeric navigation cards; labels state bounded pages |
 | Tenancy and role denial | Existing database tests for parcels/lots/routes/payments/e-way exercise B/C, nested IDs and all-role matrices |
-| E-way semantics | Adapter/component tests cover redacted response, short reference, unverified language, distinct official/estimate states and exact label |
+| E-way semantics | Adapter/component tests cover redacted response, short reference, unverified language, distinct official/estimate states, exact label and two rendered revisions sharing one record ID |
 | Production/demo isolation | Planning inventory and `scripts/web-isolation.test.mjs`; explicit demo build below |
 
 ## Reproducible synthetic scenario
@@ -143,7 +177,7 @@ recorded after the branch's final verification run.
 | --- | --- |
 | `pnpm install --frozen-lockfile --ignore-scripts` | PASS; lockfile current, no install changes |
 | `pnpm check:migrations` | PASS; 21 released migrations unchanged |
-| `pnpm db:local quality` | PASS: 26 quality tests, 22 testkit, 12 DB unit, 419 API, 148 web, 3 object-store, and 58 DB + 234 DB/API PostgreSQL tests (922 total), zero failed/skipped/cancelled/todo; production build 101 modules. |
+| `pnpm db:local quality` | PASS: 26 quality tests, 22 testkit, 12 DB unit, 419 API, 155 web, 3 object-store, and 58 DB + 234 DB/API PostgreSQL tests (929 total), zero failed/skipped/cancelled/todo; production build 101 modules. |
 | `VITE_DATA_MODE=demo pnpm --filter @shippingco/web exec vite build --outDir /tmp/shipit34-demo-dist` | PASS; 1,929 modules, isolated output |
 | `git diff --check` | PASS |
 

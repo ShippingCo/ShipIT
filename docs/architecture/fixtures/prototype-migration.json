@@ -1266,6 +1266,16 @@
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
+        "name": "executes only the three exact canonical route-event identities and rejects a generic or mismatched operation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
         "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
         "cases": null
       },
@@ -1286,12 +1296,37 @@
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
+        "name": "loads an authoritative active target lot and sends its server version in the move command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "refreshes source and target after a stale target conflict and requires a deliberate new submission",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "keeps malformed and foreign target lots safely unavailable",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "shows authoritative archived target details but prevents move submission",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "shows a route instant as Kolkata wall time and preserves it when only metadata changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
         "name": "re-reads and displays the server ETA after a full route component remount without inferring parcel delivery",
         "cases": null
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
-        "name": "separates official e-way validity from a labelled estimate and renders an unverified short external reference",
+        "name": "separates official e-way validity and renders every immutable revision with a stable revision identity",
         "cases": null
       },
       {
@@ -2858,6 +2893,22 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
+      "name": "executes only the three exact canonical route-event identities and rejects a generic or mismatched operation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Issue #34 final review: retain exact canonical Route event command identity and closed response correlation."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Issue #34 final review: retain the explicit operational-timezone conversion boundary."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
       "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
       "cases": null,
       "disposition": "preserve",
@@ -2890,6 +2941,46 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
+      "name": "loads an authoritative active target lot and sends its server version in the move command",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Issue #34 final review: retain scoped target Lot authority rather than manual version transcription."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "refreshes source and target after a stale target conflict and requires a deliberate new submission",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Issue #34 final review: retain conflict refresh without automatic stale-command replacement."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "keeps malformed and foreign target lots safely unavailable",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Issue #34 final review: retain safe scoped target lookup behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "shows authoritative archived target details but prevents move submission",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Issue #34 final review: retain server-owned target state as the move eligibility gate."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "shows a route instant as Kolkata wall time and preserves it when only metadata changes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Issue #34 final review: retain lossless Route instant form and request behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
       "name": "re-reads and displays the server ETA after a full route component remount without inferring parcel delivery",
       "cases": null,
       "disposition": "preserve",
@@ -2898,7 +2989,7 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
-      "name": "separates official e-way validity from a labelled estimate and renders an unverified short external reference",
+      "name": "separates official e-way validity and renders every immutable revision with a stable revision identity",
       "cases": null,
       "disposition": "preserve",
       "group": "eway",
