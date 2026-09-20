@@ -23,6 +23,18 @@ export async function withNextInboxScope<T>(database:DatabasePool,work:(scope:Te
   });
 }
 
+/** Consent consumption has an independent durable receipt; inbox completion is not opt-in. */
+export async function withNextConsentScope<T>(database:DatabasePool,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    await tx.query("SET LOCAL transaction_timeout = '25s'");
+    const row=(await tx.query<{organization_id:string;franchise_id:string;inbox_id:string}>(
+      'SELECT organization_id,franchise_id,inbox_id FROM shipit.whatsapp_consent_next()')).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'whatsapp.consent.work',actor:{type:'service',id:'whatsapp-consent-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.inbox_id);
+  });
+}
+
 // Legacy installation-specific scope seam. Generic outbox authority below derives
 // ownership from persisted jobs/events and does not require a provider installation.
 export interface TrustedJobRecord {

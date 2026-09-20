@@ -1,6 +1,7 @@
 import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
 import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createInboxWorker } from './modules/whatsapp/inbox-worker.ts';
+import { createConsentWorker } from './modules/whatsapp/consent-worker.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
@@ -70,6 +71,7 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   const lifecycle = attachLifecycle(app, database);
   if(whatsapp?.configuration.webhook) {
     const worker=createInboxWorker(database);
+    const consent=createConsentWorker(database,whatsapp.configuration.webhook);
     let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve();
     const cycle=async()=>{
       try {
@@ -77,6 +79,10 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
         for(let n=0;n<20&&!stopped;n++) {
           const outcome=await worker.tick();if(outcome===null)break;
           if(outcome==='quarantined')app.log.warn({event:'whatsapp_inbox_quarantined',code:'MANUAL_REVIEW_REQUIRED'},'Webhook processing needs review');
+        }
+        for(let n=0;n<20&&!stopped;n++) {
+          const outcome=await consent.tick();if(outcome===null)break;
+          if(['key_unavailable','source_invalid'].includes(outcome))app.log.warn({event:'whatsapp_consent_quarantined',code:'MANUAL_REVIEW_REQUIRED'},'Consent processing needs review');
         }
       }catch{app.log.error({event:'whatsapp_inbox_failed',code:'TEMPORARILY_UNAVAILABLE'},'Webhook processing unavailable');}
       if(!stopped)timer=setTimeout(()=>{pending=cycle();},1000);

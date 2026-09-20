@@ -335,3 +335,5 @@ lease/retry/order policy, graceful stop and the synthetic reproducible fixture.
 Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and template APIs; AUTH_SECRET_REF is required. See [operations](../../docs/architecture/whatsapp.md) for catalog format, managed/local secret resolution, W45/R29, credential rotation and migration grants. No runtime customer sender is enabled by this configuration.
 
 [Operational WhatsApp webhooks](../../docs/architecture/whatsapp-webhooks.md) add an optional signed business inbox, database-only processing, and scoped health/detail. Apply migration 24 and runtime grants before adding the webhook catalog property; this does not enable customer sends.
+
+Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) documents signed consent consumption, R16 history, policy evaluation and #39 integration.

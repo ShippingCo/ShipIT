@@ -141,3 +141,6 @@ and canonical audit; #70 owns hosted alert delivery. Use [verification](issue-36
 for repeatable synthetic exercises.
 
 Issue #37 now implements [signed business callbacks and durable inbox processing](whatsapp-webhooks.md) using the optional webhook catalog property. Provider configuration alone still does not enable customer sends.
+
+Issue #38 implements [consent evidence and current policy](messaging-consent.md).
+#39 must invoke this policy at queue and dispatch and record verified disclosure delivery.

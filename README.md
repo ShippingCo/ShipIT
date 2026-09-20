@@ -162,4 +162,4 @@ The [durable outbox worker](docs/architecture/outbox.md) relays committed events
 
 The [WhatsApp provider registry](docs/architecture/whatsapp.md) validates registered identities, rotates secret references and retains approved-template metadata. Customer consent and durable sends remain downstream; configuration alone does not enable customer sends.
 
-[Signed WhatsApp callbacks](docs/architecture/whatsapp-webhooks.md) persist a tenant-bound inbox before acknowledgement, quarantine unknown identities, and process delivery observations durably. Consent and customer sends remain downstream.
+[Signed WhatsApp callbacks](docs/architecture/whatsapp-webhooks.md) persist a tenant-bound inbox before acknowledgement, quarantine unknown identities, and process delivery observations durably. [Consent evidence and current policy checks](docs/architecture/messaging-consent.md) now consume that inbox; actual outbound sending remains with #39.

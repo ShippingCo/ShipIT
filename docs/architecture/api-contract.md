@@ -412,3 +412,5 @@ Issue #36 adds masked installation reads and idempotent connect/rotate/disable/t
 ## Issue #37 business callbacks
 
 [Signed operational webhooks](whatsapp-webhooks.md) define GET/POST /webhooks/whatsapp and R29-scoped inbox health/detail. Signed provider identity owns ingress scope; callbacks never establish operator authentication. The POST acknowledges only durable inbox/quarantine persistence.
+
+Issue #38: [consent read and policy HTTP contract](messaging-consent.md) adds customer-scoped safe history and current eligibility. No public consent mutation or phone-based authorization endpoint is added.
