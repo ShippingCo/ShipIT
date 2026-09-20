@@ -1255,6 +1255,46 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "projects parcel data, rejects malformed success and binds exact scoped command identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "builds versioned lot/route/e-way intents and accepts the restricted accountant e-way projection",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "offers controlled dashboard retry after an API failure without local fallback",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "re-reads and displays the server ETA after a full route component remount without inferring parcel delivery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "separates official e-way validity from a labelled estimate and renders an unverified short external reference",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/operator.test.tsx",
         "name": "completes onboarding, sends only approved fields and reloads server context without browser authority",
         "cases": null
@@ -1524,6 +1564,10 @@
         "kind": "localStorage.removeItem"
       },
       {
+        "file": "apps/web/src/operations/Packages.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
         "file": "apps/web/src/operator/Onboarding.tsx",
         "kind": "sessionStorage.getItem"
       },
@@ -1702,6 +1746,10 @@
       {
         "file": "apps/web/src/test/fixtures/parcel-bulk.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
       },
       {
         "file": "apps/web/src/test/operator.test.tsx",
@@ -2791,6 +2839,70 @@
       "group": "presentation",
       "disposition": "preserve",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "projects parcel data, rejects malformed success and binds exact scoped command identity",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "parcels",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "builds versioned lot/route/e-way intents and accepts the restricted accountant e-way projection",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "offers controlled dashboard retry after an API failure without local fallback",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "parcels",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "re-reads and displays the server ETA after a full route component remount without inferring parcel delivery",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "separates official e-way validity from a labelled estimate and renders an unverified short external reference",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",

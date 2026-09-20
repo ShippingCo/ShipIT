@@ -141,7 +141,7 @@ unprovisioned deployment network isolation.
 
 ## Extension, rollout and rollback
 
-#33 owns customer/booking/receipt adapters; #34 owns parcel/lot/route/dashboard/e-way;
+#33 owns customer/booking/receipt adapters; #34 implements parcel/lot/route/dashboard/e-way;
 #44 owns provider-backed messaging history. Add small async query/command interfaces with
 public DTOs, declared validation fields, explicit error/reconciliation handling and scope
 lifetime tests. Reuse Fetch/AbortController and this seam; no new state framework is needed.
@@ -158,14 +158,14 @@ switch a production deployment to demo as outage recovery or automatically impor
 [Parcel bulk](parcel-bulk.md#browser-integration-and-accessibility) supplies the typed
 adapter, scope-owned controller and accessible M3 panel. It validates confirmed results,
 retains failed selection and immutable uncertain intent, and requires authoritative refresh
-for deliberate failed-item retry. Full operational screen cutover remains #34.
+for deliberate failed-item retry. The #34 Packages screen composes this controller.
 
 ## Issue #26 lot consumer boundary
 
 The [lot service/API](lots.md) is PostgreSQL authority. Shared LotDto/MembershipDto describe
 operational fields without customer PII; the existing Parcel DTO is not broadened. #26 adds
-no browser adapter/controller or screen and changes no approved client transport. #34 must
-use this document's one client → purpose adapter → live-scope controller → component seam.
+no browser adapter/controller or screen and changes no approved client transport. #34 uses
+this document's one client → purpose adapter → live-scope controller → component seam.
 See [mismatch/retry UX contract](lots.md#safe-failures-and-ui-consumer-contract): retain safe
 selection, announce corrective guidance, refresh current versions, preserve exact uncertain
 intent, use a new key only for deliberately changed intent, and purge on scope switch.
@@ -198,3 +198,12 @@ Receipts use explicit retrieval and printing. The receipt discovery adapter proj
 Parcel id, Booking id, docket and confirmation time, deduplicating Booking references.
 A confirmed booking binds the existing private attachment client to that scope generation.
 See [Issue #33 verification](issue-33-verification.md) for tests, known limits and rollback.
+
+## Issue #34 operational composition
+
+`data-access/{parcels,lots,routes,eway}.ts` adds closed runtime projections, exact resource
+correlation and expected-version command intents on the same `scoped-api.ts` stack. Feature
+hooks own AbortControllers and reset state on scope-generation remount. Confirmed mutations
+refetch authoritative projections; uncertain mutations retain the exact intent for explicit
+retry. The production shell exposes bounded-page Dashboard metrics and the five operational
+areas without importing AppContext or the fictional Store. See [Issue #34 verification](issue-34-verification.md).

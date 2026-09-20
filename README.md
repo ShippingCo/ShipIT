@@ -10,7 +10,7 @@ The default web entry now uses the Fastify/PostgreSQL API for verified operator 
 independent-franchise onboarding, invitations and a scope-aware workspace. New Booking now
 composes franchise-private customers, server pricing/tax, atomic bookings, payment collections,
 private attachments and optional immutable receipt printing. Receipts discovers saved bookings
-through the production Parcel read API. [Counter verification and synthetic walkthrough](docs/architecture/issue-33-verification.md) documents this cutover; operational screens remain #34.
+through the production Parcel read API. [Counter verification and synthetic walkthrough](docs/architecture/issue-33-verification.md) documents that cutover. The production Dashboard, Packages, Lots, Routes, To-Pay and E-way screens now use the same scoped API architecture; see [Issue #34 verification](docs/architecture/issue-34-verification.md).
 
 ## Who it is designed for
 
@@ -89,7 +89,7 @@ with same-origin API proxying; the explicit demo bundle can run without a backen
   genuinely needs — border defaults — is reproduced by hand in `tailwind.css`.
 - **Production operator entry** uses `src/operator/` for cookie/CSRF requests,
   permitted context, onboarding and scope invalidation. The existing prototype store is
-  loaded only by the explicit demo composition; operational migration remains per-domain.
+  loaded only by the explicit demo composition; production operational pages use server authority.
 
 ## Data, privacy and security
 
@@ -149,7 +149,7 @@ validity, separately labelled estimates and immutable corrections, with scoped p
 check reminders. Declared goods value is an explicit nullable INR-paise declaration, never
 derived from freight or payable. No government filing, verification or legal preset is added.
 [Verification](docs/architecture/issue-32-verification.md) records the database/API evidence;
-the production E-way Bills screen remains with #34.
+the production E-way Bills screen renders those server states and keeps estimates visibly distinct from official validity.
 
 The [Booking backend](docs/architecture/bookings.md) now confirms operator-authorized
 Customer/pricing/tax snapshots, creates initial Parcels with permanent global dockets,

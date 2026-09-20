@@ -571,3 +571,26 @@ Production counter and receipt modules use the scope runtime and purpose-specifi
 | Additional regression | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/counter.test.tsx: scope switch during a dispatched booking retains opaque recovery and never replays under B | preserve | seam |
+
+## Issue #34 production operational cutover
+
+The production BusinessShell now routes Dashboard, Packages, Lots, Dispatch Routes and
+E-way Bills to purpose-built API components. The prototype pages and browser Store remain
+unchanged behind DemoBusinessShell. Production replaces local Package status/OTP actions
+with guarded Parcel commands, Lot delete with archive, mutable payment flags with the
+server ledger, local Route delay math with persisted Route events, and hard-coded e-way
+assumptions with external observations plus server-evaluated states. Messaging claims,
+delivery proof, Automation Feed and Reports remain demo-only/deferred. The newly inventoried
+`useSyncExternalStore` effect is the existing bounded bulk controller subscribed from the
+production Packages composition; it is disposed with the active component/scope.
+
+| Issue #34 regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/operations.test.tsx: projects parcel data, rejects malformed success and binds exact scoped command identity | preserve | parcels |
+| apps/web/src/test/operations.test.tsx: builds versioned lot/route/e-way intents and accepts the restricted accountant e-way projection | preserve | eway |
+| apps/web/src/test/operations.test.tsx: announces dashboard loading then renders bounded accessible cards and an honest empty result | preserve | seam |
+| apps/web/src/test/operations.test.tsx: offers controlled dashboard retry after an API failure without local fallback | preserve | seam |
+| apps/web/src/test/operations.test.tsx: uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read | preserve | parcels |
+| apps/web/src/test/operations.test.tsx: removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server | preserve | lots |
+| apps/web/src/test/operations.test.tsx: re-reads and displays the server ETA after a full route component remount without inferring parcel delivery | preserve | routes |
+| apps/web/src/test/operations.test.tsx: separates official e-way validity from a labelled estimate and renders an unverified short external reference | preserve | eway |

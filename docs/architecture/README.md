@@ -145,7 +145,7 @@ historical issue baselines, not the current implementation state.
 
 ## Issue #27 Route authority
 
-[Dispatch routes and immutable manifests](routes.md), [ADR 0017](../adr/0017-dispatch-route-manifests.md), and [verification](issue-27-verification.md) activate persistent initial-dispatch planning, typed sources, frozen deduplicated manifests, Lot guards and authoritative T03 references. #28 events and #34 screens remain downstream.
+[Dispatch routes and immutable manifests](routes.md), [ADR 0017](../adr/0017-dispatch-route-manifests.md), and [verification](issue-27-verification.md) activate persistent initial-dispatch planning, typed sources, frozen deduplicated manifests, Lot guards and authoritative T03 references. #28 adds events and #34 exposes both through the production operator screens.
 
 ## Issue #28 operational Route events
 
@@ -173,7 +173,7 @@ declared-goods-value input, immutable correction history, estimate separation, R
 membership boundary, prospective check policy and exact v1 endpoints. [ADR 0022](../adr/0022-external-eway-records.md)
 records the application decision. [Issue #32 verification](issue-32-verification.md)
 contains the migration, PostgreSQL, HTTP, tenant-isolation and privacy evidence. The
-production E-way Bills screen remains #34; compliance/report reconciliation remains #67.
+production E-way Bills screen is implemented by #34; compliance/report reconciliation remains #67.
 
 ## Issue #33 production counter composition
 
@@ -182,4 +182,12 @@ API/DTO boundary, reproducible synthetic browser and PostgreSQL scenarios, acces
 privacy evidence and rollout. New Booking and Receipts use #18's scope generation and
 immutable command seam without demo imports. Pricing/tax/booking/payment/receipts retain
 server authority; attachments attach only to a confirmed Booking. No schema migration,
-business rule, role grant or dependency was added. Full operational screens remain #34.
+business rule, role grant or dependency was added.
+
+## Issue #34 production operational composition
+
+[Issue #34 verification](issue-34-verification.md) records the production Dashboard,
+Packages, Lots, Routes, To-Pay and E-way cutover. Purpose-specific adapters validate closed
+DTOs and bind reads and immutable commands to the current scope generation. The production
+shell does not import the fictional Store; it deliberately omits staff delivery completion,
+OTP reveal, messaging, Reports and Automation Feed.

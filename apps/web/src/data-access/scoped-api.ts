@@ -18,8 +18,8 @@ export function scopedApi(controller: ScopeController, api = createApiClient()) 
   return {
     scope, organization, franchise,
     path: (path: string) => path + '?' + query,
-    intent(operation: string, path: string, body: unknown, method: 'POST' | 'PATCH' = 'POST') {
-      current(); return createCommandIntent({ operation, path, body, method, scope });
+    intent(operation: string, path: string, body: unknown, method: 'POST' | 'PATCH' = 'POST', expectedVersion?: number) {
+      current(); return createCommandIntent({ operation, path, body, method, scope, expectedVersion });
     },
     async execute<T>(intent: CommandIntent, decode: Decoder<T>, validationFields: readonly string[] = []) {
       current();

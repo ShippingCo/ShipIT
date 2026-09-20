@@ -19,6 +19,6 @@ export function payments(api: ScopedApi, bookingId: string) {
       if (e.kind !== 'collection' || e.amount_paise !== sent.amount_paise || e.context !== sent.context || e.method !== sent.method || e.collection_reference !== sent.collection_reference || e.reversal_of !== null || e.reason_code !== null) return protocol();
       return result;
     }),
-    read: () => api.read(path, decode),
+    read: (signal?: AbortSignal) => api.read(path, decode, signal),
   };
 }
