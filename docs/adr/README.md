@@ -53,3 +53,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0023: Durable outbox worker](0023-durable-outbox-worker.md): PostgreSQL leases, atomic receipts, fair scheduling and controlled W44 redrive for Issue #35; independent review pending.
 
 - [0024: WhatsApp provider registry](0024-whatsapp-provider-registry.md): Scoped installations, versioned templates and server-only Meta adapter for Issue #36; independent review pending.
+
+- [0025: Signed WhatsApp inbox](0025-signed-whatsapp-inbox.md): Raw-byte authentication, trusted installation scope, durable inbox jobs and monotone callback evidence for Issue #37.

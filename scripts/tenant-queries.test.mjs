@@ -215,3 +215,17 @@ test('WhatsApp registry queries require both owners and cannot mint authority',(
  assert.deepEqual(inspectSource('apps/api/src/modules/whatsapp/routes.ts','service.read(request.query)'),[]);
  assert.ok(inspectSource('apps/api/src/modules/whatsapp/routes.ts',"request.query('SELECT * FROM shipit.whatsapp_installations')").length);
 });
+
+test('business inbox only exposes fixed ingress and scheduler calls through trusted adapters',()=>{
+ const adapter='apps/api/src/modules/security/jobs.ts',other='apps/api/src/modules/whatsapp/repository.ts';
+ for(const sql of ['SELECT shipit.whatsapp_receive($1,$2,$3)','SELECT organization_id,franchise_id,inbox_id FROM shipit.whatsapp_inbox_next()']) {
+  assert.deepEqual(inspectSource(adapter,`tx.query('${sql}')`),[]);
+  assert.ok(inspectSource(other,`tx.query('${sql}')`).length);
+ }
+ assert.ok(inspectSource(adapter,"tx.query('SELECT * FROM shipit.whatsapp_inbox')").length);
+ for(const name of ['persistBusinessWebhook','withNextInboxScope'])assert.ok(inspectSource(other,`import {${name}} from '../security/jobs.ts'`).length);
+ assert.ok(inspectSource(other,"import * as jobs from '../security/jobs.ts'").length);
+ assert.ok(inspectSource(other,"export * from '../security/jobs.ts'").length);
+ for(const table of ['whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_delivery_observations'])
+  assert.ok(inspectSource(other,`scopedQuery(scope,['whatsapp.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
+});

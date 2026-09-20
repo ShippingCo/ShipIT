@@ -308,3 +308,5 @@ All attachments/attachment_commands/attachment_audit_events SQL uses both author
 Fixed security/jobs owner-discovery functions return only stored organization/franchise references. The worker capability permits outbox.work in exactly that franchise; membership-issued outbox.read/outbox.redrive cannot mint worker authority. Six outbox tables and mutating definer functions are covered by scoped SQL and the AST regression gate. Handler effects use the same bounded transaction as immutable receipts. See [outbox operations](outbox.md).
 
 Issue #36: whatsapp_installations, whatsapp_templates and whatsapp_commands require both organization and franchise macros. Only the existing membership authority issues whatsapp.read/write capabilities; no new raw-query exemption exists.
+
+Issue #37 adds two exact global ingress/scheduler calls in security/jobs.ts. The ingress import is restricted to the signed webhook boundary, and scheduling to its worker. The dedicated whatsapp.inbox.work capability requires the trusted service identity and exactly one franchise. All ordinary inbox reads still use both ownership predicates. No directory-wide raw-SQL exemption is introduced.

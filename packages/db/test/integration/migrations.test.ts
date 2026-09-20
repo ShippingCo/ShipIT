@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 23 });
+  assert.deepEqual(await database.migrate(), { applied: 24 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 23);
+  assert.equal(initial.length, 24);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -76,7 +76,7 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
     { schema: 'shipit', name: 'onboarding_commands' }, { schema: 'shipit', name: 'organizations' },
     ...['outbox_attempts','outbox_jobs','outbox_receipts','outbox_redrives','outbox_schedule','outbox_streams'].map(name=>({schema:'shipit',name})),
     ...['parcel_bulk_requests','parcel_commands','parcel_dispatch_manifests','parcel_failed_attempts','parcel_rto_approvals','parcel_transitions','parcels'].map(name=>({schema:'shipit',name})),
-    ...['payment_audit_events','payment_commands','payment_entries','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','route_audit_events','route_commands','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_installations','whatsapp_templates'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
+    ...['payment_audit_events','payment_commands','payment_entries','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','route_audit_events','route_commands','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_delivery_observations','whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_installations','whatsapp_templates','whatsapp_webhook_quarantine'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
 });
 
 await test('released Issue 10 infrastructure upgrades to tenancy and repeated migration preserves roots', { timeout: 20000 }, async (t) => {
@@ -86,7 +86,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 22 });
+  assert.deepEqual(await database.migrate(), { applied: 23 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -96,6 +96,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1789045200000-memberships-authorization', '1789059600000-tenant-audit-ownership', '1789146000000-append-only-audit', '1789232400000-independent-onboarding', '1789318800000-tenant-private-customers', '1789405200000-versioned-pricing', '1789491600000-tax-proposals', '1789578000000-atomic-bookings', '1789664400000-booking-retrieval', '1789750800000-guarded-parcel-lifecycle', '1789837200000-bounded-parcel-bulk', '1789923600000-persistent-lots', '1790010000000-dispatch-route-manifests', '1790096400000-atomic-route-events', '1790182800000-payment-ledger', '1790269200000-immutable-issued-receipts', '1790355600000-private-attachments', '1790442000000-external-eway-records',
     '1790528400000-durable-outbox',
     '1790614800000-whatsapp-registry',
+    '1790701200000-whatsapp-webhook-inbox',
   ]);
 });
 
@@ -185,5 +186,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 23 });
+  assert.deepEqual(await database.migrate(), { applied: 24 });
 });

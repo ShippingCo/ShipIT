@@ -385,3 +385,12 @@ W45 assigns the issue's integration administrator responsibility to a live own-f
 template capability reads for franchise admins and explicitly scoped organization admins.
 Provider verification runs outside locks; W45 and active roots are checked again before
 commit. W24 does not grant access to credentials. See [ADR 0024](../adr/0024-whatsapp-provider-registry.md).
+
+## Issue #37 minimized inbox operations
+
+R29 also covers inbox processing health and metadata-only detail under the same live
+franchise_admin/org_admin scope checks. It does not expose customer messages, contacts,
+ciphertext, provider message IDs or global quarantine counts. No mutation permission is
+added. Signed ingress derives ownership from the registered provider installation;
+the dedicated whatsapp.inbox.work service capability cannot be minted from a membership.
+See [business webhook operations](whatsapp-webhooks.md).

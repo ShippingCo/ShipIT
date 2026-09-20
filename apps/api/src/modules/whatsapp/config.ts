@@ -8,7 +8,7 @@ export const providerIdPattern=/^[1-9][0-9]{0,31}$/;
 export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnvironment):WhatsappConfiguration {
   try {
     if(raw.length>262144||environment==='demo')throw new Error();
-    const input=object(parseStrictJson(raw),['graph_version','bindings']);
+    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook']);
     // Explicit deployment pin; never silently adopt Meta's latest version.
     if(typeof input.graph_version!=='string'||!/^v[1-9][0-9]\.0$/.test(input.graph_version)||!Array.isArray(input.bindings)||input.bindings.length>1000)throw new Error();
     const keys=new Set<string>(),owners=new Map<string,string>();
@@ -23,6 +23,19 @@ export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnviron
       owners.set(b.phone_number_id,identity);keys.add(b.key);
       return Object.freeze({key:b.key,organization_id:org,franchise_id:franchise,waba_id:b.waba_id,phone_number_id:b.phone_number_id,credential_ref:b.credential_ref});
     });
-    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings)});
+    let webhook:WhatsappConfiguration['webhook'];
+    if(input.webhook!==undefined) {
+      const w=object(input.webhook,['app_secret','verify_token','waba_ids','encryption_key','fingerprint_key','key_version']);
+      if(typeof w.app_secret!=='string'||!/^[A-Za-z0-9_-]{32,256}$/.test(w.app_secret)||
+        typeof w.verify_token!=='string'||!/^[A-Za-z0-9_-]{32,256}$/.test(w.verify_token)||w.verify_token===w.app_secret||
+        typeof w.encryption_key!=='string'||!/^[a-f0-9]{64}$/.test(w.encryption_key)||w.encryption_key===w.app_secret||
+        typeof w.fingerprint_key!=='string'||!/^[a-f0-9]{64}$/.test(w.fingerprint_key)||w.fingerprint_key===w.encryption_key||w.fingerprint_key===w.app_secret||
+        new Set([w.app_secret,w.verify_token,w.encryption_key,w.fingerprint_key]).size!==4||
+        typeof w.key_version!=='string'||!/^[a-z0-9_-]{1,32}$/.test(w.key_version)||
+        !Array.isArray(w.waba_ids)||w.waba_ids.length<1||w.waba_ids.length>1000||new Set(w.waba_ids).size!==w.waba_ids.length||
+        w.waba_ids.some(id=>typeof id!=='string'||!providerIdPattern.test(id)))throw new Error();
+      webhook=Object.freeze({app_secret:w.app_secret,verify_token:w.verify_token,encryption_key:w.encryption_key,fingerprint_key:w.fingerprint_key,key_version:w.key_version,waba_ids:Object.freeze(w.waba_ids as string[])});
+    }
+    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{})});
   }catch{throw new ConfigurationError([{field:'WHATSAPP_CONFIG_REF',code:'INVALID_FORMAT'}]);}
 }

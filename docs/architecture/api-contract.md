@@ -408,3 +408,7 @@ effect. All use live R13, no-store, minimal allowlisted DTOs and existing contro
 [Outbox operations](outbox.md#api-and-permissions) defines session-protected health, bounded job listing/detail and CSRF-protected redrive. R18 governs reads and W44 governs privileged redrive; live scope checks precede original-result replay. No raw event or lease token is returned.
 
 Issue #36 adds masked installation reads and idempotent connect/rotate/disable/template-sync commands. [WhatsApp API contract](whatsapp.md) defines exact bodies, W45/R29, capability reasons and the disabled customer-send boundary.
+
+## Issue #37 business callbacks
+
+[Signed operational webhooks](whatsapp-webhooks.md) define GET/POST /webhooks/whatsapp and R29-scoped inbox health/detail. Signed provider identity owns ingress scope; callbacks never establish operator authentication. The POST acknowledges only durable inbox/quarantine persistence.

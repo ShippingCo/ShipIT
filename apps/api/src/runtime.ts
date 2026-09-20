@@ -1,5 +1,6 @@
 import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
 import { createMetaProvider } from './modules/whatsapp/provider.ts';
+import { createInboxWorker } from './modules/whatsapp/inbox-worker.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
@@ -67,6 +68,22 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   catch { attachments?.store.close?.(); await database.close(); throw new Error('STARTUP_FAILED'); }
   if(attachments)app.addHook('onClose',async()=>{attachments.store.close?.();});
   const lifecycle = attachLifecycle(app, database);
+  if(whatsapp?.configuration.webhook) {
+    const worker=createInboxWorker(database);
+    let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve();
+    const cycle=async()=>{
+      try {
+        // Bound each turn; multiple API replicas coordinate through SKIP LOCKED.
+        for(let n=0;n<20&&!stopped;n++) {
+          const outcome=await worker.tick();if(outcome===null)break;
+          if(outcome==='quarantined')app.log.warn({event:'whatsapp_inbox_quarantined',code:'MANUAL_REVIEW_REQUIRED'},'Webhook processing needs review');
+        }
+      }catch{app.log.error({event:'whatsapp_inbox_failed',code:'TEMPORARILY_UNAVAILABLE'},'Webhook processing unavailable');}
+      if(!stopped)timer=setTimeout(()=>{pending=cycle();},1000);
+    };
+    app.addHook('onReady',async()=>{timer=setTimeout(()=>{pending=cycle();},1000);});
+    app.addHook('preClose',async()=>{stopped=true;clearTimeout(timer);await pending;});
+  }
   if (auth) {
     const worker=createDeliveryWorker(database,auth.keys,createSender(auth.delivery));
     let timer: ReturnType<typeof setTimeout> | undefined;

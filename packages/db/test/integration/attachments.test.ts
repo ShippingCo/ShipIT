@@ -16,7 +16,7 @@ await test('attachment upgrade preserves populated main, rolls back failed migra
  await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});assert.equal((await db.adminQuery("SELECT to_regclass('shipit.attachments') relation")).rows[0]!.relation,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,19);assert.deepEqual(await snapshot(),before);
- assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareAttachments();assert.deepEqual(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareAttachments();assert.deepEqual(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.attachments')).rows[0]!.n,0);
 });
 await test('attachment identity, ready facts and append-only command/audit are protected by PostgreSQL',{timeout:30000},async t=>{

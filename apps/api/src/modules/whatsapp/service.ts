@@ -36,6 +36,13 @@ export function createWhatsappService(database:DatabasePool,dependencies:Whatsap
     if(digest(b)!==digest(storedBinding(i)))throw new HttpError('WHATSAPP_CONFIGURATION_CHANGED');return b;
   };
   return {
+    async inbox(token:string,id:string|null,query:unknown,correlation:string) {
+      const q=selection(query);if(id!==null)uuid(id);
+      return withWhatsappScope(database,token,q.org,q.franchise,'whatsapp.read',correlation,async scope=>{
+        if(id===null)return {states:await repository.inboxHealth(scope),recovery_owner:'deployment_operator',runbook:'whatsapp-inbox-v1'};
+        const result=await repository.inboxDetail(scope,id);if(!result)throw new HttpError('RESOURCE_NOT_FOUND');return result;
+      });
+    },
     async read(token:string,query:unknown,correlation:string) {
       const q=selection(query);
       return withWhatsappScope(database,token,q.org,q.franchise,'whatsapp.read',correlation,async scope=>{

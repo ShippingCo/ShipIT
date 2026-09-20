@@ -589,3 +589,5 @@ Roll back compatible code, preserve evidence and repair schema forward. See the
 ## WhatsApp registry migration #36
 
 Migration 23 adds scoped installations, immutable template revisions and command/audit receipts. See [runtime grants and rollout](../../docs/architecture/whatsapp.md#database-rollout-and-recovery). Apply schema before enabling WHATSAPP_CONFIG_REF. Existing data and released migrations are preserved.
+
+Migration 24 adds the [signed WhatsApp inbox](../../docs/architecture/whatsapp-webhooks.md), immutable attempt/quarantine evidence and monotone delivery observations. Its fixed ingress/scheduler/processor functions require explicit EXECUTE grants; runtime gets no direct inbox or projection DML.
