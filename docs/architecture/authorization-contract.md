@@ -167,6 +167,7 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W42 | Organization memberships/invites/grants create/revoke with no-self and final-admin guards | O | - | - | - | - | - | - |
 | W43 | Above-tolerance freight override approval (`pricing.override.approve`), with structured reason | - | F | - | - | - | - | - |
 | W44 | Quarantined outbox job redrive with expected revision, original identity and closed repair reason (`outbox.redrive`) | - | F | - | - | - | - | - |
+| W45 | WhatsApp installation connect, rotate, disable and template synchronization | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -376,3 +377,11 @@ read_only are denied both. No new role or staff policy-administration action is 
 ## Issue #35 controlled recovery
 
 W44 permits only live franchise_admin grants to redrive an own-franchise quarantined job with active roots, expected revision and a closed repair reason. R18 remains sanitized operational read access. Org admins receive no implicit redrive write. W34 arbitrary redrive remains denied. See [outbox operations](outbox.md).
+
+## Issue #36 installation administration
+
+W45 assigns the issue's integration administrator responsibility to a live own-franchise
+`franchise_admin` grant. No new role is introduced. R29 permits masked configuration and
+template capability reads for franchise admins and explicitly scoped organization admins.
+Provider verification runs outside locks; W45 and active roots are checked again before
+commit. W24 does not grant access to credentials. See [ADR 0024](../adr/0024-whatsapp-provider-registry.md).

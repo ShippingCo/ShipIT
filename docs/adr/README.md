@@ -51,3 +51,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0022 — External e-way observations and prospective check reminders](0022-external-eway-records.md): bounded declared-value input, immutable revisions, external/estimate provenance, scoped replay and fail-closed reminder policy for Issue #32.
 
 - [0023: Durable outbox worker](0023-durable-outbox-worker.md): PostgreSQL leases, atomic receipts, fair scheduling and controlled W44 redrive for Issue #35; independent review pending.
+
+- [0024: WhatsApp provider registry](0024-whatsapp-provider-registry.md): Scoped installations, versioned templates and server-only Meta adapter for Issue #36; independent review pending.

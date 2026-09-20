@@ -141,3 +141,5 @@ effective-dated maintenance check policies for independent review. It approves n
 threshold, transport-category rule or government verification. D06 statutory applicability
 validation remains gated with #67 and the compliance owner; #34 owns the production screen,
 #72 retention. No settings-management role is added.
+
+D10: #36 now specifies registered Meta identity binding and a conservative utility/text template capability in [ADR 0024](../adr/0024-whatsapp-provider-registry.md). Live provider onboarding/approval remains unverified; #38 consent and #39 durable sends remain open.

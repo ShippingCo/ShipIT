@@ -193,3 +193,5 @@ shell does not import the fictional Store; it deliberately omits staff delivery 
 OTP reveal, messaging, Reports and Automation Feed.
 
 Issue #35 adds the [durable outbox worker and operational API](outbox.md), with [verification evidence](issue-35-verification.md) and [ADR 0023](../adr/0023-durable-outbox-worker.md). Provider delivery and business consumers remain downstream.
+
+[WhatsApp installations and templates](whatsapp.md) documents the #36 provider boundary; see [ADR 0024](../adr/0024-whatsapp-provider-registry.md).

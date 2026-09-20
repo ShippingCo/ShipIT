@@ -1,3 +1,6 @@
+import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
+import { createMetaProvider } from './modules/whatsapp/provider.ts';
+import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
 import { createDatabaseConfig, createPool } from '@shippingco/db';
@@ -28,18 +31,24 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   let resolved: string;
   let auth: AuthConfiguration | undefined;
   let attachments:AttachmentDependencies|undefined;
+  let whatsapp:WhatsappDependencies|undefined;
   try {
     if (signal?.aborted) throw new Error();
     const values = await Promise.race([
       Promise.all([secretResolver.resolve(config.databaseSecretRef, controller.signal),
         config.authSecretRef ? secretResolver.resolve(config.authSecretRef,controller.signal) : Promise.resolve(undefined),
-        config.storageSecretRef ? secretResolver.resolve(config.storageSecretRef,controller.signal) : Promise.resolve(undefined)]),
+        config.storageSecretRef ? secretResolver.resolve(config.storageSecretRef,controller.signal) : Promise.resolve(undefined),
+        config.whatsappConfigRef ? secretResolver.resolve(config.whatsappConfigRef,controller.signal) : Promise.resolve(undefined)]),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => { controller.abort(); reject(new Error()); }, 10_000);
         controller.signal.addEventListener('abort', () => reject(new Error()), { once: true });
       }),
     ]);
     resolved=values[0];
+    if(values[3]!==undefined){
+      const configuration=parseWhatsappConfiguration(values[3],config.environment);
+      whatsapp={configuration,provider:createMetaProvider({configuration,secrets:secretResolver})};
+    }
     if(values[2]!==undefined)attachments=attachmentAdapters(parseAttachmentConfiguration(values[2],config.environment));
     if (values[1]!==undefined) {
       try {auth=parseAuthConfig(values[1],config.environment==='developer');}
@@ -54,7 +63,7 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   const database = createPool(createDatabaseConfig({ connectionString: resolved, environment: config.environment,
     tls: config.databaseTls, applicationName: 'shipit_api' }));
   let app;
-  try { app = buildServer({ config, database, logSink, auth, attachments }); }
+  try { app = buildServer({ config, database, logSink, auth, attachments, whatsapp }); }
   catch { attachments?.store.close?.(); await database.close(); throw new Error('STARTUP_FAILED'); }
   if(attachments)app.addHook('onClose',async()=>{attachments.store.close?.();});
   const lifecycle = attachLifecycle(app, database);

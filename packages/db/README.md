@@ -585,3 +585,7 @@ search path and explicit owners; API/service capability checks remain mandatory.
 `prepareOutbox()` tests these grants. No automatic role provisioning or data backfill.
 Roll back compatible code, preserve evidence and repair schema forward. See the
 [outbox guide](../../docs/architecture/outbox.md) for lock considerations and rollout.
+
+## WhatsApp registry migration #36
+
+Migration 23 adds scoped installations, immutable template revisions and command/audit receipts. See [runtime grants and rollout](../../docs/architecture/whatsapp.md#database-rollout-and-recovery). Apply schema before enabling WHATSAPP_CONFIG_REF. Existing data and released migrations are preserved.
