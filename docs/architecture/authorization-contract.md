@@ -360,3 +360,14 @@ issuance audit is within the accountant finance projection. See [receipts](recei
 ## Executable attachment R14/W22 (#31)
 
 [ADR 0021](../adr/0021-private-attachment-storage.md) implements R14 and W22 independently. Org-admin O reads metadata only. Franchise-admin/operator have W22 F; franchise-admin/operator/dispatcher have R14 F. Delivery-agent A requires current persisted assignment, active out-for-delivery attempt and parcel_proof; booking-wide evidence is denied. Accountant/read_only get neither. C remains fail-closed because current custody data cannot establish cross-franchise ownership (ADR 0014). Mixed roles contribute independent grants, never implicit org-admin byte access. Replay and signed-byte endpoints repeat live authority checks.
+
+## Executable e-way R15/W23 (#32)
+
+[ADR 0022](../adr/0022-external-eway-records.md) implements two private actions: eway.read
+covers current records/history/reminders under R15; eway.write covers capture, correction and
+explicit estimate recalculation under W23. The dedicated withEwayScope coordinator rechecks
+live session and memberships in the transaction, narrowing one explicit franchise selector.
+Org-admin reads its own organization; franchise_admin/operator/dispatcher read own franchise;
+accountant gets only statutory reference/value/validity fields, excluding operational vehicle,
+distance, actor and correction reason. Only franchise_admin/operator write. Delivery_agent and
+read_only are denied both. No new role or staff policy-administration action is introduced.

@@ -142,6 +142,13 @@ representations, finite expiry and audited overrides. [Verification](docs/archit
 covers PostgreSQL concurrency and immutable evidence. Tax (#21), confirmed Booking snapshots
 (#22) and the production New Booking UI (#33) remain separate downstream work.
 
+The [E-way backend](docs/architecture/eway.md) tracks externally issued references, source
+validity, separately labelled estimates and immutable corrections, with scoped prospective
+check reminders. Declared goods value is an explicit nullable INR-paise declaration, never
+derived from freight or payable. No government filing, verification or legal preset is added.
+[Verification](docs/architecture/issue-32-verification.md) records the database/API evidence;
+the production E-way Bills screen remains with #34.
+
 The [Booking backend](docs/architecture/bookings.md) now confirms operator-authorized
 Customer/pricing/tax snapshots, creates initial Parcels with permanent global dockets,
 and atomically retains the uncollected obligation, replay result, audit and producer events.

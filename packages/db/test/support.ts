@@ -158,6 +158,7 @@ export interface DisposableDatabase {
   preparePayments(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
+  prepareEway(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -338,6 +339,15 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         // obligation trigger still rejects every actual UPDATE, including id=id.
         await owner.query(`GRANT UPDATE(id) ON shipit.booking_obligations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareEway() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.eway_records,shipit.eway_record_revisions,shipit.eway_commands,shipit.eway_policies TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT ON shipit.eway_records,shipit.eway_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(version,declared_goods_value_paise,declaration_source_ref,issuer,external_reference,source_ref,source_issued_at,official_valid_until,validity_evidence_ref,vehicle_number,distance_km,estimate,estimate_policy_id,actor_id,captured_at,reason_code,reason_ref,command_id,correlation_id) ON shipit.eway_records TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareAttachments() {

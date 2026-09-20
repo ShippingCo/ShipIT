@@ -21,7 +21,7 @@ await test('populated pre-29 upgrade preserves booked totals and opening IDs thr
  await writeFile(path,(await readFile(path,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});assert.equal((await db.adminQuery("SELECT to_regclass('shipit.payment_entries') relation")).rows[0]!.relation,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,17);assert.deepEqual(await snapshot(),before);
- assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});await db.preparePayments();
+ assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});await db.preparePayments();
  assert.deepEqual(await snapshot(),before);assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.payment_entries')).rows[0]!.n,0);
  const projection=await createPaymentService(s.pool).read(s.local.token,response.json().id,{organization_id:org,franchise_id:A},randomUUID());
  assert.equal(projection.obligation_id,response.json().payment_obligation.id);assert.equal(projection.gross_paise,response.json().payment_obligation.total_paise);

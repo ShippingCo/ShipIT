@@ -165,3 +165,12 @@ GET materializes canonical evidence; later retrieval/printing preserves identity
 amounts. #33 retains the full production receipt-screen migration.
 
 - [Private attachments](attachments.md), [ADR 0021](../adr/0021-private-attachment-storage.md), [dependency review](issue-31-dependency-review.md), and [Issue #31 verification](issue-31-verification.md).
+
+## Issue #32 — external e-way records and reminders
+
+[E-way authority](eway.md) defines the Booking-scoped external observation aggregate,
+declared-goods-value input, immutable correction history, estimate separation, R15/W23
+membership boundary, prospective check policy and exact v1 endpoints. [ADR 0022](../adr/0022-external-eway-records.md)
+records the application decision. [Issue #32 verification](issue-32-verification.md)
+contains the migration, PostgreSQL, HTTP, tenant-isolation and privacy evidence. The
+production E-way Bills screen remains #34; compliance/report reconciliation remains #67.

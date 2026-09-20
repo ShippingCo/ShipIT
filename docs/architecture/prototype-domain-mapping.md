@@ -79,3 +79,11 @@ and examples only, never actual server authorization or PostgreSQL behavior.
 ## Attachment boundary after #31
 
 The historical `{kind,url,name,size}` record remains fictional demo input only. Production references use server Attachment IDs and minimal metadata; Blob/grant values are transient and never serialized with a Booking. The reusable production uploader is available for #33. The demo logo and demo picker explicitly import `demo-image.ts`; the production `image.ts` helper returns a Blob.
+
+## E-way backend after #32
+
+Prototype goodsValue is not migrated or inferred from financial totals. The production
+[dedicated declaration](eway.md) captures declared physical goods for the entire Booking in
+integer INR paise with its own source reference; absence remains unknown. External and
+estimate observations have separate provenance and saved values. Fictional threshold/distance
+constants remain demo-only; #34 consumes the production backend and #67 verifies compliance.

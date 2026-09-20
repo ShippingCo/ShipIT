@@ -148,3 +148,11 @@ not proof of identity, payment, delivery or permission.
 ## Private evidence boundary (#31)
 
 The API owns attachment metadata and streams bounded private objects through an S3-compatible port. A separate clamd-compatible scanner must approve each object before linking. Authenticated application grants reauthorize every read; no browser/provider URL establishes authority. API cleanup removes only unlinked temporary objects. [Attachments](attachments.md) defines the protocol; #68 provisions storage, TLS scanner and capacity, #69 recovery, #72 legal deletion.
+
+## External e-way boundary (#32)
+
+The eway module owns Booking-scoped external observations, declared-value applicability
+inputs, separate estimates, revisions and prospective reminder queries in PostgreSQL.
+Its eway.read/write capabilities come only from the membership coordinator. Maintenance-only
+policy versions have no staff administration endpoint. No filing, provider or public event
+consumer exists. [Contract and downstream handoffs](eway.md).

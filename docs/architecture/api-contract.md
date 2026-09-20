@@ -1,5 +1,12 @@
 # Public API contract v1
 
+Issue #32 ratifies its exact e-way endpoints and DTO projections in
+[eway.md](eway.md). They follow the v1 rules below: unknown request fields are rejected,
+private ownership is selected from the authenticated membership, writes require scoped
+idempotency keys and expected versions, and reminder/history cursors are encrypted and
+query-bound. The e-way API stores externally observed facts only; it does not file or
+verify a government record.
+
 [Architecture](README.md) · [ADR 0007](../adr/0007-api-event-idempotency-contracts.md) · [Idempotency](idempotency-contract.md) · [Events](event-contract.md) · [Verification](api-event-verification.md)
 
 Issue #4 defines wire conventions and bounded examples, not implemented HTTP routes.

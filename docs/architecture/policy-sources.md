@@ -20,6 +20,13 @@ No GST rate is approved here. No blog is used as legal authority.
 
 ## Interpretation and release sign-off
 
+Issue #32 follow-up, **2026-09-20**: the primary S03 NIC FAQ URL returned HTTP 403 on
+retrieval. Current amendments, state exemptions and transport categories were not established.
+[ADR 0022](../adr/0022-external-eway-records.md) therefore enables no production legal preset:
+applicability remains unknown, approved maintenance policies only drive check reminders, and
+synthetic test thresholds/distance blocks have no legal authority. #67 and the compliance
+owner must validate current applicability before production presets are approved.
+
 ShippingCo's final customer rounding is already business authority in ADR 0006. S01
 supports the statutory rounding convention; it does not certify how each invoice component
 or return must be rounded. No reviewed source specifies the exact largest-remainder/tie

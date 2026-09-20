@@ -279,3 +279,12 @@ No printed/downloaded domain event or assertion that physical printing succeeded
 ## Issue #31 attachment evidence
 
 Attachment state changes append one reference-only attachment_audit_events row through an immutable trigger; grant issuance appends a separate safe fact in the same command transaction. The canonical audit_history projection contains only scope/resource, actor, closed action/result, version/correlation and time. It contains no filename, digest, key, URL, scan text or bytes. Replay appends no duplicate success fact. Controlled denials use the existing security.request audit; HTTP telemetry logs route templates, never private grant queries. No general domain event is emitted.
+
+## Issue #32 e-way observation evidence
+
+Each committed e-way version is an immutable revision captured by a fixed-path database
+trigger. audit_history projects only eway:command_id, owner, actor, record identity,
+eway.created/eway.corrected, closed reason, version, correlation and capture time. It excludes
+external/vehicle/source references, declarations and raw input. Deferred command/revision
+constraints prevent missing success evidence. Existing R28 administrative scope applies;
+accountants use the R15 reduced revision projection rather than gaining general audit access.
