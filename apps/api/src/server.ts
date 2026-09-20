@@ -1,3 +1,6 @@
+import { createWhatsappService } from './modules/whatsapp/service.ts';
+import { registerWhatsapp } from './modules/whatsapp/routes.ts';
+import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { createOutboxService } from './modules/outbox/service.ts';
 import { registerOutbox } from './modules/outbox/routes.ts';
 import { createEwayService } from './modules/eway/service.ts';
@@ -48,8 +51,8 @@ import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies }
-export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies; whatsapp?:WhatsappDependencies }
+export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments, whatsapp }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -102,6 +105,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
+      if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer');
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');

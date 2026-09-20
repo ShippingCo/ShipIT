@@ -27,6 +27,7 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
         // The indexes remain the final boundary if occupancy changes after a check.
         // Translate inside the transaction so normal rollback must succeed first.
         if(error instanceof DatabaseError && error.code==='DB_QUERY_FAILED' && error.sqlState==='23505') {
+          if(error.constraint==='whatsapp_phone_unique') domainError=new HttpError('WHATSAPP_IDENTITY_MISMATCH');
           if(error.constraint==='lot_memberships_one_active_idx') domainError=new HttpError('LOT_MEMBERSHIP_CONFLICT');
           if(error.constraint==='lots_active_code_idx') domainError=new HttpError('LOT_CODE_CONFLICT');
           if(error.constraint==='memberships_one_active_role_idx') domainError=new HttpError('MEMBERSHIP_CONFLICT');
@@ -61,6 +62,27 @@ export async function withOutboxScope<T>(database:DatabasePool,token:string,orga
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
     if(!local.some(m=>m.role==='franchise_admin')&&!(action==='outbox.read'&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
     if(action==='outbox.redrive'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+    const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
+    return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+  });
+}
+/** R29 safe configuration reads and W45 local installation administration; no org-admin write inheritance. */
+export async function withWhatsappScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+  action:'whatsapp.read'|'whatsapp.write',correlationId:string,
+  work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,token);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);
+    if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const orgAdmin=memberships.some(m=>m.role==='org_admin');
+    const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!local.some(m=>m.role==='franchise_admin')&&!(action==='whatsapp.read'&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if(action==='whatsapp.write'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
     return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));

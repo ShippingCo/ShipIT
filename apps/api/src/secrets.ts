@@ -4,7 +4,7 @@ export interface SecretResolver {
   resolve(reference: string, signal: AbortSignal): Promise<string>;
 }
 // #68 injects a managed resolver backed by workload identity. No vendor is selected.
-export function developerSecretResolver(config: RuntimeConfig, value: string | undefined, authValue?: string, storageValue?: string): SecretResolver {
+export function developerSecretResolver(config: RuntimeConfig, value: string | undefined, authValue?: string, storageValue?: string, whatsappValue?:string): SecretResolver {
   const refuse = (): never => { throw new ConfigurationError([{ field: 'LOCAL_DATABASE_URL', code: 'INCONSISTENT' }]); };
   if (config.environment !== 'developer' || config.databaseSecretRef !== 'local:database') refuse();
   try {
@@ -14,6 +14,13 @@ export function developerSecretResolver(config: RuntimeConfig, value: string | u
   } catch { return refuse(); }
   return { kind: 'developer-local', resolve: async reference => {
     if (reference==='local:database') return value!;
+    if (whatsappValue&&(reference==='local:whatsapp'||reference.startsWith('whatsapp:'))) {
+      try {
+        const local=JSON.parse(whatsappValue);
+        if(reference==='local:whatsapp')return JSON.stringify(local.configuration);
+        if(Object.hasOwn(local.credentials,reference)&&typeof local.credentials[reference]==='string')return local.credentials[reference];
+      }catch{throw new Error('SECRET_UNAVAILABLE');}
+    }
     if (reference==='local:storage' && storageValue) return storageValue;
     if (reference==='local:auth' && authValue) return authValue;
     throw new Error('SECRET_UNAVAILABLE');

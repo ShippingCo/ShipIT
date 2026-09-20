@@ -3,6 +3,12 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  WHATSAPP_CREDENTIAL_INVALID:[409,'Provider credential could not be validated. Ask the integration administrator to rotate it.'],
+  WHATSAPP_PROVIDER_UNAVAILABLE:[503,'Provider validation is unavailable. Retry the same command later.'],
+  WHATSAPP_IDENTITY_MISMATCH:[409,'Provider identity could not be connected to this franchise. Verify the registered mapping.'],
+  WHATSAPP_TEMPLATE_MISSING:[409,'No template exists for this exact name and language. Synchronize an approved language.'],
+  WHATSAPP_CONFIGURATION_CHANGED:[409,'Installation configuration changed. Validate a registered credential rotation.'],
+  WHATSAPP_INSTALLATION_DISABLED:[409,'Installation is disabled. Validate a registered credential rotation to reconnect.'],
   EWAY_ESTIMATE_UNAVAILABLE: [409, 'No approved estimate rule or distance is available. Verify the external source.'],
   ATTACHMENT_LIMIT_EXCEEDED: [413, 'Attachment storage limit exceeded.'],
   ATTACHMENT_TYPE_UNSUPPORTED: [422, 'Choose a supported photo, voice note or video.'],

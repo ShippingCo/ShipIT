@@ -202,3 +202,16 @@ test('e-way current, history, receipts and policy require both owners and member
  assert.deepEqual(inspectSource('apps/api/src/modules/eway/routes.ts','service.read(request.query)'),[]);
  assert.ok(inspectSource('apps/api/src/modules/eway/routes.ts',"request.query('SELECT * FROM shipit.eway_records')").length);
 });
+
+
+test('WhatsApp registry queries require both owners and cannot mint authority',()=>{
+ const file='apps/api/src/modules/whatsapp/repository.ts';
+ for(const table of ['whatsapp_installations','whatsapp_templates','whatsapp_commands']){
+  assert.deepEqual(inspectSource(file,`scopedQuery(scope,['whatsapp.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  for(const source of [`db.query('SELECT * FROM shipit.${table}')`,
+   `scopedQuery(scope,['whatsapp.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,
+   "import {issueTenantAccess} from '../security/scope.ts'"])assert.ok(inspectSource(file,source).length);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/whatsapp/routes.ts','service.read(request.query)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/whatsapp/routes.ts',"request.query('SELECT * FROM shipit.whatsapp_installations')").length);
+});

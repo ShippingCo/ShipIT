@@ -329,3 +329,7 @@ or network sends are introduced. The API exposes R18 scoped health/job reads and
 privileged quarantined-job redrive. Apply the migration and minimum runtime grants
 first. [Operations](../../docs/architecture/outbox.md) covers exact endpoints, reasons,
 lease/retry/order policy, graceful stop and the synthetic reproducible fixture.
+
+## WhatsApp provider configuration
+
+Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and template APIs; AUTH_SECRET_REF is required. See [operations](../../docs/architecture/whatsapp.md) for catalog format, managed/local secret resolution, W45/R29, credential rotation and migration grants. No runtime customer sender is enabled by this configuration.
