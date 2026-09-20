@@ -3,8 +3,8 @@ import { withTransaction, type DatabasePool, type TransactionExecutor } from '@s
 import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
 
-// No durable job implementation exists yet. A future adapter must load/lock these
-// facts from its persisted installation/event records, never from the queue body.
+// Legacy installation-specific scope seam. Generic outbox authority below derives
+// ownership from persisted jobs/events and does not require a provider installation.
 export interface TrustedJobRecord {
   readonly eventId: string;
   readonly installationId: string;
@@ -46,5 +46,27 @@ export async function withNextAttachmentCleanupScope<T>(database:DatabasePool,no
       organizationId:row.organization_id,permittedFranchiseIds:[row.franchise_id],organizationWide:false,
       correlationId:randomUUID(),provenance:'trusted-event'});
     return work(scope);
+  });
+}
+
+/** Fixed definer queries return only persisted owner references, never event bodies. */
+export async function withNextOutboxScope<T>(database:DatabasePool,consumer:string,types:readonly string[],
+  mode:'relay'|'claim'|'alert',now:Date|null,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    const row=(await tx.query<{organization_id:string;franchise_id:string}>(
+      'SELECT organization_id,franchise_id FROM shipit.outbox_next_scope($1,$2,$3,$4)',[consumer,types,mode,now])).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}));
+  });
+}
+export async function withOutboxJobScope<T>(database:DatabasePool,job:string,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    await tx.query("SET LOCAL transaction_timeout = '25s'");
+    const row=(await tx.query<{organization_id:string;franchise_id:string}>(
+      'SELECT organization_id,franchise_id FROM shipit.outbox_job_scope($1)',[job])).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}));
   });
 }

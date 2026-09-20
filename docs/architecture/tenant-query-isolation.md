@@ -302,3 +302,7 @@ SQL triggers/FKs protect source and correction relationships. [Evidence](issue-3
 ## Attachment scopes (#31)
 
 All attachments/attachment_commands/attachment_audit_events SQL uses both authoritative owners through scopedQuery. The only new raw discovery expression is the exact security/jobs.ts call to `attachment_cleanup_scope($1)`: a fixed-search-path, PUBLIC-revoked definer function yielding at most one due owner pair, never keys or content. Its worker issues only attachments.cleanup for that pair; no request selector is accepted. Gate tests reject unscoped, organization-only, raw-executor and issuer imports. No attachment directory exemption exists.
+
+## Issue #35 worker capabilities
+
+Fixed security/jobs owner-discovery functions return only stored organization/franchise references. The worker capability permits outbox.work in exactly that franchise; membership-issued outbox.read/outbox.redrive cannot mint worker authority. Six outbox tables and mutating definer functions are covered by scoped SQL and the AST regression gate. Handler effects use the same bounded transaction as immutable receipts. See [outbox operations](outbox.md).

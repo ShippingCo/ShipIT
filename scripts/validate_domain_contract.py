@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 43)]:
+    for prefix, count in [("R", 30), ("E", 4), ("W", 44)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -55,6 +55,7 @@ def validate():
     assert rules["W41"][2:] == ["F", "F", "-", "-", "-", "-", "-"]
     assert rules["W42"][2:] == ["O", "-", "-", "-", "-", "-", "-"]
     assert rules["W43"][2:] == ["-", "F", "-", "-", "-", "-", "-"]
+    assert rules["W44"][2:] == ["-", "F", "-", "-", "-", "-", "-"]
     assert rules["R05"][2:] == ["V", "F", "F", "-", "-", "-", "-"]
     assert rules["R07"][6] == "A"
 
@@ -207,7 +208,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 77 matrix rows including exact W41 lifecycle, W42 membership and W43 pricing override grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 78 matrix rows including exact W41 lifecycle, W42 membership, W43 pricing override and W44 redrive grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":

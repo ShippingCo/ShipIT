@@ -191,3 +191,5 @@ Packages, Lots, Routes, To-Pay and E-way cutover. Purpose-specific adapters vali
 DTOs and bind reads and immutable commands to the current scope generation. The production
 shell does not import the fictional Store; it deliberately omits staff delivery completion,
 OTP reveal, messaging, Reports and Automation Feed.
+
+Issue #35 adds the [durable outbox worker and operational API](outbox.md), with [verification evidence](issue-35-verification.md) and [ADR 0023](../adr/0023-durable-outbox-worker.md). Provider delivery and business consumers remain downstream.

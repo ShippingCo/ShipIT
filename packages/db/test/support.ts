@@ -159,6 +159,7 @@ export interface DisposableDatabase {
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
   prepareEway(): Promise<void>;
+  prepareOutbox(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
   prepareFixtures(): Promise<void>;
@@ -349,6 +350,21 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT INSERT ON shipit.eway_records,shipit.eway_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(version,declared_goods_value_paise,declaration_source_ref,issuer,external_reference,source_ref,source_issued_at,official_valid_until,validity_evidence_ref,vehicle_number,distance_km,estimate,estimate_policy_id,actor_id,captured_at,reason_code,reason_ref,command_id,correlation_id) ON shipit.eway_records TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareOutbox() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.outbox_jobs,shipit.outbox_receipts,shipit.outbox_attempts,shipit.outbox_redrives,shipit.outbox_streams TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT ON shipit.outbox_streams TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(high_water) ON shipit.outbox_streams TO ${identifier(resource.runtimeRole)}`);
+        // Row locking needs an UPDATE privilege; the guard disallows changes to this column.
+        await owner.query(`GRANT UPDATE(id) ON shipit.outbox_jobs TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.outbox_next_scope(text,text[],text,timestamptz),shipit.outbox_job_scope(uuid),
+          shipit.outbox_relay(uuid,uuid,text,text[]),shipit.outbox_claim(uuid,uuid,text,timestamptz),
+          shipit.outbox_receipt(uuid,uuid,uuid,uuid,text,timestamptz),shipit.outbox_finish(uuid,uuid,uuid,uuid,text,integer,timestamptz),
+          shipit.outbox_redrive(uuid,uuid,uuid,uuid,uuid,text,text,integer,text) TO ${identifier(resource.runtimeRole)}`);
+      } finally { await owner.close();pools.delete(owner); }
     },
     async prepareAttachments() {
       await handle.prepareBookings();

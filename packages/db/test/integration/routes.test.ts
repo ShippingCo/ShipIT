@@ -15,7 +15,7 @@ await test('route upgrade from all 15 released migrations, failed additive rollb
   await assert.rejects(db.migrate({dir:temp}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await owner.query("SELECT to_regclass('shipit.routes') relation")).rows[0]!.relation,null);
   assert.equal((await owner.query('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,15);
-  assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await owner.query('SELECT * FROM shipit.audit_history')).rows,prior);
   await db.prepareRoutes();
   const runtime=db.runtimePool();

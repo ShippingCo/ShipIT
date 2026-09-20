@@ -166,6 +166,7 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W41 | Franchise lifecycle disable/reactivate with explicit target grant | F | F | - | - | - | - | - |
 | W42 | Organization memberships/invites/grants create/revoke with no-self and final-admin guards | O | - | - | - | - | - | - |
 | W43 | Above-tolerance freight override approval (`pricing.override.approve`), with structured reason | - | F | - | - | - | - | - |
+| W44 | Quarantined outbox job redrive with expected revision, original identity and closed repair reason (`outbox.redrive`) | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -196,7 +197,7 @@ W28 cannot cancel/dispatch indirectly; service tools must authorize the underlyi
 For **every R01–R30 resource**, action classes are: list; detail/read; export; create;
 mutate/edit; cancel/destructive; state transition; operational job; custody transfer;
 configuration. Reads are exhaustively R01–R30, exports E01–E04, and permitted staff commands
-W01–W43. **Every other resource/action/role combination is explicitly denied.** Thus no
+W01–W44. **Every other resource/action/role combination is explicitly denied.** Thus no
 missing mutation column implies a future permission. This includes private reports (read
 sources, never mutate them), issued receipts (no direct create/edit; owning transaction),
 audit/outbox/proof internals (owner-service append only), and organization-wide config
@@ -371,3 +372,7 @@ Org-admin reads its own organization; franchise_admin/operator/dispatcher read o
 accountant gets only statutory reference/value/validity fields, excluding operational vehicle,
 distance, actor and correction reason. Only franchise_admin/operator write. Delivery_agent and
 read_only are denied both. No new role or staff policy-administration action is introduced.
+
+## Issue #35 controlled recovery
+
+W44 permits only live franchise_admin grants to redrive an own-franchise quarantined job with active roots, expected revision and a closed repair reason. R18 remains sanitized operational read access. Org admins receive no implicit redrive write. W34 arbitrary redrive remains denied. See [outbox operations](outbox.md).

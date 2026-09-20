@@ -157,3 +157,5 @@ and atomically retains the uncollected obligation, replay result, audit and prod
 [Verification](docs/architecture/issue-22-verification.md) covers real PostgreSQL races and
 rollback. Production booking UI, collections, issued receipts and event processing remain
 with their downstream issues.
+
+The [durable outbox worker](docs/architecture/outbox.md) relays committed events into leased jobs with atomic consumer receipts, bounded retries, quarantine and audited recovery. Its registry starts empty until downstream business consumers are implemented. [Verification](docs/architecture/issue-35-verification.md) covers real PostgreSQL crash recovery and tenant isolation.
