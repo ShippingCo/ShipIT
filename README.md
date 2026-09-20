@@ -7,9 +7,10 @@ delivery — is sent automatically, and routine customer questions are answered 
 anyone at the shop having to reply.
 
 The default web entry now uses the Fastify/PostgreSQL API for verified operator login,
-independent-franchise onboarding, invitations and a scope-aware workspace. Booking and
-customer workflows remain in the explicitly fictional demo until their production services
-are enabled. See [operator setup and synthetic demo](docs/architecture/independent-onboarding.md).
+independent-franchise onboarding, invitations and a scope-aware workspace. New Booking now
+composes franchise-private customers, server pricing/tax, atomic bookings, payment collections,
+private attachments and optional immutable receipt printing. Receipts discovers saved bookings
+through the production Parcel read API. [Counter verification and synthetic walkthrough](docs/architecture/issue-33-verification.md) documents this cutover; operational screens remain #34.
 
 ## Who it is designed for
 
@@ -95,7 +96,8 @@ with same-origin API proxying; the explicit demo bundle can run without a backen
 - Production identity, organization, franchise and membership state comes from PostgreSQL.
   No failed production operation falls back to browser JSON.
 - Session cookies are HttpOnly. OTPs and invitation secrets are never persisted by the
-  operator UI. Only an uncertain onboarding request intent is retained in session storage.
+  operator UI. Counter drafts remain in memory. Only opaque uncertain-command recovery references are retained
+  in session storage; no counter contact/body/file data is persisted. Onboarding retains its separately approved intent.
 - The demo seed is fictional and stays in its separate composition. It cannot send real
   customer messages or create production bookings.
 - `VITE_DATA_MODE=demo` explicitly selects a fictional build. Server credentials and auth
@@ -134,13 +136,13 @@ Both builds are checked separately; production build inspection rejects demo mod
 The [Customer backend](docs/architecture/customers.md) provides franchise-private contact persistence,
 bounded repeat lookup, optimistic edits, idempotent commands and immutable safe audit.
 [Verification](docs/architecture/issue-19-verification.md) covers real PostgreSQL isolation.
-Production customer screens remain with #33 and booking snapshot persistence with #22.
+The #33 production counter consumes these APIs; #22 owns immutable booking snapshots.
 
 The [Pricing backend](docs/architecture/pricing.md) persists and publishes tenant-scoped
 rate versions and returns deterministic freight/packing proposals with exact paise/gram
 representations, finite expiry and audited overrides. [Verification](docs/architecture/issue-20-verification.md)
-covers PostgreSQL concurrency and immutable evidence. Tax (#21), confirmed Booking snapshots
-(#22) and the production New Booking UI (#33) remain separate downstream work.
+covers PostgreSQL concurrency and immutable evidence. The #33 counter composes this contract
+with #21 tax and #22 confirmed booking snapshots; React does not calculate commercial authority.
 
 The [E-way backend](docs/architecture/eway.md) tracks externally issued references, source
 validity, separately labelled estimates and immutable corrections, with scoped prospective

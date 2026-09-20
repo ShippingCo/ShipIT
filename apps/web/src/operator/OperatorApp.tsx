@@ -28,7 +28,7 @@ export default function OperatorApp() {
   useEffect(() => {
     latestPath.current = location.pathname;
     void controller.load(selected.current, location.pathname);
-    const resume = () => { if (document.visibilityState === 'visible') void controller.load(selected.current, location.pathname); };
+    const resume = () => { if (document.visibilityState === 'visible') void controller.revalidate(selected.current); };
     window.addEventListener('focus', resume); document.addEventListener('visibilitychange', resume);
     return () => { window.removeEventListener('focus', resume); document.removeEventListener('visibilitychange', resume); controller.clear(); };
   }, [controller, location.pathname]);
@@ -74,12 +74,13 @@ export default function OperatorApp() {
         <h1 className="t-headline-sm">Workspace access unavailable</h1>
         <p role="alert">Your session or access may have changed, or the service is unavailable. Private workspace data has been cleared.</p>
         <button className="btn btn-filled" disabled={busy} onClick={() => { selected.current = undefined; void refresh(); }}>Refresh workspace access</button>
-      </section></main> : context?.state === 'ready' ? <BusinessShell context={context} select={id => {
+      </section></main> : context?.state === 'ready' ? <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
       }} /> : <main className="operator-center">
         {context?.state === 'onboarding_required' ? <Onboarding key={context.user_id} controller={controller} userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /> :
           <section className="card operator-card"><h1 className="t-headline-sm">No available workspace</h1><p role="alert">Ask an administrator to restore access or send an invitation. Disabled locations and revoked memberships cannot be used.</p></section>}
       </main>}
+    {state.notice && <p role="status" className="operator-message">{state.notice}</p>}
     {!loading && state.status !== 'signed_out' && <footer className="operator-actions">
       <button className="btn btn-text" disabled={busy} onClick={() => { selected.current = undefined; void refresh(); }}>Refresh workspace access</button>
       <button className="btn btn-text" disabled={busy} onClick={() => { void logout(); }}>Sign out</button>

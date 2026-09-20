@@ -77,3 +77,9 @@ it('replacing the attachment client clears prior booking previews before the nex
  const replacement={...client,list:vi.fn().mockImplementation(()=>new Promise<AttachmentDto[]>(()=>{}))};view.rerender(<AttachmentUploader client={replacement} runtime={r} onChange={changed}/>);
  expect(document.querySelector('audio')).toBeNull();expect(screen.queryByText('voice-note.wav')).toBeNull();expect(changed).toHaveBeenLastCalledWith([]);expect(URL.revokeObjectURL).toHaveBeenCalled();
 });
+
+it('a booking attachment client cannot rebind to a newly selected franchise',async()=>{
+ const r=runtime(),api={request:vi.fn()},client=createAttachmentClient(r,booking,api);
+ r.invalidate();r.bind({userId:id,organizationId:org,franchiseId:'10000000-0000-4000-8000-000000000099',permissions:'operator'});
+ await expect(client.list()).rejects.toMatchObject({code:'SCOPE_CHANGED'});expect(api.request).not.toHaveBeenCalled();
+});

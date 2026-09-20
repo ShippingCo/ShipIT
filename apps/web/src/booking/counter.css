@@ -1,0 +1,14 @@
+.counter-flow { display: grid; gap: 20px; min-width: 0; }
+.counter-section { padding: 24px; min-width: 0; overflow-wrap: anywhere; }
+.counter-section h2 { margin-bottom: 12px; }
+.counter-section p { margin: 12px 0; }
+.counter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.counter-help { font-size: 13px; color: var(--md-sys-color-on-surface-variant); min-height: 18px; }
+.counter-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.counter-results { list-style: none; padding: 0; }
+.counter-results .btn { height: auto; white-space: normal; text-align: left; padding: 12px; }
+.counter-flow button[disabled] { cursor: default; }
+@media (max-width: 600px) { .counter-grid { grid-template-columns: minmax(0, 1fr); } .counter-section { padding: 16px; } }
+
+.counter-flow .attach-list { padding: 0; list-style: none; }
+.counter-flow .attach-list .u-grow { flex-basis: 140px; }

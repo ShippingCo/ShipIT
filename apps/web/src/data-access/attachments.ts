@@ -19,7 +19,8 @@ export async function attachmentIntent(file:Blob,purpose:AttachmentIntent['purpo
 }
 export function createAttachmentClient(runtime:ReturnType<typeof createScopeRuntime>,bookingId:string,api=createApiClient(),xhrFactory:()=>XMLHttpRequest=()=>new XMLHttpRequest()) {
   if(!uuid.test(bookingId))throw new ApiFailure('MALFORMED_REQUEST');
-  function context(){const ticket=runtime.ticket(),a=ticket.authority;
+  const bound=runtime.ticket();
+  function context(){if(!runtime.isCurrent(bound))throw new ApiFailure('SCOPE_CHANGED');const ticket=bound,a=ticket.authority;
     if(!a?.organizationId||!a.franchiseId||!uuid.test(a.organizationId)||!uuid.test(a.franchiseId))throw new ApiFailure('SCOPE_CHANGED');
     return {ticket,query:new URLSearchParams({organization_id:a.organizationId,franchise_id:a.franchiseId}).toString()};}
   const base=`/api/v1/bookings/${bookingId}/attachments`;
