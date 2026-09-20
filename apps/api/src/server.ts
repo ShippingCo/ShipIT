@@ -1,4 +1,5 @@
 import { createWhatsappService } from './modules/whatsapp/service.ts';
+import { registerBusinessWebhook } from './modules/whatsapp/webhook.ts';
 import { registerWhatsapp } from './modules/whatsapp/routes.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { createOutboxService } from './modules/outbox/service.ts';
@@ -91,6 +92,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
   });
   // Register after infrastructure boot so global plugin hooks cover every route.
   app.register(async instance => { registerHealth(instance, database); });
+  if(whatsapp?.configuration.webhook)app.register(async instance=>registerBusinessWebhook(instance,database,whatsapp.configuration.webhook!));
   if (auth) {
     app.register(cookie);
     app.register(async instance => {

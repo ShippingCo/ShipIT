@@ -2,6 +2,26 @@ import { randomUUID } from 'node:crypto';
 import { withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
+import type { InboxInput } from '../whatsapp/webhook-payload.ts';
+
+/** Called only after raw-byte authentication/normalization. No caller-supplied tenant scope. */
+export async function persistBusinessWebhook(database:DatabasePool,events:readonly InboxInput[],wabas:readonly string[],correlation:string) {
+  return withTransaction(database,async tx=>{
+    const result=await tx.query<{whatsapp_receive:number}>('SELECT shipit.whatsapp_receive($1,$2,$3)',[JSON.stringify(events),wabas,correlation]);
+    return result.rows[0]?.whatsapp_receive??0;
+  });
+}
+/** The selection lock, projection and completion share one bounded transaction. */
+export async function withNextInboxScope<T>(database:DatabasePool,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    await tx.query("SET LOCAL transaction_timeout = '25s'");
+    const row=(await tx.query<{organization_id:string;franchise_id:string;inbox_id:string}>(
+      'SELECT organization_id,franchise_id,inbox_id FROM shipit.whatsapp_inbox_next()')).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'whatsapp.inbox.work',actor:{type:'service',id:'whatsapp-inbox-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.inbox_id);
+  });
+}
 
 // Legacy installation-specific scope seam. Generic outbox authority below derives
 // ownership from persisted jobs/events and does not require a provider installation.

@@ -4,7 +4,7 @@ export interface Binding {
   readonly key:string; readonly organization_id:string; readonly franchise_id:string;
   readonly waba_id:string; readonly phone_number_id:string; readonly credential_ref:string;
 }
-export interface WhatsappConfiguration { readonly graph_version:string; readonly bindings:readonly Binding[] }
+export interface WhatsappConfiguration { readonly graph_version:string; readonly bindings:readonly Binding[]; readonly webhook?:import('./webhook-payload.ts').BusinessWebhookConfig }
 export interface Template {
   provider_id:string|null; name:string; language:string; status:string; category:string;
   shape_hash:string; variables:readonly {type:'text'}[]; supported:boolean;

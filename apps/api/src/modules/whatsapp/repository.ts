@@ -2,6 +2,16 @@ import { HttpError } from '../../plugins/errors.ts';
 import { scopedQuery,type TenantAccess } from '../security/scope.ts';
 import type { Installation,RegisteredTemplate,Binding,Template } from './types.ts';
 
+export async function inboxHealth(scope:TenantAccess) {
+  return (await scopedQuery(scope,['whatsapp.read'],`SELECT state,count(*)::integer AS count,
+    greatest(0,extract(epoch FROM clock_timestamp()-min(received_at)))::integer AS oldest_age_seconds
+    FROM shipit.whatsapp_inbox i WHERE {{franchise:i.organization_id:i.franchise_id}} GROUP BY state`)).rows;
+}
+export async function inboxDetail(scope:TenantAccess,id:string) {
+  return (await scopedQuery(scope,['whatsapp.read'],`SELECT id,kind,state,attempts,reason_code,received_at,processed_at
+    FROM shipit.whatsapp_inbox i WHERE {{franchise:i.organization_id:i.franchise_id}} AND i.id=$1`,[id])).rows[0]??null;
+}
+
 export async function active(scope:TenantAccess) {
   const f=(await scopedQuery<{lifecycle:string}>(scope,['whatsapp.write'],`SELECT f.lifecycle FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}} FOR UPDATE`)).rows[0];
   if(!f)throw new HttpError('RESOURCE_NOT_FOUND');if(f.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');

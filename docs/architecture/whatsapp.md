@@ -139,3 +139,5 @@ Old code can run with the additive schema. Disable configuration to roll back be
 retain evidence and repair applied schema forward. Observe safe request codes/duration
 and canonical audit; #70 owns hosted alert delivery. Use [verification](issue-36-verification.md)
 for repeatable synthetic exercises.
+
+Issue #37 now implements [signed business callbacks and durable inbox processing](whatsapp-webhooks.md) using the optional webhook catalog property. Provider configuration alone still does not enable customer sends.
