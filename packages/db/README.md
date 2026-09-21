@@ -595,3 +595,35 @@ Migration 24 adds the [signed WhatsApp inbox](../../docs/architecture/whatsapp-w
 Migration 25 adds scoped WhatsApp consent evidence and customer contact identities. Apply the [consent runtime grants](../../docs/architecture/messaging-consent.md) before enabling its consumer; prior migrations are unchanged.
 
 Issue #39 migration 26 adds the outbound intent, attempt and redrive ledger. Apply the restricted [outbound grants and rollout](../../docs/architecture/whatsapp-outbound.md) before enabling dispatch. Released migrations remain unchanged; no producer backfill occurs.
+
+## Notification automation migration (#40)
+
+Apply `1790960400000-notification-automation.cjs` after migration 26 and retain the #35,
+#36–#39 and Booking/Parcel/Route/Customer read grants. Resolve the deployment's separate
+runtime role and grant exactly:
+
+```sql
+GRANT SELECT ON shipit.notification_policy_activations,
+  shipit.notification_automation_decisions TO runtime_role;
+GRANT INSERT ON shipit.notification_automation_decisions TO runtime_role;
+GRANT EXECUTE ON FUNCTION
+  shipit.notification_policy_activate(uuid,uuid,jsonb) TO runtime_role;
+```
+
+Each activation stores a per-policy `binding_hash`. The definer function inserts missing
+policy versions and locks/compares existing rows; an identical restart preserves the first
+cutover timestamp, while a different identity fails atomically before worker polling. The
+hash contains only safe code/configuration identity, not rendered content, recipients,
+credentials or tokens. PUBLIC remains denied.
+
+The existing table-level `whatsapp_outbound` SELECT/INSERT grant covers its new
+`affected_entity_id`; no new UPDATE authority is required. Do not grant activation-table
+INSERT, decision UPDATE/DELETE, trigger execution, TRUNCATE, ownership, DDL or PUBLIC
+access. The fixed-search-path activation function validates existing tenant owners and the
+closed consumer identity, while insert-once keys preserve the original cutover.
+`prepareNotificationAutomation()` is the executable least-privilege reference.
+
+Deploy schema and these grants before code. Then supply exact server-only automation
+bindings and start the outbox worker; activation commits before consumer polling. Rollback
+stops/reverts compatible code while retaining evidence and repairs schema forward. See
+[notification automation](../../docs/architecture/notification-automation.md).

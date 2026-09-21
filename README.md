@@ -158,10 +158,10 @@ and atomically retains the uncollected obligation, replay result, audit and prod
 rollback. Production booking UI, collections, issued receipts and event processing remain
 with their downstream issues.
 
-The [durable outbox worker](docs/architecture/outbox.md) relays committed events into leased jobs with atomic consumer receipts, bounded retries, quarantine and audited recovery. Its registry starts empty until downstream business consumers are implemented. [Verification](docs/architecture/issue-35-verification.md) covers real PostgreSQL crash recovery and tenant isolation.
+The [durable outbox worker](docs/architecture/outbox.md) relays committed events into leased jobs with atomic consumer receipts, bounded retries, quarantine and audited recovery. Its production registry now contains the stable `customer-notifications` consumer. [Verification](docs/architecture/issue-35-verification.md) covers real PostgreSQL crash recovery and tenant isolation.
 
 The [WhatsApp provider registry](docs/architecture/whatsapp.md) validates registered identities, rotates secret references and retains approved-template metadata. Customer consent and durable sends remain downstream; configuration alone does not enable customer sends.
 
 [Signed WhatsApp callbacks](docs/architecture/whatsapp-webhooks.md) persist a tenant-bound inbox before acknowledgement, quarantine unknown identities, and process delivery observations durably. [Consent evidence and current policy checks](docs/architecture/messaging-consent.md) consume that inbox; the outbound worker rechecks them before dispatch.
 
-[Durable outbound WhatsApp](docs/architecture/whatsapp-outbound.md) stores logical message intents, separates acceptance from delivery, and provides controlled retries and recovery. Dispatch is explicitly enabled after schema/grants; notification selection remains #40.
+[Durable outbound WhatsApp](docs/architecture/whatsapp-outbound.md) stores logical message intents, separates acceptance from delivery, and provides controlled retries and recovery. [Notification automation](docs/architecture/notification-automation.md) now resolves the initial versioned Booking, Parcel and Route policies into those intents without provider I/O; delay and delivery-completion policies remain #41/#43.

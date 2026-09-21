@@ -1,8 +1,22 @@
 import { randomUUID } from 'node:crypto';
-import { withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
+import { DatabaseError,withTransaction, type DatabasePool, type TransactionExecutor } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
 import type { InboxInput } from '../whatsapp/webhook-payload.ts';
+
+/** Deployment-only cutover. Owner pairs come from validated server configuration and the
+ * definer function accepts only existing tenant owners and the fixed consumer registry. */
+export async function activateNotificationPolicies(database:DatabasePool,owners:readonly {organization_id:string;franchise_id:string}[],policies:unknown) {
+  try {
+    await withTransaction(database,async tx=>{
+      for(const owner of owners)await tx.query('SELECT shipit.notification_policy_activate($1,$2,$3)',
+        [owner.organization_id,owner.franchise_id,JSON.stringify(policies)]);
+    });
+  } catch(error) {
+    if(error instanceof DatabaseError&&error.sqlState==='P0040')throw new Error('NOTIFICATION_POLICY_VERSION_CONFLICT',{cause:error});
+    throw error;
+  }
+}
 
 /** References are resolved from the durable outbound ledger, never from client ownership. */
 export async function withOutboundScope<T>(database:DatabasePool,target:string|null,now:Date|null,work:(scope:TenantAccess,id:string)=>Promise<T>,attention=false):Promise<T|null> {

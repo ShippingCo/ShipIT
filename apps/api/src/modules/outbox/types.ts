@@ -23,6 +23,7 @@ export interface Consumer {
   readonly ordering: Ordering;
   readonly validate: (event: Event) => boolean;
   readonly reconcileGap?: (scope: TenantAccess, event: Event, highWater: number) => Promise<boolean>;
+  readonly applyStale?: (scope: TenantAccess, event: Event) => Promise<void>;
   readonly apply: (scope: TenantAccess, event: Event, historical: boolean) => Promise<void>;
 }
 export function jobDto(job: Job) {

@@ -201,3 +201,5 @@ Issue #35 adds the [durable outbox worker and operational API](outbox.md), with 
 [Messaging consent](messaging-consent.md) implements #38's independent source consumption, safe history and current policy checks; [verification](issue-38-verification.md).
 
 [Outbound WhatsApp](whatsapp-outbound.md) implements durable intents, controlled provider attempts, monotone delivery history and audited recovery; [verification](issue-39-verification.md).
+
+[Notification automation](notification-automation.md) implements the versioned #40 event-policy resolver, immutable activation cutover, Route/Parcel overlap suppression and database-only #39 enqueue boundary; [verification](issue-40-verification.md).

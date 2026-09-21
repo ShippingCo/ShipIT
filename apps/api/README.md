@@ -324,8 +324,8 @@ screen/client-adapter migration; the existing demo calls its explicitly fictiona
 
 `pnpm --filter @shippingco/api start:worker` starts the separate developer worker with
 the normal validated environment and local database resolver. Its code-owned registry
-is initially empty; downstream issues add business consumers. No provider credentials
-or network sends are introduced. The API exposes R18 scoped health/job reads and W44
+contains #40's stable `customer-notifications` consumer and requires validated local
+WhatsApp configuration; consumer effects make no provider network call. The API exposes R18 scoped health/job reads and W44
 privileged quarantined-job redrive. Apply the migration and minimum runtime grants
 first. [Operations](../../docs/architecture/outbox.md) covers exact endpoints, reasons,
 lease/retry/order policy, graceful stop and the synthetic reproducible fixture.
@@ -338,4 +338,4 @@ Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and templat
 
 Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) documents signed consent consumption, R16 history, policy evaluation and #39 integration.
 
-[Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. #40 owns event automation registration.
+[Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. [Notification automation](../../docs/architecture/notification-automation.md) registers #40's versioned event policies and safe decision reads.

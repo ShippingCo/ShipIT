@@ -15,10 +15,10 @@ test('dispatch defaults off and requires explicit boolean enablement with signed
 });
 test('outbound validation closes purpose, body, source and sensitive rendering boundaries',()=>{
  const input={source_kind:'inbox',source_id:randomUUID(),customer_id:randomUUID(),purpose:'requested_assistance',format:'text',text:'Synthetic reply'};
- assert.deepEqual(outboundInput(input),input);
+ const normalized=outboundInput(input);assert.deepEqual(normalized,{...input,affected_entity_id:input.source_id});
  for(const change of [{purpose:'marketing'},{source_kind:'event'},{text:''},{text:'a'.repeat(4097)},{phone:'+15550000001'},{text:'\u0000'},{variables:['private']}])assert.throws(()=>outboundInput({...input,...change}));
- const id=randomUUID(),sealed=sealOutbound(webhookConfig,id,input as ReturnType<typeof outboundInput>);
- assert.ok(!sealed.includes(input.text));assert.deepEqual(openOutbound(webhookConfig,id,webhookConfig.key_version,sealed),input);
+ const id=randomUUID(),sealed=sealOutbound(webhookConfig,id,normalized);
+ assert.ok(!sealed.includes(input.text));assert.deepEqual(openOutbound(webhookConfig,id,webhookConfig.key_version,sealed),normalized);
  assert.throws(()=>openOutbound(webhookConfig,randomUUID(),webhookConfig.key_version,sealed));assert.throws(()=>openOutbound(webhookConfig,id,'v99',sealed));
 });
 test('bounded rejection retry honors seconds/date Retry-After; uncertainty never retries',()=>{

@@ -3,8 +3,13 @@ import { idempotencyKey } from '../customers/validation.ts';
 import type { createWhatsappService } from './service.ts';
 import type { createConsentService } from './consent-service.ts';
 import type { createOutboundService } from './outbound-service.ts';
-export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>) {
+import type { createAutomationReadService } from '../automation/read-service.ts';
+export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>,automation?:ReturnType<typeof createAutomationReadService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  if(automation) {
+    app.get('/api/v1/whatsapp/automation',{exposeHeadRoute:false},request=>automation.list(session(request),request.query,request.id));
+    app.get<{Params:{id:string}}>('/api/v1/whatsapp/automation/:id',{exposeHeadRoute:false},request=>automation.detail(session(request),request.params.id,request.query,request.id));
+  }
   if(outbound) {
     app.get('/api/v1/whatsapp/outbound/health',{exposeHeadRoute:false},request=>outbound.health(session(request),request.query,request.id));
     app.get('/api/v1/whatsapp/outbound',{exposeHeadRoute:false},request=>outbound.list(session(request),request.query,request.id));

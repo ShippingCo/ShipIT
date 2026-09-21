@@ -59,3 +59,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0026: Scoped messaging consent](0026-scoped-messaging-consent.md): Evidence, contact identity, deterministic withdrawal and current dispatch policy for Issue #38.
 
 - [0027: Durable WhatsApp outbound](0027-durable-whatsapp-outbound.md): Stable intents, fenced dispatch, uncertainty, delivery reconciliation and disclosure proof for Issue #39.
+
+- [0028: Event-to-notification automation policies](0028-event-notification-automation.md): Stable consumer identity, versioned policies, immutable cutover/decisions and Route/Parcel cause suppression for Issue #40.

@@ -6,13 +6,14 @@ import type { BusinessWebhookConfig } from './webhook-payload.ts';
 import type { SendOutcome } from './types.ts';
 
 export interface OutboundInput {
-  source_kind:'event'|'inbox'; source_id:string; customer_id:string;
+  source_kind:'event'|'inbox'; source_id:string; affected_entity_id?:string; customer_id:string;
   purpose:'updates'|'requested_assistance'|'consent_disclosure';
   format:'text'|'template'; text?:string; template_name?:string; template_language?:string; variables?:string[];
 }
-export function outboundInput(value:unknown):OutboundInput {
-  const b=object(value,['source_kind','source_id','customer_id','purpose','format','text','template_name','template_language','variables']);
-  uuid(b.source_id);uuid(b.customer_id);
+export type ResolvedOutboundInput=OutboundInput&{affected_entity_id:string};
+export function outboundInput(value:unknown):ResolvedOutboundInput {
+  const b=object(value,['source_kind','source_id','affected_entity_id','customer_id','purpose','format','text','template_name','template_language','variables']);
+  uuid(b.source_id);uuid(b.customer_id);const affected=uuid(b.affected_entity_id??b.source_id);
   if(!['event','inbox'].includes(String(b.source_kind))||!['updates','requested_assistance','consent_disclosure'].includes(String(b.purpose))||
     !['text','template'].includes(String(b.format)) || (b.purpose==='updates'?b.source_kind!=='event':b.source_kind!=='inbox'))throw new HttpError('VALIDATION_FAILED');
   if(b.purpose==='consent_disclosure') {
@@ -22,28 +23,29 @@ export function outboundInput(value:unknown):OutboundInput {
       b.template_name!==undefined||b.template_language!==undefined||b.variables!==undefined)throw new HttpError('VALIDATION_FAILED');
   } else if(typeof b.template_name!=='string'||!namePattern.test(b.template_name)||typeof b.template_language!=='string'||!languagePattern.test(b.template_language)||
     b.text!==undefined||!Array.isArray(b.variables)||b.variables.length>20||b.variables.some(v=>typeof v!=='string'||!v.length||v.length>1024||Array.from(v).some(c=>c.charCodeAt(0)<32)))throw new HttpError('VALIDATION_FAILED');
-  return b as unknown as OutboundInput;
+  return {...b,affected_entity_id:affected} as unknown as ResolvedOutboundInput;
 }
 export const disclosureText=(business:string)=>`${business}: Reply START UPDATES to this message to receive optional shipment updates from this franchise on WhatsApp. Reply STOP at any time to stop. Your choice does not affect shipment service.`;
 /** Policy withdrawal is terminal; configuration can be repaired without changing intent. */
 export function policyFailure(reason:string):'failed'|'suppressed' {
   return reason.startsWith('template_')||reason==='installation_unavailable'?'failed':'suppressed';
 }
-export function outboundFingerprint(config:BusinessWebhookConfig,input:OutboundInput) {
+export function outboundFingerprint(config:BusinessWebhookConfig,input:ResolvedOutboundInput) {
   return createHmac('sha256',Buffer.from(config.fingerprint_key,'hex')).update('shipit:outbound:v1\0').update(JSON.stringify([
-    input.source_kind,input.source_id,input.customer_id,input.purpose,input.format,input.text??null,input.template_name??null,input.template_language??null,input.variables??null])).digest('hex');
+    input.source_kind,input.source_id,input.affected_entity_id,input.customer_id,input.purpose,input.format,input.text??null,input.template_name??null,input.template_language??null,input.variables??null])).digest('hex');
 }
-export function sealOutbound(config:BusinessWebhookConfig,id:string,input:OutboundInput) {
+export function sealOutbound(config:BusinessWebhookConfig,id:string,input:ResolvedOutboundInput) {
   const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(config.encryption_key,'hex'),iv);
   cipher.setAAD(Buffer.from(`shipit:outbound:v1:${config.key_version}:${id}`));
   const encrypted=Buffer.concat([cipher.update(JSON.stringify(input)),cipher.final()]);
   return Buffer.concat([iv,encrypted,cipher.getAuthTag()]).toString('base64url');
 }
-export function openOutbound(config:BusinessWebhookConfig,id:string,keyVersion:string,sealed:string):OutboundInput {
+export function openOutbound(config:BusinessWebhookConfig,id:string,keyVersion:string,sealed:string):ResolvedOutboundInput {
   if(config.key_version!==keyVersion)throw new Error('OUTBOUND_KEY_UNAVAILABLE');
   const b=Buffer.from(sealed,'base64url'),cipher=createDecipheriv('aes-256-gcm',Buffer.from(config.encryption_key,'hex'),b.subarray(0,12));
   cipher.setAAD(Buffer.from(`shipit:outbound:v1:${keyVersion}:${id}`));cipher.setAuthTag(b.subarray(-16));
-  return JSON.parse(Buffer.concat([cipher.update(b.subarray(12,-16)),cipher.final()]).toString('utf8')) as OutboundInput;
+  const value=JSON.parse(Buffer.concat([cipher.update(b.subarray(12,-16)),cipher.final()]).toString('utf8')) as OutboundInput;
+  return {...value,affected_entity_id:value.affected_entity_id??value.source_id};
 }
 export function retryDelay(attempt:number,retryAfter:number|undefined,random=Math.random) {
   const backoff=Math.min(300,2**Math.min(attempt,8))*(0.5+random()*0.5);

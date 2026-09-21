@@ -8,7 +8,7 @@ process.on('SIGINT',stop);process.on('SIGTERM',stop);
 try {
   const config=parseEnvironment(process.env);
   // Hosted #68 composition injects managed identity; local credentials cannot serve hosted modes.
-  const resolver=developerSecretResolver(config,process.env.LOCAL_DATABASE_URL);
+  const resolver=developerSecretResolver(config,process.env.LOCAL_DATABASE_URL,undefined,undefined,process.env.LOCAL_WHATSAPP_JSON);
   await startOutboxRuntime(config,resolver,controller.signal,{emit:(event,code)=>{
     process.stderr.write(JSON.stringify({event,code,recovery_owner:'franchise_admin',runbook:'outbox-quarantine-v1'})+'\n');
   }});
