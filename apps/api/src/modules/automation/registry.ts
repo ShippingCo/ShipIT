@@ -39,7 +39,15 @@ export function policyBindings(input:readonly AutomationPolicyBinding[]) {
   }
   return result;
 }
-export const activationDocument=notificationPolicies.map(({id,version})=>({id,version}));
-export function configurationHash(bindings:readonly AutomationPolicyBinding[]) {
-  return createHash('sha256').update(JSON.stringify([...bindings].sort((a,b)=>`${a.policy_id}:${a.policy_version}`.localeCompare(`${b.policy_id}:${b.policy_version}`)))).digest('hex');
+export interface NotificationPolicyActivation { readonly id:string;readonly version:number;readonly binding_hash:string }
+export function policyActivationDocument(input:readonly AutomationPolicyBinding[]):readonly NotificationPolicyActivation[] {
+  const bindings=policyBindings(input);
+  return Object.freeze(notificationPolicies.map(policy=>{
+    const binding=bindings.get(`${policy.id}:${policy.version}`);
+    const identity={policy:{id:policy.id,version:policy.version,event:policy.event,aggregate:policy.aggregate,kind:policy.kind,
+      affected:policy.affected,variables:[...policy.variables],notify:policy.notify},binding:binding?{template_name:binding.template_name,
+      template_language:binding.template_language,variables:[...binding.variables]}:null};
+    const binding_hash=createHash('sha256').update('shipit:notification-policy-activation:v1\0').update(JSON.stringify(identity)).digest('hex');
+    return Object.freeze({id:policy.id,version:policy.version,binding_hash});
+  }));
 }

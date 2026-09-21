@@ -22,7 +22,7 @@ ALTER TABLE shipit.whatsapp_outbound ADD CONSTRAINT whatsapp_outbound_effect_ide
 CREATE TABLE shipit.notification_policy_activations (
  organization_id uuid NOT NULL,franchise_id uuid NOT NULL,consumer_id text NOT NULL,
  policy_id text NOT NULL CHECK(policy_id ~ '^[a-z][a-z0-9.-]{0,63}$'),
- policy_version integer NOT NULL CHECK(policy_version>0),configuration_hash text NOT NULL CHECK(configuration_hash ~ '^[a-f0-9]{64}$'),
+ policy_version integer NOT NULL CHECK(policy_version>0),binding_hash text NOT NULL CHECK(binding_hash ~ '^[a-f0-9]{64}$'),
  activated_at timestamptz NOT NULL CHECK(isfinite(activated_at)),
  PRIMARY KEY(organization_id,franchise_id,consumer_id,policy_id,policy_version),
  FOREIGN KEY(organization_id,franchise_id) REFERENCES shipit.franchises(organization_id,id) ON DELETE RESTRICT,
@@ -74,27 +74,37 @@ CREATE TRIGGER notification_automation_decisions_immutable BEFORE INSERT OR UPDA
  FOR EACH ROW EXECUTE FUNCTION shipit.guard_notification_automation();
 
 -- Deployment configuration establishes cutover before the consumer registry starts.
--- Existing activations never move forward on restart or template/configuration repair.
-CREATE FUNCTION shipit.notification_policy_activate(org uuid,franchise uuid,policies jsonb,config_hash text) RETURNS integer
+-- Existing policy versions accept only their original per-policy binding identity.
+CREATE FUNCTION shipit.notification_policy_activate(org uuid,franchise uuid,policies jsonb) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
-DECLARE activated timestamptz:=clock_timestamp();inserted integer;
+DECLARE activated timestamptz:=clock_timestamp();inserted integer:=0;affected integer;policy jsonb;existing_hash text;
 BEGIN
- IF config_hash !~ '^[a-f0-9]{64}$' OR jsonb_typeof(policies)<>'array' OR jsonb_array_length(policies) NOT BETWEEN 1 AND 32
+ IF jsonb_typeof(policies)<>'array' OR jsonb_array_length(policies) NOT BETWEEN 1 AND 32
   OR NOT EXISTS(SELECT 1 FROM shipit.franchises f WHERE f.organization_id=org AND f.id=franchise)
   OR EXISTS(SELECT 1 FROM jsonb_array_elements(policies) p WHERE jsonb_typeof(p)<>'object'
-    OR p-ARRAY['id','version']<>'{}'::jsonb OR p->>'id' !~ '^[a-z][a-z0-9.-]{0,63}$'
+    OR p-ARRAY['id','version','binding_hash']<>'{}'::jsonb OR NOT p ?& ARRAY['id','version','binding_hash']
+    OR p->>'id' !~ '^[a-z][a-z0-9.-]{0,63}$' OR p->>'binding_hash' !~ '^[a-f0-9]{64}$'
     OR jsonb_typeof(p->'version')<>'number' OR (p->>'version')::numeric<>trunc((p->>'version')::numeric)
     OR (p->>'version')::numeric NOT BETWEEN 1 AND 2147483647)
   OR (SELECT count(*) FROM jsonb_array_elements(policies))<>(SELECT count(DISTINCT (p->>'id',(p->>'version')::integer)) FROM jsonb_array_elements(policies) p)
  THEN RAISE EXCEPTION 'NOTIFICATION_ACTIVATION_INVALID' USING ERRCODE='23514'; END IF;
- INSERT INTO shipit.notification_policy_activations(organization_id,franchise_id,consumer_id,policy_id,policy_version,configuration_hash,activated_at)
- SELECT org,franchise,'customer-notifications',p->>'id',(p->>'version')::integer,config_hash,activated
- FROM jsonb_array_elements(policies) p ON CONFLICT DO NOTHING;
- GET DIAGNOSTICS inserted=ROW_COUNT;RETURN inserted;
+ FOR policy IN SELECT value FROM jsonb_array_elements(policies) LOOP
+  INSERT INTO shipit.notification_policy_activations(organization_id,franchise_id,consumer_id,policy_id,policy_version,binding_hash,activated_at)
+  VALUES(org,franchise,'customer-notifications',policy->>'id',(policy->>'version')::integer,policy->>'binding_hash',activated)
+  ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS affected=ROW_COUNT;inserted:=inserted+affected;
+  SELECT a.binding_hash INTO STRICT existing_hash FROM shipit.notification_policy_activations a
+   WHERE a.organization_id=org AND a.franchise_id=franchise AND a.consumer_id='customer-notifications'
+     AND a.policy_id=policy->>'id' AND a.policy_version=(policy->>'version')::integer FOR UPDATE;
+  IF existing_hash IS DISTINCT FROM policy->>'binding_hash' THEN
+   RAISE EXCEPTION 'NOTIFICATION_POLICY_VERSION_CONFLICT' USING ERRCODE='P0040';
+  END IF;
+ END LOOP;
+ RETURN inserted;
 END $fn$;
 
 REVOKE ALL ON shipit.notification_policy_activations,shipit.notification_automation_decisions FROM PUBLIC;
-REVOKE ALL ON FUNCTION shipit.guard_notification_automation(),shipit.notification_policy_activate(uuid,uuid,jsonb,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION shipit.guard_notification_automation(),shipit.notification_policy_activate(uuid,uuid,jsonb) FROM PUBLIC;
 DO $extend_audit$
 DECLARE source text;
 BEGIN

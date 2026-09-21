@@ -7,7 +7,7 @@ import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
 import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createOutboxWorker, type WorkerTelemetry } from './modules/outbox/worker.ts';
 import { productionConsumers } from './modules/outbox/consumers.ts';
-import { activationDocument,configurationHash } from './modules/automation/registry.ts';
+import { policyActivationDocument } from './modules/automation/registry.ts';
 import { activateNotificationPolicies } from './modules/security/jobs.ts';
 
 /** One bounded cycle at a time. Shutdown stops claiming and drains the current DB effect. */
@@ -42,7 +42,7 @@ export async function startOutboxRuntime(config:RuntimeConfig,resolver:SecretRes
       const owners=[...new Map(configuration.bindings.map(b=>[`${b.organization_id}:${b.franchise_id}`,
         {organization_id:b.organization_id,franchise_id:b.franchise_id}])).values()];
       if(!owners.length)throw new Error('NOTIFICATION_AUTOMATION_CONFIGURATION_REQUIRED');
-      await activateNotificationPolicies(database,owners,activationDocument,configurationHash(configuration.automation.policies));
+      await activateNotificationPolicies(database,owners,policyActivationDocument(configuration.automation.policies));
       consumers=productionConsumers({configuration,provider:createMetaProvider({configuration,secrets:resolver})});
     }
     await runOutboxLoop(database,consumers,signal,telemetry);

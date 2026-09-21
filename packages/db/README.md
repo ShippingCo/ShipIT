@@ -607,8 +607,14 @@ GRANT SELECT ON shipit.notification_policy_activations,
   shipit.notification_automation_decisions TO runtime_role;
 GRANT INSERT ON shipit.notification_automation_decisions TO runtime_role;
 GRANT EXECUTE ON FUNCTION
-  shipit.notification_policy_activate(uuid,uuid,jsonb,text) TO runtime_role;
+  shipit.notification_policy_activate(uuid,uuid,jsonb) TO runtime_role;
 ```
+
+Each activation stores a per-policy `binding_hash`. The definer function inserts missing
+policy versions and locks/compares existing rows; an identical restart preserves the first
+cutover timestamp, while a different identity fails atomically before worker polling. The
+hash contains only safe code/configuration identity, not rendered content, recipients,
+credentials or tokens. PUBLIC remains denied.
 
 The existing table-level `whatsapp_outbound` SELECT/INSERT grant covers its new
 `affected_entity_id`; no new UPDATE authority is required. Do not grant activation-table

@@ -10,21 +10,22 @@ import { consentContactKey } from '../../src/modules/whatsapp/consent-worker.ts'
 import { createOutboxWorker } from '../../src/modules/outbox/worker.ts';
 import { createNotificationConsumer } from '../../src/modules/automation/service.ts';
 import { activateNotificationPolicies } from '../../src/modules/security/jobs.ts';
-import { activationDocument,configurationHash } from '../../src/modules/automation/registry.ts';
+import { policyActivationDocument } from '../../src/modules/automation/registry.ts';
 import { createAutomationReadService } from '../../src/modules/automation/read-service.ts';
 import { routeMetadata } from '../route-support.ts';
 import type { Binding } from '../../src/modules/whatsapp/types.ts';
 
+const policies=[
+  {policy_id:'booking-confirmation',policy_version:1,template_name:'booking_confirmation',template_language:'en_US',variables:['booking_id']},
+  {policy_id:'parcel-checked-in',policy_version:1,template_name:'parcel_checked_in',template_language:'en_US',variables:['docket']},
+  {policy_id:'parcel-dispatched',policy_version:1,template_name:'parcel_dispatched',template_language:'en_US',variables:['docket']},
+  {policy_id:'route-departed',policy_version:1,template_name:'route_departed',template_language:'en_US',variables:['docket']},
+  {policy_id:'route-arrived',policy_version:1,template_name:'route_arrived',template_language:'en_US',variables:['docket']},
+];
+
 async function setup(t:Parameters<typeof bookingSetup>[0],activateBefore=true,options:{skipTemplate?:string;consent?:boolean}={}) {
   const s=await bookingSetup(t);await s.db.prepareNotificationAutomation();
   const admin=await s.grant('franchise_admin',[A]),binding={key:'automation_v1',organization_id:org,franchise_id:A,waba_id:'100001',phone_number_id:'100002',credential_ref:'whatsapp:automation/v1'};
-  const policies=[
-    {policy_id:'booking-confirmation',policy_version:1,template_name:'booking_confirmation',template_language:'en_US',variables:['booking_id']},
-    {policy_id:'parcel-checked-in',policy_version:1,template_name:'parcel_checked_in',template_language:'en_US',variables:['docket']},
-    {policy_id:'parcel-dispatched',policy_version:1,template_name:'parcel_dispatched',template_language:'en_US',variables:['docket']},
-    {policy_id:'route-departed',policy_version:1,template_name:'route_departed',template_language:'en_US',variables:['docket']},
-    {policy_id:'route-arrived',policy_version:1,template_name:'route_arrived',template_language:'en_US',variables:['docket']},
-  ];
   const configuration={graph_version:'v24.0',bindings:[binding],webhook:webhookConfig,automation:{policies}};
   const dependencies={configuration,clock:s.clock,provider:{validate:async()=>{},template:async(_binding:Binding,name:string,language:string)=>({provider_id:'100003',name,language,status:'APPROVED',category:'UTILITY',shape_hash:'a'.repeat(64),variables:[{type:'text' as const}],supported:true}),send:async()=>({kind:'accepted' as const,provider_message_id:'wamid.automation'})}};
   const whatsapp=createWhatsappService(s.pool,dependencies),query={organization_id:org,franchise_id:A};
@@ -33,11 +34,12 @@ async function setup(t:Parameters<typeof bookingSetup>[0],activateBefore=true,op
   let installationVersion=1;
   for(const policy of policies)if(policy.policy_id!==options.skipTemplate)await whatsapp.execute(admin.token,installationId,'sync',query,randomUUID(),
     {expected_version:installationVersion++,name:policy.template_name,language:policy.template_language},randomUUID());
-  if(activateBefore)await activateNotificationPolicies(s.pool,[binding],activationDocument,configurationHash(policies));
+  const activations=policyActivationDocument(policies);
+  if(activateBefore)await activateNotificationPolicies(s.pool,[binding],activations);
   const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
-  if(!activateBefore)for(const policy of activationDocument)await s.db.adminQuery(`INSERT INTO shipit.notification_policy_activations
-    (organization_id,franchise_id,consumer_id,policy_id,policy_version,configuration_hash,activated_at)
-    VALUES($1,$2,'customer-notifications',$3,$4,$5,'2100-01-01T00:00:00Z')`,[org,A,policy.id,policy.version,configurationHash(policies)]);
+  if(!activateBefore)for(const policy of activations)await s.db.adminQuery(`INSERT INTO shipit.notification_policy_activations
+    (organization_id,franchise_id,consumer_id,policy_id,policy_version,binding_hash,activated_at)
+    VALUES($1,$2,'customer-notifications',$3,$4,$5,'2100-01-01T00:00:00Z')`,[org,A,policy.id,policy.version,policy.binding_hash]);
   const customer=(await s.db.adminQuery<{contact_version:string;phone_normalized:string}>('SELECT contact_version,phone_normalized FROM shipit.customers WHERE id=$1',[s.source.id])).rows[0]!;
   if(options.consent!==false) {
     const inbox=randomUUID(),contactKey=consentContactKey(webhookConfig,installationId,customer.phone_normalized);
@@ -78,10 +80,60 @@ await test('activation is an immutable cutover and historical events are durably
   const decision=(await s.db.adminQuery('SELECT outcome,reason_code,outbound_intent_id FROM shipit.notification_automation_decisions')).rows[0]!;
   assert.deepEqual(decision,{outcome:'skipped',reason_code:'historical_cutover',outbound_intent_id:null});
   assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.whatsapp_outbound')).rows[0]!.n,0);
-  await activateNotificationPolicies(s.pool,[{organization_id:org,franchise_id:A}],activationDocument,'c'.repeat(64));
+  await activateNotificationPolicies(s.pool,[{organization_id:org,franchise_id:A}],policyActivationDocument(policies));
   assert.equal((await s.db.adminQuery('SELECT count(DISTINCT activated_at)::int n FROM shipit.notification_policy_activations')).rows[0]!.n,1);
   await assert.rejects(s.pool.query("UPDATE shipit.notification_policy_activations SET activated_at=clock_timestamp()"));
   await assert.rejects(s.pool.query("UPDATE shipit.notification_automation_decisions SET reason_code='eligible'"));
+});
+
+await test('policy activation identities are immutable, versioned and race-safe',{timeout:60000},async t=>{
+  const s=await bookingSetup(t);await s.db.prepareNotificationAutomation();
+  const owners=[{organization_id:org,franchise_id:A}];
+  const configured=policies.map(policy=>policy.policy_id==='booking-confirmation'?{...policy,variables:['booking_id','parcel_count']}:policy);
+  const activations=policyActivationDocument(configured);
+  await activateNotificationPolicies(s.pool,owners,activations);
+  type Activation={policy_id:string;policy_version:number;binding_hash:string;activated_at:Date};
+  const rows=()=>s.db.adminQuery<Activation>(`SELECT policy_id,policy_version,binding_hash,activated_at
+    FROM shipit.notification_policy_activations WHERE organization_id=$1 AND franchise_id=$2 ORDER BY policy_id,policy_version`,[org,A]);
+  const initial=(await rows()).rows;
+  await activateNotificationPolicies(s.pool,owners,activations);
+  assert.deepEqual((await rows()).rows,initial);
+  assert.equal(initial.length,6);assert.ok(initial.some(row=>row.policy_id==='parcel-route-overlap'));
+
+  const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
+  const variants=[
+    configured.map(policy=>policy.policy_id==='booking-confirmation'?{...policy,template_name:'booking_confirmation_v2'}:policy),
+    configured.map(policy=>policy.policy_id==='booking-confirmation'?{...policy,template_language:'en_GB'}:policy),
+    configured.map(policy=>policy.policy_id==='booking-confirmation'?{...policy,variables:['booking_id','parcel_count','confirmed_at']}:policy),
+    configured.map(policy=>policy.policy_id==='booking-confirmation'?{...policy,variables:['parcel_count','booking_id']}:policy),
+  ];
+  for(const variant of variants)await assert.rejects(
+    activateNotificationPolicies(s.pool,owners,policyActivationDocument(variant)),{message:'NOTIFICATION_POLICY_VERSION_CONFLICT'});
+  assert.deepEqual((await rows()).rows,initial);
+  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.notification_automation_decisions')).rows[0]!.n,0);
+
+  const originalBooking=activations.find(policy=>policy.id==='booking-confirmation')!;
+  await activateNotificationPolicies(s.pool,owners,[originalBooking]);
+  const changedRoute=policyActivationDocument(configured.map(policy=>policy.policy_id==='route-arrived'?{...policy,template_name:'route_arrived_v2'}:policy))
+    .find(policy=>policy.id==='route-arrived')!;
+  await assert.rejects(activateNotificationPolicies(s.pool,owners,[changedRoute]),{message:'NOTIFICATION_POLICY_VERSION_CONFLICT'});
+  assert.equal((await rows()).rows.find(row=>row.policy_id==='booking-confirmation')!.binding_hash,originalBooking.binding_hash);
+
+  await activateNotificationPolicies(s.pool,owners,[{id:'booking-confirmation',version:2,binding_hash:'2'.repeat(64)}]);
+  const versions=(await rows()).rows.filter(row=>row.policy_id==='booking-confirmation');
+  assert.deepEqual(versions.map(row=>row.policy_version),[1,2]);assert.notEqual(versions[0]!.binding_hash,versions[1]!.binding_hash);
+
+  const identical={id:'booking-confirmation',version:3,binding_hash:'3'.repeat(64)};
+  await Promise.all([activateNotificationPolicies(s.pool,owners,[identical]),activateNotificationPolicies(s.pool,owners,[identical])]);
+  assert.equal((await rows()).rows.filter(row=>row.policy_id==='booking-confirmation'&&row.policy_version===3).length,1);
+  const raced=await Promise.allSettled([
+    activateNotificationPolicies(s.pool,owners,[{id:'booking-confirmation',version:4,binding_hash:'4'.repeat(64)}]),
+    activateNotificationPolicies(s.pool,owners,[{id:'booking-confirmation',version:4,binding_hash:'5'.repeat(64)}]),
+  ]);
+  assert.deepEqual(raced.map(result=>result.status).sort(),['fulfilled','rejected']);
+  const rejected=raced.find(result=>result.status==='rejected');
+  assert.equal(rejected?.status==='rejected'&&rejected.reason instanceof Error?rejected.reason.message:null,'NOTIFICATION_POLICY_VERSION_CONFLICT');
+  assert.equal((await rows()).rows.filter(row=>row.policy_id==='booking-confirmation'&&row.policy_version===4).length,1);
 });
 
 await test('check-in, dispatch, departure and arrival policies create only current canonical effects',{timeout:60000},async t=>{

@@ -10,7 +10,7 @@ Implementation branch: `issue-40-notification-automation`, based on refreshed ma
 | Requirement | Executable or structural evidence |
 | --- | --- |
 | Explicit versioned policies | Closed registry, exact v1 envelope validators and configuration parser rejection cases |
-| Durable cutover | Immutable activation rows, insert-once deployment activation and historical-event test |
+| Durable cutover and version identity | Per-policy code-and-binding hashes; identical, conflicting, new-version, suppression-only and concurrent activation tests; historical-event test |
 | Correct authoritative resolution | Booking/Parcel joins; Route fanout solely through immutable `route_parcel_effects` |
 | No duplicate Route/transit notification | Shared semantic key plus durable `overlapping_route_cause` suppression test |
 | One intent per affected Parcel | Outbound uniqueness includes `affected_entity_id`; Route integration test |
@@ -23,6 +23,15 @@ Implementation branch: `issue-40-notification-automation`, based on refreshed ma
 
 All fixtures use fictional contacts, fake provider adapters and disposable PostgreSQL.
 No live Meta request or customer notification is made.
+
+The activation regression suite proves that an exact restart preserves the original row and
+timestamp; template, language, variable-set and variable-order changes fail with only
+`NOTIFICATION_POLICY_VERSION_CONFLICT`; a new version coexists with the old identity; and
+concurrent identical callers converge while different hashes admit only one winner. Hashes
+are independent per policy, so a Route binding change leaves the Booking identity valid.
+The suppression-only policy activates deterministically without a template. A pending domain
+event remains unprocessed when activation rejects, matching runtime composition order:
+activation completes before production consumer construction and polling.
 
 ## Verification run
 
@@ -49,14 +58,15 @@ changing authorization or policy behavior and then passed 7/7. The first #40 fai
 injection fixture also reused an already loaded migration module, so the synthetic error did
 not execute; using a fresh copied migration directory then proved rollback and retry.
 
-Two later full-quality attempts reached an unchanged web onboarding test and timed out while
+During the original implementation, two later full-quality attempts reached an unchanged web onboarding test and timed out while
 it remained at `Checking workspace access…`; the standalone web suite immediately passed
-155/155. No web code or timeout was changed. The final complete quality run bounded Vitest
-worker concurrency to one, executed every unchanged check, and passed.
+155/155. No web code or timeout was changed. That original complete quality run bounded
+Vitest worker concurrency to one, executed every unchanged check, and passed.
 
-The final full quality run reported 29 quality-contract tests, 22 testkit tests, 12 database
-unit tests, 476 API tests, 155 web tests, 3 object-store contract tests, and the final
-PostgreSQL matrix of 64 database plus 278 API tests. All reported zero failures, skips,
-cancellations and todos where the runner exposes those categories, and both production
-builds passed. The final planning, diff and remote CI results are recorded after the last
-documentation-only edit and PR publication.
+The immutable-version follow-up ran the normal unbounded `pnpm db:local quality` command
+successfully; no concurrency override was needed. It reported 29 quality-contract tests,
+22 testkit tests, 12 database unit tests, 477 API tests, 155 web tests, 3 object-store
+contract tests, and the final PostgreSQL matrix of 64 database plus 279 API tests. All
+reported zero failures, skips, cancellations and todos where the runner exposes those
+categories, and both production builds passed. The final planning, diff and remote CI
+results are recorded after the last documentation-only edit and PR publication.

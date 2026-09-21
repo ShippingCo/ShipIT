@@ -28,7 +28,15 @@ bindings fail runtime composition.
 
 Every configured organization/franchise owner receives an immutable activation row
 before the production consumer starts. The first activation timestamp is never advanced
-by restart or configuration repair. Events older than that cutover become durable
+by an identical restart. Its `binding_hash` is a domain-separated per-policy digest of the
+closed code-owned semantics and exact template name, language and ordered variables. A
+missing binding is an explicit null component; the non-notifying `parcel-route-overlap`
+policy therefore has a deterministic code-owned identity without a fake template. A
+different hash for an existing policy/version raises the controlled
+`NOTIFICATION_POLICY_VERSION_CONFLICT` startup failure before the consumer is constructed.
+Changing a template, language, ordered variables or versioned code semantics requires a new
+policy version. Unrelated policy changes do not alter another policy's hash. Events older
+than the original cutover become durable
 `historical_cutover` skips, preventing an installation enabled later from replaying old
 customer notifications. A new policy version has a separate activation.
 

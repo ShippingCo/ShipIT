@@ -28,9 +28,18 @@ installation/template dependency is `blocked`, and an eligible #39 intent is `qu
 Only controlled reason codes and references are retained.
 
 Each configured tenant owner receives an immutable policy activation before the consumer
-starts. The first activation timestamp is insert-once. An event older than it records a
+starts. Each policy/version has an independent, domain-separated SHA-256 identity over its
+closed code definition (ID, version, event, aggregate, notification kind, affected type,
+allowed variables and notify flag) plus its exact template name, language and ordered
+variables. Missing bindings are represented explicitly; the suppression-only
+`parcel-route-overlap` identity uses its code definition and a null binding, never a fake
+template. The first activation timestamp is insert-once. An identical restart is a no-op,
+while a different identity for the same version fails startup before consumer construction.
+Changing a template, language, ordered variables or versioned code semantics therefore
+requires a new policy version. Because identities are per policy, changing another policy
+does not invalidate an unchanged version. An event older than the activation records a
 `historical_cutover` skip, including events discovered later by #35; enabling configuration
-therefore cannot message the historical backlog. A new version requires a new activation.
+therefore cannot message the historical backlog.
 
 `notification_automation_decisions` is append-only and stores source event, policy/version,
 affected Booking/Parcel, customer reference, semantic key, outcome, reason, correlation and
@@ -49,7 +58,10 @@ outbox jobs, receipts, effects and unique keys already provide the required atom
 
 ## Failure, recovery and consequences
 
-Configuration errors fail startup. Durable blocked/suppressed/skipped decisions expose
+Configuration errors and immutable-version conflicts fail startup with controlled codes.
+The activation function inserts or locks and compares each identity atomically, making
+identical and conflicting concurrent starts safe without exposing configuration or database
+details. Durable blocked/suppressed/skipped decisions expose
 business-policy outcomes without retry loops; transient database failures roll back both
 decision/enqueue and #35 receipt for normal retry. Provider outage occurs after commit and
 leaves #39's durable intent recoverable. Activation and decision evidence cannot be updated

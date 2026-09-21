@@ -387,7 +387,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT ON shipit.notification_policy_activations,shipit.notification_automation_decisions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT ON shipit.notification_automation_decisions TO ${identifier(resource.runtimeRole)}`);
-        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.notification_policy_activate(uuid,uuid,jsonb,text) TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.notification_policy_activate(uuid,uuid,jsonb) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareWhatsappConsent() {
