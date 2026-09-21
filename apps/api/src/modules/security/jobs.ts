@@ -4,6 +4,15 @@ import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
 import type { InboxInput } from '../whatsapp/webhook-payload.ts';
 
+/** Deployment-only cutover. Owner pairs come from validated server configuration and the
+ * definer function accepts only existing tenant owners and the fixed consumer registry. */
+export async function activateNotificationPolicies(database:DatabasePool,owners:readonly {organization_id:string;franchise_id:string}[],policies:unknown,hash:string) {
+  await withTransaction(database,async tx=>{
+    for(const owner of owners)await tx.query('SELECT shipit.notification_policy_activate($1,$2,$3,$4)',
+      [owner.organization_id,owner.franchise_id,JSON.stringify(policies),hash]);
+  });
+}
+
 /** References are resolved from the durable outbound ledger, never from client ownership. */
 export async function withOutboundScope<T>(database:DatabasePool,target:string|null,now:Date|null,work:(scope:TenantAccess,id:string)=>Promise<T>,attention=false):Promise<T|null> {
   return withTransaction(database,async tx=>{

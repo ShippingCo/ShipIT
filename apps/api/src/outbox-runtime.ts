@@ -3,8 +3,12 @@ import { checkDatabaseReadiness, createDatabaseConfig, createPool, type Database
 import type { RuntimeConfig } from './env.ts';
 import type { SecretResolver } from './secrets.ts';
 import type { Consumer } from './modules/outbox/types.ts';
+import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
+import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createOutboxWorker, type WorkerTelemetry } from './modules/outbox/worker.ts';
 import { productionConsumers } from './modules/outbox/consumers.ts';
+import { activationDocument,configurationHash } from './modules/automation/registry.ts';
+import { activateNotificationPolicies } from './modules/security/jobs.ts';
 
 /** One bounded cycle at a time. Shutdown stops claiming and drains the current DB effect. */
 export function runOutboxLoop(database:DatabasePool,consumers:readonly Consumer[],signal:AbortSignal,telemetry:WorkerTelemetry) {
@@ -18,17 +22,29 @@ export function runOutboxLoop(database:DatabasePool,consumers:readonly Consumer[
   })();
 }
 export async function startOutboxRuntime(config:RuntimeConfig,resolver:SecretResolver,signal:AbortSignal,telemetry:WorkerTelemetry,
-  consumers:readonly Consumer[]=productionConsumers) {
+  injectedConsumers?:readonly Consumer[]) {
   if((config.environment!=='developer'&&resolver.kind!=='managed')||
     (config.databaseSecretRef.startsWith('local:')!==(resolver.kind==='developer-local')))throw new Error('OUTBOX_CONFIGURATION_INVALID');
   const deadline=AbortSignal.timeout(10000),resolutionSignal=AbortSignal.any([signal,deadline]);
-  const connection=await Promise.race([resolver.resolve(config.databaseSecretRef,resolutionSignal),
+  const values=await Promise.race([Promise.all([resolver.resolve(config.databaseSecretRef,resolutionSignal),
+    !injectedConsumers&&config.whatsappConfigRef?resolver.resolve(config.whatsappConfigRef,resolutionSignal):Promise.resolve(undefined)]),
     new Promise<never>((_,reject)=>{if(resolutionSignal.aborted)reject(new Error('OUTBOX_STARTUP_ABORTED'));
       else resolutionSignal.addEventListener('abort',()=>reject(new Error('OUTBOX_STARTUP_ABORTED')),{once:true});})]);
-  const database=createPool(createDatabaseConfig({connectionString:connection,environment:config.environment,tls:config.databaseTls,
+  const database=createPool(createDatabaseConfig({connectionString:values[0],environment:config.environment,tls:config.databaseTls,
     applicationName:'shipit_outbox',maxConnections:2,statementTimeoutMs:5000,queryTimeoutMs:6000,idleTransactionTimeoutMs:10000}));
   try {
     if(signal.aborted||(await checkDatabaseReadiness(database)).status!=='ready')throw new Error('OUTBOX_STARTUP_FAILED');
+    let consumers=injectedConsumers;
+    if(!consumers) {
+      if(!values[1])throw new Error('NOTIFICATION_AUTOMATION_CONFIGURATION_REQUIRED');
+      const configuration=parseWhatsappConfiguration(values[1],config.environment);
+      if(!configuration.webhook||!configuration.automation)throw new Error('NOTIFICATION_AUTOMATION_CONFIGURATION_REQUIRED');
+      const owners=[...new Map(configuration.bindings.map(b=>[`${b.organization_id}:${b.franchise_id}`,
+        {organization_id:b.organization_id,franchise_id:b.franchise_id}])).values()];
+      if(!owners.length)throw new Error('NOTIFICATION_AUTOMATION_CONFIGURATION_REQUIRED');
+      await activateNotificationPolicies(database,owners,activationDocument,configurationHash(configuration.automation.policies));
+      consumers=productionConsumers({configuration,provider:createMetaProvider({configuration,secrets:resolver})});
+    }
     await runOutboxLoop(database,consumers,signal,telemetry);
   } finally { await database.close(); }
 }

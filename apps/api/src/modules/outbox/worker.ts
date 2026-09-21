@@ -47,7 +47,8 @@ export function createOutboxWorker(database: DatabasePool, input: readonly Consu
         if (await repository.versionConflict(scope,c.id,event)) return 'version_conflict' as const;
         if (event.aggregate_version > highWater + 1 && (!c.reconcileGap || !await c.reconcileGap(scope,event,highWater))) return 'ordering_gap' as const;
         const outcome = disposition(c.ordering,event.aggregate_version,highWater);
-        if (outcome !== 'skipped_stale') {
+        if (outcome === 'skipped_stale' && c.applyStale) await c.applyStale(scope,event);
+        else if (outcome !== 'skipped_stale') {
           try { await c.apply(scope,event,outcome === 'historical'); }
           catch(error) { if (error instanceof PermanentJobFailure) failure = 'permanent_failure'; throw error; }
         }

@@ -22,7 +22,7 @@ await test('inbox upgrade preserves populated #36 evidence, rolls back atomicall
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue37_function()');};\n");
   await assert.rejects(db.migrate({dir:directory}));
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.whatsapp_inbox') value")).rows[0]!.value,null);
-  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual(await snapshot(),before);
   // Existing provider configuration APIs continue operating without inbox enablement.
   assert.equal((await s.request('installation')).json().installation.version,2);

@@ -18,7 +18,7 @@ overview under the existing ADRs; actual data adapters remain Issue #18.
 | `utils/receipt.ts` | M2 immutable receipt snapshot/API | Keep HTML escaping, existing layout and explicit user print action. |
 | `utils/image.ts`, inline attachment URLs | M2 private uploads | Reuse input experience; private validated storage replaces base64 localStorage. |
 | `EwayPage.tsx`, EwayRecord | M2 record tracking; M6 compliance verification | Keep separate navigation; distinguish estimates from externally issued official validity. |
-| `data/messages.ts`, outbox and Automation Feed | M3 approved templates/provider/outbox/workers | Keep English/Hindi message intent; consent/window rules verified from current provider policy. |
+| `data/messages.ts`, outbox and Automation Feed | M3 approved templates/provider/outbox/workers; #40 decision backend; #44 production feed UI | Keep language-specific message intent and safe automation outcomes; consent/window rules remain server policy, while the current feed stays prototype-only until #44. |
 | `CustomerWhatsApp.tsx`, `data/bot.ts` | M4 verified customer context and deterministic tools | Simulated arbitrary-phone persona stays demo-only. No public foreign-docket disclosure or raw OTP tool result. |
 | `ReportsPage.tsx`, report helpers | M6 scoped snapshots/queries/exports | Preserve cards → detail/table/filter/export UX and reconcile tax/collections. |
 | `MiscPages.tsx` settings/escalations | M4 staff handoff; M6 versioned settings | Replace hardcoded callback promises with actual staffing policy and audited configuration. |

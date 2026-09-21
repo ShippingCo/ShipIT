@@ -13,7 +13,7 @@ import { persistBusinessWebhook } from '../../../../apps/api/src/modules/securit
 import { createInboxWorker } from '../../../../apps/api/src/modules/whatsapp/inbox-worker.ts';
 import { createConsentWorker } from '../../../../apps/api/src/modules/whatsapp/consent-worker.ts';
 
-await test('populated #38 upgrade preserves inbox/consent/audit, rolls back on failure and adds restricted outbound schema',{timeout:30000},async t=>{
+await test('populated #38/#39 upgrades preserve evidence and both forward migrations roll back and retry',{timeout:30000},async t=>{
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:25}),{applied:25});
  const migrate=db.migrate;db.migrate=async()=>({applied:0});const s=await whatsappSetup(t,db);await db.prepareWhatsappConsent();await s.connect();
  const body=Buffer.from(JSON.stringify(callback([inbound()],{kind:'messages'})));
@@ -28,6 +28,15 @@ await test('populated #38 upgrade preserves inbox/consent/audit, rolls back on f
  await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue39_function()');};\n");
  await assert.rejects(db.migrate({dir:directory}));assert.deepEqual(await snapshot(),before);
  assert.equal((await db.adminQuery("SELECT to_regclass('shipit.whatsapp_outbound') value")).rows[0]!.value,null);
+ assert.deepEqual(await db.migrate({count:1}),{applied:1});const beforeAutomation=await snapshot();
+ const automationDirectory=await mkdtemp(join(tmpdir(),'shipit-automation-upgrade-'));
+ t.after(()=>{assert.equal(dirname(automationDirectory),tmpdir());assert.ok(basename(automationDirectory).startsWith('shipit-automation-upgrade-'));return rm(automationDirectory,{recursive:true,force:true});});
+ await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),automationDirectory,{recursive:true});
+ const automationFile=join(automationDirectory,'1790960400000-notification-automation.cjs');
+ await writeFile(automationFile,(await readFile(automationFile,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue40_function()');};\n");
+ await assert.rejects(db.migrate({dir:automationDirectory}));assert.deepEqual(await snapshot(),beforeAutomation);
+ assert.equal((await db.adminQuery("SELECT to_regclass('shipit.notification_automation_decisions') value")).rows[0]!.value,null);
+ assert.equal((await db.adminQuery("SELECT count(*)::int n FROM information_schema.columns WHERE table_schema='shipit' AND table_name='whatsapp_outbound' AND column_name='affected_entity_id'")).rows[0]!.n,0);
  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
  const count=(await db.adminQuery(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace,
  LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE n.nspname='shipit'

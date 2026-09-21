@@ -22,9 +22,10 @@ transaction. Recovery checks the receipt before permitting another effect.
 
 ## Execution and ownership
 
-`apps/api/src/modules/outbox/consumers.ts` is the code-owned registry. It is empty
-until downstream owners add reviewed handlers (#39/#40/#55/#58). Starting an empty
-registry is safe and idle; it does not acknowledge undispatched producer events.
+`apps/api/src/modules/outbox/consumers.ts` is the code-owned registry. It contains the
+stable `customer-notifications` handler from #40; later owners may add reviewed handlers
+(#55/#58). A deliberately injected empty registry remains safe and idle in tests; it does
+not acknowledge undispatched producer events.
 Registration IDs are durable protocol identities, not deployment/version strings.
 Changing an ID replays all subscribed history and requires explicit owner review.
 Removing a consumer pauses its jobs; restore the same ID to resume them.
@@ -114,7 +115,9 @@ from `.env.example`, then run `pnpm --filter @shippingco/api start:worker`. `.en
 loaded automatically. This entry point accepts only developer-local secret resolution;
 hosted composition must inject a managed resolver into `startOutboxRuntime`. It requires
 no messaging credentials. SIGINT/SIGTERM stops new claims and drains the current effect
-before closing the pool. An empty registry performs no business work.
+before closing the pool. The production registry requires #40's validated server-only
+WhatsApp configuration; constructing it makes no provider call. An injected empty registry
+performs no business work.
 
 Migration `1790528400000-durable-outbox.cjs` is additive, with no backfill of jobs and no
 producer rewrite. Composite owner foreign keys and unique identities protect links;

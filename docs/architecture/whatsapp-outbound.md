@@ -6,20 +6,21 @@
 
 `enqueueMessage(scope, dependencies, input)` is an internal database-only consumer effect.
 The capability must be trusted `outbox.work`; it does not accept caller ownership or phone.
-Fields: `source_kind` (`event` or `inbox`), `source_id`, `customer_id`, `purpose` (`updates`,
+Fields: `source_kind` (`event` or `inbox`), `source_id`, optional `affected_entity_id`, `customer_id`, `purpose` (`updates`,
 `requested_assistance`, `consent_disclosure`), and `format` (`text` or `template`). Text
 requires a nonempty body of at most 4096 characters; template requires exact registered
 name/language and bounded text variables. Disclosure accepts no caller body and uses
 fixed server content. Updates require a valid owning booking/parcel event; assistance
 and disclosure require a consumed same-customer inbound reference. Unknown fields fail.
 
-The service returns `{id}`. Exact logical retries preserve that ID, while changed canonical
+The service returns `{id,state,reason_code}`. Exact logical retries preserve that ID, while changed canonical
 intent conflicts. Source/customer access is checked before replay. Policy denial persists
 a suppressed intent without sensitive rendering for consent/contact denial. Template or
 installation failures retain a failed, repairable intent until its deadline. No public enqueue/send endpoint exists.
 Call from the owning post-commit consumer, never the booking request transaction. #40
-registers event automation; #41 owns route fanout, #42 delivery challenges, #44 history UI,
-and #47 conversation decisions. None is silently implemented by this issue.
+registers initial Booking/Parcel/Route automation and Route fanout; #41 owns route-delay
+fanout, #42 delivery challenges, #43 attempt/RTO/completion notifications, #44 history UI,
+and #47 conversation decisions.
 
 ## States and failure boundary
 
@@ -107,7 +108,8 @@ include `"outbound_enabled":true` only with the signed webhook configuration. Om
 defaults to disabled. The API runtime drains the current five-second provider request on
 shutdown. Polling starts on readiness and is bounded to one intent per second per replica.
 Enable only in isolated development/staging with reviewed synthetic consumers first.
-Production producers remain unchanged until #40 installs its reviewed subscriptions.
+#40 installs its reviewed subscriptions only after immutable per-policy cutover activation.
+Events predating activation are recorded as historical skips, not outbound intents.
 
 Rendering is sealed with the configured versioned key and purged on acceptance/suppression
 or the 24-hour dispatch deadline. Keep that key version available for pending work; missing

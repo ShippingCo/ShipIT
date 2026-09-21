@@ -21,7 +21,7 @@ export async function enqueueMessage(scope:TenantAccess,dependencies:WhatsappDep
  const fingerprint=outboundFingerprint(config,input),prior=await repository.prior(scope,input);
  if(prior) {
   if(prior.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');
-  return {id:prior.id};
+  return {id:prior.id,state:prior.state,reason_code:prior.reason_code};
  }
  const instant=await repository.now(scope,dependencies.clock?.());
  const policy=await checkCurrentConsent(scope,{...dependencies,clock:()=>instant},{...input,purpose:input.purpose==='consent_disclosure'?'requested_assistance':input.purpose,
@@ -29,11 +29,11 @@ export async function enqueueMessage(scope:TenantAccess,dependencies:WhatsappDep
  const rendering=input.purpose==='consent_disclosure'?{...input,text:disclosureText(await repository.businessName(scope))}:input;
  const id=randomUUID();
  const state=policy.allowed?'queued':policyFailure(policy.reason);
- const saved=await repository.insert(scope,[id,installation.id,customer.id,customer.contact_version,consentContactKey(config,installation.id,customer.phone_normalized),input.source_id,input.source_kind,input.purpose,
+ const saved=await repository.insert(scope,[id,installation.id,customer.id,customer.contact_version,consentContactKey(config,installation.id,customer.phone_normalized),input.source_id,input.affected_entity_id,input.source_kind,input.purpose,
   fingerprint,state==='suppressed'?null:sealOutbound(config,id,rendering),config.key_version,new Date(instant.getTime()+86400000),
   input.purpose==='consent_disclosure'?createHash('sha256').update(rendering.text!).digest('hex'):null,state,policy.reason]);
- if(saved)return {id:saved.id};
+ if(saved)return {id:saved.id,state:saved.state,reason_code:saved.reason_code};
  const concurrent=await repository.prior(scope,input);
  if(!concurrent||concurrent.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');
- return {id:concurrent.id};
+ return {id:concurrent.id,state:concurrent.state,reason_code:concurrent.reason_code};
 }

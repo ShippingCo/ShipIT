@@ -38,6 +38,14 @@ describe('WhatsApp provider boundary',()=>{
     expect(()=>parseWhatsappConfiguration(JSON.stringify(configuration),'demo')).toThrow();
     expect(parseWhatsappConfiguration(JSON.stringify({...configuration,bindings:[binding,{...binding,key:'rotation',credential_ref:'whatsapp:synthetic/v2'}]}),'production').bindings).toHaveLength(2);
   });
+  it('pins exact automation policy, template, language and positional data bindings',()=>{
+    const automation={policies:[{policy_id:'booking-confirmation',policy_version:1,template_name:'booking_confirmation',template_language:'en_US',variables:['booking_id']}]};
+    expect(parseWhatsappConfiguration(JSON.stringify({...configuration,automation}),'production').automation).toEqual(automation);
+    for(const policy of [{...automation.policies[0],policy_version:0},{...automation.policies[0],template_language:'latest'},
+      {...automation.policies[0],variables:['booking id']},{...automation.policies[0],secret:'private'}])
+      expect(()=>parseWhatsappConfiguration(JSON.stringify({...configuration,automation:{policies:[policy]}}),'production')).toThrow('CONFIGURATION_INVALID');
+    expect(()=>parseWhatsappConfiguration(JSON.stringify({...configuration,automation:{policies:[automation.policies[0],automation.policies[0]]}}),'production')).toThrow('CONFIGURATION_INVALID');
+  });
   it('checks the exact WABA phone membership, verification and platform',async()=>{
     const s=setup(async()=>reply({data:[{id:binding.phone_number_id,code_verification_status:'VERIFIED',platform_type:'CLOUD_API'}]}));
     await s.provider.validate(binding);expect(s.resolve).toHaveBeenCalledWith(binding.credential_ref,expect.any(AbortSignal));

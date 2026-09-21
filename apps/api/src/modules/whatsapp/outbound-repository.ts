@@ -1,40 +1,51 @@
 import { scopedQuery, type TenantAccess } from '../security/scope.ts';
-import type { OutboundInput } from './outbound-rules.ts';
+import type { OutboundInput,ResolvedOutboundInput } from './outbound-rules.ts';
 
 export interface Outbound {
  id:string;organization_id:string;franchise_id:string;installation_id:string;customer_id:string;contact_version:string;contact_key:string;
- source_id:string;source_kind:'event'|'inbox';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
+ source_id:string;affected_entity_id:string;source_kind:'event'|'inbox';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
  state:string;reason_code:string;version:number;attempts:number;cycle_attempts:number;attempt_id:string|null;lease_until:Date|null;available_at:Date;created_at:Date;
 }
 type MessageSummary=Pick<Outbound,'id'|'state'|'reason_code'|'version'|'attempts'|'cycle_attempts'|'created_at'|'available_at'|'expires_at'>;
 export const safeMessage=(m:MessageSummary)=>({id:m.id,state:m.state,reason_code:m.reason_code,version:m.version,attempts:m.attempts,
  cycle_attempts:m.cycle_attempts,created_at:m.created_at,available_at:m.available_at,expires_at:m.expires_at});
-export async function prior(scope:TenantAccess,input:OutboundInput) {
+export async function prior(scope:TenantAccess,input:ResolvedOutboundInput) {
  return (await scopedQuery<Outbound>(scope,['outbox.work'],`SELECT m.* FROM shipit.whatsapp_outbound m
- WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.source_kind=$1 AND m.source_id=$2 AND m.customer_id=$3 AND m.purpose=$4`,
- [input.source_kind,input.source_id,input.customer_id,input.purpose])).rows[0];
+ WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.source_kind=$1 AND m.source_id=$2 AND m.affected_entity_id=$3 AND m.customer_id=$4 AND m.purpose=$5`,
+ [input.source_kind,input.source_id,input.affected_entity_id,input.customer_id,input.purpose])).rows[0];
 }
-export async function sourceValid(scope:TenantAccess,input:OutboundInput) {
+export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput) {
  if(input.source_kind==='inbox')return (await scopedQuery(scope,['outbox.work'],`SELECT r.inbox_id FROM shipit.whatsapp_consent_receipts r
  WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.inbox_id=$1 AND r.customer_id=$2 AND r.intent='other' AND r.outcome='unchanged'`,[input.source_id,input.customer_id])).rows.length===1;
- return (await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.bookings b
+ const direct=(await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.bookings b
  ON b.organization_id=e.organization_id AND b.franchise_id=e.franchise_id
  JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id
  WHERE {{franchise:e.organization_id:e.franchise_id}} AND {{franchise:b.organization_id:b.franchise_id}}
  AND {{franchise:c.organization_id:c.franchise_id}} AND b.customer_snapshot->>'phone'=c.phone_normalized
- AND e.event_id=$1 AND b.customer_id=$2 AND (e.aggregate_id=b.id OR e.envelope->'payload'->>'booking_id'=b.id::text OR
- EXISTS(SELECT 1 FROM shipit.parcels p WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.booking_id=b.id AND p.id=e.aggregate_id)) LIMIT 1`,
- [input.source_id,input.customer_id])).rows.length===1;
+ AND e.event_id=$1 AND b.customer_id=$2 AND ($3=$1 OR b.id=$3 OR EXISTS(SELECT 1 FROM shipit.parcels p
+ WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.booking_id=b.id AND p.id=$3))
+ AND (e.aggregate_id=b.id OR e.envelope->'payload'->>'booking_id'=b.id::text OR
+ EXISTS(SELECT 1 FROM shipit.parcels p WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.booking_id=b.id AND
+   p.id=e.aggregate_id)) LIMIT 1`,[input.source_id,input.customer_id,input.affected_entity_id])).rows.length===1;
+ if(direct||input.affected_entity_id===input.source_id)return direct;
+ return (await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.route_parcel_effects x
+   ON x.organization_id=e.organization_id AND x.franchise_id=e.franchise_id AND x.event_id=e.event_id AND x.parcel_id=$3
+  JOIN shipit.bookings b ON b.organization_id=x.organization_id AND b.franchise_id=x.franchise_id AND b.id=x.booking_id
+  JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id
+  WHERE {{franchise:e.organization_id:e.franchise_id}} AND {{franchise:x.organization_id:x.franchise_id}}
+   AND {{franchise:b.organization_id:b.franchise_id}} AND {{franchise:c.organization_id:c.franchise_id}}
+   AND e.event_id=$1 AND b.customer_id=$2 AND b.customer_snapshot->>'phone'=c.phone_normalized LIMIT 1`,
+ [input.source_id,input.customer_id,input.affected_entity_id])).rows.length===1;
 }
 export async function businessName(scope:TenantAccess) {
  return (await scopedQuery<{display_name:string}>(scope,['outbox.work'],`SELECT f.display_name FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}}`)).rows[0]!.display_name;
 }
 export async function insert(scope:TenantAccess,values:readonly unknown[]) {
  const c=scope.context;
- return (await scopedQuery<Outbound>(scope,['outbox.work'],`INSERT INTO shipit.whatsapp_outbound(id,installation_id,customer_id,contact_version,contact_key,source_id,source_kind,purpose,
+ return (await scopedQuery<Outbound>(scope,['outbox.work'],`INSERT INTO shipit.whatsapp_outbound(id,installation_id,customer_id,contact_version,contact_key,source_id,affected_entity_id,source_kind,purpose,
  fingerprint,sealed_payload,key_version,expires_at,disclosure_hash,state,reason_code,organization_id,franchise_id,correlation_id)
- SELECT $1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::text,$8::text,$9::text,$10::text,$11::text,$12::timestamptz,$13::text,$14::text,$15::text,$16::uuid,$17::uuid,$18::uuid
- WHERE {{franchise:$16:$17}} ON CONFLICT(organization_id,franchise_id,source_kind,source_id,customer_id,purpose) DO NOTHING RETURNING *`,[...values,c.organizationId,c.permittedFranchiseIds[0],c.correlationId])).rows[0];
+ SELECT $1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::text,$9::text,$10::text,$11::text,$12::text,$13::timestamptz,$14::text,$15::text,$16::text,$17::uuid,$18::uuid,$19::uuid
+ WHERE {{franchise:$17:$18}} ON CONFLICT(organization_id,franchise_id,source_kind,source_id,affected_entity_id,customer_id,purpose) DO NOTHING RETURNING *`,[...values,c.organizationId,c.permittedFranchiseIds[0],c.correlationId])).rows[0];
 }
 export async function lock(scope:TenantAccess,id:string) {
  return (await scopedQuery<Outbound>(scope,['outbox.work','outbox.redrive'],`SELECT m.* FROM shipit.whatsapp_outbound m
