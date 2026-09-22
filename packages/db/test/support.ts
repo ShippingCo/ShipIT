@@ -388,6 +388,12 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT ON shipit.notification_policy_activations,shipit.notification_automation_decisions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT ON shipit.notification_automation_decisions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.notification_policy_activate(uuid,uuid,jsonb) TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT ON shipit.route_delay_reminder_commands,shipit.route_delay_reminder_events,
+          shipit.route_delay_fanouts,shipit.route_delay_fanout_items TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,result,committed_at) ON shipit.route_delay_reminder_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,cursor_parcel_id,completed_count,skipped_count,failed_count,attempt_count,reason_code,started_at,completed_at)
+          ON shipit.route_delay_fanouts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.route_delay_fanout_scope(timestamptz) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareWhatsappConsent() {

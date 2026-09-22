@@ -283,7 +283,7 @@ await test('upgrade preserves existing booking and dispatch events/audit byte-fo
   const legacy=await legacyDispatch(s.pool,s.operator.token,parcelId,legacyKey,legacyBody);
   const beforeEvents=(await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows;
   const beforeAudit=(await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows;assert.ok(beforeEvents.length>=4);assert.ok(beforeAudit.length>0);
-  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:13});await db.prepareRoutes();
+  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:14});await db.prepareRoutes();
   assert.deepEqual((await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows,beforeEvents);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows,beforeAudit);
   const {createParcelService}=await import('../../src/modules/parcels/service.ts');

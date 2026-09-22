@@ -13,6 +13,7 @@ export const notificationPolicies:readonly NotificationPolicy[]=Object.freeze([
   {id:'parcel-dispatched',version:1,event:'parcel.dispatched',aggregate:'parcel',kind:'parcel_dispatched',affected:'parcel',variables:['docket','occurred_at'],notify:true},
   {id:'parcel-route-overlap',version:1,event:'parcel.in_transit',aggregate:'parcel',kind:'route_departed',affected:'parcel',variables:[],notify:false},
   {id:'route-departed',version:1,event:'route.departed',aggregate:'route',kind:'route_departed',affected:'parcel',variables:['docket','route_id','effective_at','base_eta_at','revised_eta_at'],notify:true},
+  {id:'route-delayed',version:1,event:'route.delayed',aggregate:'route',kind:'route_delayed',affected:'parcel',variables:['docket','effective_at','revised_eta_at'],notify:true},
   {id:'route-arrived',version:1,event:'route.arrived',aggregate:'route',kind:'route_arrived',affected:'parcel',variables:['docket','route_id','effective_at'],notify:true},
 ]);
 export const notificationSubscriptions=Object.freeze(Object.fromEntries(notificationPolicies.map(p=>[p.event,Object.freeze([1])])));

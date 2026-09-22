@@ -18,6 +18,7 @@ The closed v1 registry consumes strict schema-version-1 envelopes for:
 | `parcel-dispatched:1` | `parcel.dispatched` | Parcel | `parcel_dispatched` |
 | `parcel-route-overlap:1` | `parcel.in_transit` | Parcel | `route_departed` suppression |
 | `route-departed:1` | `route.departed` | each immutable route effect Parcel | `route_departed` |
+| `route-delayed:1` | `route.delayed` | each immutable route effect Parcel via resumable fanout | `route_delayed` |
 | `route-arrived:1` | `route.arrived` | each immutable route effect Parcel | `route_arrived` |
 
 `WHATSAPP_CONFIG_REF` may contain the server-only `automation.policies` array. Each
@@ -72,6 +73,11 @@ event to create one intent per Parcel even when a customer owns several affected
 Consent and template policy remain #38/#39 authority. Provider I/O remains in the later
 outbound worker after commit.
 
+`route.delayed` is the bounded exception to the same-transaction per-item rule. Its source
+effect creates only a durable root. [Issue #41's worker](route-delay-notifications.md)
+processes at most 20 frozen effects per pass and commits each item independently; its
+narrow item ledger is the delay policy decision truth and references the #39 intent.
+
 ## Read authorization
 
 `GET /api/v1/whatsapp/automation` and
@@ -80,5 +86,5 @@ signed, actor/revision-bound pagination. They reuse R16 `whatsapp.consent.read`:
 franchise admin, operator and dispatcher are permitted for the selected franchise;
 `read_only`, sibling and foreign tenant access fail closed.
 
-Route delay remains #41. Delivery challenges remain #42. Attempt, RTO and completion
-notifications remain #43, and the browser automation feed remains #44.
+Delivery challenges remain #42. Attempt, RTO and completion notifications remain #43, and
+the browser automation feed remains #44.

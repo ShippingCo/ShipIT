@@ -37,7 +37,7 @@ await test('populated #38/#39 upgrades preserve evidence and both forward migrat
  await assert.rejects(db.migrate({dir:automationDirectory}));assert.deepEqual(await snapshot(),beforeAutomation);
  assert.equal((await db.adminQuery("SELECT to_regclass('shipit.notification_automation_decisions') value")).rows[0]!.value,null);
  assert.equal((await db.adminQuery("SELECT count(*)::int n FROM information_schema.columns WHERE table_schema='shipit' AND table_name='whatsapp_outbound' AND column_name='affected_entity_id'")).rows[0]!.n,0);
- assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
  const count=(await db.adminQuery(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace,
  LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE n.nspname='shipit'
  AND p.proname LIKE '%outbound%' AND a.grantee=0 AND a.privilege_type='EXECUTE'`)).rows[0]!.n;assert.equal(count,0);

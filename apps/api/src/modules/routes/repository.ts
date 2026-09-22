@@ -2,7 +2,7 @@ import { assertTenantAccess,scopedQuery,type TenantAccess } from '../security/sc
 import { HttpError } from '../../plugins/errors.ts';
 import type { RouteRow,ManifestRow,RouteOperation,RouteInput,RouteFilter,RouteBoundary,SourceRow,Contribution,RouteDto,RouteManifestItem } from './types.ts';
 const columns='r.id,r.origin,r.destination,r.mode,r.carrier_code,r.scheduled_departure_at,r.state,r.version,r.current_manifest_id,r.created_at,r.updated_at';
-function context(scope:TenantAccess) {return assertTenantAccess(scope,['routes.departure','routes.delay','routes.arrival','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach']);}
+function context(scope:TenantAccess) {return assertTenantAccess(scope,['routes.departure','routes.delay','routes.arrival','routes.delay.remind','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach']);}
 export async function active(scope:TenantAccess) {
   const c=context(scope),row=(await scopedQuery<{lifecycle:string;now:Date}>(scope,[c.action],`SELECT lifecycle,date_trunc('milliseconds',clock_timestamp()) AS now
     FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`)).rows[0];

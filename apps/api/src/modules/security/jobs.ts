@@ -128,3 +128,16 @@ export async function withOutboxJobScope<T>(database:DatabasePool,job:string,wor
       permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}));
   });
 }
+
+/** Route-delay fanout ownership is derived only from the persisted root selected by
+ * the fixed database scheduler. One item and its progress commit per transaction. */
+export async function withNextRouteDelayFanoutScope<T>(database:DatabasePool,now:Date,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    await tx.query("SET LOCAL transaction_timeout = '25s'");
+    const row=(await tx.query<{organization_id:string;franchise_id:string;fanout_id:string}>(
+      'SELECT organization_id,franchise_id,fanout_id FROM shipit.route_delay_fanout_scope($1)',[now])).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.fanout_id);
+  });
+}

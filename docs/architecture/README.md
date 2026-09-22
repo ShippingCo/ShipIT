@@ -203,3 +203,8 @@ Issue #35 adds the [durable outbox worker and operational API](outbox.md), with 
 [Outbound WhatsApp](whatsapp-outbound.md) implements durable intents, controlled provider attempts, monotone delivery history and audited recovery; [verification](issue-39-verification.md).
 
 [Notification automation](notification-automation.md) implements the versioned #40 event-policy resolver, immutable activation cutover, Route/Parcel overlap suppression and database-only #39 enqueue boundary; [verification](issue-40-verification.md).
+
+[Route-delay notifications](route-delay-notifications.md) implement #41's frozen-membership,
+bounded resumable fanout and separately identified W19 reminder; see
+[ADR 0029](../adr/0029-route-delay-notification-fanout.md) and
+[verification](issue-41-verification.md).

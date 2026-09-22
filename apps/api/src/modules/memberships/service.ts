@@ -533,7 +533,7 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
 
 /** Route read/command work and current RBAC share one transaction and independent capabilities. */
 export async function withRouteScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
-  action:import('../routes/types.ts').RouteOperation|import('../routes/event-types.ts').RouteEventOperation|'routes.read'|'routes.list',correlationId:string,
+  action:import('../routes/types.ts').RouteOperation|import('../routes/event-types.ts').RouteEventOperation|'routes.delay.remind'|'routes.read'|'routes.list',correlationId:string,
   work:(scopes:import('../routes/types.ts').RouteScopes)=>Promise<T>):Promise<T> {
   const reading=action==='routes.read'||action==='routes.list';
   return membershipTransaction(database,async tx=>{
