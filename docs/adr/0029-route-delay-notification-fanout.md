@@ -52,8 +52,10 @@ The original alert is suppressed as `state_superseded` if a later Route delay ex
 Route is no longer departed. Otherwise its variables come from the latest authoritative
 `route_parcel_effects` delay row. A null `revised_eta_at` becomes the literal closed value
 `unavailable`; messaging never calculates an ETA. The v1 allowlist is `docket`,
-`effective_at`, `revised_eta_at`. Template name, language and variable order remain
-server-only configuration bound into the immutable policy activation hash.
+`effective_at`, `revised_eta_at`. `revised_eta_at` is mandatory for `route-delayed:1`. A
+Route-delay template that cannot represent the trusted ETA or the explicit `unavailable`
+value must not be activated. Template name, language and variable order remain server-only
+configuration bound into the immutable policy activation hash.
 
 Events before the policy activation create bounded `historical_cutover` results, never
 customer sends.

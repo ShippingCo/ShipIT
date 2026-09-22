@@ -31,6 +31,17 @@ test('policy bindings reject unknown versions, variables and duplicate identitie
   assert.throws(()=>policyBindings([valid,valid]));
 });
 
+test('route-delayed policy requires the trusted ETA variable while preserving closed optional variables',()=>{
+  const delayed={policy_id:'route-delayed',policy_version:1,template_name:'route_delayed',template_language:'en_US',variables:['revised_eta_at']};
+  assert.equal(policyBindings([delayed]).get('route-delayed:1'),delayed);
+  for(const variables of [[],['docket'],['effective_at'],['docket','effective_at']])
+    assert.throws(()=>policyBindings([{...delayed,variables}]),{message:'NOTIFICATION_POLICY_CONFIGURATION_INVALID'});
+  assert.throws(()=>policyBindings([{...delayed,variables:['revised_eta_at','unknown']}]),{message:'NOTIFICATION_POLICY_CONFIGURATION_INVALID'});
+  assert.throws(()=>policyBindings([{...delayed,variables:['revised_eta_at','revised_eta_at']}]),{message:'NOTIFICATION_POLICY_CONFIGURATION_INVALID'});
+  const booking={policy_id:'booking-confirmation',policy_version:1,template_name:'booking_confirmation',template_language:'en_US',variables:['booking_id']};
+  assert.equal(policyBindings([booking]).get('booking-confirmation:1'),booking);
+});
+
 test('policy activation identities are deterministic, independent and sensitive to versioned semantics',()=>{
   const booking={policy_id:'booking-confirmation',policy_version:1,template_name:'booking_confirmation',template_language:'en_US',variables:['booking_id','parcel_count']};
   const route={policy_id:'route-arrived',policy_version:1,template_name:'route_arrived',template_language:'en_US',variables:['docket','route_id']};
@@ -47,7 +58,7 @@ test('policy activation identities are deterministic, independent and sensitive 
   const delayed={policy_id:'route-delayed',policy_version:1,template_name:'route_delayed',template_language:'en_US',variables:['docket','effective_at','revised_eta_at']};
   const withDelay=policyActivationDocument([booking,route,delayed]);
   assert.equal(withDelay.find(p=>p.id==='booking-confirmation')!.binding_hash,original);
-  assert.equal(withDelay.find(p=>p.id==='route-delayed')!.binding_hash.length,64);
+  assert.equal(withDelay.find(p=>p.id==='route-delayed')!.binding_hash,'a467a19213dc812c7ee6f2d1d5ea9102f17d1b41cecaaae9a84bb9cabf70af1f');
 });
 
 test('Issue 41 preserves every previously activated policy-v1 binding hash',()=>{

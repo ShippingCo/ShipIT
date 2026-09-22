@@ -32,8 +32,10 @@ and an ordered subset of:
 - `effective_at`
 - `revised_eta_at`
 
-`revised_eta_at` is copied from current trusted Route-effect state. When absent, its exact
-value is `unavailable`. A template that cannot safely express that value must not be bound.
+`revised_eta_at` is mandatory for `route-delayed:1` and is copied from current trusted
+Route-effect state. When absent, its exact value is `unavailable`. A Route-delay template
+that cannot represent the trusted ETA or the explicit `unavailable` value must not be
+activated.
 The message must not include manifest contents, incident notes, evidence, staff, addresses,
 phones or unnecessary internal IDs.
 

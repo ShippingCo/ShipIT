@@ -21,6 +21,10 @@ The closed v1 registry consumes strict schema-version-1 envelopes for:
 | `route-delayed:1` | `route.delayed` | each immutable route effect Parcel via resumable fanout | `route_delayed` |
 | `route-arrived:1` | `route.arrived` | each immutable route effect Parcel | `route_arrived` |
 
+`revised_eta_at` is mandatory for `route-delayed:1`. A Route-delay template that cannot
+represent the trusted ETA or the explicit `unavailable` value must not be activated. The
+other allowlisted Route-delay variables remain optional.
+
 `WHATSAPP_CONFIG_REF` may contain the server-only `automation.policies` array. Each
 entry binds one exact policy/version to one exact approved-template name, language and
 ordered allowlisted variable list. No language, template or variable is guessed from
