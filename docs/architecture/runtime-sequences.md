@@ -109,9 +109,11 @@ sequenceDiagram
     else All writes valid
         Routes->>DB: COMMIT
         Routes-->>API: Canonical updated and skipped counts
-        Messaging->>DB: Claim committed cause and frozen affected set
-        Messaging->>DB: Create deduplicated per-parcel intents in bounded batches
-        Messaging->>Provider: Check current terminal status and consent, then send
+        Messaging->>DB: Establish durable root from committed frozen effects
+        loop At most 20 items per worker pass
+            Messaging->>DB: Recheck current state and commit one item/cursor
+        end
+        Messaging->>Provider: #39 rechecks consent, then sends queued intent
         alt Provider unavailable or uncertain
             Messaging->>DB: Retry or reconciliation state, ETA stays committed
         else Accepted
@@ -126,15 +128,16 @@ sequenceDiagram
 | 2 | Accept typed cause | Routes service | Route state, unique command/cause | Route status/version, immutable typed event, distinct affected membership | One route transaction | Same cause replays original result; stale version conflicts; title never controls state |
 | 3 | Propagate ETA effect | Parcels service, invoked by Routes | Locked parcel version, terminal status, existing ETA, prior cause application | Eligible parcel ETA/timeline and applied-cause identity | Same transaction, correlated parcel fact if #4 catalogs it | Each parcel once despite lot/direct overlap; delivered/RTO skipped; missing ETA remains explicitly unavailable |
 | 4 | Publish committed route fact | Routes service; Audit append; outbox persistence | All application results | Counts, audit, `route.delayed` with frozen membership reference | Commit with all preceding writes | Any required write failure rolls back every effect |
-| 5 | Fanout/reminder | Messaging service under #40/#41 | Committed affected set, current terminal status/consent, cause/purpose identity | Notification intents and per-item progress | Post-commit transactions | Partial batch retry schedules unfinished intents only; never modifies ETA |
+| 5 | Fanout/reminder | Messaging service under #40/#41 | Committed effect set, current terminal/Route/contact/consent state, cause/purpose identity | Root plus one item/cursor and optional #39 intent per transaction | At most 20 items per pass; one item transaction | Partial retry selects only after the durable cursor; newer Route fact safely supersedes old work; never modifies ETA |
 | 6 | Provider processing | Messaging service/adapter | Intent, installation, prior attempt | Attempt/reconciliation state only | After commit | Uncertain acceptance is not blindly retried; safe manual action is audited |
 
 Initial consistency choice: bounded route commands apply all eligible operational effects
 atomically; oversized commands reject before mutation rather than partially applying.
 D11 assigns the size/locking bound to #28 and qualification to #74. A future resumable
 operational strategy needs an explicit reviewed contract revision. Notification fanout
-is separately resumable and bounded under #41. Reminders have their own authorized,
-rate-limited intent identity and cannot repeat the original ETA change.
+is separately resumable and bounded by [ADR 0029](../adr/0029-route-delay-notification-fanout.md).
+Reminders have their own authorized, 60-minute database-rate-limited identity and cannot
+repeat the original ETA change.
 
 ## C. Delivery proof and completion
 

@@ -18,7 +18,8 @@ test('outbox owner predicates and exact discovery exceptions cannot become raw S
  }
  const jobs='apps/api/src/modules/security/jobs.ts';
  for(const sql of ['SELECT organization_id,franchise_id FROM shipit.outbox_next_scope($1,$2,$3,$4)',
-  'SELECT organization_id,franchise_id FROM shipit.outbox_job_scope($1)']){
+  'SELECT organization_id,franchise_id FROM shipit.outbox_job_scope($1)',
+  'SELECT organization_id,franchise_id,fanout_id FROM shipit.route_delay_fanout_scope($1)']){
   assert.deepEqual(inspectSource(jobs,`tx.query('${sql}')`),[]);
   assert.ok(inspectSource(path,`tx.query('${sql}')`).length);
   assert.ok(inspectSource(jobs,`tx.query('${sql}; SELECT * FROM shipit.domain_events')`).length);

@@ -319,7 +319,7 @@
       "committed_state": "Authorized typed departure evidence and validated frozen membership committed; any Parcel state effect passed its own role/transition guards",
       "schema_version": 1,
       "payload": {
-        "manifest_ref": "reference",
+        "manifest_id": "reference",
         "affected_set_ref": "reference"
       },
       "consumers": [
@@ -341,8 +341,8 @@
       "committed_state": "Typed delay, distinct frozen affected set, updated/skipped outcomes and eligible Parcels ETA changes committed atomically",
       "schema_version": 1,
       "payload": {
-        "affected_set_ref": "reference",
-        "outcome_ref": "reference"
+        "manifest_id": "reference",
+        "affected_set_ref": "reference"
       },
       "consumers": [
         "messaging",
@@ -363,7 +363,7 @@
       "committed_state": "Authorized typed route arrival and physical observation committed; affected membership validated",
       "schema_version": 1,
       "payload": {
-        "manifest_ref": "reference",
+        "manifest_id": "reference",
         "affected_set_ref": "reference"
       },
       "consumers": [

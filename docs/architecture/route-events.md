@@ -63,6 +63,8 @@ updated/skipped counts, and ETA state/base/revision/delay. Route events use sche
 payload `{manifest_id,affected_set_ref}`. The affected set reference is the event UUID;
 each transit effect links its Parcel event UUID and shares request correlation. Messaging
 consumers can deduplicate on source event + Parcel + purpose. No notification is sent here.
+The [Issue #41 fanout](route-delay-notifications.md) consumes only those frozen effects in
+bounded transactions and never recalculates or writes ETA.
 
 ## Reliability, D11 and rollout
 

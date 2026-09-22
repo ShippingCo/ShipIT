@@ -18,8 +18,8 @@ intent conflicts. Source/customer access is checked before replay. Policy denial
 a suppressed intent without sensitive rendering for consent/contact denial. Template or
 installation failures retain a failed, repairable intent until its deadline. No public enqueue/send endpoint exists.
 Call from the owning post-commit consumer, never the booking request transaction. #40
-registers initial Booking/Parcel/Route automation and Route fanout; #41 owns route-delay
-fanout, #42 delivery challenges, #43 attempt/RTO/completion notifications, #44 history UI,
+registers initial Booking/Parcel/Route automation and #41 adds bounded Route-delay fanout;
+#42 owns delivery challenges, #43 attempt/RTO/completion notifications, #44 history UI,
 and #47 conversation decisions.
 
 ## States and failure boundary

@@ -2,6 +2,7 @@ import { createWhatsappService } from './modules/whatsapp/service.ts';
 import { createConsentService } from './modules/whatsapp/consent-service.ts';
 import { createOutboundService } from './modules/whatsapp/outbound-service.ts';
 import { createAutomationReadService } from './modules/automation/read-service.ts';
+import { createRouteDelayReminderService } from './modules/automation/reminder-service.ts';
 import { registerBusinessWebhook } from './modules/whatsapp/webhook.ts';
 import { registerWhatsapp } from './modules/whatsapp/routes.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
@@ -107,7 +108,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
-      registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database));
+      registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp),createOutboundService(database,auth.keys.browser),createAutomationReadService(database,auth.keys.browser));

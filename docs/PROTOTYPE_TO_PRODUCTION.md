@@ -65,6 +65,12 @@ are separate. No prototype UI or test is changed here.
 
 No automatic production import of `shippingco_v1`, `setu_courier_v2` or existing phone personas. If a real migration is later required, give it a dedicated issue with authorization, dry run, validation, provenance, tenant ownership mapping, retention and reconciliation.
 
+The demo's visible Route delay/Delay Alert remains useful UX evidence only. Production
+Issue #41 uses the committed `route.delayed` event, frozen `route_parcel_effects`, durable
+bounded fanout, #38 consent and #39 outbound intent. It never scans browser Route bookings,
+recalculates `etaDays`, appends localStorage chats or implements reminder by repeating the
+Route mutation.
+
 OTP plaintext, `otpUsed`, `revealOTP`, unrestricted `confirmDelivered`, unknown-city intra-state tax fallback and title-derived route state are prototype limitations, not invariants to preserve. The production backlog explicitly owns each replacement. Legal rates/thresholds/retention and current vendor messaging terms must be verified by the responsible implementation issue; historical design-note market claims are not production authority.
 
 ## Issue #8 policy ratification

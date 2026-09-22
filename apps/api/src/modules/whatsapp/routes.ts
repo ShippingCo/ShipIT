@@ -7,6 +7,8 @@ import type { createAutomationReadService } from '../automation/read-service.ts'
 export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>,automation?:ReturnType<typeof createAutomationReadService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
   if(automation) {
+    app.get('/api/v1/whatsapp/automation/route-delay-fanouts',{exposeHeadRoute:false},request=>automation.fanouts(session(request),request.query,request.id));
+    app.get<{Params:{id:string}}>('/api/v1/whatsapp/automation/route-delay-fanouts/:id',{exposeHeadRoute:false},request=>automation.fanout(session(request),request.params.id,request.query,request.id));
     app.get('/api/v1/whatsapp/automation',{exposeHeadRoute:false},request=>automation.list(session(request),request.query,request.id));
     app.get<{Params:{id:string}}>('/api/v1/whatsapp/automation/:id',{exposeHeadRoute:false},request=>automation.detail(session(request),request.params.id,request.query,request.id));
   }

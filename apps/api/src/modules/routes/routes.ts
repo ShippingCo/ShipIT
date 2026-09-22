@@ -2,8 +2,11 @@ import type { FastifyInstance,FastifyRequest } from 'fastify';
 import type { createRouteService } from './service.ts';
 import type { RouteOperation } from './types.ts';
 import type { createRouteEventService } from './event-service.ts';
-export function registerRoutes(app:FastifyInstance,service:ReturnType<typeof createRouteService>,secure:boolean,events:ReturnType<typeof createRouteEventService>) {
+import type { createRouteDelayReminderService } from '../automation/reminder-service.ts';
+export function registerRoutes(app:FastifyInstance,service:ReturnType<typeof createRouteService>,secure:boolean,events:ReturnType<typeof createRouteEventService>,reminders?:ReturnType<typeof createRouteDelayReminderService>) {
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  if(reminders)app.post<{Params:{route_id:string}}>('/api/v1/routes/:route_id/delay-reminders',async(request,reply)=>reply.code(202).send(await reminders.execute(session(request),request.params.route_id,
+    request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id)));
   app.post<{Params:{route_id:string}}>('/api/v1/routes/:route_id/events',request=>events.execute(session(request),request.params.route_id,
     request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
   app.get<{Params:{route_id:string}}>('/api/v1/routes/:route_id/events',request=>events.read(session(request),request.params.route_id,request.query,request.id));

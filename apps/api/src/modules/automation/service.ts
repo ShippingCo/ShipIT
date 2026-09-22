@@ -6,6 +6,7 @@ import type { AutomationPolicyBinding,WhatsappDependencies } from '../whatsapp/t
 import { notificationConsumerId,notificationSubscriptions,policyBindings,policyFor,validateNotificationEvent } from './registry.ts';
 import * as repository from './repository.ts';
 import type { DecisionOutcome,ResolvedNotification } from './types.ts';
+import { establishDelayFanout } from './delay-fanout.ts';
 
 const safe=(value:string)=>value.length&&value.length<=1024&&!Array.from(value).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127);
 function semantic(event:Event,resolved:ResolvedNotification,kind:string) {
@@ -29,6 +30,10 @@ export function createNotificationConsumer(dependencies:WhatsappDependencies):Co
   async function apply(scope:TenantAccess,event:Event,stale:boolean) {
     const policy=policyFor(event.event_type);if(!policy)throw new Error('NOTIFICATION_POLICY_MISSING');
     const activation=await repository.activation(scope,policy.id,policy.version);if(!activation)throw new Error('NOTIFICATION_POLICY_NOT_ACTIVATED');
+    if(event.event_type==='route.delayed') {
+      const suppression=stale?'stale_aggregate_event':new Date(event.occurred_at)<activation.activated_at?'historical_cutover':null;
+      await establishDelayFanout(scope,event,policy,suppression);return;
+    }
     const items=await resolved(scope,event);if(!items.length)throw new Error('NOTIFICATION_SOURCE_UNRESOLVED');
     const binding=bindings.get(`${policy.id}:${policy.version}`);
     const install=binding&&policy.notify?await repository.installationAvailable(scope):false;

@@ -5,7 +5,7 @@ import type { AutomationPolicyBinding } from '../whatsapp/types.ts';
 export const notificationConsumerId='customer-notifications';
 export interface NotificationPolicy {
   id:string;version:number;event:string;aggregate:'booking'|'parcel'|'route';kind:string;affected:'booking'|'parcel';
-  variables:readonly string[];notify:boolean;
+  variables:readonly string[];requiredVariables?:readonly string[];notify:boolean;
 }
 export const notificationPolicies:readonly NotificationPolicy[]=Object.freeze([
   {id:'booking-confirmation',version:1,event:'booking.created',aggregate:'booking',kind:'booking_confirmation',affected:'booking',variables:['booking_id','parcel_count','confirmed_at'],notify:true},
@@ -13,6 +13,7 @@ export const notificationPolicies:readonly NotificationPolicy[]=Object.freeze([
   {id:'parcel-dispatched',version:1,event:'parcel.dispatched',aggregate:'parcel',kind:'parcel_dispatched',affected:'parcel',variables:['docket','occurred_at'],notify:true},
   {id:'parcel-route-overlap',version:1,event:'parcel.in_transit',aggregate:'parcel',kind:'route_departed',affected:'parcel',variables:[],notify:false},
   {id:'route-departed',version:1,event:'route.departed',aggregate:'route',kind:'route_departed',affected:'parcel',variables:['docket','route_id','effective_at','base_eta_at','revised_eta_at'],notify:true},
+  {id:'route-delayed',version:1,event:'route.delayed',aggregate:'route',kind:'route_delayed',affected:'parcel',variables:['docket','effective_at','revised_eta_at'],requiredVariables:['revised_eta_at'],notify:true},
   {id:'route-arrived',version:1,event:'route.arrived',aggregate:'route',kind:'route_arrived',affected:'parcel',variables:['docket','route_id','effective_at'],notify:true},
 ]);
 export const notificationSubscriptions=Object.freeze(Object.fromEntries(notificationPolicies.map(p=>[p.event,Object.freeze([1])])));
@@ -33,7 +34,8 @@ export function policyBindings(input:readonly AutomationPolicyBinding[]) {
   const result=new Map<string,AutomationPolicyBinding>();
   for(const binding of input) {
     const policy=notificationPolicies.find(p=>p.id===binding.policy_id&&p.version===binding.policy_version&&p.notify);
-    if(!policy||binding.variables.length!==new Set(binding.variables).size||binding.variables.some(v=>!policy.variables.includes(v)))throw new Error('NOTIFICATION_POLICY_CONFIGURATION_INVALID');
+    if(!policy||binding.variables.length!==new Set(binding.variables).size||binding.variables.some(v=>!policy.variables.includes(v))||
+      (policy.requiredVariables??[]).some(v=>!binding.variables.includes(v)))throw new Error('NOTIFICATION_POLICY_CONFIGURATION_INVALID');
     const identity=`${policy.id}:${policy.version}`;if(result.has(identity))throw new Error('NOTIFICATION_POLICY_CONFIGURATION_INVALID');
     result.set(identity,binding);
   }

@@ -339,3 +339,10 @@ Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and templat
 Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) documents signed consent consumption, R16 history, policy evaluation and #39 integration.
 
 [Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. [Notification automation](../../docs/architecture/notification-automation.md) registers #40's versioned event policies and safe decision reads.
+
+[Route-delay notifications](../../docs/architecture/route-delay-notifications.md) add
+`route-delayed:1`, a 20-item resumable worker, safe fanout progress reads and the W19
+`POST /api/v1/routes/:route_id/delay-reminders` action. The existing outbox runtime drains
+source events and fanout work sequentially; shutdown stops new claims and lets the active
+database transaction finish. Apply migration 28 and its grants before activating the exact
+template binding. No provider call occurs in the Route or fanout transaction.

@@ -28,6 +28,15 @@ export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput
  EXISTS(SELECT 1 FROM shipit.parcels p WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.booking_id=b.id AND
    p.id=e.aggregate_id)) LIMIT 1`,[input.source_id,input.customer_id,input.affected_entity_id])).rows.length===1;
  if(direct||input.affected_entity_id===input.source_id)return direct;
+ const reminder=(await scopedQuery(scope,['outbox.work'],`SELECT r.id FROM shipit.route_delay_reminder_events r
+  JOIN shipit.route_parcel_effects x ON x.organization_id=r.organization_id AND x.franchise_id=r.franchise_id AND x.event_id=r.original_event_id AND x.parcel_id=$3
+  JOIN shipit.bookings b ON b.organization_id=x.organization_id AND b.franchise_id=x.franchise_id AND b.id=x.booking_id
+  JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id
+  WHERE {{franchise:r.organization_id:r.franchise_id}} AND {{franchise:x.organization_id:x.franchise_id}}
+   AND {{franchise:b.organization_id:b.franchise_id}} AND {{franchise:c.organization_id:c.franchise_id}}
+   AND r.id=$1 AND b.customer_id=$2 AND b.customer_snapshot->>'phone'=c.phone_normalized LIMIT 1`,
+ [input.source_id,input.customer_id,input.affected_entity_id])).rows.length===1;
+ if(reminder)return true;
  return (await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.route_parcel_effects x
    ON x.organization_id=e.organization_id AND x.franchise_id=e.franchise_id AND x.event_id=e.event_id AND x.parcel_id=$3
   JOIN shipit.bookings b ON b.organization_id=x.organization_id AND b.franchise_id=x.franchise_id AND b.id=x.booking_id

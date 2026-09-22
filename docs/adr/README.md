@@ -61,3 +61,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0027: Durable WhatsApp outbound](0027-durable-whatsapp-outbound.md): Stable intents, fenced dispatch, uncertainty, delivery reconciliation and disclosure proof for Issue #39.
 
 - [0028: Event-to-notification automation policies](0028-event-notification-automation.md): Stable consumer identity, versioned policies, immutable cutover/decisions and Route/Parcel cause suppression for Issue #40.
+
+- [0029: Resumable Route-delay notification fanout](0029-route-delay-notification-fanout.md): Frozen effect membership, 20-item durable batches, current-state/ETA policy, separately identified W19 reminders and database-enforced cooldown for Issue #41.

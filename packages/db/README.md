@@ -627,3 +627,40 @@ Deploy schema and these grants before code. Then supply exact server-only automa
 bindings and start the outbox worker; activation commits before consumer polling. Rollback
 stops/reverts compatible code while retaining evidence and repairs schema forward. See
 [notification automation](../../docs/architecture/notification-automation.md).
+
+## Route-delay fanout migration (#41)
+
+Apply `1791046800000-route-delay-fanout.cjs` after migration 27. It creates immutable
+reminder command/event evidence and Route-delay fanout roots/items, trigger-checked progress,
+composite tenant ownership, the fixed `route_delay_fanout_scope` scheduler and a narrow #39
+outbound-source guard extension for immutable reminders. No released migration is edited and
+no existing event is backfilled.
+
+After resolving the deployment runtime identity, retain all #28/#35/#38–#40 grants and add:
+
+```sql
+GRANT SELECT, INSERT ON
+  shipit.route_delay_reminder_commands,
+  shipit.route_delay_reminder_events,
+  shipit.route_delay_fanouts,
+  shipit.route_delay_fanout_items TO runtime_role;
+GRANT UPDATE(state, result, committed_at)
+  ON shipit.route_delay_reminder_commands TO runtime_role;
+GRANT UPDATE(state, cursor_parcel_id, completed_count, skipped_count,
+  failed_count, attempt_count, reason_code, started_at, completed_at)
+  ON shipit.route_delay_fanouts TO runtime_role;
+GRANT EXECUTE ON FUNCTION
+  shipit.route_delay_fanout_scope(timestamptz) TO runtime_role;
+```
+
+Do not grant item/reminder-event UPDATE, any DELETE/TRUNCATE, broad root/command UPDATE,
+trigger-function execution, DDL, ownership, migration-role membership or PUBLIC access.
+`prepareNotificationAutomation()` is the executable grant reference. The scheduler returns
+only one persisted owner/root reference with `SKIP LOCKED`; application scope is then issued
+as `outbox.work` and each item commits independently.
+
+The populated migration-27 upgrade, injected migration failure rollback, clean retry and
+repeat no-op are covered by `route-delay-fanout.test.ts`. Rollback stops the compatible
+worker/reminder code, retains evidence and repairs forward. See
+[operations](../../docs/architecture/route-delay-notifications.md) and
+[ADR 0029](../../docs/adr/0029-route-delay-notification-fanout.md).
