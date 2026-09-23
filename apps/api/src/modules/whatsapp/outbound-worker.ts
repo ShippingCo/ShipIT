@@ -34,21 +34,35 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
     let input;
     try {if(!config||!m.sealed_payload)throw new Error();input=openOutbound(config,id,m.key_version,m.sealed_payload);}
     catch {await repository.update(scope,m,'failed','rendering_unavailable',now);return {result:'failed'} as const;}
-    const customer=await consent.lockCustomer(scope,m.customer_id);
-    if(!installation||installation.id!==m.installation_id||!customer||customer.contact_version!==m.contact_version) {
-     await repository.update(scope,m,'suppressed','contact_changed',now,{purge:true});return {result:'suppressed'} as const;
+    if(!installation||installation.id!==m.installation_id) {
+     await repository.update(scope,m,'suppressed','installation_unavailable',now,{purge:true});return {result:'suppressed'} as const;
     }
-    const policy=await checkCurrentConsent(scope,{...dependencies,clock:()=>now},{...input,purpose:input.purpose==='consent_disclosure'?'requested_assistance':input.purpose,
-     requested_inbox_id:input.source_kind==='inbox'?input.source_id:undefined});
-    if(!policy.allowed) {
-     const result=policyFailure(policy.reason);
-     await repository.update(scope,m,result,policy.reason,now,{purge:result==='suppressed'});return {result};
+    let recipient:string;
+    if(input.purpose==='delivery_otp') {
+     const deliveryRecipient=await repository.lockDeliveryRecipient(scope,m.delivery_recipient_ref);
+     if(!deliveryRecipient||deliveryRecipient.contact_version!==m.contact_version||input.delivery_recipient_ref!==deliveryRecipient.id) {
+      await repository.update(scope,m,'suppressed','contact_changed',now,{purge:true});return {result:'suppressed'} as const;
+     }
+     if(!await repository.sourceValid(scope,input)) {await repository.update(scope,m,'suppressed','challenge_unavailable',now,{purge:true});return {result:'suppressed'} as const;}
+     recipient=deliveryRecipient.phone_normalized;
+    } else {
+     const customer=await consent.lockCustomer(scope,m.customer_id!);
+     if(!customer||customer.contact_version!==m.contact_version||input.customer_id!==customer.id) {
+      await repository.update(scope,m,'suppressed','contact_changed',now,{purge:true});return {result:'suppressed'} as const;
+     }
+     const policy=await checkCurrentConsent(scope,{...dependencies,clock:()=>now},{...input,customer_id:customer.id,purpose:input.purpose==='consent_disclosure'?'requested_assistance':input.purpose,
+      requested_inbox_id:input.source_kind==='inbox'?input.source_id:undefined});
+     if(!policy.allowed) {
+      const result=policyFailure(policy.reason);
+      await repository.update(scope,m,result,policy.reason,now,{purge:result==='suppressed'});return {result};
+     }
+     recipient=customer.phone_normalized;
     }
     const binding=dependencies.configuration.bindings.find(b=>b.key===installation.binding_key)!;
     const template=input.format==='template'?await consent.template(scope,installation.id,input.template_name,input.template_language):null;
     const attempt=randomUUID();
     await repository.update(scope,m,'dispatching','dispatch_reserved',now,{attempt});
-    return {id,attempt,binding,template,recipient:customer.phone_normalized,input} as const;
+    return {id,attempt,binding,template,recipient,input} as const;
    });
    if(!reservation)return null;
    if('result' in reservation)return reservation.result;
@@ -57,7 +71,7 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
    let outcome:SendOutcome;
    try {
     outcome=reservation.input.format==='template'?
-     await dependencies.provider.send(reservation.binding,reservation.template!,reservation.recipient,reservation.input.variables):
+     await dependencies.provider.send(reservation.binding,reservation.template!,reservation.recipient,reservation.input.variables,reservation.input.purpose):
      dependencies.provider.sendText?await dependencies.provider.sendText(reservation.binding,reservation.recipient,reservation.input.text!):{kind:'unavailable',reason:'text_unavailable'};
    }catch{outcome={kind:'uncertain',reason:'acceptance_unknown'};}
    return withOutboundScope(database,reservation.id,clock(),async(scope,id)=>{

@@ -21,7 +21,7 @@ await test('WhatsApp additive upgrade preserves populated #35 baseline and audit
   const file=join(directory,'1790614800000-whatsapp-registry.cjs');
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue36_function()');};\n");
   await assert.rejects(db.migrate({dir:directory}));assert.equal((await db.adminQuery("SELECT to_regclass('shipit.whatsapp_installations') value")).rows[0]!.value,null);
-  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
 });
 
 await test('WhatsApp owner constraints, immutable history, revisions and restricted runtime privileges',{timeout:30000},async t=>{

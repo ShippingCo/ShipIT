@@ -132,3 +132,15 @@ reconciled through current membership, payment collection triggers a fresh ledge
 Route ETA is always read from server events. Production has no OTP reveal, generic delivered
 action, local paid flag, Lot delete, message queue claim, legal threshold or fixed e-way
 reference format. See [verification and synthetic walkthrough](architecture/issue-34-verification.md).
+
+## Issue #42 secure delivery cutover
+
+The production Deliveries area replaces the demo reveal/verify/confirm loop with strict
+server DTOs and immutable commands. Agents see current assignments only; dispatchers start
+or retry from Packages through a minimal eligible-agent list; franchise admins independently
+review exceptional requests. Proof input stays in component memory, is cleared on submission
+or unmount, and never enters browser storage. Confirmed completion reloads canonical state.
+
+The fictional Store may retain its isolated demo behavior, but production imports none of
+`data/store`, `revealOTP`, `verifyDeliveryOTP` or `confirmDelivered`. See
+[secure deliveries](architecture/deliveries.md) and [verification](architecture/issue-42-verification.md).

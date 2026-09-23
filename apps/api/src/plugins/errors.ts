@@ -3,6 +3,12 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  DELIVERY_PROOF_INVALID:[422,'Recipient proof was not accepted.'],
+  DELIVERY_CHALLENGE_EXPIRED:[409,'Delivery challenge has expired. Replace it before retrying.'],
+  DELIVERY_CHALLENGE_LOCKED:[409,'Delivery challenge is locked and requires independent review.'],
+  DELIVERY_RESEND_COOLDOWN:[429,'Delivery challenge resend is not available yet.'],
+  DELIVERY_RESEND_LIMIT:[429,'Delivery challenge resend limit has been reached.'],
+  DELIVERY_EXCEPTION_INVALID:[409,'Exceptional delivery approval is no longer valid.'],
   WHATSAPP_CREDENTIAL_INVALID:[409,'Provider credential could not be validated. Ask the integration administrator to rotate it.'],
   WHATSAPP_PROVIDER_UNAVAILABLE:[503,'Provider validation is unavailable. Retry the same command later.'],
   WHATSAPP_IDENTITY_MISMATCH:[409,'Provider identity could not be connected to this franchise. Verify the registered mapping.'],

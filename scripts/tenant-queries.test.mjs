@@ -124,6 +124,21 @@ test('booking and parcel repositories require both owners and cannot mint capabi
   assert.deepEqual(inspectSource('apps/api/src/modules/bookings/routes.ts','selection(request.query)'),[]);
   assert.ok(inspectSource('apps/api/src/modules/bookings/routes.ts',"request.query('SELECT * FROM shipit.bookings')").length);
 });
+test('delivery proof tables require composite tenant ownership and route query data is never executable SQL',()=>{
+ const file='apps/api/src/modules/deliveries/repository.ts';
+ for(const table of ['delivery_commands','delivery_recipients','delivery_attempts','delivery_challenges','delivery_challenge_sends','delivery_exception_requests','delivery_exception_approvals','delivery_proofs','delivery_audit_events']){
+  assert.deepEqual(inspectSource(file,`scopedQuery(scope,['deliveries.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  for(const source of [`db.query('SELECT * FROM shipit.${table}')`,`scopedQuery(scope,['deliveries.read'],'SELECT * FROM shipit.${table}')`,
+   `scopedQuery(scope,['deliveries.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`,"import {issueTenantAccess} from '../security/scope.ts'"])assert.ok(inspectSource(file,source).length,source);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/deliveries/routes.ts','service.list(session(request),request.query,request.id)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/deliveries/routes.ts',"request.query('SELECT * FROM shipit.delivery_attempts')").length);
+ const jobs='apps/api/src/modules/security/jobs.ts';
+ const cleanup='SELECT organization_id,franchise_id,challenge_id FROM shipit.delivery_challenge_cleanup_scope($1)';
+ assert.deepEqual(inspectSource(jobs,`tx.query('${cleanup}')`),[]);
+ assert.ok(inspectSource(file,`tx.query('${cleanup}')`).length);
+ assert.ok(inspectSource(jobs,`tx.query('${cleanup}; SELECT * FROM shipit.delivery_challenges')`).length);
+});
 test('lots require both owner predicates; routes cannot execute request query or mint authority',()=>{
   const file='apps/api/src/modules/lots/repository.ts';
   for(const table of ['lots','lot_commands','lot_memberships','lot_audit_events','lot_code_counters']){

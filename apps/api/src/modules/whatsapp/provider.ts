@@ -90,8 +90,8 @@ export function createMetaProvider({configuration,secrets,transport=fetch}:Adapt
         return normalizeTemplate(rows[0]);
       }catch(error){if(error instanceof HttpError)throw error;return safe(error);}
     },
-    async send(binding,template,recipient,variables):Promise<SendOutcome> {
-      const reason=templateReason(template);
+    async send(binding,template,recipient,variables,purpose):Promise<SendOutcome> {
+      const delivery=purpose==='delivery_otp',reason=templateReason(template,delivery?'delivery_otp':'ordinary');
       if(reason)return {kind:'unavailable',reason};
       if(!validVariables(template,variables)||!/^\+[1-9][0-9]{7,14}$/.test(recipient))return {kind:'permanent_failure',reason:'invalid_message_parameters'};
       return submit(binding,{messaging_product:'whatsapp',to:recipient.slice(1),type:'template',

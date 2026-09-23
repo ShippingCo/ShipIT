@@ -16,6 +16,8 @@ test('dispatch defaults off and requires explicit boolean enablement with signed
 test('outbound validation closes purpose, body, source and sensitive rendering boundaries',()=>{
  const input={source_kind:'inbox',source_id:randomUUID(),customer_id:randomUUID(),purpose:'requested_assistance',format:'text',text:'Synthetic reply'};
  const normalized=outboundInput(input);assert.deepEqual(normalized,{...input,affected_entity_id:input.source_id});
+ const delivery={source_kind:'delivery_challenge',source_id:randomUUID(),affected_entity_id:randomUUID(),delivery_recipient_ref:randomUUID(),purpose:'delivery_otp',format:'template',template_name:'shipit_delivery_code',template_language:'en',variables:['123456']};
+ assert.deepEqual(outboundInput(delivery),delivery);assert.throws(()=>outboundInput({...delivery,customer_id:randomUUID()}));assert.throws(()=>outboundInput({...delivery,delivery_recipient_ref:undefined}));
  for(const change of [{purpose:'marketing'},{source_kind:'event'},{text:''},{text:'a'.repeat(4097)},{phone:'+15550000001'},{text:'\u0000'},{variables:['private']}])assert.throws(()=>outboundInput({...input,...change}));
  const id=randomUUID(),sealed=sealOutbound(webhookConfig,id,normalized);
  assert.ok(!sealed.includes(input.text));assert.deepEqual(openOutbound(webhookConfig,id,webhookConfig.key_version,sealed),normalized);

@@ -6,7 +6,7 @@ import type { ApprovedTenancyContext } from '../tenancy/types.ts';
 export type BookingAction = 'bookings.create'|'parcels.create'|'customer.snapshot.read'|'bookings.audit'|'bookings.events'|
   'bookings.read'|'bookings.list'|'parcels.read'|'parcels.list'|'parcels.timeline';
 export type PrivateAction = 'whatsapp.consent.read' | 'whatsapp.consent.work' | 'whatsapp.inbox.work' | 'whatsapp.read' | 'whatsapp.write' | import('../outbox/types.ts').OutboxAction | import('../eway/types.ts').EwayAction | import('../attachments/types.ts').AttachmentAction | import('../receipts/types.ts').ReceiptAction | import('../payments/types.ts').PaymentAction | import('../routes/types.ts').RouteAction | import('../lots/types.ts').LotAction | BookingAction | import('../parcels/types.ts').ParcelAction | import('../tax/types.ts').TaxAction | import('../pricing/types.ts').PricingAction | CustomerAction | ApprovedTenancyContext['action'] | 'memberships.read' | 'memberships.manage' |
-  'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
+  import('../deliveries/types.ts').DeliveryAction | 'invitations.accept' | 'memberships.bootstrap' | 'operations.export' | 'financial.export' | 'audit.read';
 export interface PrivateContext extends Omit<ApprovedTenancyContext, 'action'> {
   readonly action: PrivateAction;
   readonly organizationWide: boolean;
@@ -22,7 +22,8 @@ const actions: readonly PrivateAction[] = ['whatsapp.consent.read','whatsapp.con
   'tax.read','tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate','organization.bootstrap','franchise.create','organization.profile.update',
   'organization.lifecycle.manage','organization.profile.read','franchise.profile.read','franchise.profile.list',
   'franchise.profile.update','franchise.lifecycle.manage','memberships.read','memberships.manage',
-  'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read','pricing.read','pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve','pricing.validate','customer.read','customer.list','customer.create','customer.update'];
+  'invitations.accept','memberships.bootstrap','operations.export','financial.export','audit.read','pricing.read','pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve','pricing.validate','customer.read','customer.list','customer.create','customer.update',
+  'deliveries.read','deliveries.list','deliveries.agents','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.events','deliveries.messaging','deliveries.cleanup'];
 const reference = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/;
 
 // Internal issuer. Import sites are allowlisted by the AST security gate. Never a DTO parser.
@@ -44,6 +45,8 @@ export function issueTenantAccess(executor: QueryExecutor, input: PrivateContext
     throw new HttpError('ACTION_FORBIDDEN');
   }
   if (input.action.startsWith('whatsapp.') && !['whatsapp.inbox.work','whatsapp.consent.work'].includes(input.action) && (input.provenance !== 'membership' || input.actor.type !== 'user' || input.organizationWide || input.permittedFranchiseIds.length !== 1)) throw new HttpError('ACTION_FORBIDDEN');
+  if(input.action.startsWith('deliveries.')&&(input.organizationWide||input.permittedFranchiseIds.length!==1||
+    (input.action==='deliveries.cleanup'?input.provenance!=='trusted-event'||input.actor.type!=='service'||input.actor.id!=='delivery-cleanup':input.provenance!=='membership'||input.actor.type!=='user')))throw new HttpError('ACTION_FORBIDDEN');
   if(input.action==='whatsapp.consent.work' && (input.provenance!=='trusted-event'||input.actor.type!=='service'||input.actor.id!=='whatsapp-consent-worker'||input.organizationWide||input.permittedFranchiseIds.length!==1))throw new HttpError('ACTION_FORBIDDEN');
   if(input.action==='whatsapp.inbox.work' && (input.provenance!=='trusted-event'||input.actor.type!=='service'||input.actor.id!=='whatsapp-inbox-worker'||input.organizationWide||input.permittedFranchiseIds.length!==1))throw new HttpError('ACTION_FORBIDDEN');
   if (input.action.startsWith('attachments.') && (input.permittedFranchiseIds.length !== 1 || input.organizationWide ||

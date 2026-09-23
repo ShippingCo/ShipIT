@@ -165,3 +165,8 @@ The [WhatsApp provider registry](docs/architecture/whatsapp.md) validates regist
 [Signed WhatsApp callbacks](docs/architecture/whatsapp-webhooks.md) persist a tenant-bound inbox before acknowledgement, quarantine unknown identities, and process delivery observations durably. [Consent evidence and current policy checks](docs/architecture/messaging-consent.md) consume that inbox; the outbound worker rechecks them before dispatch.
 
 [Durable outbound WhatsApp](docs/architecture/whatsapp-outbound.md) stores logical message intents, separates acceptance from delivery, and provides controlled retries and recovery. [Notification automation](docs/architecture/notification-automation.md) resolves versioned Booking, Parcel and Route policies into those intents without provider I/O. [Route-delay notifications](docs/architecture/route-delay-notifications.md) add frozen-membership, 20-item resumable fanout and rate-limited W19 reminders; delivery-completion policies remain #43.
+
+[Secure deliveries](docs/architecture/deliveries.md) now own physical attempts, protected
+recipient challenges, assigned-agent work and independent exceptional proof. A Parcel reaches
+`delivered` only through the atomic Deliveries transaction; payment remains independent and
+completion notifications remain #43.

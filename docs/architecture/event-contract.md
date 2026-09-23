@@ -286,3 +286,13 @@ may produce a later genuine settlement event for the same obligation. Uniqueness
 obligation/revision and command, not obligation alone; replay emits none. Zero-gross opening
 has no money event. P/R consumers reconcile the scoped ledger before deriving current truth;
 settlement never delivers, refunds, or reissues a receipt. [Full contract](payments.md).
+
+## Issue #42 delivery facts
+
+Deliveries emits exactly one schema-1 fact in the same transaction as each owning Parcel
+transition: `delivery.attempt_started` and `delivery.retry_started` payloads are exactly
+`{attempt_id,assignment_id,challenge_ref}`; `delivery.completed` is exactly
+`{attempt_id,proof_ref}`. No code, verifier, ciphertext, contact, evidence bytes or proof
+method enters the envelope. T06 deliberately has no redundant `parcel.delivered` event.
+Existing T07 `delivery.attempt_failed` remains the Parcel command fact and now requires the
+attempt/challenge to be atomically closed.

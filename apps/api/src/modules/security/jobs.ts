@@ -107,6 +107,17 @@ export async function withNextAttachmentCleanupScope<T>(database:DatabasePool,no
   });
 }
 
+/** Expired/terminal challenge ownership is selected only by the fixed definer scheduler. */
+export async function withNextDeliveryCleanupScope<T>(database:DatabasePool,now:Date,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
+  return withTransaction(database,async tx=>{
+    const row=(await tx.query<{organization_id:string;franchise_id:string;challenge_id:string}>(
+      'SELECT organization_id,franchise_id,challenge_id FROM shipit.delivery_challenge_cleanup_scope($1)',[now])).rows[0];
+    if(!row)return null;
+    return work(issueTenantAccess(tx,{action:'deliveries.cleanup',actor:{type:'service',id:'delivery-cleanup'},organizationId:row.organization_id,
+      permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.challenge_id);
+  });
+}
+
 /** Fixed definer queries return only persisted owner references, never event bodies. */
 export async function withNextOutboxScope<T>(database:DatabasePool,consumer:string,types:readonly string[],
   mode:'relay'|'claim'|'alert',now:Date|null,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {

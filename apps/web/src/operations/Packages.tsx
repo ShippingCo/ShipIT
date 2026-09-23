@@ -5,6 +5,7 @@ import { scopedApi } from '../data-access/scoped-api';
 import { parcels,parcelStatuses,type ParcelRead,type ParcelStatus,type ParcelCommand } from '../data-access/parcels';
 import { lots } from '../data-access/lots';
 import { payments } from '../data-access/payments';
+import { deliveries } from '../data-access/deliveries';
 import { createParcelBulkController } from '../data-access/parcel-bulk-controller';
 import { BulkParcelPanel } from '../parcels/BulkParcelPanel';
 import { useCommand,usePagedResource,useResource } from './hooks';
@@ -60,6 +61,7 @@ function PackageBulk({controller,source,rows,reload}:{controller:ScopeController
 
 function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:ScopeController;roles:readonly OperatorRole[];parcelId:string;close:()=>void;refreshed:()=>void}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
+ const deliverySource=useMemo(()=>deliveries(api),[api]);
  const detail=useResource(parcelId,signal=>source.read(parcelId,signal));
  const timeline=useResource(parcelId+'-timeline',signal=>source.timeline(parcelId,signal));
  const membership=useResource(parcelId+'-membership',signal=>lotSource.currentMembership(parcelId,signal));
@@ -77,10 +79,19 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
   <div className="ops-facts"><Fact label="Server version" value={parcel.version}/><Fact label="Weight" value={`${parcel.weight_grams.toLocaleString('en-IN')} g`}/><Fact label="Custody" value={parcel.custody.replaceAll('_',' ')}/><Fact label="Booking" value={parcel.booking_id}/></div>
   <div className="ops-grid"><div className="ops-fact"><b>Sender</b>{parcel.sender.name}<span className="ops-note">{parcel.sender.phone_display}</span></div><div className="ops-fact"><b>Recipient</b>{parcel.recipient.name}<span className="ops-note">{parcel.recipient.phone_display}</span></div></div>
   <ParcelActionForm parcel={parcel} roles={roles} command={life} source={source} confirmed={refresh}/>
+  {has(roles,'dispatcher')&&(parcel.status==='in_transit'||parcel.status==='failed_attempt')&&<DeliveryStartForm parcel={parcel} source={deliverySource} retry={parcel.status==='failed_attempt'} confirmed={refresh}/>}
   <section><h3>Timeline</h3>{timeline.phase==='loading'?<p role="status">Loading timeline…</p>:timeline.phase==='error'?<button className="btn btn-outlined" onClick={timeline.reload}>Retry timeline</button>:<ol className="ops-list">{timeline.value!.items.map(item=><li className="ops-row" key={item.event_id}><span className="ops-row-main"><b>{item.label}</b><span className="ops-note">{formatKolkata(item.occurred_at)} · sequence {item.sequence}</span></span></li>)}</ol>}</section>
   <section><h3>Lot membership</h3>{membership.phase==='loading'||memberLot.phase==='loading'?<p role="status">Loading membership…</p>:membership.phase==='error'||memberLot.phase==='error'?<button className="btn btn-outlined" onClick={()=>{membership.reload();memberLot.reload();}}>Retry membership</button>:!membership.value?<p role="status" className="ops-success">Server confirms this parcel is ungrouped.</p>:<div className="ops-row"><span className="ops-row-main"><b>{memberLot.value?.code??membership.value.lot_id}</b><span>{memberLot.value?.name}</span><span className="ops-note">Membership {membership.value.id}</span></span><button className="btn btn-outlined" disabled={remove.phase==='pending'} onClick={()=>{void removeMembership();}}>Remove from lot</button></div>}<CommandNotice phase={remove.phase} code={remove.error?.code} retry={remove.canRetry?()=>{void remove.retry().then(()=>{membership.reload();memberLot.reload();refreshed();}).catch(()=>{});}:undefined}/></section>
   <PaymentPanel roles={roles} source={paymentSource} resource={payment}/>
  </section>;
+}
+
+function DeliveryStartForm({parcel,source,retry,confirmed}:{parcel:ParcelRead;source:ReturnType<typeof deliveries>;retry:boolean;confirmed:()=>void}){
+ const agents=useResource(parcel.id+'-agents',signal=>source.agents(signal)),command=useCommand(value=>source.execute(value));
+ const [agent,setAgent]=useState(''),[evidence,setEvidence]=useState('');
+ useEffect(()=>{if(!agent&&agents.value?.items[0])setAgent(agents.value.items[0].id);},[agent,agents.value]);
+ async function submit(event:React.FormEvent){event.preventDefault();try{await command.run(source.intent({kind:retry?'retry':'start',parcelId:parcel.id,body:{expected_version:parcel.version,agent_id:agent,handover_evidence_ref:evidence}}));setEvidence('');confirmed();}catch{/* safe notice */}}
+ return <section><h3>{retry?'Start final delivery attempt':'Start delivery'}</h3>{agents.phase==='loading'?<p role="status">Loading eligible delivery agents…</p>:agents.phase==='error'?<button className="btn btn-outlined" onClick={agents.reload}>Retry eligible agents</button>:agents.value!.items.length===0?<p role="status">No active delivery agent is eligible in this franchise.</p>:<form className="ops-form" onSubmit={event=>{void submit(event);}}><div className="ops-form-grid"><SelectField label="Assigned delivery agent" value={agent} onChange={setAgent} options={agents.value!.items.map(item=>({value:item.id,label:item.label}))}/><TextField label="Handover evidence reference (UUID)" value={evidence} onChange={setEvidence} required/></div><button className="btn btn-filled" disabled={!uuid.test(agent)||!uuid.test(evidence)||command.phase==='pending'}>{retry?'Start second attempt':'Assign and send challenge'}</button></form>}<CommandNotice phase={command.phase} code={command.error?.code}/></section>;
 }
 
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>;}

@@ -29,7 +29,7 @@ await test('consent upgrade preserves populated #37 source/audit, creates unknow
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue38_function()');};\n");
   await assert.rejects(db.migrate({dir:directory}));assert.deepEqual(await snapshot(),before);
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.whatsapp_consent_state') value")).rows[0]!.value,null);
-  assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   const c=(await db.adminQuery('SELECT contact_version,contact_changed_at,updated_at FROM shipit.customers WHERE id=$1',[customer])).rows[0]!;
   assert.ok(c.contact_version);assert.deepEqual(c.contact_changed_at,c.updated_at);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.whatsapp_consent_state')).rows[0]!.n,0);

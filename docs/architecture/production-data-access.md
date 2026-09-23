@@ -207,3 +207,14 @@ hooks own AbortControllers and reset state on scope-generation remount. Confirme
 refetch authoritative projections; uncertain mutations retain the exact intent for explicit
 retry. The production shell exposes bounded-page Dashboard metrics and the five operational
 areas without importing AppContext or the fictional Store. See [Issue #34 verification](issue-34-verification.md).
+
+## Issue #42 delivery composition
+
+`data-access/deliveries.ts` adds closed safe-state/queue/eligible-agent DTOs and exact
+immutable Delivery intents on the same scoped client. The Deliveries screen is visible only
+to delivery_agent, dispatcher and franchise_admin roles; backend assignment remains
+authoritative. Packages adds dispatcher start/retry without widening Parcel list access.
+Proof input stays only in React memory, is cleared after submission/unmount, and is never
+stored or rendered from server state. Successful commands reload canonical state; stale,
+locked, expired, cooldown, provider and uncertain states remain explicit. Production still
+has no import from the fictional Store or provider call. [Verification](issue-42-verification.md).

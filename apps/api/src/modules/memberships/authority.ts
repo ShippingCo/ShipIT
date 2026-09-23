@@ -59,6 +59,10 @@ export async function lockOrganization(tx:TransactionExecutor,organizationId:str
   assertActiveTransaction(tx);
   return (await tx.query<{id:string;lifecycle:string}>('SELECT id,lifecycle FROM shipit.organizations WHERE id=$1 FOR UPDATE',[organizationId])).rows[0];
 }
+export async function lockFranchise(tx:TransactionExecutor,organizationId:string,franchiseId:string) {
+  assertActiveTransaction(tx);
+  return (await tx.query<{id:string;lifecycle:string}>('SELECT id,lifecycle FROM shipit.franchises WHERE organization_id=$1 AND id=$2 FOR UPDATE',[organizationId,franchiseId])).rows[0];
+}
 export async function activeUser(tx:TransactionExecutor,userId:string,lock=false) {
   assertActiveTransaction(tx);
   return (await tx.query<{id:string}>(`SELECT id FROM shipit.auth_users WHERE id=$1 AND lifecycle='active' ${lock?'FOR SHARE':''}`,[userId])).rows[0];

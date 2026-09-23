@@ -2,8 +2,8 @@ import { scopedQuery, type TenantAccess } from '../security/scope.ts';
 import type { OutboundInput,ResolvedOutboundInput } from './outbound-rules.ts';
 
 export interface Outbound {
- id:string;organization_id:string;franchise_id:string;installation_id:string;customer_id:string;contact_version:string;contact_key:string;
- source_id:string;affected_entity_id:string;source_kind:'event'|'inbox';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
+ id:string;organization_id:string;franchise_id:string;installation_id:string;customer_id:string|null;delivery_recipient_ref:string|null;contact_version:string;contact_key:string;
+ source_id:string;affected_entity_id:string;source_kind:'event'|'inbox'|'delivery_challenge';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
  state:string;reason_code:string;version:number;attempts:number;cycle_attempts:number;attempt_id:string|null;lease_until:Date|null;available_at:Date;created_at:Date;
 }
 type MessageSummary=Pick<Outbound,'id'|'state'|'reason_code'|'version'|'attempts'|'cycle_attempts'|'created_at'|'available_at'|'expires_at'>;
@@ -15,6 +15,16 @@ export async function prior(scope:TenantAccess,input:ResolvedOutboundInput) {
  [input.source_kind,input.source_id,input.affected_entity_id,input.customer_id,input.purpose])).rows[0];
 }
 export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput) {
+ if(input.source_kind==='delivery_challenge')return (await scopedQuery(scope,['outbox.work'],`SELECT s.id FROM shipit.delivery_challenge_sends s
+  JOIN shipit.delivery_attempts a ON a.organization_id=s.organization_id AND a.franchise_id=s.franchise_id AND a.id=s.attempt_id
+  JOIN shipit.delivery_challenges c ON c.organization_id=s.organization_id AND c.franchise_id=s.franchise_id AND c.id=s.challenge_id
+  JOIN shipit.parcels p ON p.organization_id=a.organization_id AND p.franchise_id=a.franchise_id AND p.id=a.parcel_id
+  WHERE {{franchise:s.organization_id:s.franchise_id}} AND {{franchise:a.organization_id:a.franchise_id}} AND {{franchise:c.organization_id:c.franchise_id}}
+   AND {{franchise:p.organization_id:p.franchise_id}} AND s.id=$1 AND s.recipient_ref=$2 AND s.parcel_id=$3 AND a.state='active'
+   AND a.locked_at IS NULL AND a.failed_verifications<5 AND a.recipient_ref=$2 AND c.attempt_id=a.id AND c.verifier IS NOT NULL AND c.encrypted_secret IS NOT NULL
+   AND p.status='out_for_delivery' AND p.active_attempt_id=a.id AND p.assigned_agent_id=a.agent_id
+   AND c.superseded_at IS NULL AND c.consumed_at IS NULL AND c.closed_at IS NULL AND c.expires_at>clock_timestamp()`,[input.source_id,input.delivery_recipient_ref,input.affected_entity_id])).rows.length===1;
+ if(!input.customer_id)return false;
  if(input.source_kind==='inbox')return (await scopedQuery(scope,['outbox.work'],`SELECT r.inbox_id FROM shipit.whatsapp_consent_receipts r
  WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.inbox_id=$1 AND r.customer_id=$2 AND r.intent='other' AND r.outcome='unchanged'`,[input.source_id,input.customer_id])).rows.length===1;
  const direct=(await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.bookings b
@@ -45,6 +55,11 @@ export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput
    AND {{franchise:b.organization_id:b.franchise_id}} AND {{franchise:c.organization_id:c.franchise_id}}
    AND e.event_id=$1 AND b.customer_id=$2 AND b.customer_snapshot->>'phone'=c.phone_normalized LIMIT 1`,
  [input.source_id,input.customer_id,input.affected_entity_id])).rows.length===1;
+}
+export async function lockDeliveryRecipient(scope:TenantAccess,id:string|null) {
+ if(!id)return undefined;
+ return (await scopedQuery<{id:string;contact_version:string;phone_normalized:string}>(scope,['outbox.work'],`SELECT r.id,r.contact_version,r.phone_normalized FROM shipit.delivery_recipients r
+  WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.id=$1`,[id])).rows[0];
 }
 export async function businessName(scope:TenantAccess) {
  return (await scopedQuery<{display_name:string}>(scope,['outbox.work'],`SELECT f.display_name FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}}`)).rows[0]!.display_name;

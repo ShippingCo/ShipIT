@@ -664,3 +664,39 @@ repeat no-op are covered by `route-delay-fanout.test.ts`. Rollback stops the com
 worker/reminder code, retains evidence and repairs forward. See
 [operations](../../docs/architecture/route-delay-notifications.md) and
 [ADR 0029](../../docs/adr/0029-route-delay-notification-fanout.md).
+
+## Secure delivery proof migration (#42)
+
+Apply `1791133200000-secure-delivery-proof.cjs` after migration 28. It creates scoped
+delivery command, attempt, challenge, send, exception, approval, proof and audit tables;
+extends only the T05/T08/T06 Parcel edges and delivery event catalog; and narrowly permits
+delivery-owned `delivery_otp` sources in the existing WhatsApp outbound ledger. Released
+migrations are unchanged. A populated migration-28 database, injected failure rollback,
+unchanged retry and repeat no-op are covered by `delivery-proof.test.ts`.
+
+After resolving the deployment runtime identity, retain the existing Parcel, attachment and
+WhatsApp outbound grants and add:
+
+```sql
+GRANT SELECT, INSERT ON
+  shipit.delivery_commands, shipit.delivery_recipients, shipit.delivery_attempts,
+  shipit.delivery_challenges, shipit.delivery_challenge_sends,
+  shipit.delivery_exception_requests, shipit.delivery_exception_approvals,
+  shipit.delivery_proofs, shipit.delivery_audit_events TO runtime_role;
+GRANT UPDATE(state,http_status,result,committed_at,retain_until)
+  ON shipit.delivery_commands TO runtime_role;
+GRANT UPDATE(state,failed_verifications,resend_count,locked_at,closed_at,version,
+  close_delivery_command_id,close_parcel_command_id)
+  ON shipit.delivery_attempts TO runtime_role;
+GRANT UPDATE(verifier,encrypted_secret,superseded_at,superseded_by,consumed_at,closed_at)
+  ON shipit.delivery_challenges TO runtime_role;
+GRANT UPDATE(state,decided_at,decision_command_id)
+  ON shipit.delivery_exception_requests TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.delivery_challenge_cleanup_scope(timestamptz)
+  TO runtime_role;
+```
+
+Do not grant broad UPDATE, challenge-secret SELECT outside the delivery runtime,
+DELETE/TRUNCATE, DDL, ownership or trigger-function execution. `prepareDeliveries()` is the
+executable reference. Rollback disables compatible routes/workers, retains evidence and
+repairs forward. See [secure deliveries](../../docs/architecture/deliveries.md).

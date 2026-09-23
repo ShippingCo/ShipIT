@@ -63,3 +63,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0028: Event-to-notification automation policies](0028-event-notification-automation.md): Stable consumer identity, versioned policies, immutable cutover/decisions and Route/Parcel cause suppression for Issue #40.
 
 - [0029: Resumable Route-delay notification fanout](0029-route-delay-notification-fanout.md): Frozen effect membership, 20-item durable batches, current-state/ETA policy, separately identified W19 reminders and database-enforced cooldown for Issue #41.
+
+- [0030: Secure and atomic delivery proof](0030-secure-atomic-delivery-proof.md): Versioned protected challenges, atomic T05/T08/T06, independent exception approval and delivery-owned durable WhatsApp identities for Issue #42.

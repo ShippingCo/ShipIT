@@ -1256,6 +1256,11 @@
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
+        "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
         "name": "projects parcel data, rejects malformed success and binds exact scoped command identity",
         "cases": null
       },
@@ -1267,6 +1272,11 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "executes only the three exact canonical route-event identities and rejects a generic or mismatched operation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state",
         "cases": null
       },
       {
@@ -1781,6 +1791,22 @@
       {
         "file": "apps/web/src/test/fixtures/parcel-bulk.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "kind": "expect(sessionStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "kind": "expect(sessionStorage.length).toBe"
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
@@ -2877,6 +2903,14 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
+      "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "proof",
+      "reason": "Issue #42: retain the strict delivery DTO, immutable proof command and no-browser-persistence boundary."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
       "name": "projects parcel data, rejects malformed success and binds exact scoped command identity",
       "cases": null,
       "disposition": "preserve",
@@ -2898,6 +2932,14 @@
       "disposition": "preserve",
       "group": "routes",
       "reason": "Issue #34 final review: retain exact canonical Route event command identity and closed response correlation."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "proof",
+      "reason": "Issue #42: retain assigned-only visibility, server proof submission, sensitive-input clearing and canonical refresh."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",

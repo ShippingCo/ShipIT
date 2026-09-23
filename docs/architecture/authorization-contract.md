@@ -398,3 +398,16 @@ See [business webhook operations](whatsapp-webhooks.md).
 Issue #38 implements R16 selected-franchise customer consent history/policy for org_admin, franchise_admin, operator and dispatcher. Assignment/custody-specific projections remain with their owning workflows; this endpoint grants no general customer access to delivery_agent. W34 consent overrides remain denied. Source mutations use only signed installation-bound inbox authority. See [consent operations](messaging-consent.md).
 
 Issue #39 applies the existing R18 operational reads and W44 controlled recovery to outbound WhatsApp intents. R18 permits scoped org_admin and local franchise_admin; W44 permits local franchise_admin only. Explicit uncertain redrive acknowledges possible duplicate provider delivery and does not override current consent. W34 remains denied. See [outbound operations](whatsapp-outbound.md).
+
+## Issue #42 delivery proof activation
+
+W10 is the current dispatcher in responsible Franchise F for first/final attempt assignment.
+W11, W38 and W39 require the currently assigned delivery_agent A. W40 requires a current
+responsible-franchise `franchise_admin` F and a different user from the requester, even if
+one person holds multiple memberships. Every command and replay rechecks active roots,
+membership, Franchise, custody, Parcel, assignment, attempt and expected version.
+
+Delivery-agent read scope is the same active assignment, never general R07 Parcel/customer
+visibility. Dispatcher agent selection exposes only eligible active agent opaque ID and a
+minimal label. There is no supervisor role, org-admin write inheritance, OTP reveal action,
+admin completion action or client proof flag. [Exact workflow](deliveries.md).

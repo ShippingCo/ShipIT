@@ -16,6 +16,7 @@ export interface RuntimeConfig {
   readonly authSecretRef?: string;
   readonly storageSecretRef?: string;
   readonly whatsappConfigRef?: string;
+  readonly deliveryProofSecretRef?: string;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
 export class ConfigurationError extends Error {
@@ -102,6 +103,11 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   if(whatsappConfigRef&&(environment==='demo'||!authSecretRef))issue('WHATSAPP_CONFIG_REF','INCONSISTENT');
   if(whatsappConfigRef?.startsWith('local:')&&(environment!=='developer'||whatsappConfigRef!=='local:whatsapp'))issue('WHATSAPP_CONFIG_REF','INCONSISTENT');
   if(env.LOCAL_WHATSAPP_JSON!==undefined&&(environment!=='developer'||whatsappConfigRef!=='local:whatsapp'))issue('LOCAL_WHATSAPP_JSON','INCONSISTENT');
+  const deliveryProofSecretRef=env.DELIVERY_PROOF_SECRET_REF;
+  if((environment==='staging'||environment==='production')&&!deliveryProofSecretRef)issue('DELIVERY_PROOF_SECRET_REF','REQUIRED');
+  if(deliveryProofSecretRef!==undefined&&(!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(deliveryProofSecretRef)||deliveryProofSecretRef.includes('://')))issue('DELIVERY_PROOF_SECRET_REF','INVALID_FORMAT');
+  if(deliveryProofSecretRef?.startsWith('local:')&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('DELIVERY_PROOF_SECRET_REF','INCONSISTENT');
+  if(env.LOCAL_DELIVERY_PROOF_JSON!==undefined&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('LOCAL_DELIVERY_PROOF_JSON','INCONSISTENT');
   if (issues.length) throw new ConfigurationError(issues);
   return Object.freeze({ environment: environment!, host, port, logLevel: logLevel as RuntimeConfig['logLevel'],
     allowedOrigins: Object.freeze(allowedOrigins), trustedProxyHops, trustedProxyAddresses: Object.freeze(trustedProxyAddresses), databaseSecretRef,
@@ -109,5 +115,6 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     ...(authSecretRef ? {authSecretRef} : {}),
     ...(storageSecretRef ? {storageSecretRef} : {}),
     ...(whatsappConfigRef ? {whatsappConfigRef} : {}),
+    ...(deliveryProofSecretRef ? {deliveryProofSecretRef} : {}),
   });
 }

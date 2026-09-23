@@ -55,9 +55,12 @@ import { registerErrors, HttpError, errorEnvelope, rejectTransport } from './plu
 import { registerJson, JSON_BODY_LIMIT } from './plugins/json.ts';
 import { loggerOptions, registerRequestLogging, type LogSink } from './plugins/logging.ts';
 import { registerHealth } from './modules/health/routes.ts';
+import { createDeliveryService } from './modules/deliveries/service.ts';
+import { registerDeliveries } from './modules/deliveries/routes.ts';
+import type { DeliveryProofConfiguration } from './modules/deliveries/types.ts';
 
-export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies; whatsapp?:WhatsappDependencies }
-export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments, whatsapp }: ServerDependencies) {
+export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies; whatsapp?:WhatsappDependencies;deliveryProof?:DeliveryProofConfiguration }
+export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments, whatsapp, deliveryProof }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
     logController: new LogController({ disableRequestLogging: true, requestIdLogLabel: 'request_id' }),
@@ -108,6 +111,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
+      if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');

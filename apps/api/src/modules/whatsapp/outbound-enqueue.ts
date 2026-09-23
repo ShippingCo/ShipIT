@@ -12,6 +12,7 @@ import type { WhatsappDependencies } from './types.ts';
 export async function enqueueMessage(scope:TenantAccess,dependencies:WhatsappDependencies,value:unknown) {
  assertTenantAccess(scope,['outbox.work']);
  const input=outboundInput(value),config=dependencies.configuration.webhook;
+ if(input.source_kind==='delivery_challenge'||!input.customer_id)throw new HttpError('ACTION_FORBIDDEN');
  if(!config)throw new HttpError('TEMPORARILY_UNAVAILABLE');
  // Match the consent lock order; the unique ledger identity serializes duplicate inserts.
  const installation=await consent.lockInstallation(scope);
@@ -24,7 +25,7 @@ export async function enqueueMessage(scope:TenantAccess,dependencies:WhatsappDep
   return {id:prior.id,state:prior.state,reason_code:prior.reason_code};
  }
  const instant=await repository.now(scope,dependencies.clock?.());
- const policy=await checkCurrentConsent(scope,{...dependencies,clock:()=>instant},{...input,purpose:input.purpose==='consent_disclosure'?'requested_assistance':input.purpose,
+ const policy=await checkCurrentConsent(scope,{...dependencies,clock:()=>instant},{...input,customer_id:input.customer_id,purpose:input.purpose==='consent_disclosure'?'requested_assistance':input.purpose,
   requested_inbox_id:input.source_kind==='inbox'?input.source_id:undefined});
  const rendering=input.purpose==='consent_disclosure'?{...input,text:disclosureText(await repository.businessName(scope))}:input;
  const id=randomUUID();
