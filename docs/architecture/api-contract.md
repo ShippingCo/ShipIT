@@ -418,3 +418,18 @@ Issue #38: [consent read and policy HTTP contract](messaging-consent.md) adds cu
 ## Issue #39 outbound operations
 
 [Outbound API and runbook](whatsapp-outbound.md) specifies R18 history/health and W44 revision-checked, idempotent redrive under /api/v1/whatsapp/outbound. Enqueue is a trusted consumer service only; no staff or browser provider-send endpoint is added.
+
+## Issue #42 delivery proof API
+
+[Secure deliveries](deliveries.md#commands-and-apis) ratify Delivery-owned list/detail,
+eligible-agent, start/retry, resend/replace, proof completion and exceptional
+request/approval/completion endpoints. They use the standard selector, session,
+Origin/CSRF, one `Idempotency-Key`, expected version, canonical fingerprint, receipt and
+replay reauthorization. Unknown fields are rejected. No generic Parcel delivered endpoint
+exists and no DTO contains the code, verifier, ciphertext, contact or provider payload.
+
+Stable safe codes are `DELIVERY_PROOF_INVALID` (422),
+`DELIVERY_CHALLENGE_EXPIRED`/`DELIVERY_CHALLENGE_LOCKED`/
+`DELIVERY_EXCEPTION_INVALID` (409), and `DELIVERY_RESEND_COOLDOWN`/
+`DELIVERY_RESEND_LIMIT` (429). Tenant/assignment visibility still takes precedence and uses
+the ordinary indistinguishable `RESOURCE_NOT_FOUND` boundary.

@@ -133,3 +133,19 @@ accept/timeout, duplicate workers, STOP in backoff, restart, disclosure proof, H
 scope denial. `packages/db/test/integration/whatsapp-outbound.test.ts` proves populated
 upgrade rollback/retry. No production database or real customer messaging is used.
 Live Meta onboarding and acceptance remain unverified without sandbox credentials.
+
+## Delivery challenge source
+
+Issue #42 extends the closed purpose and source sets with `delivery_otp` and
+`delivery_challenge`. A delivery-owned immutable send reservation is the only valid source;
+the outbound trigger rejects arbitrary UUIDs. Initial, resend, and replacement reservations
+have distinct logical identities, while transport retry keeps the same outbound intent.
+Uncertain provider acceptance therefore consumes that reservation until reconciliation and
+cannot silently manufacture another resend. Immediately before provider I/O the worker
+rechecks that the attempt is active, the challenge is current and unexpired, and its protected
+secret is still usable. The exact authentication-template exception and safe operator state
+are owned by [Deliveries](deliveries.md); all other queue, retry, callback, redrive, and sealed
+payload guarantees in this document remain unchanged.
+Delivery intents use the private immutable Parcel-recipient generation in
+`delivery_recipient_ref`; `customer_id` remains the booking sender identity for every
+non-delivery purpose and is null for `delivery_otp`.

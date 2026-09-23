@@ -11,7 +11,8 @@ describe('fail-closed runtime configuration', () => {
     expect(Object.isFrozen(config.allowedOrigins)).toBe(true);
     for (const mode of ['demo', 'staging', 'production']) {
       expect(parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/db/version-1',
-        DATABASE_TLS_MODE: 'verify-full', ALLOWED_ORIGINS: 'https://console.example.test' }).environment).toBe(mode);
+        DATABASE_TLS_MODE: 'verify-full', ALLOWED_ORIGINS: 'https://console.example.test',
+        ...(['staging','production'].includes(mode)?{DELIVERY_PROOF_SECRET_REF:'managed/delivery-proof/version-1'}:{}) }).environment).toBe(mode);
     }
   });
   it.each(Object.keys(syntheticEnv))('rejects missing %s', field => {
@@ -42,7 +43,8 @@ describe('fail-closed runtime configuration', () => {
     for (const mode of ['demo', 'staging', 'production']) {
       expect(() => parseEnvironment({ ...syntheticEnv, NODE_ENV: mode })).toThrow(ConfigurationError);
       const config = parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/version-1',
-        ALLOWED_ORIGINS: 'https://example.test', DATABASE_TLS_MODE: 'verify-full' });
+        ALLOWED_ORIGINS: 'https://example.test', DATABASE_TLS_MODE: 'verify-full',
+        ...(['staging','production'].includes(mode)?{DELIVERY_PROOF_SECRET_REF:'managed/delivery-proof/version-1'}:{}) });
       expect(() => developerSecretResolver(config, 'SYN_SECRET')).toThrow(ConfigurationError);
       await expect(startRuntime({ config, secretResolver: { kind: 'developer-local', resolve: async () => 'SYN_SECRET' } })).rejects.toThrow(ConfigurationError);
       expect(() => parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, LOCAL_DATABASE_URL: 'SYN_SECRET' })).toThrow(ConfigurationError);
@@ -80,7 +82,7 @@ it('secret resolution timeout aborts the resolver and fails without secret-beari
   } finally { vi.useRealTimers(); }
 });
 it('hosted attachment configuration cannot silently disable the feature or use local secrets',async()=>{
- const hosted={...syntheticEnv,NODE_ENV:'production',ALLOWED_ORIGINS:'https://console.example.test',DATABASE_SECRET_REF:'managed/db/version-1',DATABASE_TLS_MODE:'verify-full',AUTH_SECRET_REF:'managed/auth/version-1'};
+ const hosted={...syntheticEnv,NODE_ENV:'production',ALLOWED_ORIGINS:'https://console.example.test',DATABASE_SECRET_REF:'managed/db/version-1',DATABASE_TLS_MODE:'verify-full',AUTH_SECRET_REF:'managed/auth/version-1',DELIVERY_PROOF_SECRET_REF:'managed/delivery-proof/version-1'};
  expect(()=>parseEnvironment(hosted)).toThrow(ConfigurationError);
  for(const bad of ['local:storage','https://user:SYN_SECRET@example.test'])expect(()=>parseEnvironment({...hosted,STORAGE_CREDENTIAL_REF:bad})).toThrow(ConfigurationError);
  const config=parseEnvironment({...hosted,STORAGE_CREDENTIAL_REF:'managed/storage/version-1'}),resolve=vi.fn();

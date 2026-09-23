@@ -13,7 +13,7 @@ import * as repository from './repository.ts';
 import { appendMembership } from '../audit/repository.ts';
 import * as authorityRepository from './authority.ts';
 import { issueTenantAccess, type PrivateAction } from '../security/scope.ts';
-import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, lotScope, routeScope, paymentScope, receiptScope, type ManagementAuthority } from './policy.ts';
+import { canManageGrant, managementAuthority, tenancyScope, customerScope, pricingScope, taxScope, shipmentReadScope, parcelCommandScope, deliveryScope, lotScope, routeScope, paymentScope, receiptScope, type ManagementAuthority } from './policy.ts';
 import { invitationDto, membershipDto, type Role } from './types.ts';
 import * as validate from './validation.ts';
 
@@ -497,6 +497,31 @@ export async function withParcelCommandScope<T>(database:DatabasePool,sessionTok
     const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
       organizationWide:false,correlationId,provenance:'membership' as const};
     return work({command:issueTenantAccess(tx,{...context,action}),events:issueTenantAccess(tx,{...context,action:'parcels.events'})});
+  });
+}
+
+export async function withDeliveryScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:import('../deliveries/types.ts').DeliveryAction,correlationId:string,
+  work:(scopes:{command:import('../security/scope.ts').TenantAccess;events:import('../security/scope.ts').TenantAccess;
+    roles:readonly Role[];revision:string})=>Promise<T>):Promise<T> {
+  validate.uuid(organizationId);validate.uuid(franchiseId);
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),permitted=deliveryScope(action,memberships);
+    if(!permitted.length)throw new HttpError(action==='deliveries.read'?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
+    if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!['deliveries.read','deliveries.list','deliveries.agents'].includes(action)){
+      if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+      if(franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
+    }
+    const roles=memberships.filter(m=>m.franchiseIds.includes(franchiseId)).map(m=>m.role);
+    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,
+      correlationId,provenance:'membership' as const};
+    return work({command:issueTenantAccess(tx,{...context,action}),events:issueTenantAccess(tx,{...context,action:'deliveries.events'}),roles,
+      revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
   });
 }
 

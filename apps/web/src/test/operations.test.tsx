@@ -8,11 +8,13 @@ import { parcels } from '../data-access/parcels';
 import { lots } from '../data-access/lots';
 import { routes } from '../data-access/routes';
 import { eway } from '../data-access/eway';
+import { deliveries } from '../data-access/deliveries';
 import OperationsDashboard from '../operations/Dashboard';
 import Packages from '../operations/Packages';
 import Lots from '../operations/Lots';
 import Routes from '../operations/Routes';
 import Eway from '../operations/Eway';
+import Deliveries from '../operations/Deliveries';
 import { instantToKolkataInput,kolkataInputToInstant } from '../operations/format';
 
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
@@ -28,6 +30,11 @@ const state={reference_state:'recorded',official_validity_state:'unknown',estima
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 
 describe('production operational adapters',()=>{
+ it('projects only safe delivery state and builds immutable proof commands without browser persistence',async()=>{
+  const delivery={parcel_id:parcelId,docket:'SYN-34',parcel_version:5,attempt_id:id(70),assignment_id:id(71),attempt_number:1,challenge_ref:id(72),challenge_version:1,status:'active',expires_at:now,resend_available_at:now,resends_remaining:3,verification_attempts_remaining:5,send_state:'accepted',send_reason:'provider_accepted',proof_method:null,exception:null,verifier:'private-verifier',encrypted_secret:'private-ciphertext'};
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(json(delivery)));const source=deliveries(scopedApi(controller())),value=await source.read(parcelId);expect(JSON.stringify(value)).not.toContain('private-');
+  const intent=source.intent({kind:'complete',parcelId,body:{expected_version:5,challenge_ref:id(72),challenge_version:1,proof:'123456'}});expect(intent).toMatchObject({operation:'api.v1.deliveries.complete',expectedVersion:5});expect(Object.isFrozen(intent)).toBe(true);expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
+ });
  it('projects parcel data, rejects malformed success and binds exact scoped command identity',async()=>{
   const fetcher=vi.fn().mockResolvedValueOnce(json(page([{...parcel,private_secret:'discard'}]))).mockResolvedValueOnce(json(page([{...parcel,status:'invented'}])));vi.stubGlobal('fetch',fetcher);const scope=controller(),source=parcels(scopedApi(scope));
   const value=await source.list({docket:'SYN-34',status:'booked'});expect(value.items[0]).toEqual(parcel);expect(JSON.stringify(value)).not.toContain('private_secret');expect(String(fetcher.mock.calls[0][0])).toContain(`organization_id=${org}&franchise_id=${franchise}&docket=SYN-34&status=booked`);
@@ -58,6 +65,13 @@ describe('production operational adapters',()=>{
 });
 
 describe('production operational screens',()=>{
+ it('shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state',async()=>{
+  const queue={items:[{parcel_id:parcelId,docket:'SYN-34',attempt_id:id(70),attempt_number:1,expires_at:now,failed_verifications:0,resend_count:0}],scope_revision:'revision'};
+  const active={parcel_id:parcelId,docket:'SYN-34',parcel_version:5,attempt_id:id(70),assignment_id:id(71),attempt_number:1,challenge_ref:id(72),challenge_version:1,status:'active',expires_at:now,resend_available_at:'2020-01-01T00:00:00.000Z',resends_remaining:3,verification_attempts_remaining:5,send_state:'accepted',send_reason:'provider_accepted',proof_method:null,exception:null};
+  const consumed={...active,parcel_version:6,status:'consumed',proof_method:'otp_verified',resends_remaining:3};let delivered=false,writes=0,reads=0;
+  vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes(`/deliveries/${parcelId}/complete`)&&options.method==='POST'){writes++;expect(JSON.parse(String(options.body))).toMatchObject({proof:'123456',challenge_ref:id(72)});delivered=true;return json(consumed);}if(path.includes(`/deliveries/${parcelId}?`)){reads++;return json(delivered?consumed:active);}if(path.includes('/deliveries?'))return json(delivered?{items:[],scope_revision:'revision-2'}:queue);throw new Error(`Unexpected ${path}`);}));
+  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));const input=await screen.findByLabelText('6-digit recipient code');expect(screen.queryByText(/private|verifier|ciphertext/i)).not.toBeInTheDocument();fireEvent.change(input,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verify and complete delivery'}));await waitFor(()=>expect(writes).toBe(1));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));expect(input).toHaveValue('');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
+ });
  it('round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary',()=>{
   expect(instantToKolkataInput('2026-09-20T12:00:00.000Z')).toBe('2026-09-20T17:30');
   expect(kolkataInputToInstant('2026-09-20T17:30:00.000')).toBe('2026-09-20T12:00:00.000Z');

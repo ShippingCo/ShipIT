@@ -22,7 +22,7 @@ try {
   const config = parseEnvironment(process.env);
   // This CLI supports local developer composition. #68 supplies a managed resolver
   // to startRuntime for hosted deployment; hosted modes cannot use local credentials.
-  const secretResolver = developerSecretResolver(config, process.env.LOCAL_DATABASE_URL,process.env.LOCAL_AUTH_JSON,process.env.LOCAL_STORAGE_CREDENTIAL,process.env.LOCAL_WHATSAPP_JSON);
+  const secretResolver = developerSecretResolver(config, process.env.LOCAL_DATABASE_URL,process.env.LOCAL_AUTH_JSON,process.env.LOCAL_STORAGE_CREDENTIAL,process.env.LOCAL_WHATSAPP_JSON,process.env.LOCAL_DELIVERY_PROOF_JSON);
   runtime = await startRuntime({ config, secretResolver, signal: controller.signal });
   if (controller.signal.aborted) stop();
 } catch (error) {

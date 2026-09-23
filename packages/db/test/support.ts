@@ -164,6 +164,7 @@ export interface DisposableDatabase {
   prepareWhatsappConsent(): Promise<void>;
   prepareWhatsappOutbound(): Promise<void>;
   prepareNotificationAutomation(): Promise<void>;
+  prepareDeliveries(): Promise<void>;
   prepareOutbox(): Promise<void>;
   prepareTax(): Promise<void>;
   prepareCustomers(): Promise<void>;
@@ -394,6 +395,22 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(state,cursor_parcel_id,completed_count,skipped_count,failed_count,attempt_count,reason_code,started_at,completed_at)
           ON shipit.route_delay_fanouts TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.route_delay_fanout_scope(timestamptz) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareDeliveries() {
+      await handle.prepareAttachments();await handle.prepareWhatsappOutbound();await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.delivery_commands,shipit.delivery_recipients,shipit.delivery_attempts,shipit.delivery_challenges,
+          shipit.delivery_challenge_sends,shipit.delivery_exception_requests,shipit.delivery_exception_approvals,
+          shipit.delivery_proofs,shipit.delivery_audit_events TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.delivery_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,failed_verifications,resend_count,locked_at,closed_at,version,close_delivery_command_id,close_parcel_command_id)
+          ON shipit.delivery_attempts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(verifier,encrypted_secret,superseded_at,superseded_by,consumed_at,closed_at)
+          ON shipit.delivery_challenges TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,decided_at,decision_command_id) ON shipit.delivery_exception_requests TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.delivery_challenge_cleanup_scope(timestamptz) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareWhatsappConsent() {

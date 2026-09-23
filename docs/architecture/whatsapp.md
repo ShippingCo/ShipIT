@@ -144,3 +144,12 @@ Issue #37 now implements [signed business callbacks and durable inbox processing
 
 Issue #38 implements [consent evidence and current policy](messaging-consent.md).
 #39 invokes this policy at queue and dispatch and records verified disclosure delivery; see [outbound operations](whatsapp-outbound.md).
+
+Issue #42 adds one closed exception to the utility-only template rule above. The
+`delivery_otp` purpose accepts only a currently approved `AUTHENTICATION` template with
+one OTP `COPY_CODE` button and the exact one-code variable shape described in
+[Deliveries](deliveries.md). It is authorized only for an active assigned delivery attempt;
+it does not authorize arbitrary authentication templates, free text, marketing, or shipment
+updates, and optional update consent neither grants nor revokes this operational proof send.
+The supported template shape follows Meta's
+[authentication template example](https://www.postman.com/meta/whatsapp-business-platform/request/qzriq9r/create-authentication-template-w-otp-copy-code-button).

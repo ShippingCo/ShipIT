@@ -11,27 +11,30 @@ export function normalizeTemplate(value:unknown):Template {
     typeof value.language!=='string'||!languagePattern.test(value.language)||!Array.isArray(value.components)||value.components.length>10)throw new HttpError('WHATSAPP_PROVIDER_UNAVAILABLE');
   const status=typeof value.status==='string'&&['APPROVED','PENDING','REJECTED','PAUSED','DISABLED','IN_APPEAL','PENDING_DELETION','DELETED','LIMIT_EXCEEDED'].includes(value.status)?value.status:'UNKNOWN';
   const category=typeof value.category==='string'&&['UTILITY','MARKETING','AUTHENTICATION'].includes(value.category)?value.category:'UNKNOWN';
-  let supported=value.parameter_format===undefined||value.parameter_format==='POSITIONAL',bodies=0,count=0;
+  let supported=value.parameter_format===undefined||value.parameter_format==='POSITIONAL',bodies=0,count=0,authenticationButton=false;
   const shape:unknown[]=[];
   for(const c of value.components) {
-    if(!record(c)||typeof c.type!=='string'||typeof c.text!=='string'||c.text.length>4096){supported=false;continue;}
-    shape.push({type:c.type,format:c.format??null,text:c.text});
+    if(!record(c)||typeof c.type!=='string'){supported=false;continue;}
+    shape.push({type:c.type,format:c.format??null,text:c.text??null,buttons:c.buttons??null});
     if(c.type==='BODY') {
+      if(typeof c.text!=='string'||c.text.length>4096){supported=false;continue;}
       bodies++;
       const matches=[...c.text.matchAll(/\{\{([1-9][0-9]*)\}\}/g)].map(m=>Number(m[1]));
       const numbers=[...new Set(matches)].sort((a,b)=>a-b);count=numbers.length;
       if(count>20||numbers.some((n,i)=>n!==i+1)||/[{}]/.test(c.text.replace(/\{\{[1-9][0-9]*\}\}/g,'')))supported=false;
-    }else if(!['HEADER','FOOTER'].includes(c.type)||(c.type==='HEADER'&&c.format!=='TEXT')||/[{}]/.test(c.text))supported=false;
+    }else if(c.type==='BUTTONS'&&Array.isArray(c.buttons)&&c.buttons.length===1&&record(c.buttons[0])&&
+      c.buttons[0].type==='OTP'&&c.buttons[0].otp_type==='COPY_CODE')authenticationButton=true;
+    else if(!['HEADER','FOOTER'].includes(c.type)||typeof c.text!=='string'||(c.type==='HEADER'&&c.format!=='TEXT')||/[{}]/.test(c.text))supported=false;
   }
-  supported=supported&&bodies===1;
+  supported=supported&&bodies===1&&(category==='AUTHENTICATION'?count===1&&authenticationButton:!authenticationButton);
   return {provider_id:value.id,name:value.name,language:value.language,status,category,shape_hash:digest({shape,parameter_format:value.parameter_format??'POSITIONAL',supported}),
     variables:Array.from({length:supported?count:0},()=>({type:'text' as const})),supported};
 }
-export function templateReason(template:Template|null):string|null {
+export function templateReason(template:Template|null,purpose:'delivery_otp'|'ordinary'='ordinary'):string|null {
   if(!template||template.status==='MISSING')return 'template_language_missing';
   if(template.status!=='APPROVED')return 'template_not_approved';
   if(!template.supported)return 'template_shape_unavailable';
-  if(template.category!=='UTILITY')return 'template_category_unavailable';
+  if(template.category!==(purpose==='delivery_otp'?'AUTHENTICATION':'UTILITY'))return 'template_category_unavailable';
   return null;
 }
 export function validVariables(template:Template,variables:unknown):variables is string[] {

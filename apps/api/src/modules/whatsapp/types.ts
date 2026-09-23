@@ -26,7 +26,7 @@ export type SendOutcome = {kind:'accepted';provider_message_id:string} |
 export interface Provider {
   validate(binding:Binding):Promise<void>;
   template(binding:Binding,name:string,language:string):Promise<Template>;
-  send(binding:Binding,template:Template,recipient:string,variables:unknown):Promise<SendOutcome>;
+  send(binding:Binding,template:Template,recipient:string,variables:unknown,purpose?:'delivery_otp'|'updates'|'requested_assistance'|'consent_disclosure'):Promise<SendOutcome>;
   sendText?(binding:Binding,recipient:string,text:string):Promise<SendOutcome>;
 }
 export interface WhatsappDependencies { configuration:WhatsappConfiguration; provider:Provider; clock?:()=>Date }

@@ -586,9 +586,11 @@ production Packages composition; it is disposed with the active component/scope.
 
 | Issue #34 regression | Disposition | Group |
 | --- | --- | --- |
+| apps/web/src/test/operations.test.tsx: projects only safe delivery state and builds immutable proof commands without browser persistence | preserve | proof |
 | apps/web/src/test/operations.test.tsx: projects parcel data, rejects malformed success and binds exact scoped command identity | preserve | parcels |
 | apps/web/src/test/operations.test.tsx: builds versioned lot/route/e-way intents and accepts the restricted accountant e-way projection | preserve | eway |
 | apps/web/src/test/operations.test.tsx: executes only the three exact canonical route-event identities and rejects a generic or mismatched operation | preserve | routes |
+| apps/web/src/test/operations.test.tsx: shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state | preserve | proof |
 | apps/web/src/test/operations.test.tsx: round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary | preserve | routes |
 | apps/web/src/test/operations.test.tsx: announces dashboard loading then renders bounded accessible cards and an honest empty result | preserve | seam |
 | apps/web/src/test/operations.test.tsx: offers controlled dashboard retry after an API failure without local fallback | preserve | seam |

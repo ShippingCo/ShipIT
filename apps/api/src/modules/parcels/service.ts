@@ -10,6 +10,7 @@ import { fingerprint,keyDigest } from './idempotency.ts';
 import type { ParcelCommandInput,ParcelLifecycleRow,ParcelOperation,ParcelTransitionDto } from './types.ts';
 import * as repository from './repository.ts';
 import type { TenantAccess } from '../security/scope.ts';
+import { closeForFailure } from '../deliveries/repository.ts';
 
 /** Owning-domain T04 seam for a Route coordinator's existing transaction. */
 export async function transitForRoute(command:TenantAccess, events:TenantAccess, parcelId:string, routeId:string, evidence:string, time:string) {
@@ -59,6 +60,7 @@ export function createParcelService(database:DatabasePool,clock?:()=>Date) {
       }
       const commandId=randomUUID(),eventId=randomUUID(),time=instant(clock?clock():await repository.databaseNow(scopes.command));
       await repository.reserve(scopes.command,commandId,before,operation,key,intent,body);
+      if(operation==='parcels.fail_delivery')await closeForFailure(scopes.command,id,body.attempt_id!,commandId,new Date(time));
       const after=await repository.mutate(scopes.command,before,commandId,operation,time);
       if(!after)throw new HttpError('VERSION_CONFLICT');
       await repository.appendTransition(scopes.command,commandId,eventId,before,after,operation,body,time);

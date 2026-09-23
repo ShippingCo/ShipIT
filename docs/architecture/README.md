@@ -208,3 +208,8 @@ Issue #35 adds the [durable outbox worker and operational API](outbox.md), with 
 bounded resumable fanout and separately identified W19 reminder; see
 [ADR 0029](../adr/0029-route-delay-notification-fanout.md) and
 [verification](issue-41-verification.md).
+
+[Secure deliveries](deliveries.md) implement #42's server-owned attempt/challenge authority,
+atomic T05/T08/T06 Parcel seams, independent exceptional proof and narrow `delivery_otp`
+outbound source; see [ADR 0030](../adr/0030-secure-atomic-delivery-proof.md) and
+[verification](issue-42-verification.md).

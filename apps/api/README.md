@@ -346,3 +346,26 @@ Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) do
 source events and fanout work sequentially; shutdown stops new claims and lets the active
 database transaction finish. Apply migration 28 and its grants before activating the exact
 template binding. No provider call occurs in the Route or fanout transaction.
+
+## Secure delivery proof (#42)
+
+`DELIVERY_PROOF_SECRET_REF` resolves server-only JSON containing distinct 32-byte hex
+`keys.verifier` and `keys.encryption`, a closed key `version`, and exact authentication
+template `name`/`language`. `template.meta_send_qualified` defaults false; set it true only
+after the exact Meta send shape is qualified for that deployment. Hosted modes require this reference and never accept local
+fallback. Developer composition may use `local:delivery-proof` with
+`LOCAL_DELIVERY_PROOF_JSON`. Apply migration 29 and the grants in the database guide first.
+
+Delivery routes are registered only when the proof configuration resolves. They expose a
+narrow assigned-work projection, dispatcher start/retry and eligible-agent projection,
+resend/replacement, atomic recipient-proof completion, and request/approve/complete
+exception operations. All mutations use the normal session, Origin/CSRF,
+`Idempotency-Key`, tenant selector and expected version. No route exposes challenge secret,
+verifier, ciphertext, contact, provider payload or a generic Parcel delivered action.
+
+The reviewed `delivery_otp` exception uses the existing durable outbound worker. A send
+failure does not roll back assignment; a safe failed/uncertain state remains visible. Live
+Meta authentication-template approval is a deployment prerequisite, not established by
+synthetic tests. See [contract](../../docs/architecture/deliveries.md),
+[ADR 0030](../../docs/adr/0030-secure-atomic-delivery-proof.md), and
+[verification](../../docs/architecture/issue-42-verification.md).

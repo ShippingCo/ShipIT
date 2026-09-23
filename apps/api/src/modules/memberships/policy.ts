@@ -55,6 +55,15 @@ export function parcelCommandScope(action:import('../parcels/types.ts').ParcelAc
   return [...new Set(memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
 
+/** Issue #42 W10/W11/W38-W40. Assignment and independence are rechecked from delivery records. */
+export function deliveryScope(action:import('../deliveries/types.ts').DeliveryAction,memberships:readonly Membership[]) {
+  const roles:readonly Role[]=action==='deliveries.agents'||action==='deliveries.start'||action==='deliveries.retry'?['dispatcher']:
+    action==='deliveries.exception.approve'?['franchise_admin']:
+    action==='deliveries.read'||action==='deliveries.list'?['delivery_agent','dispatcher','franchise_admin']:
+    ['delivery_agent'];
+  return [...new Set(memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}
+
 /** R21 published projection, W27 policy administration, W37 resolution, W01 booking preparation. */
 export function taxScope(action: import('../tax/types.ts').TaxAction, memberships: readonly Membership[], all: readonly string[]) {
   const active = memberships.filter(m => m.lifecycle === 'active');

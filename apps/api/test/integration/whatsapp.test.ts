@@ -11,6 +11,11 @@ const binding={key:'synthetic',organization_id:randomUUID(),franchise_id:randomU
 const configuration={graph_version:'v24.0',bindings:[binding]};
 const rawTemplate={id:'100003',name:'parcel_update',language:'en_US',status:'APPROVED',category:'UTILITY',components:[{type:'BODY',text:'Parcel {{1}} is {{2}}'}]};
 const template=normalizeTemplate(rawTemplate);
+const rawAuthentication={id:'100004',name:'shipit_delivery_code',language:'en',status:'APPROVED',category:'AUTHENTICATION',components:[
+  {type:'BODY',text:'{{1}} is your delivery code'},{type:'FOOTER',text:'This code expires in 10 minutes'},
+  {type:'BUTTONS',buttons:[{type:'OTP',otp_type:'COPY_CODE',text:'Copy code'}]},
+]};
+const authentication=normalizeTemplate(rawAuthentication);
 const reply=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json'}});
 const setup=(respond:typeof fetch)=>{
   const resolve=vi.fn(async()=> 'synthetic_token_not_a_real_credential');
@@ -73,6 +78,13 @@ describe('WhatsApp provider boundary',()=>{
     expect(normalizeTemplate({...rawTemplate,parameter_format:'NAMED'}).supported).toBe(false);
     expect(validVariables(template,['SYNTHETIC','ready'])).toBe(true);
     for(const v of [[],['one'],['one',2],['one',null],['one',''],['one','bad\nline']])expect(validVariables(template,v)).toBe(false);
+  });
+  it('admits only the reviewed one-code AUTHENTICATION copy-code shape for delivery_otp',async()=>{
+    expect(authentication.supported).toBe(true);expect(templateReason(authentication)).toBe('template_category_unavailable');expect(templateReason(authentication,'delivery_otp')).toBe(null);
+    for(const raw of [{...rawAuthentication,components:[rawAuthentication.components[0]]},{...rawAuthentication,components:[rawAuthentication.components[0],{type:'BUTTONS',buttons:[{type:'OTP',otp_type:'ONE_TAP'}]}]},
+      {...rawAuthentication,components:[{type:'BODY',text:'{{1}} {{2}}'},rawAuthentication.components[2]]}])expect(normalizeTemplate(raw).supported).toBe(false);
+    const s=setup(async()=>reply({messages:[{id:'wamid.synthetic'}]}));expect((await s.provider.send(binding,authentication,'+12025550100',['123456'],'delivery_otp')).kind).toBe('accepted');
+    const payload=JSON.parse(s.transport.mock.calls[0]![1]!.body as string);expect(payload.template.components).toEqual([{type:'body',parameters:[{type:'text',text:'123456'}]}]);
   });
   it('rejects invalid parameters and unavailable templates before secrets or HTTP',async()=>{
     const s=setup(async()=>reply({messages:[{id:'wamid.synthetic'}]}));

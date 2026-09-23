@@ -6,6 +6,7 @@ import { DatabaseError,type DatabasePool } from '@shippingco/db';
 import { bookingSetup } from '../booking-support.ts';
 import { org,A,B,otherOrg,C } from '../audit-support.ts';
 import { createParcelService } from '../../src/modules/parcels/service.ts';
+import { startTestDelivery } from '../delivery-support.ts';
 
 type Actor={id:string;token:string};
 const body=(version:number,extra:Record<string,unknown>)=>({expected_version:version,evidence_ref:randomUUID(),...extra});
@@ -55,35 +56,26 @@ await test('same-version contenders have one winner; same key replays once and c
 });
 
 await test('failure is agent/attempt-bound, increments once, and two failures permit reasoned RTO',{timeout:30000},async t=>{
-  const s=await setup(t),agent=await s.grant('delivery_agent',[A]),attempt1=randomUUID();
-  await s.db.adminQuery('ALTER TABLE shipit.parcels DISABLE TRIGGER parcels_lifecycle_guard');
-  await s.db.adminQuery(`UPDATE shipit.parcels SET status='out_for_delivery',custody='delivery_agent',version=2,attempts_started=1,
-    active_attempt_id=$2,assigned_agent_id=$3,last_command_id=NULL WHERE id=$1`,[s.parcel.id,attempt1,agent.id]);
-  await s.db.adminQuery('ALTER TABLE shipit.parcels ENABLE TRIGGER parcels_lifecycle_guard');
-  const key=randomUUID(),failedBody=body(2,{attempt_id:attempt1,reason_code:'customer_unavailable'});
+  const s=await setup(t),agent=await s.grant('delivery_agent',[A]),started=await startTestDelivery(s,s.parcel.id,agent),attempt1=started.state.attempt_id;
+  const key=randomUUID(),failedBody=body(5,{attempt_id:attempt1,reason_code:'customer_unavailable'});
   const failed=await s.post('failed-attempt',failedBody,agent,key);assert.equal(failed.statusCode,200,failed.body);assert.equal(failed.json().failed_attempt_count,1);
   assert.deepEqual((await s.post('failed-attempt',failedBody,agent,key)).json(),failed.json());
   assert.equal((await s.post('failed-attempt',{...failedBody,reason_code:'address_issue'},agent,key)).json().error.code,'IDEMPOTENCY_CONFLICT');
-  const attempt2=randomUUID();await s.db.adminQuery('ALTER TABLE shipit.parcels DISABLE TRIGGER parcels_lifecycle_guard');
-  await s.db.adminQuery(`UPDATE shipit.parcels SET status='out_for_delivery',version=4,attempts_started=2,active_attempt_id=$2,last_command_id=NULL WHERE id=$1`,[s.parcel.id,attempt2]);
-  await s.db.adminQuery('ALTER TABLE shipit.parcels ENABLE TRIGGER parcels_lifecycle_guard');
-  const failed2=await s.post('failed-attempt',body(4,{attempt_id:attempt2,reason_code:'address_issue'}),agent);assert.equal(failed2.statusCode,200,failed2.body);assert.equal(failed2.json().failed_attempt_count,2);
-  const rto=await s.post('rto',body(5,{approval_ref:randomUUID(),return_plan_ref:randomUUID()}),s.local);assert.equal(rto.statusCode,200,rto.body);assert.equal(rto.json().status,'rto');
-  assert.equal((await s.post('check-in',body(6,{location_ref:randomUUID()}))).json().error.code,'PARCEL_STATE_CONFLICT');
+  const retryKey=randomUUID(),retry=await started.service.start(started.dispatcher.token,s.parcel.id,{organization_id:org,franchise_id:A},retryKey,['idempotency-key',retryKey],
+    {expected_version:6,agent_id:agent.id,handover_evidence_ref:randomUUID()},true,randomUUID()),attempt2=retry.attempt_id;
+  const failed2=await s.post('failed-attempt',body(7,{attempt_id:attempt2,reason_code:'address_issue'}),agent);assert.equal(failed2.statusCode,200,failed2.body);assert.equal(failed2.json().failed_attempt_count,2);
+  const rto=await s.post('rto',body(8,{approval_ref:randomUUID(),return_plan_ref:randomUUID()}),s.local);assert.equal(rto.statusCode,200,rto.body);assert.equal(rto.json().status,'rto');
+  assert.equal((await s.post('check-in',body(9,{location_ref:randomUUID()}))).json().error.code,'PARCEL_STATE_CONFLICT');
   assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.parcel_failed_attempts')).rows[0]!.n,2);
   assert.equal((await s.db.adminQuery('SELECT mode FROM shipit.parcel_rto_approvals')).rows[0]!.mode,'attempt_limit');
 });
 
 await test('early RTO needs a closed privileged reason; controlled failures need a closed subreason',{timeout:30000},async t=>{
-  const s=await setup(t),agent=await s.grant('delivery_agent',[A]),attempt=randomUUID();
-  await s.db.adminQuery('ALTER TABLE shipit.parcels DISABLE TRIGGER parcels_lifecycle_guard');
-  await s.db.adminQuery(`UPDATE shipit.parcels SET status='out_for_delivery',custody='delivery_agent',version=2,attempts_started=1,
-    active_attempt_id=$2,assigned_agent_id=$3,last_command_id=NULL WHERE id=$1`,[s.parcel.id,attempt,agent.id]);
-  await s.db.adminQuery('ALTER TABLE shipit.parcels ENABLE TRIGGER parcels_lifecycle_guard');
-  const invalid=await s.post('failed-attempt',body(2,{attempt_id:attempt,reason_code:'other_controlled'}),agent);assert.equal(invalid.statusCode,422,invalid.body);
-  const failed=await s.post('failed-attempt',body(2,{attempt_id:attempt,reason_code:'other_controlled',failure_subreason_code:'weather_disruption'}),agent);assert.equal(failed.statusCode,200,failed.body);
-  const regular=await s.post('rto',body(3,{approval_ref:randomUUID(),return_plan_ref:randomUUID()}),s.local);assert.equal(regular.statusCode,409,regular.body);assert.equal(regular.json().error.code,'RTO_NOT_ELIGIBLE');
-  const override=await s.post('rto',body(3,{approval_ref:randomUUID(),return_plan_ref:randomUUID(),override_reason_code:'safety_risk'}),s.local);assert.equal(override.statusCode,200,override.body);
+  const s=await setup(t),agent=await s.grant('delivery_agent',[A]),started=await startTestDelivery(s,s.parcel.id,agent),attempt=started.state.attempt_id;
+  const invalid=await s.post('failed-attempt',body(5,{attempt_id:attempt,reason_code:'other_controlled'}),agent);assert.equal(invalid.statusCode,422,invalid.body);
+  const failed=await s.post('failed-attempt',body(5,{attempt_id:attempt,reason_code:'other_controlled',failure_subreason_code:'weather_disruption'}),agent);assert.equal(failed.statusCode,200,failed.body);
+  const regular=await s.post('rto',body(6,{approval_ref:randomUUID(),return_plan_ref:randomUUID()}),s.local);assert.equal(regular.statusCode,409,regular.body);assert.equal(regular.json().error.code,'RTO_NOT_ELIGIBLE');
+  const override=await s.post('rto',body(6,{approval_ref:randomUUID(),return_plan_ref:randomUUID(),override_reason_code:'safety_risk'}),s.local);assert.equal(override.statusCode,200,override.body);
   const row=(await s.db.adminQuery('SELECT mode,override_reason_code FROM shipit.parcel_rto_approvals')).rows[0];assert.deepEqual(row,{mode:'privileged_override',override_reason_code:'safety_risk'});
 });
 

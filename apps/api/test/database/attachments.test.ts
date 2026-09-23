@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { startTestDelivery } from '../delivery-support.ts';
 import { attachmentSetup,photo,intent } from '../attachment-support.ts';
 import { createAttachmentService } from '../../src/modules/attachments/service.ts';
 import { org,A,B,otherOrg,C } from '../audit-support.ts';
@@ -90,10 +91,7 @@ await test('attachment binary stream checks actual size without trusting Content
 });
 await test('assigned delivery agent can upload only current parcel proof; reassignment immediately revokes metadata, grant and replay',{timeout:30000},async t=>{
  const s=await attachmentSetup(t),agent=await s.grant('delivery_agent',[A]),replacement=await s.grant('delivery_agent',[A]);
- // Trusted future-delivery fixture: no new assignment/completion API is introduced by #31.
- await s.db.adminQuery('ALTER TABLE shipit.parcels DISABLE TRIGGER parcels_lifecycle_guard');
- try{await s.db.adminQuery("UPDATE shipit.parcels SET status='out_for_delivery',custody='delivery_agent',attempts_started=1,active_attempt_id=$1,assigned_agent_id=$2 WHERE id=$3",[randomUUID(),agent.id,s.parcelId]);}
- finally{await s.db.adminQuery('ALTER TABLE shipit.parcels ENABLE TRIGGER parcels_lifecycle_guard');}
+ await startTestDelivery(s,s.parcelId,agent);
  const body={...intent(),purpose:'parcel_proof',parcel_id:s.parcelId},key=randomUUID();
  const start=await s.request('POST','/uploads',body,agent.token,s.bookingId,s.q,key);assert.equal(start.statusCode,201,start.body);const id=start.json().id;
  assert.equal((await s.request('POST','/uploads',{...intent(),parcel_id:s.parcelId},agent.token)).statusCode,404);

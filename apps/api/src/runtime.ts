@@ -16,6 +16,9 @@ import { parseAuthConfig, type AuthConfiguration } from './modules/auth/config.t
 import { createDeliveryWorker } from './modules/auth/worker.ts';
 import { createAttachmentCleanup } from './modules/attachments/cleanup.ts';
 import { createSender } from './modules/auth/delivery.ts';
+import { parseDeliveryProofConfiguration } from './modules/deliveries/crypto.ts';
+import type { DeliveryProofConfiguration } from './modules/deliveries/types.ts';
+import { createDeliveryChallengeCleanup } from './modules/deliveries/cleanup.ts';
 
 export async function startRuntime({ config, secretResolver, logSink, signal }: {
   config: RuntimeConfig; secretResolver: SecretResolver; logSink?: LogSink; signal?: AbortSignal;
@@ -35,13 +38,15 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   let auth: AuthConfiguration | undefined;
   let attachments:AttachmentDependencies|undefined;
   let whatsapp:WhatsappDependencies|undefined;
+  let deliveryProof:DeliveryProofConfiguration|undefined;
   try {
     if (signal?.aborted) throw new Error();
     const values = await Promise.race([
       Promise.all([secretResolver.resolve(config.databaseSecretRef, controller.signal),
         config.authSecretRef ? secretResolver.resolve(config.authSecretRef,controller.signal) : Promise.resolve(undefined),
         config.storageSecretRef ? secretResolver.resolve(config.storageSecretRef,controller.signal) : Promise.resolve(undefined),
-        config.whatsappConfigRef ? secretResolver.resolve(config.whatsappConfigRef,controller.signal) : Promise.resolve(undefined)]),
+        config.whatsappConfigRef ? secretResolver.resolve(config.whatsappConfigRef,controller.signal) : Promise.resolve(undefined),
+        config.deliveryProofSecretRef ? secretResolver.resolve(config.deliveryProofSecretRef,controller.signal) : Promise.resolve(undefined)]),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => { controller.abort(); reject(new Error()); }, 10_000);
         controller.signal.addEventListener('abort', () => reject(new Error()), { once: true });
@@ -51,6 +56,10 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
     if(values[3]!==undefined){
       const configuration=parseWhatsappConfiguration(values[3],config.environment);
       whatsapp={configuration,provider:createMetaProvider({configuration,secrets:secretResolver})};
+    }
+    if(values[4]!==undefined){
+      try {deliveryProof=parseDeliveryProofConfiguration(values[4]);}
+      catch {throw new ConfigurationError([{field:'DELIVERY_PROOF_SECRET_REF',code:'INVALID_FORMAT'}]);}
     }
     if(values[2]!==undefined)attachments=attachmentAdapters(parseAttachmentConfiguration(values[2],config.environment));
     if (values[1]!==undefined) {
@@ -66,7 +75,7 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   const database = createPool(createDatabaseConfig({ connectionString: resolved, environment: config.environment,
     tls: config.databaseTls, applicationName: 'shipit_api' }));
   let app;
-  try { app = buildServer({ config, database, logSink, auth, attachments, whatsapp }); }
+  try { app = buildServer({ config, database, logSink, auth, attachments, whatsapp, deliveryProof }); }
   catch { attachments?.store.close?.(); await database.close(); throw new Error('STARTUP_FAILED'); }
   if(attachments)app.addHook('onClose',async()=>{attachments.store.close?.();});
   const lifecycle = attachLifecycle(app, database);
@@ -127,6 +136,12 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
     };
     app.addHook('onReady',async()=>{timer=setTimeout(()=>{pending=cycle();},1000);});
     app.addHook('preClose',async()=>{stopped=true;clearTimeout(timer);cleanupStop.abort();await pending;});
+  }
+  if(deliveryProof){
+    const cleanup=createDeliveryChallengeCleanup(database),cleanupStop=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve();
+    const cycle=async()=>{try{await cleanup.tick(100,cleanupStop.signal);}catch{app.log.error({event:'delivery_challenge_cleanup_failed',code:'TEMPORARILY_UNAVAILABLE'},'Delivery challenge cleanup unavailable');}
+      if(!stopped)timer=setTimeout(()=>{pending=cycle();},60000);};
+    app.addHook('onReady',async()=>{timer=setTimeout(()=>{pending=cycle();},1000);});app.addHook('preClose',async()=>{stopped=true;clearTimeout(timer);cleanupStop.abort();await pending;});
   }
   try {
     await app.ready();

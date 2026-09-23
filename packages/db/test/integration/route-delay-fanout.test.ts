@@ -21,7 +21,7 @@ await test('populated #40 baseline upgrades forward; failed #41 migration rolls 
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.route_delay_fanouts') value")).rows[0]!.value,null);
   assert.deepEqual((await db.adminQuery('SELECT id,display_name FROM shipit.organizations WHERE id=$1',[organization])).rows,before);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,27);
-  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await db.adminQuery('SELECT id,display_name FROM shipit.organizations WHERE id=$1',[organization])).rows,before);
   for(const table of ['route_delay_reminder_commands','route_delay_reminder_events','route_delay_fanouts','route_delay_fanout_items'])
     assert.equal((await db.adminQuery('SELECT to_regclass($1) value',[`shipit.${table}`])).rows[0]!.value,`shipit.${table}`);
