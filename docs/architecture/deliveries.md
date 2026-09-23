@@ -26,6 +26,9 @@ most two physical attempts. OTP verification failures are a separate lineage cou
 - Replacement is limited to expiry or recorded compromise, atomically supersedes and
   destroys the old verifier/ciphertext, creates a fresh version and ten-minute window,
   and preserves every attempt, failure and resend counter.
+  Expiry cleanup may already have destroyed the old verifier and resend ciphertext.
+  Replacement authorizes from durable lineage/state metadata and creates fresh material;
+  it never requires or restores the expired secret or old outbound payload.
 - Consumption, lock, supersession, failed-attempt closure and delivery closure make secret
   material unusable immediately. Expired material is never accepted; operational cleanup
   may null remaining expired ciphertext without changing immutable proof facts.

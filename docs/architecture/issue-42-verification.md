@@ -19,11 +19,16 @@ FKs, runtime privileges, exact replay, five-failure lock, resend/replacement bud
 restart, independent-connection completion races, OTP/exception race, OTP/T07 race,
 post-proof injected rollback, sibling/foreign/other-agent isolation, protected evidence,
 permanent proof method, immutable Parcel-recipient routing distinct from the booking sender,
-and unchanged To-Pay obligation. Synthetic secret sentinels assert
+and unchanged To-Pay obligation. The review regression exercises expiry → cleanup →
+replacement after two resends and one wrong proof: old verifier/ciphertext and both old
+outbound payloads are null, ordinary resend remains denied, replacement retains lineage
+and assignment with the third send reservation, old proof fails, and new proof completes
+exactly once. Cleanup followed by resend/replacement also cannot bypass five-failure lockout.
+Synthetic secret sentinels assert
 that plaintext proof and private markers do not enter command results, events or browser
 state. Provider tests use a synthetic transport only. The final run passed 30 static
 quality tests, 34 package unit tests, 481 API tests, 157 web tests, 3 object-store contract
-tests, and 366 real-PostgreSQL tests (67 database + 299 API); both production builds passed. `verify:gates` passed
+tests, and 367 real-PostgreSQL tests (67 database + 300 API); both production builds passed. `verify:gates` passed
 the clean/restored quality runs and every expected negative drill.
 
 Manual review searches `OTP|challenge|verifier|secret|token|phone|address|payload|console.log|

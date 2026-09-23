@@ -77,14 +77,16 @@ export function createDeliveryService(database:DatabasePool,configuration:Delive
    if(a.resend_count>=3)throw new HttpError('DELIVERY_RESEND_LIMIT');
    if(replace&&(body as ReturnType<typeof validate.replace>).reason_code==='expired'&&time<a.expires_at)throw new HttpError('PARCEL_STATE_CONFLICT');
    if(!replace&&time>=a.expires_at)throw new HttpError('DELIVERY_CHALLENGE_EXPIRED');
-   if(!a.encrypted_secret)throw new HttpError('DELIVERY_CHALLENGE_LOCKED');
    const command=randomUUID();await repository.reserve(scopes.command,command,parcel,a.id,operation,key,fingerprint,body.expected_version,body,time);
    const advanced=await repository.advanceResend(scopes.command,a.id);if(!advanced)throw new HttpError('DELIVERY_RESEND_LIMIT');
    let challenge=a.challenge_id,version=a.challenge_version,code:string;
    if(replace) {
     challenge=randomUUID();version++;code=generateDeliveryCode();const parts=identity(a,challenge,version);
     await repository.replaceChallenge(scopes.command,a,challenge,deliveryVerifier(configuration.keys,parts,code),sealDeliveryCode(configuration.keys,parts,code),configuration.keys.version,command,time);
-   } else code=openDeliveryCode(configuration.keys,identity(a,a.challenge_id,a.challenge_version),a.encrypted_secret,a.key_version);
+   } else {
+    if(!a.encrypted_secret)throw new HttpError('DELIVERY_CHALLENGE_LOCKED');
+    code=openDeliveryCode(configuration.keys,identity(a,a.challenge_id,a.challenge_version),a.encrypted_secret,a.key_version);
+   }
    await reserveChallengeSend(scopes.command,whatsapp,configuration,{attempt:a.id,challenge,parcel,recipient:a.recipient_ref,contactVersion:a.recipient_contact_version,
     code,expires:replace?new Date(time.getTime()+600000):a.expires_at,command,kind:replace?'replacement':'resend',ordinal:advanced.resend_count,time});
    await repository.audit(scopes.command,randomUUID(),command,parcel,a.id,operation,'success',replace?'challenge_replaced':'challenge_resent',time);
