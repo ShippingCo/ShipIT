@@ -18,6 +18,9 @@ async function resolved(scope:TenantAccess,event:Event) {
   if(event.event_type==='parcel.checked_in')return repository.parcel(scope,event,'checked_in');
   if(event.event_type==='parcel.dispatched')return repository.parcel(scope,event,'dispatched');
   if(event.event_type==='parcel.in_transit')return repository.transit(scope,event);
+  if(event.event_type==='delivery.attempt_failed')return repository.failedAttempt(scope,event);
+  if(event.event_type==='parcel.rto_approved')return repository.rto(scope,event);
+  if(event.event_type==='delivery.completed')return repository.completion(scope,event);
   return repository.route(scope,event);
 }
 function variables(binding:AutomationPolicyBinding,item:ResolvedNotification) {

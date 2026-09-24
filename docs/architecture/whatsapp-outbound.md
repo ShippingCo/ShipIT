@@ -37,6 +37,22 @@ This short transaction blocks concurrent ingress and consent changes through the
 lock. HTTP happens afterward without database locks. Lost COMMIT acknowledgment skips HTTP.
 Lost acceptance persistence leaves the reservation for uncertain recovery.
 
+For the three #43 final-mile update policies only, the same reservation transaction also
+performs a source-reference-based lifecycle check immediately before changing the intent
+to `dispatching`. It takes a tenant-scoped SHARE lock on the authoritative Parcel and checks:
+
+- a failed attempt is still the latest physical failure, with no retry/newer attempt and no
+  delivered/RTO outcome;
+- an RTO source still names the current `rto` revision; and
+- a completion source and its proof still name the current `delivered` revision.
+
+If false, the worker sets `suppressed / source_superseded`, purges sealed rendering and
+makes no provider call. The Parcel lock makes the reservation commit the linearization
+point: a lifecycle outcome committed before this check suppresses the intent; an outcome
+that can commit only after reservation cannot retract provider I/O already authorized.
+The immutable automation decision is unchanged. Booking, route, consent-disclosure and
+`delivery_otp` purposes do not use these #43 predicates.
+
 Five confirmed 429 rejections exhaust a cycle. Retry delay respects both jittered backoff
 and provider Retry-After; a wait over 24 hours fails for review. Permanent credential/template
 errors stop immediately. No unbounded or hidden provider retries. Unknown outcomes without

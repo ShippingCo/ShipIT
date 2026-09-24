@@ -330,7 +330,7 @@ await test('policy activation identities are immutable, versioned and race-safe'
   const initial=(await rows()).rows;
   await activateNotificationPolicies(s.pool,owners,activations);
   assert.deepEqual((await rows()).rows,initial);
-  assert.equal(initial.length,7);assert.ok(initial.some(row=>row.policy_id==='parcel-route-overlap'));
+  assert.equal(initial.length,10);assert.ok(initial.some(row=>row.policy_id==='parcel-route-overlap'));
 
   const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
   const variants=[
