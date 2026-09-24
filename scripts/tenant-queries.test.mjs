@@ -139,6 +139,20 @@ test('delivery proof tables require composite tenant ownership and route query d
  assert.ok(inspectSource(file,`tx.query('${cleanup}')`).length);
  assert.ok(inspectSource(jobs,`tx.query('${cleanup}; SELECT * FROM shipit.delivery_challenges')`).length);
 });
+test('final-mile resolvers require franchise scope and an unscoped #43 query fails the actual checker',()=>{
+ const files=['apps/api/src/modules/automation/repository.ts','apps/api/src/modules/automation/final-mile-relevance.ts'];
+ for(const path of files)for(const table of ['domain_events','parcels','parcel_failed_attempts','parcel_rto_approvals','delivery_attempts','delivery_proofs']){
+  assert.deepEqual(inspectSource(path,`scopedQuery(scope,['outbox.work'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  assert.ok(inspectSource(path,`scopedQuery(scope,['outbox.work'],'SELECT id FROM shipit.${table} WHERE id=$1')`).length);
+ }
+ const root=mkdtempSync(join(tmpdir(),'shipit-final-mile-gate-')),path=files[1];
+ try {
+  mkdirSync(join(root,'apps/api/src/modules/automation'),{recursive:true});
+  writeFileSync(join(root,path),"scopedQuery(scope,['outbox.work'],'SELECT id FROM shipit.delivery_proofs WHERE id=$1')");
+  const result=spawnSync(process.execPath,[resolve('scripts/check-tenant-queries.mjs')],{cwd:root,encoding:'utf8'});
+  assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
+ } finally {rmSync(root,{recursive:true,force:true});}
+});
 test('lots require both owner predicates; routes cannot execute request query or mint authority',()=>{
   const file='apps/api/src/modules/lots/repository.ts';
   for(const table of ['lots','lot_commands','lot_memberships','lot_audit_events','lot_code_counters']){

@@ -213,3 +213,7 @@ bounded resumable fanout and separately identified W19 reminder; see
 atomic T05/T08/T06 Parcel seams, independent exceptional proof and narrow `delivery_otp`
 outbound source; see [ADR 0030](../adr/0030-secure-atomic-delivery-proof.md) and
 [verification](issue-42-verification.md).
+
+[Final-mile notifications](notification-automation.md#final-mile-resolution) implement
+#43's failed-attempt, committed-RTO and proof-aware completion policies on the stable
+consumer, including send-time stale suppression; see [verification](issue-43-verification.md).

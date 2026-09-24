@@ -15,6 +15,9 @@ export const notificationPolicies:readonly NotificationPolicy[]=Object.freeze([
   {id:'route-departed',version:1,event:'route.departed',aggregate:'route',kind:'route_departed',affected:'parcel',variables:['docket','route_id','effective_at','base_eta_at','revised_eta_at'],notify:true},
   {id:'route-delayed',version:1,event:'route.delayed',aggregate:'route',kind:'route_delayed',affected:'parcel',variables:['docket','effective_at','revised_eta_at'],requiredVariables:['revised_eta_at'],notify:true},
   {id:'route-arrived',version:1,event:'route.arrived',aggregate:'route',kind:'route_arrived',affected:'parcel',variables:['docket','route_id','effective_at'],notify:true},
+  {id:'delivery-attempt-failed',version:1,event:'delivery.attempt_failed',aggregate:'parcel',kind:'delivery_attempt_failed',affected:'parcel',variables:['docket','safe_failure_reason','occurred_at'],requiredVariables:['safe_failure_reason'],notify:true},
+  {id:'parcel-rto-approved',version:1,event:'parcel.rto_approved',aggregate:'parcel',kind:'rto_approved',affected:'parcel',variables:['docket','occurred_at'],notify:true},
+  {id:'delivery-completed',version:1,event:'delivery.completed',aggregate:'parcel',kind:'delivery_completed',affected:'parcel',variables:['docket','completed_at','proof_wording'],requiredVariables:['proof_wording'],notify:true},
 ]);
 export const notificationSubscriptions=Object.freeze(Object.fromEntries(notificationPolicies.map(p=>[p.event,Object.freeze([1])])));
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -28,6 +31,23 @@ export function validateNotificationEvent(event:Event) {
   if(event.event_type==='parcel.checked_in')return exact(p,['receipt_ref','location_ref'])&&[p.receipt_ref,p.location_ref].every(v=>typeof v==='string'&&uuid.test(v));
   if(event.event_type==='parcel.dispatched')return exact(p,['manifest_id','dispatch_evidence_ref'])&&[p.manifest_id,p.dispatch_evidence_ref].every(v=>typeof v==='string'&&uuid.test(v));
   if(event.event_type==='parcel.in_transit')return exact(p,['route_id','movement_evidence_ref'])&&[p.route_id,p.movement_evidence_ref].every(v=>typeof v==='string'&&uuid.test(v));
+  if(event.event_type==='delivery.attempt_failed') {
+    const reasons=['customer_unavailable','customer_requests_pickup','address_issue','recipient_refusal','payment_not_collected','operational_issue','other_controlled'];
+    const subreasons=['weather_disruption','vehicle_breakdown','route_access_restricted','device_or_network_failure'];
+    const keys=Object.keys(p),shape=keys.length===3&&exact(p,['attempt_id','failure_reason','evidence_ref'])||
+      keys.length===4&&exact(p,['attempt_id','failure_reason','evidence_ref','failure_subreason']);
+    return shape&&typeof p.attempt_id==='string'&&uuid.test(p.attempt_id)&&typeof p.evidence_ref==='string'&&uuid.test(p.evidence_ref)&&
+      typeof p.failure_reason==='string'&&reasons.includes(p.failure_reason)&&
+      (p.failure_reason==='other_controlled'?typeof p.failure_subreason==='string'&&subreasons.includes(p.failure_subreason):p.failure_subreason===undefined);
+  }
+  if(event.event_type==='parcel.rto_approved') {
+    const keys=Object.keys(p),shape=keys.length===3&&exact(p,['approval_ref','eligibility_ref','return_plan_ref'])||
+      keys.length===4&&exact(p,['approval_ref','eligibility_ref','return_plan_ref','override_reason_code']);
+    return shape&&[p.approval_ref,p.eligibility_ref,p.return_plan_ref].every(v=>typeof v==='string'&&uuid.test(v))&&
+      (p.override_reason_code===undefined||['safety_risk','legal_restriction','operationally_unserviceable'].includes(String(p.override_reason_code)));
+  }
+  if(event.event_type==='delivery.completed')return exact(p,['attempt_id','proof_ref'])&&
+    [p.attempt_id,p.proof_ref].every(v=>typeof v==='string'&&uuid.test(v));
   return exact(p,['manifest_id','affected_set_ref'])&&[p.manifest_id,p.affected_set_ref].every(v=>typeof v==='string'&&uuid.test(v))&&p.affected_set_ref===event.event_id;
 }
 export function policyBindings(input:readonly AutomationPolicyBinding[]) {

@@ -6,6 +6,7 @@ import * as consent from './consent-repository.ts';
 import * as repository from './outbound-repository.ts';
 import { openOutbound, policyFailure, sendDecision } from './outbound-rules.ts';
 import type { SendOutcome, WhatsappDependencies } from './types.ts';
+import { finalMileRelevance } from '../automation/final-mile-relevance.ts';
 
 export function createOutboundWorker(database:DatabasePool,dependencies:WhatsappDependencies) {
  const clock=()=>dependencies.clock?.()??null;
@@ -60,6 +61,9 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
     }
     const binding=dependencies.configuration.bindings.find(b=>b.key===installation.binding_key)!;
     const template=input.format==='template'?await consent.template(scope,installation.id,input.template_name,input.template_language):null;
+    if(await finalMileRelevance(scope,input)===false) {
+     await repository.update(scope,m,'suppressed','source_superseded',now,{purge:true});return {result:'suppressed'} as const;
+    }
     const attempt=randomUUID();
     await repository.update(scope,m,'dispatching','dispatch_reserved',now,{attempt});
     return {id,attempt,binding,template,recipient,input} as const;

@@ -1,4 +1,4 @@
-# Event-to-notification automation — Issue #40
+# Event-to-notification automation — Issues #40 and #43
 
 [ADR 0028](../adr/0028-event-notification-automation.md)
 
@@ -20,10 +20,31 @@ The closed v1 registry consumes strict schema-version-1 envelopes for:
 | `route-departed:1` | `route.departed` | each immutable route effect Parcel | `route_departed` |
 | `route-delayed:1` | `route.delayed` | each immutable route effect Parcel via resumable fanout | `route_delayed` |
 | `route-arrived:1` | `route.arrived` | each immutable route effect Parcel | `route_arrived` |
+| `delivery-attempt-failed:1` | `delivery.attempt_failed` | Parcel | `delivery_attempt_failed` |
+| `parcel-rto-approved:1` | `parcel.rto_approved` | Parcel | `rto_approved` |
+| `delivery-completed:1` | `delivery.completed` | Parcel | `delivery_completed` |
 
 `revised_eta_at` is mandatory for `route-delayed:1`. A Route-delay template that cannot
 represent the trusted ETA or the explicit `unavailable` value must not be activated. The
 other allowlisted Route-delay variables remain optional.
+
+The failed-attempt policy requires `safe_failure_reason`; the completion policy requires
+`proof_wording`. These are code-owned closed values, not event prose. Failure codes map to:
+
+| Internal code | Customer-safe value |
+| --- | --- |
+| `customer_unavailable` | `The recipient was unavailable` |
+| `customer_requests_pickup` | `The recipient requested office collection` |
+| `address_issue` | `The delivery address needs confirmation` |
+| `recipient_refusal` | `The recipient could not accept the delivery` |
+| `payment_not_collected` | `The required payment was not collected` |
+| `operational_issue` | `An operational issue prevented delivery` |
+| `other_controlled` | `A delivery condition prevented completion` |
+
+`other_controlled` subreasons remain closed validation evidence and are never rendered.
+Completion renders `recipient verification` for `otp_verified` and
+`approved alternate delivery proof` for `exceptional`. It never exposes the proof reference,
+exception reason/evidence, staff identity or challenge material.
 
 `WHATSAPP_CONFIG_REF` may contain the server-only `automation.policies` array. Each
 entry binds one exact policy/version to one exact approved-template name, language and
@@ -64,6 +85,26 @@ The consumer proves aggregate gaps from the immutable domain-event sequence. Out
 delivery is safe: current-state checks and stale handling still append a decision, while
 the #35 receipt advances the stream once the transaction commits.
 
+## Final-mile resolution
+
+All three #43 resolvers are dedicated tenant-scoped joins. They validate the immutable
+source event against the owned Parcel and typed source evidence before resolving the normal
+Booking → current Customer contact used by optional updates. They never use the private
+`delivery_recipients` contact reserved for `delivery_otp`.
+
+- A failure must match its immutable attempt, failure row and closed reason. It is current
+  only while that attempt is the latest physical attempt, its failure number is current,
+  and the Parcel remains at the source revision in `failed_attempt`.
+- RTO comes only from the matching committed `parcel.rto_approved` row and remains current
+  only while the Parcel is at that source revision in `rto`. Template wording must describe
+  an initiated/approved return, not physical return completion, refund or credit.
+- Completion resolves only the proof row named by `proof_ref`, with the same tenant, Parcel
+  and attempt, and reads only `proof_method` and `completed_at`. It remains current only
+  while the Parcel is at that source revision in `delivered`.
+
+Delivery status and proof never authorize payment statements. No #43 resolver reads or
+changes the payment ledger, and the approved variables contain no paid/settled/COD claim.
+
 ## Persistence and enqueue boundary
 
 `notification_automation_decisions` is append-only and records source event, policy/version,
@@ -90,5 +131,5 @@ signed, actor/revision-bound pagination. They reuse R16 `whatsapp.consent.read`:
 franchise admin, operator and dispatcher are permitted for the selected franchise;
 `read_only`, sibling and foreign tenant access fail closed.
 
-Delivery challenges remain #42. Attempt, RTO and completion notifications remain #43, and
-the browser automation feed remains #44.
+Delivery challenges remain #42 and use their separate protected recipient. The browser
+automation feed remains #44 and release qualification remains #45.

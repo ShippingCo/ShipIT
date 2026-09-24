@@ -338,7 +338,7 @@ Optional server-only WHATSAPP_CONFIG_REF enables scoped installation and templat
 
 Issue #38: [consent operations](../../docs/architecture/messaging-consent.md) documents signed consent consumption, R16 history, policy evaluation and #39 integration.
 
-[Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. [Notification automation](../../docs/architecture/notification-automation.md) registers #40's versioned event policies and safe decision reads.
+[Outbound WhatsApp](../../docs/architecture/whatsapp-outbound.md) adds a database-only enqueue service, post-commit dispatch, delivery reconciliation and scoped history/redrive. Dispatch defaults off and requires outbound_enabled in the existing server-only WhatsApp catalog. [Notification automation](../../docs/architecture/notification-automation.md) registers the stable #40 consumer plus #43's failed-attempt, RTO and proof-aware completion policy versions and safe decision reads.
 
 [Route-delay notifications](../../docs/architecture/route-delay-notifications.md) add
 `route-delayed:1`, a 20-item resumable worker, safe fanout progress reads and the W19
