@@ -98,6 +98,10 @@ Pinned toolchain: Node 22.23.2, pnpm 10.34.5, Python 3.12.14; disposable Postgre
 - `pnpm db:local verify:gates` passed the clean/restore paths and every controlled
   failure-injection drill, including the #43 unscoped-query negative control; PostgreSQL
   was removed. Exact-head CI is recorded in the PR after the final commit.
+- The first exact-head CI attempt exposed that the test harness's pinned upstream MinIO
+  digest was no longer available from Quay. The harness now pins the maintained Silo
+  2026-09-03 multi-architecture release by immutable digest; a cold pull passed all three
+  S3-compatible private-object contract tests before the aggregate reruns.
 
 ## Known external limits and downstream scope
 
