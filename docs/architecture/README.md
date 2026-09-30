@@ -220,4 +220,11 @@ consumer, including send-time stale suppression; see [verification](issue-43-ver
 
 [Messaging history](messaging-history.md) implements #44’s joined R16/R17 projection,
 production Automation & Messages screen, W44 redrive and W19 reminders; see
-[verification](issue-44-verification.md). #45 remains downstream.
+[verification](issue-44-verification.md).
+
+## End-to-end messaging recovery qualification (#45)
+
+[Issue #45 verification](issue-45-verification.md) records the real-PostgreSQL crash matrix,
+synthetic provider/callback recovery, closed-pool restarts, authorization and privacy evidence.
+Run `pnpm db:local exec node scripts/test-messaging-recovery.mjs` for its focused selection;
+all cases also remain mandatory in `pnpm db:local quality` and existing CI.

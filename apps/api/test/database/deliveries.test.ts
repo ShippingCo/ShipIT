@@ -16,6 +16,8 @@ import { buildServer } from '../../src/server.ts';
 import { parseEnvironment } from '../../src/env.ts';
 
 const selector={organization_id:org,franchise_id:A};
+// A fixed wrong-code literal can randomly equal the cryptographically generated challenge.
+const wrongProof=(code:string)=>String((Number(code)+1)%1000000).padStart(6,'0');
 const headers=(key:string)=>['idempotency-key',key];
 async function setup(t:Parameters<typeof bookingSetup>[0]){
  const s=await bookingSetup(t),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);const parcel=booked.json().parcels[0],agent=await s.grant('delivery_agent',[A]);
@@ -74,13 +76,13 @@ await test('delivery HTTP boundary enforces CSRF, strict input, assignment hidin
  response=await app.inject({method:'POST',url:url.replace('?','/complete?'),cookies:s.cookies(s.agent.token),headers:{...s.headers,'idempotency-key':key},payload:JSON.stringify(body)});assert.equal(response.statusCode,200,response.body);
  const committed=response.json();assert.equal(committed.proof_method,'otp_verified');for(const prohibited of [s.code,'verifier','encrypted_secret','phone_normalized'])assert.equal(response.body.includes(prohibited),false);
  assert.deepEqual((await app.inject({method:'POST',url:url.replace('?','/complete?'),cookies:s.cookies(s.agent.token),headers:{...s.headers,'idempotency-key':key},payload:JSON.stringify(body)})).json(),committed);
- assert.equal((await app.inject({method:'POST',url:url.replace('?','/complete?'),cookies:s.cookies(s.agent.token),headers:{...s.headers,'idempotency-key':key},payload:JSON.stringify({...body,proof:'000000'})})).statusCode,409);
+ assert.equal((await app.inject({method:'POST',url:url.replace('?','/complete?'),cookies:s.cookies(s.agent.token),headers:{...s.headers,'idempotency-key':key},payload:JSON.stringify({...body,proof:wrongProof(s.code)})})).statusCode,409);
  for(const prohibited of [s.code,deliveryProofConfiguration.keys.verifier.toString('hex'),deliveryProofConfiguration.keys.encryption.toString('hex'),'raw-exception-evidence'])assert.equal(JSON.stringify(logs).includes(prohibited),false);
 });
 
 await test('wrong proofs serialize at five, lock permanently, and resend/replacement cannot reset lineage budgets',{timeout:30000},async t=>{
  const s=await setup(t);for(let attempt=1;attempt<=5;attempt++){const key=randomUUID(),result=await s.service.complete(s.agent.token,s.parcel.id,selector,key,headers(key),
-  {expected_version:5,challenge_ref:s.state.challenge_ref,challenge_version:1,proof:'999999'},false,randomUUID()) as {outcome:string;remaining_attempts:number};assert.equal(result.outcome,'proof_invalid');assert.equal(result.remaining_attempts,5-attempt);}
+  {expected_version:5,challenge_ref:s.state.challenge_ref,challenge_version:1,proof:wrongProof(s.code)},false,randomUUID()) as {outcome:string;remaining_attempts:number};assert.equal(result.outcome,'proof_invalid');assert.equal(result.remaining_attempts,5-attempt);}
  await assert.rejects(complete(s,randomUUID()),{code:'DELIVERY_CHALLENGE_LOCKED'});
  const locked=(await s.db.adminQuery('SELECT failed_verifications,locked_at FROM shipit.delivery_attempts WHERE id=$1',[s.state.attempt_id])).rows[0]!;assert.equal(locked.failed_verifications,5);assert.ok(locked.locked_at);
  const key=randomUUID();await assert.rejects(s.service.resend(s.agent.token,s.parcel.id,selector,key,headers(key),{expected_version:5,challenge_ref:s.state.challenge_ref},false,randomUUID()),{code:'DELIVERY_CHALLENGE_LOCKED'});
@@ -93,7 +95,7 @@ await test('wrong proofs serialize at five, lock permanently, and resend/replace
 await test('cooldown, same-code resend, expiry replacement, supersession and resend budget use persisted server time',{timeout:30000},async t=>{
  const s=await setup(t),first=s.state.challenge_ref,expires=s.state.expires_at;
  const wrongKey=randomUUID();const wrong=await s.service.complete(s.agent.token,s.parcel.id,selector,wrongKey,headers(wrongKey),
-  {expected_version:5,challenge_ref:first,challenge_version:1,proof:'999999'},false,randomUUID()) as {remaining_attempts:number};assert.equal(wrong.remaining_attempts,4);
+  {expected_version:5,challenge_ref:first,challenge_version:1,proof:wrongProof(s.code)},false,randomUUID()) as {remaining_attempts:number};assert.equal(wrong.remaining_attempts,4);
  let key=randomUUID();await assert.rejects(s.service.resend(s.agent.token,s.parcel.id,selector,key,headers(key),{expected_version:5,challenge_ref:first},false,randomUUID()),{code:'DELIVERY_RESEND_COOLDOWN'});
  s.setNow(new Date(Date.parse(s.state.resend_available_at)+1).toISOString());key=randomUUID();const resent=await s.service.resend(s.agent.token,s.parcel.id,selector,key,headers(key),{expected_version:5,challenge_ref:first},false,randomUUID());assert.equal(resent.challenge_ref,first);assert.equal(resent.expires_at,expires);assert.equal(await testDeliveryCode(s,s.parcel.id),s.code);
  s.setNow(new Date(Date.parse(expires)+1).toISOString());key=randomUUID();const replaced=await s.service.resend(s.agent.token,s.parcel.id,selector,key,headers(key),{expected_version:5,challenge_ref:first,reason_code:'expired'},true,randomUUID());assert.notEqual(replaced.challenge_ref,first);assert.equal(replaced.challenge_version,2);assert.equal(replaced.resends_remaining,1);
@@ -124,7 +126,7 @@ await test('expiry cleanup destroys old challenge and outbound secrets while rep
   {expected_version:5,challenge_ref:state.challenge_ref,...(replace?{reason_code:'expired'}:{})},replace,randomUUID());};
  const lineage=async()=>(await s.db.adminQuery(`SELECT a.failed_verifications,a.locked_at,a.resend_count,a.attempt_number,a.assignment_id,a.agent_id,a.organization_id,a.franchise_id,
   p.active_attempt_id,p.assigned_agent_id,p.status FROM shipit.delivery_attempts a JOIN shipit.parcels p ON p.id=a.parcel_id WHERE a.id=$1`,[s.state.attempt_id])).rows[0]!;
- const wrong=await complete(s,randomUUID(),s.code==='000000'?'000001':'000000') as {remaining_attempts:number};assert.equal(wrong.remaining_attempts,4);
+ const wrong=await complete(s,randomUUID(),wrongProof(s.code)) as {remaining_attempts:number};assert.equal(wrong.remaining_attempts,4);
  let current=s.state;
  for(let count=1;count<=2;count++){
   s.setNow(new Date(Date.parse(current.resend_available_at)+1).toISOString());current=await resend(current,false);
@@ -247,4 +249,40 @@ await test('messaging history always redacts delivery OTP for every permitted ro
   const json=JSON.stringify(row);for(const prohibited of [code,secret.verifier,secret.encrypted_secret,'sealed_payload','delivery_recipient_ref','variables','template','body','phone'])assert.equal(json.includes(String(prohibited)),false);
  }
  await assert.rejects(history.list(agent.token,'messages',selector,randomUUID()),{code:'ACTION_FORBIDDEN'});
+});
+
+await test('qualification: proof at expiry minus one millisecond completes once; consumed proof cannot complete after pool restart',{timeout:30000},async t=>{
+ const s=await setup(t);s.setNow(new Date(Date.parse(s.state.expires_at)-1).toISOString());
+ const result=await complete(s) as DeliveryStateDto;assert.equal(result.status,'consumed');
+ await s.app.close();await s.pool.close();
+ const fresh=createDeliveryService(s.db.runtimePool(),deliveryProofConfiguration,undefined,s.clock);
+ await assert.rejects(complete(s,randomUUID(),s.code,fresh),{code:'VERSION_CONFLICT'});
+ const key=randomUUID();await assert.rejects(fresh.complete(s.agent.token,s.parcel.id,selector,key,headers(key),
+ {expected_version:6,challenge_ref:s.state.challenge_ref,challenge_version:s.state.challenge_version,proof:s.code},false,randomUUID()),{code:'PARCEL_STATE_CONFLICT'});
+ const saved=(await s.db.adminQuery(`SELECT p.status,p.version,(SELECT count(*)::int FROM shipit.delivery_proofs WHERE parcel_id=p.id) proofs,
+ (SELECT count(*)::int FROM shipit.domain_events WHERE parcel_id=p.id AND event_type='delivery.completed') events
+ FROM shipit.parcels p WHERE p.id=$1`,[s.parcel.id])).rows[0]!;
+ assert.deepEqual(saved,{status:'delivered',version:6,proofs:1,events:1});
+});
+
+await test('qualification: exact expiry rejects proof without partial completion; cleaned replacement retains failures across restart',{timeout:30000},async t=>{
+ const s=await setup(t),wrong=wrongProof(s.code);
+ const failed=await complete(s,randomUUID(),wrong) as {outcome:string;remaining_attempts:number};
+ assert.equal(failed.outcome,'proof_invalid');assert.equal(failed.remaining_attempts,4);
+ s.setNow(s.state.expires_at);await assert.rejects(complete(s),{code:'DELIVERY_CHALLENGE_EXPIRED'});
+ const state=async()=>(await s.db.adminQuery(`SELECT p.status,p.version,a.failed_verifications,a.resend_count,
+ (SELECT count(*)::int FROM shipit.delivery_proofs WHERE parcel_id=p.id) proofs,
+ (SELECT count(*)::int FROM shipit.domain_events WHERE parcel_id=p.id AND event_type='delivery.completed') events
+ FROM shipit.parcels p JOIN shipit.delivery_attempts a ON a.id=p.active_attempt_id WHERE p.id=$1`,[s.parcel.id])).rows[0]!;
+ assert.deepEqual(await state(),{status:'out_for_delivery',version:5,failed_verifications:1,resend_count:0,proofs:0,events:0});
+ assert.deepEqual(await createDeliveryChallengeCleanup(s.pool,s.clock).tick(),{destroyed:1});
+ assert.deepEqual((await s.db.adminQuery('SELECT verifier,encrypted_secret FROM shipit.delivery_challenges WHERE id=$1',[s.state.challenge_ref])).rows[0],{verifier:null,encrypted_secret:null});
+ await s.app.close();await s.pool.close();
+ const fresh=createDeliveryService(s.db.runtimePool(),deliveryProofConfiguration,undefined,s.clock),key=randomUUID();
+ const replaced=await fresh.resend(s.agent.token,s.parcel.id,selector,key,headers(key),
+ {expected_version:5,challenge_ref:s.state.challenge_ref,reason_code:'expired'},true,randomUUID());
+ assert.equal(replaced.challenge_version,2);assert.equal(replaced.resends_remaining,2);
+ assert.deepEqual(await state(),{status:'out_for_delivery',version:5,failed_verifications:1,resend_count:1,proofs:0,events:0});
+ await assert.rejects(complete(s,randomUUID(),s.code,fresh),{code:'DELIVERY_PROOF_INVALID'});
+ assert.equal((await state()).proofs,0);
 });
