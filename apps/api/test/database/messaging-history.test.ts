@@ -7,7 +7,7 @@ import { createHistoryService } from '../../src/modules/whatsapp/history-service
 
 const correlation=()=>randomUUID();
 async function setup(t:Parameters<typeof outboundSetup>[0]) {
- const s=await outboundSetup(t);await s.db.prepareNotificationAutomation();s.advance(100000);
+ const s=await outboundSetup(t);await s.db.prepareNotificationAutomation();
  const history=createHistoryService(s.pool,s.keys.browser,s.dependencies.clock);
  const read=(id:string,token=s.local.token)=>history.detail(token,'messages',id,s.query,correlation());
  const list=(extra:Record<string,string|undefined>={},token=s.local.token)=>history.list(token,'messages',{...s.query,...extra},correlation());
