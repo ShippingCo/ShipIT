@@ -228,3 +228,23 @@ await test('correct OTP and physical failed-attempt race serialize to one safe l
   FROM shipit.parcels p JOIN shipit.delivery_challenges c ON c.parcel_id=p.id WHERE p.id=$1`,[s.parcel.id])).rows[0]!;
  assert.ok(['delivered','failed_attempt'].includes(outcome.status));assert.equal(outcome.verifier,null);assert.equal(outcome.encrypted_secret,null);assert.equal(outcome.proofs,outcome.status==='delivered'?1:0);assert.ok(outcome.status==='delivered'?outcome.consumed_at:outcome.closed_at);
 });
+
+await test('messaging history always redacts delivery OTP for every permitted role including organization admin',{timeout:30000},async t=>{
+ const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
+ const s=await bookingSetup(t),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);const parcel=booked.json().parcels[0],agent=await s.grant('delivery_agent',[A]),dispatcher=await s.grant('dispatcher',[A]),admin=await s.grant('franchise_admin',[A]);
+ await s.db.prepareDeliveries();const binding={key:'delivery',organization_id:org,franchise_id:A,waba_id:'100001',phone_number_id:'100002',credential_ref:'whatsapp:delivery/v1'};
+ const dependencies={configuration:{graph_version:'v24.0',bindings:[binding],webhook:webhookConfig},clock:s.clock,provider:{
+  validate:async()=>{},template:async()=>({provider_id:'100004',name:'shipit_delivery_code',language:'en',status:'APPROVED',category:'AUTHENTICATION',shape_hash:'a'.repeat(64),variables:[{type:'text' as const}],supported:true}),
+  send:async()=>{return {kind:'accepted' as const,provider_message_id:'wamid.delivery_recipient'};},
+ }};
+ const registry=createWhatsappService(s.pool,dependencies),installed=await registry.execute(admin.token,null,'connect',selector,randomUUID(),{binding_key:'delivery',expected_version:0},randomUUID());
+ await registry.execute(admin.token,installed.id as string,'sync',selector,randomUUID(),{expected_version:1,name:'shipit_delivery_code',language:'en'},randomUUID());
+ const started=await startTestDelivery(s,parcel.id,agent,dispatcher,dependencies),code=await testDeliveryCode(s,parcel.id);await s.db.prepareNotificationAutomation();
+ const history=createHistoryService(s.pool,s.keys.browser),outbound=(await s.db.adminQuery('SELECT id FROM shipit.whatsapp_outbound WHERE affected_entity_id=$1',[parcel.id])).rows[0]!;
+ const secret=(await s.db.adminQuery('SELECT verifier,encrypted_secret FROM shipit.delivery_challenges WHERE id=$1',[started.state.challenge_ref])).rows[0]!;
+ for(const actor of [s.admin,s.operator,await s.grant('franchise_admin',[A]),dispatcher]) {
+  const row=await history.detail(actor.token,'messages',outbound.id,selector,randomUUID());assert.equal(row.notification_kind,'delivery_otp');assert.equal(row.decision,null);
+  const json=JSON.stringify(row);for(const prohibited of [code,secret.verifier,secret.encrypted_secret,'sealed_payload','delivery_recipient_ref','variables','template','body','phone'])assert.equal(json.includes(String(prohibited)),false);
+ }
+ await assert.rejects(history.list(agent.token,'messages',selector,randomUUID()),{code:'ACTION_FORBIDDEN'});
+});

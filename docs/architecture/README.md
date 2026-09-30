@@ -190,7 +190,7 @@ business rule, role grant or dependency was added.
 Packages, Lots, Routes, To-Pay and E-way cutover. Purpose-specific adapters validate closed
 DTOs and bind reads and immutable commands to the current scope generation. The production
 shell does not import the fictional Store; it deliberately omits staff delivery completion,
-OTP reveal, messaging, Reports and Automation Feed.
+OTP reveal and Reports. Issue #44 adds the provider-backed messaging projection below.
 
 Issue #35 adds the [durable outbox worker and operational API](outbox.md), with [verification evidence](issue-35-verification.md) and [ADR 0023](../adr/0023-durable-outbox-worker.md). Provider delivery and business consumers remain downstream.
 
@@ -217,3 +217,7 @@ outbound source; see [ADR 0030](../adr/0030-secure-atomic-delivery-proof.md) and
 [Final-mile notifications](notification-automation.md#final-mile-resolution) implement
 #43's failed-attempt, committed-RTO and proof-aware completion policies on the stable
 consumer, including send-time stale suppression; see [verification](issue-43-verification.md).
+
+[Messaging history](messaging-history.md) implements #44’s joined R16/R17 projection,
+production Automation & Messages screen, W44 redrive and W19 reminders; see
+[verification](issue-44-verification.md). #45 remains downstream.

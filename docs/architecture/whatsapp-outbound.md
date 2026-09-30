@@ -165,3 +165,10 @@ payload guarantees in this document remain unchanged.
 Delivery intents use the private immutable Parcel-recipient generation in
 `delivery_recipient_ref`; `customer_id` remains the booking sender identity for every
 non-delivery purpose and is null for `delivery_otp`.
+
+## Product history (#44)
+
+The [R16/R17 history projection](messaging-history.md) serves operator/dispatcher inspection
+without granting R18 diagnostics. It joins normalized observations immediately, keeps acceptance
+separate from delivery, and shares the W44 eligibility predicate with this command. The existing
+redrive endpoint, expected version, idempotency, roles and audit remain authoritative.

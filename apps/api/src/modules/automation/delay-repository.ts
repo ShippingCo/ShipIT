@@ -3,7 +3,7 @@ import type { DelayFanoutCandidate,DelayFanoutOutcome,DelayFanoutRow } from './d
 
 interface Source {route_id:string;manifest_id:string;manifest_version:number;route_version:number;total_count:number}
 export async function source(scope:TenantAccess,event:string):Promise<Source|null> {
-  return (await scopedQuery<Source>(scope,['outbox.work','routes.delay.remind'],`SELECT x.route_id,x.manifest_id,m.version AS manifest_version,
+  return (await scopedQuery<Source>(scope,['outbox.work','routes.delay.remind','whatsapp.consent.read'],`SELECT x.route_id,x.manifest_id,m.version AS manifest_version,
     min(x.route_version)::integer AS route_version,count(*)::integer AS total_count
     FROM shipit.domain_events e JOIN shipit.route_parcel_effects x ON x.organization_id=e.organization_id AND x.franchise_id=e.franchise_id AND x.event_id=e.event_id
     JOIN shipit.route_manifests m ON m.organization_id=x.organization_id AND m.franchise_id=x.franchise_id AND m.route_id=x.route_id AND m.id=x.manifest_id
@@ -64,7 +64,7 @@ export async function recordItem(scope:TenantAccess,fanout:DelayFanoutRow,item:D
     WHERE {{franchise:f.organization_id:f.franchise_id}} AND f.id=$1`,[fanout.id,item.parcel_id,complete?1:0,skipped?1:0,failed?1:0]);
 }
 export async function activationExists(scope:TenantAccess,policy:string,version:number) {
-  return (await scopedQuery(scope,['routes.delay.remind'],`SELECT a.policy_id FROM shipit.notification_policy_activations a
+  return (await scopedQuery(scope,['routes.delay.remind','whatsapp.consent.read'],`SELECT a.policy_id FROM shipit.notification_policy_activations a
     WHERE {{franchise:a.organization_id:a.franchise_id}} AND a.consumer_id='customer-notifications' AND a.policy_id=$1 AND a.policy_version=$2`,[policy,version])).rows.length===1;
 }
 export async function reminderReplay(scope:TenantAccess,key:string) {
@@ -74,15 +74,15 @@ export async function reminderReplay(scope:TenantAccess,key:string) {
       AND c.operation_id='api.v1.routes.delay.remind' AND c.key_digest=$2 FOR UPDATE`,[c.actor.id,key])).rows[0]??null;
 }
 export async function latestDelay(scope:TenantAccess,route:string) {
-  return (await scopedQuery<{event_id:string}>(scope,['routes.delay.remind'],`SELECT e.event_id FROM shipit.domain_events e
+  return (await scopedQuery<{event_id:string}>(scope,['routes.delay.remind','whatsapp.consent.read'],`SELECT e.event_id FROM shipit.domain_events e
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.route_id=$1 AND e.event_type='route.delayed' ORDER BY e.aggregate_sequence DESC LIMIT 1`,[route])).rows[0]?.event_id??null;
 }
 export async function routeExecution(scope:TenantAccess,route:string) {
-  return (await scopedQuery<{execution_state:string;base_eta_at:Date|null;total_delay_minutes:number;version:number}>(scope,['routes.delay.remind'],`SELECT r.execution_state,r.base_eta_at,r.total_delay_minutes,r.version
+  return (await scopedQuery<{execution_state:string;base_eta_at:Date|null;total_delay_minutes:number;version:number}>(scope,['routes.delay.remind','whatsapp.consent.read'],`SELECT r.execution_state,r.base_eta_at,r.total_delay_minutes,r.version
     FROM shipit.routes r WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.id=$1`,[route])).rows[0]??null;
 }
 export async function rateLimited(scope:TenantAccess,event:string,now:Date) {
-  return (await scopedQuery(scope,['routes.delay.remind'],`SELECT r.id FROM shipit.route_delay_reminder_events r
+  return (await scopedQuery(scope,['routes.delay.remind','whatsapp.consent.read'],`SELECT r.id FROM shipit.route_delay_reminder_events r
     WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.original_event_id=$1 AND r.occurred_at>$2::timestamptz-interval '60 minutes' LIMIT 1`,[event,now])).rows.length>0;
 }
 export async function createReminder(scope:TenantAccess,input:{command:string;event:string;fanout:string;route:string;original:string;key:string;fingerprint:string;now:Date;policy:string;version:number;source:Source}) {

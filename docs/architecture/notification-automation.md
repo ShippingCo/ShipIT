@@ -133,3 +133,10 @@ franchise admin, operator and dispatcher are permitted for the selected franchis
 
 Delivery challenges remain #42 and use their separate protected recipient. The browser
 automation feed remains #44 and release qualification remains #45.
+
+## Product feed (#44)
+
+[Messaging history](messaging-history.md) joins immutable decisions with transport evidence and
+unions Route fanout summaries using time/ID pagination. It includes decision-only blocks/skips
+and preserves business outcomes when provider state advances. Existing automation APIs remain
+compatible; the production browser uses the coordinated `/whatsapp/history` views.

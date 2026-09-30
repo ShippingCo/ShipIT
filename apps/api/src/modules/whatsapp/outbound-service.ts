@@ -9,6 +9,7 @@ import { idempotencyKey } from '../customers/validation.ts';
 import { digest,keyDigest } from '../pricing/idempotency.ts';
 import { ewayCursorCodec } from '../eway/cursor.ts';
 import * as repository from './outbound-repository.ts';
+import { redriveReason } from './recovery.ts';
 
 export function createOutboundService(database:DatabasePool,key:Buffer,clock=()=>new Date()) {
  const cursors=ewayCursorCodec(createHash('sha256').update('shipit:outbound:cursor:v1\0').update(key).digest(),clock);
@@ -40,8 +41,7 @@ export function createOutboundService(database:DatabasePool,key:Buffer,clock=()=
     const prior=await repository.replay(scope,keyHash);
     if(prior){if(prior.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');return {id:prior.intent_id,version:prior.version,state:'queued'};}
     const observed=await repository.observation(scope,id),now=clock();
-    if(m.version!==version||!['failed','uncertain'].includes(m.state)||!m.sealed_payload||m.expires_at<=now||observed.progress>=2||
-      (m.state==='uncertain')!==(reason==='retry_uncertain_confirmed'))throw new HttpError('VERSION_CONFLICT');
+    if(m.version!==version||redriveReason(m.state,!!m.sealed_payload,m.expires_at,observed.progress,now)!==reason)throw new HttpError('VERSION_CONFLICT');
     const updated=await repository.update(scope,m,'queued','redriven',now,{reset:true});
     await repository.redriveReceipt(scope,updated,keyHash,fingerprint,reason);
     return {id,version:updated.version,state:'queued'};

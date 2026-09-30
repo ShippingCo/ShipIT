@@ -411,3 +411,12 @@ Delivery-agent read scope is the same active assignment, never general R07 Parce
 visibility. Dispatcher agent selection exposes only eligible active agent opaque ID and a
 minimal label. There is no supervisor role, org-admin write inheritance, OTP reveal action,
 admin completion action or client proof flag. [Exact workflow](deliveries.md).
+
+## Issue #44 history projection
+
+The [messaging history API](messaging-history.md) combines only R16/R17 safe evidence through
+the existing `whatsapp.consent.read` membership capability. Four-role Franchise access remains
+org_admin (explicit selected own Franchise), franchise_admin, operator and dispatcher. There
+is no generic delivery_agent, accountant or read_only feed, no C/A expansion, no new action/role,
+and no R18 or R29 widening. Current local W44/W19 authority is computed in the same membership
+transaction for action eligibility; existing commands reauthorize. No role receives content or OTPs.

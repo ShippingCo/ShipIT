@@ -33,3 +33,8 @@
 .ops-page button:focus-visible,.ops-page a:focus-visible,.ops-page input:focus-visible,.ops-page select:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
 @media(max-width:700px){.ops-form-grid{grid-template-columns:1fr}.ops-row{align-items:flex-start;flex-direction:column}.ops-row-actions{width:100%}.ops-row-actions .btn{flex:1}.operator-workspace.ops-workspace{padding:16px}.ops-card{padding:16px}}
 @media(prefers-reduced-motion:reduce){.ops-page *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.history-dialog { position:fixed; z-index:1100; top:50%; left:50%; transform:translate(-50%,-50%); width:min(760px,calc(100vw - 24px)); max-height:90dvh; overflow:auto; background:var(--md-sys-color-surface,#fff); }
+.history-facts { display:grid; grid-template-columns:minmax(100px,1fr) minmax(0,3fr); gap:8px 16px; }
+.history-facts dd { margin:0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+@media(max-width:600px) { .history-facts { grid-template-columns:1fr; } .history-facts dt { font-weight:600; } }

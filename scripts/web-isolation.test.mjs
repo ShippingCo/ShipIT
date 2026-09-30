@@ -4,7 +4,7 @@ import { assertProductionOutput, demoModule } from './web-isolation.mjs';
 
 test('production output gate rejects direct/transitive demo modules, aliases and secret/demo markers', () => {
   assert.doesNotThrow(() => assertProductionOutput(['/work/apps/web/src/operator/OperatorApp.tsx'], 'real shell'));
-  for (const module of ['utils/demo-image.ts', 'data/store.ts', 'data/bot.ts', 'context/AppContext.tsx', 'DemoApp.tsx', 'pages/CustomerWhatsApp.tsx', 'demo/storage.ts', 'pages/business/DemoBusinessShell.tsx']) {
+  for (const module of ['utils/demo-image.ts', 'data/store.ts', 'data/bot.ts', 'context/AppContext.tsx', 'DemoApp.tsx', 'pages/CustomerWhatsApp.tsx', 'demo/storage.ts', 'pages/business/DemoBusinessShell.tsx', 'pages/business/MiscPages.tsx', 'data/messages.ts']) {
     assert.equal(demoModule(`/work/apps/web/src/${module}`), true);
     assert.throws(() => assertProductionOutput([`/work/apps/web/src/${module}`], ''), /Production bundle includes demo module/);
   }

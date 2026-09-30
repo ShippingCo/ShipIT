@@ -259,3 +259,15 @@ test('business inbox only exposes fixed ingress and scheduler calls through trus
  for(const table of ['whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_delivery_observations','whatsapp_consent_state','whatsapp_consent_receipts','whatsapp_consent_disclosures','whatsapp_outbound','whatsapp_outbound_attempts','whatsapp_outbound_redrives'])
   assert.ok(inspectSource(other,`scopedQuery(scope,['whatsapp.read'],'SELECT * FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
 });
+
+test('message history joins require ownership and the actual checker rejects an unscoped history read',()=>{
+ const path='apps/api/src/modules/whatsapp/history-repository.ts';
+ assert.deepEqual(inspectSource(path,"scopedQuery(scope,['whatsapp.consent.read'],`SELECT m.id FROM shipit.whatsapp_outbound m WHERE {{franchise:m.organization_id:m.franchise_id}}`)"),[]);
+ const root=mkdtempSync(join(tmpdir(),'shipit-history-gate-'));
+ try {
+  mkdirSync(join(root,'apps/api/src/modules/whatsapp'),{recursive:true});
+  writeFileSync(join(root,path),"scopedQuery(scope,['whatsapp.consent.read'],`SELECT m.id FROM shipit.whatsapp_outbound m WHERE m.id=$1`)");
+  const result=spawnSync(process.execPath,[resolve('scripts/check-tenant-queries.mjs')],{cwd:root,encoding:'utf8'});
+  assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});

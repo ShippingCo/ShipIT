@@ -2,10 +2,15 @@ import type { FastifyInstance,FastifyRequest } from 'fastify';
 import { idempotencyKey } from '../customers/validation.ts';
 import type { createWhatsappService } from './service.ts';
 import type { createConsentService } from './consent-service.ts';
+import type { createHistoryService } from './history-service.ts';
 import type { createOutboundService } from './outbound-service.ts';
 import type { createAutomationReadService } from '../automation/read-service.ts';
-export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>,automation?:ReturnType<typeof createAutomationReadService>) {
+export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>,automation?:ReturnType<typeof createAutomationReadService>,history?:ReturnType<typeof createHistoryService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  if(history)for(const view of ['messages','automation'] as const) {
+    app.get(`/api/v1/whatsapp/history/${view}`,{exposeHeadRoute:false},request=>history.list(session(request),view,request.query,request.id));
+    app.get<{Params:{id:string}}>(`/api/v1/whatsapp/history/${view}/:id`,{exposeHeadRoute:false},request=>history.detail(session(request),view,request.params.id,request.query,request.id));
+  }
   if(automation) {
     app.get('/api/v1/whatsapp/automation/route-delay-fanouts',{exposeHeadRoute:false},request=>automation.fanouts(session(request),request.query,request.id));
     app.get<{Params:{id:string}}>('/api/v1/whatsapp/automation/route-delay-fanouts/:id',{exposeHeadRoute:false},request=>automation.fanout(session(request),request.params.id,request.query,request.id));

@@ -1255,6 +1255,71 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "shows loading, truthful acceptance and immutable automation independently, then read after refresh",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "labels %s separately",
+        "cases": "['suppressed','failed','uncertain']"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "shows empty/error/explicit retry without demo fallback",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "offers keyboard native filters and resets old cursors on filter changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "always redacts delivery verification content and strips unknown response fields before UI state",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "traps dialog focus, closes on Escape and restores trigger focus",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "operator cannot redrive even an erroneously offered recovery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "refreshes version, requires uncertain warning, then preserves the exact W44 request after transport uncertainty",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "uses W19 for eligible route reminders, without redriving or modifying ETA",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "aborts old scope responses, rejects stale paint and purges on 401",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "denies %s navigation and direct route",
+        "cases": "['accountant','read_only','delivery_agent'] as const"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "allows %s navigation",
+        "cases": "['org_admin','franchise_admin','operator','dispatcher'] as const"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "name": "rejects malformed successful status DTOs",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
         "cases": null
@@ -1793,6 +1858,22 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/messaging.test.tsx",
+        "kind": "expect(sessionStorage.length).toBe"
+      },
+      {
         "file": "apps/web/src/test/operations.test.tsx",
         "kind": "expect(localStorage.length).toBe"
       },
@@ -2072,10 +2153,11 @@
       ],
       "rules": [
         "docs/architecture/idempotency-contract.md",
-        "docs/architecture/event-contract.md"
+        "docs/architecture/event-contract.md",
+        "docs/architecture/messaging-history.md"
       ],
       "current": "Browser queueMsg and read/seen markers simulate outbound transport.",
-      "target": "Committed outbox, worker/provider outcomes, consent at send time and honest pending/accepted/delivered/uncertain states; no client send authority.",
+      "target": "Issue #44 production projection joins provider-backed message/automation evidence; existing W44 redrive and W19 reminder commands remain authoritative. Demo queue/seen behavior remains fictional.",
       "verification": "Outage after booking, replay fanout, revoked consent, duplicate callbacks; one logical intent does not claim exactly-once external delivery.",
       "retire_when": "Owning implementation has passing API, scope, failure and browser evidence; all production callers use the approved boundary. Retain fictional tests only in demo."
     },
@@ -2900,6 +2982,110 @@
       "group": "presentation",
       "disposition": "preserve",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "shows loading, truthful acceptance and immutable automation independently, then read after refresh",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "labels %s separately",
+      "cases": "['suppressed','failed','uncertain']",
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "shows empty/error/explicit retry without demo fallback",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "offers keyboard native filters and resets old cursors on filter changes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "always redacts delivery verification content and strips unknown response fields before UI state",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "traps dialog focus, closes on Escape and restores trigger focus",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "operator cannot redrive even an erroneously offered recovery",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "refreshes version, requires uncertain warning, then preserves the exact W44 request after transport uncertainty",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "uses W19 for eligible route reminders, without redriving or modifying ETA",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "aborts old scope responses, rejects stale paint and purges on 401",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "denies %s navigation and direct route",
+      "cases": "['accountant','read_only','delivery_agent'] as const",
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "allows %s navigation",
+      "cases": "['org_admin','franchise_admin','operator','dispatcher'] as const",
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/messaging.test.tsx",
+      "name": "rejects malformed successful status DTOs",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
