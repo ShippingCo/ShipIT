@@ -18,7 +18,9 @@ import { parseEnvironment } from '../../src/env.ts';
 import { createOutboxWorker } from '../../src/modules/outbox/worker.ts';
 
 await test('concurrent enqueue/replay has one intent and one send across restart; stale callbacks never regress',{timeout:30000},async t=>{
- const s=await outboundSetup(t),results=await Promise.all([s.enqueue(),s.enqueue(),s.enqueue()]);assert.equal(new Set(results.map(r=>r.id)).size,1);const id=results[0]!.id;
+ // A slow runner can leave the frozen application clock behind the DB enqueue timestamp.
+ const s=await outboundSetup(t,-5000),results=await Promise.all([s.enqueue(),s.enqueue(),s.enqueue()]);assert.equal(new Set(results.map(r=>r.id)).size,1);const id=results[0]!.id;
+ const due=(await s.db.adminQuery<{due:boolean}>('SELECT available_at<=$2::timestamptz AS due FROM shipit.whatsapp_outbound WHERE id=$1',[id,s.dependencies.clock()])).rows[0]!;assert.equal(due.due,true);
  await assert.rejects(s.enqueue({...s.input,text:'Different intent'}));
  s.setSend(async()=>({kind:'accepted',provider_message_id:'wamid.delivered39'}));
  await Promise.all([s.worker.tick(),s.worker.tick()]);assert.equal(s.calls(),1);assert.equal((await s.detail(id)).message.state,'accepted');
@@ -45,7 +47,9 @@ await test('accept then timeout and expired reservation are uncertain, never bli
 });
 await test('429 waits for Retry-After and STOP during backoff suppresses the retained intent',{timeout:30000},async t=>{
  const s=await outboundSetup(t),{id}=await s.enqueue();s.setSend(async()=>({kind:'retryable_not_accepted',reason:'rate_limited',retry_after_seconds:120}));
- assert.equal(await s.worker.tick(),'retry_wait');s.advance(119000);assert.equal(await s.worker.tick(),null);assert.equal(s.calls(),1);
+ assert.equal(await s.worker.tick(),'retry_wait');
+ const before=s.dependencies.clock();await s.enqueue();assert.deepEqual(s.dependencies.clock(),before);
+ s.advance(119000);assert.equal(await s.worker.tick(),null);assert.equal(s.calls(),1);
  await s.receive('STOP');s.advance(1000);assert.equal(await s.worker.tick(),'suppressed');assert.equal((await s.detail(id)).message.reason_code,'consent_revoked');assert.equal(s.calls(),1);
 });
 await test('five confirmed rejections dead-letter; permanent credential failure stops, redrive retains identity',{timeout:30000},async t=>{

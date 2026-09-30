@@ -15,9 +15,9 @@ import { enqueueMessage } from '../src/modules/whatsapp/outbound-enqueue.ts';
 import type { OutboundInput } from '../src/modules/whatsapp/outbound-rules.ts';
 import type { SendOutcome } from '../src/modules/whatsapp/types.ts';
 
-export async function outboundSetup(t:TestContext) {
+export async function outboundSetup(t:TestContext,clockOffsetMs=0) {
  const s=await whatsappSetup(t);await s.db.prepareWhatsappOutbound();const installed=await s.connect(),installation=installed.json().id as string;
- let now=new Date(Date.now()+1000),calls=0;
+ let now=new Date(Date.now()+clockOffsetMs),calls=0;
  const customer=randomUUID();
  await s.db.adminQuery(`INSERT INTO shipit.customers(id,organization_id,franchise_id,name,phone_normalized,phone_display,contact_changed_at)
  VALUES($1,$2,$3,'Fictional outbound customer','+15550000001','+15550000001',clock_timestamp()-interval '1 day')`,[customer,org,A]);
@@ -33,8 +33,17 @@ export async function outboundSetup(t:TestContext) {
  }
  const source=await receive('Please help with shipment updates');
  const input:OutboundInput={source_kind:'inbox',source_id:source,customer_id:customer,purpose:'requested_assistance',format:'text',text:'Fictional requested response'};
- const enqueue=(value:unknown=input,pool=s.pool)=>withTransaction(pool,tx=>enqueueMessage(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:org,
-  permittedFranchiseIds:[A],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),dependencies,value));
+ const enqueue=async(value:unknown=input,pool=s.pool)=>{
+  const result=await withTransaction(pool,tx=>enqueueMessage(issueTenantAccess(tx,{action:'outbox.work',actor:{type:'service',id:'outbox-worker'},organizationId:org,
+   permittedFranchiseIds:[A],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),dependencies,value));
+  // Initial availability uses PostgreSQL's wall clock, while worker deadlines use this
+  // frozen fixture clock. Advance to the committed ready instant, never a retry deadline.
+  // Round upward: pg timestamps retain microseconds that a JavaScript Date would truncate.
+  const ready=(await s.db.adminQuery<{ready_ms:string}>(`SELECT ceil(extract(epoch FROM available_at)*1000)::bigint::text AS ready_ms
+   FROM shipit.whatsapp_outbound WHERE id=$1 AND state='queued' AND attempts=0`,[result.id])).rows[0];
+  if(ready)now=new Date(Math.max(now.getTime(),Number(ready.ready_ms)));
+  return result;
+ };
  const service=createOutboundService(s.pool,s.keys.browser,()=>now),query={organization_id:org,franchise_id:A};
  const detail=(id:string)=>service.detail(s.local.token,id,query,randomUUID());
  async function status(message:string,state:string) {

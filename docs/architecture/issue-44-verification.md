@@ -142,3 +142,24 @@ existing bounded fanout items (maximum 1,000) and newest 100 attempts. Synthetic
 live Meta templates or traffic. No arbitrary send, role expansion, customer conversation router,
 provider adapter, new queue, retention store, hosted monitoring or #45 qualification was added.
 The PR must remain open for independent review; no merge or auto-merge is authorized.
+
+## Post-merge CI clock regression
+
+The post-merge main run [36665663347](https://github.com/ShippingCo/ShipIT/actions/runs/36665663347)
+failed the existing concurrent outbound enqueue/restart test. Its fixture froze application time
+at setup plus one second, but initial `available_at` came from PostgreSQL's `clock_timestamp()`.
+A slow enqueue could outlive that head start, leaving a queued record in the frozen worker's future.
+Starting the fixture clock five seconds behind the database reproduced a deterministic **0 sends
+instead of 1** before the fix, without adding sleeps or relaxing the assertion.
+
+The shared outbound fixture now advances its clock to the committed initial queue-ready instant,
+rounded **up** to milliseconds so PostgreSQL microseconds cannot leave the record just beyond the
+worker's clock. Only unsent `queued` records qualify; replaying a `retry_wait` record preserves the
+clock and the existing 119/120-second Retry-After checks. The one-second fixture head start and
+history's separate 100-second timing workaround are removed. Production scheduling, migrations,
+timeouts and CI failure gates are unchanged.
+
+The strengthened existing regressions cover concurrent replay with the clock behind PostgreSQL,
+exact database eligibility, one send across restart, monotone callbacks, and preservation of retry
+backoff. Focused outbound/history PostgreSQL verification: **20/20 passed**, zero failed/skipped/
+cancelled/todo. The follow-up PR records the full quality and exact-head CI results.
