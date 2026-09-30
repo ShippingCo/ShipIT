@@ -46,10 +46,11 @@ const policies=[
   {policy_id:'route-arrived',policy_version:1,template_name:'route_arrived',template_language:'en_US',variables:['docket']},
 ];
 
-async function setup(t:Parameters<typeof bookingSetup>[0],activateBefore=true,options:{skipTemplate?:string;consent?:boolean}={}) {
+async function setup(t:Parameters<typeof bookingSetup>[0],activateBefore=true,options:{skipTemplate?:string;consent?:boolean;missingBinding?:boolean}={}) {
   const s=await bookingSetup(t);await s.db.prepareNotificationAutomation();
   const admin=await s.grant('franchise_admin',[A]),binding={key:'automation_v1',organization_id:org,franchise_id:A,waba_id:'100001',phone_number_id:'100002',credential_ref:'whatsapp:automation/v1'};
-  const configuration={graph_version:'v24.0',bindings:[binding],webhook:webhookConfig,automation:{policies}};
+  const configuredPolicies=options.missingBinding?policies.filter(p=>p.policy_id!=='booking-confirmation'):policies;
+  const configuration={graph_version:'v24.0',bindings:[binding],webhook:webhookConfig,automation:{policies:configuredPolicies}};
   const dependencies={configuration,clock:s.clock,provider:{validate:async()=>{},template:async(_binding:Binding,name:string,language:string)=>({provider_id:'100003',name,language,status:'APPROVED',category:'UTILITY',shape_hash:'a'.repeat(64),
     variables:Array.from({length:policies.find(policy=>policy.template_name===name)?.variables.length??0},()=>({type:'text' as const})),supported:true}),send:async()=>({kind:'accepted' as const,provider_message_id:'wamid.automation'})}};
   const whatsapp=createWhatsappService(s.pool,dependencies),query={organization_id:org,franchise_id:A};
@@ -58,7 +59,7 @@ async function setup(t:Parameters<typeof bookingSetup>[0],activateBefore=true,op
   let installationVersion=1;
   for(const policy of policies)if(policy.policy_id!==options.skipTemplate)await whatsapp.execute(admin.token,installationId,'sync',query,randomUUID(),
     {expected_version:installationVersion++,name:policy.template_name,language:policy.template_language},randomUUID());
-  const activations=policyActivationDocument(policies);
+  const activations=policyActivationDocument(configuredPolicies);
   if(activateBefore)await activateNotificationPolicies(s.pool,[binding],activations);
   const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
   if(!activateBefore)for(const policy of activations)await s.db.adminQuery(`INSERT INTO shipit.notification_policy_activations
@@ -425,4 +426,70 @@ await test('missing template, unknown consent and changed contact produce safe d
       {outcome:'skipped',reason_code:'recipient_contact_changed'});
     assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.whatsapp_outbound')).rows[0]!.n,0);
   });
+});
+
+await test('history joins one logical message, decision-only cutover/blocks and immutable automation outcomes',{timeout:30000},async t=>{
+ const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
+ const s=await setup(t);await s.worker.tick();
+ const history=createHistoryService(s.pool,s.keys.browser),list=(view:'messages'|'automation')=>history.list(s.operator.token,view,s.query,randomUUID());
+ const messages=await list('messages'),decisions=await list('automation');assert.equal(messages.items.length,1);assert.equal(decisions.items.length,1);
+ assert.equal(messages.items[0]!.message!.id,decisions.items[0]!.message!.id);assert.equal(decisions.items[0]!.decision!.outcome,'queued');
+ for(const role of ['franchise_admin','operator','dispatcher']) {
+  const reader=await s.grant(role,[A]);assert.equal((await history.detail(reader.token,'automation',decisions.items[0]!.id,s.query,randomUUID())).id,decisions.items[0]!.id);
+ }
+ assert.equal((await history.list(s.admin.token,'automation',s.query,randomUUID())).items.length,1);
+ for(const [organization,franchise] of [[org,B],[otherOrg,C]]) {
+  const reader=organization===org?await s.grant('operator',[franchise!]):await s.beta('operator'),query={organization_id:organization,franchise_id:franchise};
+  assert.deepEqual((await history.list(reader.token,'automation',{...query,correlation_id:decisions.items[0]!.correlation_id},randomUUID())).items,[]);
+  for(const ref of [decisions.items[0]!.id,randomUUID()])await assert.rejects(history.detail(reader.token,'automation',ref,query,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ }
+
+ await createOutboundWorker(s.pool,s.dependencies).tick();
+ assert.equal((await list('messages')).items[0]!.message!.state,'accepted');assert.equal((await list('automation')).items[0]!.decision!.outcome,'queued');
+ for(const options of [{cutover:true},{blocked:true},{suppressed:true}]) {
+  const fixture=await setup(t,!options.cutover,{missingBinding:options.blocked,consent:!options.suppressed});await fixture.worker.tick();
+  const rows=await createHistoryService(fixture.pool,fixture.keys.browser).list(fixture.operator.token,'automation',fixture.query,randomUUID());
+  assert.equal(rows.items.length,1);assert.equal(rows.items[0]!.decision!.outcome,options.cutover?'skipped':options.blocked?'blocked':'suppressed');
+  if(options.cutover||options.blocked)assert.equal(rows.items[0]!.message,null);
+ }
+});
+await test('history Route-delay root and items correlate safely; W19 eligibility, cooldown and reminder identity stay separate',{timeout:60000},async t=>{
+ const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
+ const s=await setup(t),fixture=await routeDelayFixture(s,4);await applyDelaySource(s,fixture.delay.event_id);await createRouteDelayFanoutWorker(s.pool,s.dependencies).tick();
+ const history=createHistoryService(s.pool,s.keys.browser),rows=await history.list(s.operator.token,'automation',s.query,randomUUID()),root=rows.items.find(row=>row.row_kind==='fanout')!;
+ assert.ok(root);const detail=await history.detail(s.operator.token,'automation',root.id,s.query,randomUUID());assert.equal(detail.fanout_items.length,4);assert.equal(detail.reminder.eligible,true);
+ assert.equal((await history.detail(s.admin.token,'automation',root.id,s.query,randomUUID())).reminder.eligible,false);
+ for(const item of detail.fanout_items){const message=await history.detail(s.operator.token,'messages',item.outbound_intent_id!,s.query,randomUUID());assert.equal(message.fanout!.id,root.id);assert.equal(message.decision!.outcome,item.outcome);assert.equal(message.reminder.eligible,false);}
+ const before=(await s.db.adminQuery('SELECT version,base_eta_at,total_delay_minutes FROM shipit.routes WHERE id=$1',[fixture.route.id])).rows[0];
+ const key=randomUUID(),reminders=createRouteDelayReminderService(s.pool),body={original_delay_event_id:fixture.delay.event_id};
+ const result=await reminders.execute(s.operator.token,fixture.route.id,s.query,key,['idempotency-key',key],body,randomUUID());
+ assert.notEqual(result.id,fixture.delay.event_id);assert.notEqual(result.fanout_id,root.id);
+ assert.equal((await history.detail(s.operator.token,'automation',root.id,s.query,randomUUID())).reminder.eligible,false);
+ const key2=randomUUID();await assert.rejects(reminders.execute(s.operator.token,fixture.route.id,s.query,key2,['idempotency-key',key2],body,randomUUID()),{code:'RATE_LIMITED'});
+ assert.deepEqual((await s.db.adminQuery('SELECT version,base_eta_at,total_delay_minutes FROM shipit.routes WHERE id=$1',[fixture.route.id])).rows[0],before);
+ const sibling=await s.grant('operator',[B]);for(const id of [root.id,randomUUID()])await assert.rejects(history.detail(sibling.token,'automation',id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+});
+
+await test('history mixed automation volume retains decision-only rows and bounds fanouts before enrichment',{timeout:60000},async t=>{
+ const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
+ const s=await setup(t);await s.worker.tick();const fixture=await routeDelayFixture(s,4);await applyDelaySource(s,fixture.delay.event_id);await createRouteDelayFanoutWorker(s.pool,s.dependencies).tick();
+ await s.db.adminQuery(`INSERT INTO shipit.notification_automation_decisions(id,organization_id,franchise_id,source_event_id,event_type,policy_id,policy_version,
+ affected_type,affected_entity_id,booking_id,parcel_id,customer_id,notification_kind,semantic_key,outcome,reason_code,outbound_intent_id,correlation_id,decided_at)
+ SELECT gen_random_uuid(),organization_id,franchise_id,source_event_id,event_type,'synthetic-policy-'||n,1,affected_type,affected_entity_id,booking_id,parcel_id,customer_id,
+ notification_kind,semantic_key,CASE WHEN n%3=0 THEN 'blocked' WHEN n%3=1 THEN 'suppressed' ELSE 'skipped' END,'synthetic',NULL,correlation_id,decided_at-n*interval '1 second'
+ FROM shipit.notification_automation_decisions CROSS JOIN generate_series(1,2000) n WHERE policy_id='booking-confirmation'`);
+ await s.db.adminQuery('ANALYZE shipit.notification_automation_decisions');
+ const plans:Record<string,unknown>[]=[];
+ const pool={...s.pool,async connect(){const c=await s.pool.connect();return {release:(discard?:boolean)=>c.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){
+  if(sql.includes('WITH candidates')){const result=await c.query<Record<string,unknown>>('EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) '+sql,params);plans.push((result.rows[0]!['QUERY PLAN'] as Record<string,unknown>[])[0]!);}
+  return c.query<Row>(sql,params);
+ }};}};
+ const history=createHistoryService(pool,s.keys.browser),first=await history.list(s.operator.token,'automation',{...s.query,limit:'25'},randomUUID());
+ assert.equal(first.items.length,25);assert.equal(first.page.has_more,true);assert.equal(first.items.filter(r=>r.row_kind==='fanout').length,1);
+ const second=await history.list(s.operator.token,'automation',{...s.query,limit:'25',cursor:first.page.next_cursor!},randomUUID());
+ assert.equal(new Set([...first.items,...second.items].map(r=>r.id)).size,50);assert.equal(plans.length,2);
+ assert.ok(JSON.stringify(plans).includes('notification_decisions_history'),'Tenant/time decision index used');
+ const blocked=await history.list(s.operator.token,'automation',{...s.query,status:'blocked',limit:'100'},randomUUID());
+ assert.equal(blocked.items.length,100);assert.ok(blocked.items.every(r=>r.decision?.outcome==='blocked'&&r.message===null));
+ for(const plan of plans)t.diagnostic('Automation EXPLAIN execution ms: '+plan['Execution Time']);
 });

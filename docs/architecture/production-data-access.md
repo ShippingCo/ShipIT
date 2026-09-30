@@ -218,3 +218,13 @@ Proof input stays only in React memory, is cleared after submission/unmount, and
 stored or rendered from server state. Successful commands reload canonical state; stale,
 locked, expired, cooldown, provider and uncertain states remain explicit. Production still
 has no import from the fictional Store or provider call. [Verification](issue-42-verification.md).
+
+## Issue #44 messaging cutover
+
+`/business/automation` now renders `operations/Messaging.tsx` for org_admin, franchise_admin,
+operator and dispatcher. The [history contract](messaging-history.md) owns safe DTOs and server
+eligibility. `data-access/messaging.ts` composes scoped-api/command-intent; it allowlists nested
+responses, refreshes detail before W44/W19, retains exact uncertain requests only in component
+memory, and uses the existing abort/ticket/generation purge boundary. The production graph
+rejects MiscPages, demo messages/store, CustomerWhatsApp and server-only code. API failures never
+fall back to fictional records. Inbound transcripts and arbitrary staff sends remain unavailable.

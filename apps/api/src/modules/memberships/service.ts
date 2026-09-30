@@ -67,10 +67,10 @@ export async function withOutboxScope<T>(database:DatabasePool,token:string,orga
     return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
   });
 }
-/** R29 safe configuration reads and W45 local installation administration; no org-admin write inheritance. */
+/** R29 configuration / R16-R17 safe history and W45 administration. No org-admin write inheritance. */
 export async function withWhatsappScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
   action:'whatsapp.read'|'whatsapp.write'|'whatsapp.consent.read',correlationId:string,
-  work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
+  work:(scope:import('../security/scope.ts').TenantAccess,revision:string,permissions:{redrive:boolean;remind:boolean})=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,token);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -85,7 +85,10 @@ export async function withWhatsappScope<T>(database:DatabasePool,token:string,or
     if(action==='whatsapp.write'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
-    return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
+    return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])),{
+      redrive:parent.lifecycle==='active'&&local.some(m=>m.role==='franchise_admin'),
+      remind:parent.lifecycle==='active'&&local.some(m=>['franchise_admin','operator','dispatcher'].includes(m.role)),
+    });
   });
 }
 async function authenticated(tx:TransactionExecutor,sessionToken:string,lock=true) {

@@ -603,3 +603,30 @@ production Packages composition; it is disposed with the active component/scope.
 | apps/web/src/test/operations.test.tsx: shows a route instant as Kolkata wall time and preserves it when only metadata changes | preserve | routes |
 | apps/web/src/test/operations.test.tsx: re-reads and displays the server ETA after a full route component remount without inferring parcel delivery | preserve | routes |
 | apps/web/src/test/operations.test.tsx: separates official e-way validity and renders every immutable revision with a stable revision identity | preserve | eway |
+
+## Issue #44 cutover evidence
+
+Production Automation & Messages uses the [history projection](messaging-history.md), not
+MiscPages or browser outbox/seen markers. The reviewed inventory refresh adds messaging adapter,
+role, privacy, state, recovery, scope and accessibility regression declarations. It changes no
+fictional Store export or caller ownership. The standalone messaging browser fixture contains
+only fictional DTOs and is unreachable from production composition. There is no production
+clear-history, reveal-OTP, local import or direct provider operation.
+
+Issue #44 production projection joins provider-backed message/automation evidence; existing W44 redrive and W19 reminder commands remain authoritative. Demo queue/seen behavior remains fictional.
+
+| Regression | Disposition | Owner |
+| --- | --- | --- |
+| apps/web/src/test/messaging.test.tsx: shows loading, truthful acceptance and immutable automation independently, then read after refresh | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: labels %s separately | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: shows empty/error/explicit retry without demo fallback | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: offers keyboard native filters and resets old cursors on filter changes | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: always redacts delivery verification content and strips unknown response fields before UI state | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: traps dialog focus, closes on Escape and restores trigger focus | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: operator cannot redrive even an erroneously offered recovery | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: refreshes version, requires uncertain warning, then preserves the exact W44 request after transport uncertainty | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: uses W19 for eligible route reminders, without redriving or modifying ETA | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: aborts old scope responses, rejects stale paint and purges on 401 | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: denies %s navigation and direct route | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: allows %s navigation | preserve | messaging |
+| apps/web/src/test/messaging.test.tsx: rejects malformed successful status DTOs | preserve | messaging |
