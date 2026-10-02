@@ -65,3 +65,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0029: Resumable Route-delay notification fanout](0029-route-delay-notification-fanout.md): Frozen effect membership, 20-item durable batches, current-state/ETA policy, separately identified W19 reminders and database-enforced cooldown for Issue #41.
 
 - [0030: Secure and atomic delivery proof](0030-secure-atomic-delivery-proof.md): Versioned protected challenges, atomic T05/T08/T06, independent exception approval and delivery-owned durable WhatsApp identities for Issue #42.
+
+- [0031: Private customer tracking](0031-private-customer-tracking.md): Explicit parcel relationship proof, W46 verification/rebind/revocation, signed installation identity and short-lived grants for Issue #46; local review draft.

@@ -700,3 +700,26 @@ Do not grant broad UPDATE, challenge-secret SELECT outside the delivery runtime,
 DELETE/TRUNCATE, DDL, ownership or trigger-function execution. `prepareDeliveries()` is the
 executable reference. Rollback disables compatible routes/workers, retains evidence and
 repairs forward. See [secure deliveries](../../docs/architecture/deliveries.md).
+
+## Issue #46 runtime privileges
+
+Apply the additive private-customer-tracking migration as the migration owner, then grant
+only the following to the existing API runtime role. `prepareCustomerAccess()` provides
+the test reference. Existing customer/booking, route-event and signed-inbox read privileges
+remain required. Never grant table ownership, DDL, trigger management, DELETE or TRUNCATE.
+
+```sql
+GRANT SELECT,INSERT ON shipit.customer_access_bindings,
+  shipit.customer_access_commands,shipit.customer_tracking_grants TO runtime_role;
+GRANT UPDATE(installation_id,contact_key,customer_id,contact_version,version,evidence_ref,
+  inbox_id,actor_id,correlation_id,verified_at,expires_at)
+  ON shipit.customer_access_bindings TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.customer_tracking_scope(text) TO runtime_role;
+```
+
+The lookup function returns only the stored owner of a live hashed grant. PUBLIC cannot
+execute it; commands/grants reject updates and deletion. Old binding versions remain
+referenced by grants and are rejected at read time rather than copied during a rebind.
+No existing phone, consent, booking or parcel is granted access by migration. Rollback
+disables the customer access flag and keeps additive evidence; repair schema forward.
+See [customer access](../../docs/architecture/customer-access.md).

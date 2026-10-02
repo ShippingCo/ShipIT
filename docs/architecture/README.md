@@ -228,3 +228,5 @@ production Automation & Messages screen, W44 redrive and W19 reminders; see
 synthetic provider/callback recovery, closed-pool restarts, authorization and privacy evidence.
 Run `pnpm db:local exec node scripts/test-messaging-recovery.mjs` for its focused selection;
 all cases also remain mandatory in `pnpm db:local quality` and existing CI.
+
+[Private customer tracking](customer-access.md) adds #46's signed-channel parcel bindings, short-lived grants and minimal tracking service; see [ADR 0031](../adr/0031-private-customer-tracking.md) and [verification](issue-46-verification.md).

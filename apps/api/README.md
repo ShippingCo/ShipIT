@@ -369,3 +369,7 @@ Meta authentication-template approval is a deployment prerequisite, not establis
 synthetic tests. See [contract](../../docs/architecture/deliveries.md),
 [ADR 0030](../../docs/adr/0030-secure-atomic-delivery-proof.md), and
 [verification](../../docs/architecture/issue-42-verification.md).
+
+## Private customer tracking (#46)
+
+Apply the additive migration/runtime grants before enabling customer_access_enabled in the server-only WhatsApp catalog. Local franchise administrators attest, rebind or revoke parcel relationships through CSRF-protected commands; customers use scoped bearer grants to read minimal tracking. Conversation routing and reply delivery remain #47. See [contract](../../docs/architecture/customer-access.md), [ADR](../../docs/adr/0031-private-customer-tracking.md) and [verification](../../docs/architecture/issue-46-verification.md).
