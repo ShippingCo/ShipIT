@@ -69,6 +69,10 @@ export function createCustomerAccessService(database:DatabasePool,config:Busines
       });
     },
     /** #47 calls this inside the trusted signed-inbox transaction, never from browser input. */
+    async readSelected(scope:TenantAccess,grant:string,docket:string) {
+      assertTenantAccess(scope,['whatsapp.inbox.work']);
+      return projection(scope,tokenDigest(grant),docket);
+    },
     async select(scope:TenantAccess,inboxInput:unknown,docket:string|null=null) {
       assertTenantAccess(scope,['whatsapp.inbox.work']);const inbox=uuid(inboxInput,'$');
       if(docket!==null&&!/^[A-Z0-9][A-Z0-9-]{0,39}$/.test(docket))throw new HttpError('VALIDATION_FAILED');
@@ -88,7 +92,10 @@ export function createCustomerAccessService(database:DatabasePool,config:Busines
       const hash=tokenDigest(grant);
       if(docketInput!==null&&(typeof docketInput!=='string'||!/^[A-Z0-9][A-Z0-9-]{0,39}$/.test(docketInput)))throw new HttpError('VALIDATION_FAILED');
       const docket=docketInput as string|null;
-      return withCustomerTrackingScope(database,hash,async scope=>{
+      return withCustomerTrackingScope(database,hash,scope=>projection(scope,hash,docket));
+    },
+  };
+  async function projection(scope:TenantAccess,hash:string,docket:string|null) {
         const parcel=await repository.tracking(scope,hash,docket);if(!parcel)throw new HttpError('RESOURCE_NOT_FOUND');
         const events=await repository.timeline(scope,parcel.id),eta=await repository.eta(scope,parcel.id);
         // Route arrival is relevant only while travelling on a route. Never
@@ -97,7 +104,5 @@ export function createCustomerAccessService(database:DatabasePool,config:Busines
         return {docket:parcel.docket,status:parcel.status,version:parcel.version,
           eta:available?{state:'available' as const,at:eta.toISOString(),kind:'route_arrival' as const}:{state:'unavailable' as const,at:null},
           timeline:events.reverse().map(e=>({event:e.event_type,at:e.occurred_at.toISOString()}))};
-      });
-    },
-  };
+  }
 }

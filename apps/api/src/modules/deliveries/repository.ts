@@ -10,7 +10,7 @@ export interface StartParcel {
 }
 export interface DeliveryRecipient {id:string;contact_version:string;phone_normalized:string}
 export async function now(scope:TenantAccess,override?:Date) {
- return override??(await scopedQuery<{instant:Date}>(scope,['deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT date_trunc('milliseconds',clock_timestamp()) AS instant
+ return override??(await scopedQuery<{instant:Date}>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT date_trunc('milliseconds',clock_timestamp()) AS instant
   FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}}`)).rows[0]!.instant;
 }
 export async function replay(scope:TenantAccess,parcel:string,operation:string,key:string,fingerprint:string) {
@@ -117,8 +117,8 @@ export async function completeParcelCommand(scope:TenantAccess,id:string,result:
   retain_until=$3::timestamptz+interval '24 hours' WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=$1 AND p.state='reserved'`,[id,result,time]);
 }
 export async function lockAttempt(scope:TenantAccess,parcel:string,agentOnly:boolean) {
- const c=assertTenantAccess(scope,[...deliveryCommands,'deliveries.read']);
- const row=(await scopedQuery<DeliveryAttemptRow>(scope,['deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT a.*,ch.id AS challenge_id,ch.challenge_version,
+ const c=assertTenantAccess(scope,[...deliveryCommands,'deliveries.read','whatsapp.inbox.work']);
+ const row=(await scopedQuery<DeliveryAttemptRow>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT a.*,ch.id AS challenge_id,ch.challenge_version,
   CASE WHEN ch.consumed_at IS NOT NULL THEN 'consumed' WHEN ch.superseded_at IS NOT NULL THEN 'superseded' WHEN ch.closed_at IS NOT NULL THEN 'closed'
    WHEN a.locked_at IS NOT NULL THEN 'locked' WHEN ch.expires_at<=clock_timestamp() THEN 'expired'
    WHEN s.id IS NULL OR s.send_state='queued' AND o.state IN ('queued','retry_wait','dispatching') THEN 'pending' ELSE 'active' END AS challenge_status,
@@ -129,7 +129,7 @@ export async function lockAttempt(scope:TenantAccess,parcel:string,agentOnly:boo
   LEFT JOIN LATERAL (SELECT x.* FROM shipit.delivery_challenge_sends x WHERE x.organization_id=a.organization_id AND x.franchise_id=a.franchise_id AND x.attempt_id=a.id ORDER BY x.reserved_at DESC,x.id DESC LIMIT 1) s ON true
   LEFT JOIN shipit.whatsapp_outbound o ON o.organization_id=s.organization_id AND o.franchise_id=s.franchise_id AND o.id=s.outbound_intent_id
   WHERE {{franchise:a.organization_id:a.franchise_id}} AND {{franchise:p.organization_id:p.franchise_id}} AND {{franchise:ch.organization_id:ch.franchise_id}}
-   AND a.parcel_id=$1 AND (NOT $2::boolean OR a.agent_id=$3) ORDER BY a.attempt_number DESC LIMIT 1 FOR UPDATE OF a,p,ch`,[parcel,agentOnly,c.actor.id])).rows[0];
+   AND a.parcel_id=$1 AND (NOT $2::boolean OR a.agent_id=$3) ORDER BY a.attempt_number DESC LIMIT 1 FOR UPDATE OF a,p,ch`,[parcel,agentOnly,c.actor.type==='user'?c.actor.id:null])).rows[0];
  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
 export async function currentState(scope:TenantAccess,parcel:string,agentOnly:boolean):Promise<DeliveryStateDto> {
@@ -148,12 +148,12 @@ export async function currentState(scope:TenantAccess,parcel:string,agentOnly:bo
   exception:exception?{request_id:exception.id,state:exception.state,reason_code:exception.reason_code,approval_ref:exception.approval_id}:null};
 }
 export async function latestSend(scope:TenantAccess,attempt:string) {
- return (await scopedQuery<{reserved_at:Date;resend_ordinal:number;send_state:string;outbound_state:string|null}>(scope,['deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve'],`SELECT s.reserved_at,s.resend_ordinal,s.send_state,o.state AS outbound_state FROM shipit.delivery_challenge_sends s
+ return (await scopedQuery<{reserved_at:Date;resend_ordinal:number;send_state:string;outbound_state:string|null}>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve'],`SELECT s.reserved_at,s.resend_ordinal,s.send_state,o.state AS outbound_state FROM shipit.delivery_challenge_sends s
   LEFT JOIN shipit.whatsapp_outbound o ON o.organization_id=s.organization_id AND o.franchise_id=s.franchise_id AND o.id=s.outbound_intent_id
   WHERE {{franchise:s.organization_id:s.franchise_id}} AND s.attempt_id=$1 ORDER BY s.reserved_at DESC,s.id DESC LIMIT 1`,[attempt])).rows[0];
 }
 export async function advanceResend(scope:TenantAccess,attempt:string) {
- return (await scopedQuery<{resend_count:number;version:number}>(scope,['deliveries.resend','deliveries.replace'],`UPDATE shipit.delivery_attempts a SET resend_count=resend_count+1,version=version+1
+ return (await scopedQuery<{resend_count:number;version:number}>(scope,['whatsapp.inbox.work','deliveries.resend','deliveries.replace'],`UPDATE shipit.delivery_attempts a SET resend_count=resend_count+1,version=version+1
   WHERE {{franchise:a.organization_id:a.franchise_id}} AND a.id=$1 AND a.state='active' AND a.resend_count<3 RETURNING resend_count,version`,[attempt])).rows[0];
 }
 export async function replaceChallenge(scope:TenantAccess,a:DeliveryAttemptRow,id:string,verifier:string,sealed:string,keyVersion:string,command:string,time:Date) {

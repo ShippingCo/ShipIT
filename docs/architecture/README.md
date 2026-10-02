@@ -230,3 +230,5 @@ Run `pnpm db:local exec node scripts/test-messaging-recovery.mjs` for its focuse
 all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 
 [Private customer tracking](customer-access.md) adds #46's signed-channel parcel bindings, short-lived grants and minimal tracking service; see [ADR 0031](../adr/0031-private-customer-tracking.md) and [verification](issue-46-verification.md).
+
+[Trusted customer conversations](conversations.md) adds #47's fixed router, verified shipment selection, authoritative tools and durable safe replies; see [ADR 0032](../adr/0032-trusted-conversation-tools.md) and [verification](issue-47-verification.md).

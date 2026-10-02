@@ -6,7 +6,7 @@ import type { BusinessWebhookConfig } from './webhook-payload.ts';
 import type { SendOutcome } from './types.ts';
 
 export interface OutboundInput {
-  source_kind:'event'|'inbox'|'delivery_challenge'; source_id:string; affected_entity_id?:string; customer_id?:string;delivery_recipient_ref?:string;
+  source_kind:'event'|'inbox'|'delivery_challenge'|'conversation'; source_id:string; affected_entity_id?:string; customer_id?:string;delivery_recipient_ref?:string;
   purpose:'updates'|'requested_assistance'|'consent_disclosure'|'delivery_otp';
   format:'text'|'template'; text?:string; template_name?:string; template_language?:string; variables?:string[];
 }
@@ -15,9 +15,10 @@ export function outboundInput(value:unknown):ResolvedOutboundInput {
   const b=object(value,['source_kind','source_id','affected_entity_id','customer_id','delivery_recipient_ref','purpose','format','text','template_name','template_language','variables']);
   uuid(b.source_id);const affected=uuid(b.affected_entity_id??b.source_id),delivery=b.source_kind==='delivery_challenge';
   if(delivery) {uuid(b.delivery_recipient_ref);if(b.customer_id!==undefined)throw new HttpError('VALIDATION_FAILED');}
+  else if(b.source_kind==='conversation') {if(b.customer_id!==undefined||b.delivery_recipient_ref!==undefined||b.purpose!=='requested_assistance'||b.format!=='text')throw new HttpError('VALIDATION_FAILED');}
   else {uuid(b.customer_id);if(b.delivery_recipient_ref!==undefined)throw new HttpError('VALIDATION_FAILED');}
-  if(!['event','inbox','delivery_challenge'].includes(String(b.source_kind))||!['updates','requested_assistance','consent_disclosure','delivery_otp'].includes(String(b.purpose))||
-    !['text','template'].includes(String(b.format)) || (b.purpose==='updates'?b.source_kind!=='event':b.purpose==='delivery_otp'?b.source_kind!=='delivery_challenge':b.source_kind!=='inbox'))throw new HttpError('VALIDATION_FAILED');
+  if(!['event','inbox','delivery_challenge','conversation'].includes(String(b.source_kind))||!['updates','requested_assistance','consent_disclosure','delivery_otp'].includes(String(b.purpose))||
+    !['text','template'].includes(String(b.format)) || (b.purpose==='updates'?b.source_kind!=='event':b.purpose==='delivery_otp'?b.source_kind!=='delivery_challenge':!['inbox','conversation'].includes(String(b.source_kind))))throw new HttpError('VALIDATION_FAILED');
   if(b.purpose==='consent_disclosure') {
     if(b.format!=='text'||b.text!==undefined||b.variables!==undefined||b.template_name!==undefined||b.template_language!==undefined)throw new HttpError('VALIDATION_FAILED');
   } else if(b.format==='text') {

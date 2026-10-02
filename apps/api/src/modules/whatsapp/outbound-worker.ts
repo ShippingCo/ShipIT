@@ -7,6 +7,7 @@ import * as repository from './outbound-repository.ts';
 import { openOutbound, policyFailure, sendDecision } from './outbound-rules.ts';
 import type { SendOutcome, WhatsappDependencies } from './types.ts';
 import { finalMileRelevance } from '../automation/final-mile-relevance.ts';
+import { authorizeReply } from '../conversations/replies.ts';
 
 export function createOutboundWorker(database:DatabasePool,dependencies:WhatsappDependencies) {
  const clock=()=>dependencies.clock?.()??null;
@@ -39,7 +40,14 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
      await repository.update(scope,m,'suppressed','installation_unavailable',now,{purge:true});return {result:'suppressed'} as const;
     }
     let recipient:string;
-    if(input.purpose==='delivery_otp') {
+    if(input.source_kind==='conversation') {
+     if(input.source_id!==m.source_id||input.affected_entity_id!==m.affected_entity_id||input.purpose!=='requested_assistance'||input.format!=='text') {
+      await repository.update(scope,m,'suppressed','source_invalid',now,{purge:true});return {result:'suppressed'} as const;
+     }
+     const channel=await authorizeReply(scope,dependencies,m,installation,now);
+     if(!channel) {await repository.update(scope,m,'suppressed','customer_access_unavailable',now,{purge:true});return {result:'suppressed'} as const;}
+     recipient=channel;
+    } else if(input.purpose==='delivery_otp') {
      const deliveryRecipient=await repository.lockDeliveryRecipient(scope,m.delivery_recipient_ref);
      if(!deliveryRecipient||deliveryRecipient.contact_version!==m.contact_version||input.delivery_recipient_ref!==deliveryRecipient.id) {
       await repository.update(scope,m,'suppressed','contact_changed',now,{purge:true});return {result:'suppressed'} as const;

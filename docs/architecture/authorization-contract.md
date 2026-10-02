@@ -421,3 +421,14 @@ org_admin (explicit selected own Franchise), franchise_admin, operator and dispa
 is no generic delivery_agent, accountant or read_only feed, no C/A expansion, no new action/role,
 and no R18 or R29 widening. Current local W44/W19 authority is computed in the same membership
 transaction for action eligibility; existing commands reauthorize. No role receives content or OTPs.
+
+## Issue #47 verified customer tools
+
+No membership action or role is widened. The existing trusted `whatsapp.inbox.work`
+capability derives one Franchise from the fixed signed-inbox scheduler; it cannot be
+issued from staff request fields. Customer tools reauthorize the installation/channel's
+current #46 Parcel binding every turn. Only the booking sender receives saved financial
+summaries. Delivery resend additionally checks the retained actual recipient and has a
+signed-inbox principal restricted to that one operation. It cannot start, complete,
+replace or approve delivery proof. `read_only` still cannot attest a binding. Dispatch
+rechecks contact/resource generation and consent. See [contract](conversations.md).

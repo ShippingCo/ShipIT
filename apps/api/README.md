@@ -372,4 +372,15 @@ synthetic tests. See [contract](../../docs/architecture/deliveries.md),
 
 ## Private customer tracking (#46)
 
-Apply the additive migration/runtime grants before enabling customer_access_enabled in the server-only WhatsApp catalog. Local franchise administrators attest, rebind or revoke parcel relationships through CSRF-protected commands; customers use scoped bearer grants to read minimal tracking. Conversation routing and reply delivery remain #47. See [contract](../../docs/architecture/customer-access.md), [ADR](../../docs/adr/0031-private-customer-tracking.md) and [verification](../../docs/architecture/issue-46-verification.md).
+Apply the additive migration/runtime grants before enabling customer_access_enabled in the server-only WhatsApp catalog. Local franchise administrators attest, rebind or revoke parcel relationships through CSRF-protected commands; customers use scoped bearer grants to read minimal tracking. See [contract](../../docs/architecture/customer-access.md), [ADR](../../docs/adr/0031-private-customer-tracking.md) and [verification](../../docs/architecture/issue-46-verification.md).
+
+## Trusted conversations (#47)
+
+The existing runtime consumes signed, consent-processed inbound turns when the server-only
+`conversation_enabled` flag is enabled. It requires #46 access, outbound/webhook setup
+and authentication keys. Six fixed tools return minimal current facts; no public tool
+endpoint or staff membership is added. Resend additionally needs #42 proof/template setup.
+Apply the forward migration and narrow runtime grants before enabling. See
+[contract and recovery](../../docs/architecture/conversations.md),
+[ADR](../../docs/adr/0032-trusted-conversation-tools.md) and
+[acceptance evidence](../../docs/architecture/issue-47-verification.md).

@@ -282,3 +282,13 @@ test('private tracking requires both owners and cannot expose its scope adapter 
  assert.deepEqual(inspectSource('apps/api/src/modules/customer-access/service.ts',adapter),[]);
  assert.ok(inspectSource('apps/api/src/modules/whatsapp/service.ts',adapter).length);
 });
+
+test('conversation state is franchise-private and scheduler stays in its signed worker',()=>{
+ for(const table of ['customer_conversations','customer_conversation_turns']) {
+  assert.deepEqual(inspectSource('apps/api/src/modules/conversations/repository.ts',`scopedQuery(scope,['whatsapp.inbox.work'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  assert.ok(inspectSource('apps/api/src/modules/conversations/repository.ts',`scopedQuery(scope,['whatsapp.inbox.work'],'SELECT id FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
+ }
+ const adapter="import {withNextConversationScope} from '../security/jobs.ts'";
+ assert.deepEqual(inspectSource('apps/api/src/modules/conversations/worker.ts',adapter),[]);
+ assert.ok(inspectSource('apps/api/src/modules/whatsapp/service.ts',adapter).length);
+});
