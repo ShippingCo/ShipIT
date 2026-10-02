@@ -161,6 +161,7 @@ export interface DisposableDatabase {
   prepareEway(): Promise<void>;
   prepareCustomerAccess(): Promise<void>;
   prepareConversations(): Promise<void>;
+  prepareCustomerQuotes(): Promise<void>;
   prepareWhatsapp(): Promise<void>;
   prepareWhatsappInbox(): Promise<void>;
   prepareWhatsappConsent(): Promise<void>;
@@ -366,6 +367,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_conversations,shipit.customer_conversation_turns TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.customer_conversation_next() TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCustomerQuotes() {
+      await handle.prepareConversations();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.customer_quote_policies,shipit.customer_quote_policy_commands,shipit.customer_quotes TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(quote_draft) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareCustomerAccess() {

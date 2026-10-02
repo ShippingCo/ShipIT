@@ -73,6 +73,13 @@ export function createCustomerAccessService(database:DatabasePool,config:Busines
       assertTenantAccess(scope,['whatsapp.inbox.work']);
       return projection(scope,tokenDigest(grant),docket);
     },
+    async readDelay(scope:TenantAccess,grant:string,docket:string) {
+      assertTenantAccess(scope,['whatsapp.inbox.work']);
+      const parcel=await repository.tracking(scope,tokenDigest(grant),docket);if(!parcel)throw new HttpError('RESOURCE_NOT_FOUND');
+      const recorded=await repository.delay(scope,parcel.id);
+      return recorded?.outcome==='updated'&&recorded.kind!=='route.arrived'&&['dispatched','in_transit'].includes(parcel.status)
+        ?{state:'available' as const,total_minutes:recorded.total_delay_minutes}:{state:'unavailable' as const,total_minutes:null};
+    },
     async select(scope:TenantAccess,inboxInput:unknown,docket:string|null=null) {
       assertTenantAccess(scope,['whatsapp.inbox.work']);const inbox=uuid(inboxInput,'$');
       if(docket!==null&&!/^[A-Z0-9][A-Z0-9-]{0,39}$/.test(docket))throw new HttpError('VALIDATION_FAILED');

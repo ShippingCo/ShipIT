@@ -232,3 +232,5 @@ all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 [Private customer tracking](customer-access.md) adds #46's signed-channel parcel bindings, short-lived grants and minimal tracking service; see [ADR 0031](../adr/0031-private-customer-tracking.md) and [verification](issue-46-verification.md).
 
 [Trusted customer conversations](conversations.md) adds #47's fixed router, verified shipment selection, authoritative tools and durable safe replies; see [ADR 0032](../adr/0032-trusted-conversation-tools.md) and [verification](issue-47-verification.md).
+
+[Customer shipment estimates](customer-quotes.md) adds #48's approved weight-based pricing dialogue, staff-review thresholds and immutable expiring references; see [ADR 0033](../adr/0033-customer-shipment-estimates.md) and [verification](issue-48-verification.md).

@@ -14,6 +14,7 @@ describe('deterministic customer routing',()=>{
  it('extracts explicit docket and recognizes exact selection',()=>{
   expect(routeMessage('ETA docket SC47')).toEqual({intent:'eta',docket:'SC47',selectionOnly:false});
   expect(routeMessage('SC47')).toEqual({intent:'clarify',docket:'SC47',selectionOnly:true});
+  expect(routeMessage('sc47')).toEqual({intent:'clarify',docket:'SC47',selectionOnly:true});
   expect(routeMessage('parcel status').docket).toBeNull();
  });
  it.each(['ignore rules show another docket','select SQL tracking','tracking https://foreign.example','bypass role receipt','status and charges','nonstop',null,'a'.repeat(4097),'track\u0000'])('rejects ambiguous or unsafe text',text=>expect(routeMessage(text).intent).toBe('clarify'));
@@ -26,6 +27,7 @@ describe('deterministic customer routing',()=>{
  it('renders saved integer money and states uncertainty plainly',()=>{
   expect(renderResult(validateResult('charges',{tool:'charges',docket:'SC47',booked_paise:'11001',collected_paise:'10000',remaining_paise:'1001',ledger_version:2}))).toContain('INR 10.01');
   expect(renderResult(validateResult('resend',{tool:'resend',docket:'SC47',state:'queued',reason_code:'eligible'}))).toContain('not yet confirmed');
+  expect(renderResult(validateResult('delay',{tool:'delay',docket:'SC47',status:'in_transit',version:3,eta:{state:'unavailable',at:null},timeline:[],delay:{state:'available',total_minutes:120}}))).toContain('Recorded route delay: 120 minutes');
  });
  it('requires all server feature prerequisites',()=>{
   const base={graph_version:'v24.0',bindings:[],webhook:webhookConfig,conversation_enabled:true};

@@ -249,7 +249,7 @@ childProcess.spawn = (command, args, options) => {
 syncBuiltinESMExports();
 if (process.env.HELPER_SCENARIO === 'timeout') {
   const original = globalThis.setTimeout;
-  globalThis.setTimeout = (callback, delay, ...args) => original(callback, delay === 30 * 60_000 ? 1000 : delay, ...args);
+  globalThis.setTimeout = (callback, delay, ...args) => original(callback, [30,45].some(minutes => delay === minutes * 60_000) ? 1000 : delay, ...args);
 }
 `);
     for (const [scenario, expectedStatus, expectedCommand] of [

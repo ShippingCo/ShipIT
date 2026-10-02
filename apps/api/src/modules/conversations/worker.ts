@@ -15,10 +15,13 @@ import { routeMessage,tools,type Intent,type Tool } from './router.ts';
 import { validateResult,renderResult } from './results.ts';
 import { enqueueReply } from './replies.ts';
 import * as repository from './repository.ts';
+import { quoteTurn } from '../customer-quotes/service.ts';
+import { saveDraft } from '../customer-quotes/repository.ts';
 
-const clarification='Please ask for tracking, ETA, delay, charges, receipt or delivery-code resend. Send HUMAN to contact staff.';
 const handoff='Please contact the franchise directly for a person. An automatic staff case has not been created. Send RESUME to return to self-service.';
 export function createConversationWorker(database:DatabasePool,dependencies:WhatsappDependencies,key:Buffer,proof?:DeliveryProofConfiguration) {
+ const clarification='Please ask for tracking, ETA, delay, charges, receipt or delivery-code resend. '+
+  (dependencies.configuration.customer_quotes_enabled?'Send QUOTE for a shipping estimate, or HUMAN to contact staff.':'Send HUMAN to contact staff.');
  const config=dependencies.configuration.webhook!,access=createCustomerAccessService(database,config,key);
  async function process(scope:TenantAccess,id:string,fallback=false):Promise<string> {
   const source=await repository.source(scope,id);
@@ -36,6 +39,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   const c=await repository.conversation(scope,source.installation_id,contact,source.now),live=c.expires_at>source.now;
   let selected=live?c.selected_docket:null,pending=live?c.pending_intent:null,state=live?c.state:'active';
   let intent:Intent=route.intent,outcome:repository.Outcome='answered',reply:string|null=null;
+  let quoteId:string|null=null;
   const provenance:repository.Provenance[]=[];
   if(route.intent==='stop'||route.intent==='start') {selected=null;pending=null;state='active';outcome='consent';}
   else if(await repository.consentRevoked(scope,source.installation_id,contact)) {selected=null;pending=null;state='active';outcome='consent';}
@@ -43,6 +47,11 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   else if(route.intent==='human') {selected=null;pending=null;state='human_requested';outcome='human_requested';reply=handoff;}
   else if(route.intent==='resume') {selected=null;pending=null;state='active';reply=clarification;}
   else if(state==='human_requested') {outcome='paused';reply=handoff;}
+  else if(dependencies.configuration.customer_quotes_enabled&&(route.intent==='quote'||(live&&c.quote_draft!==null&&route.intent==='clarify'))) {
+   intent='quote';selected=null;pending=null;
+   const result=await quoteTurn(scope,{inbox:id,installation:source.installation_id,contact,conversation:c.id,now:source.now},text,live?c.quote_draft:null);
+   reply=result.reply;outcome=result.outcome;quoteId=result.quoteId;
+  }
   else {
    const resumed=route.selectionOnly&&pending;
    const tool:Tool|null=resumed?pending:tools.includes(intent as Tool)?intent as Tool:null;
@@ -70,6 +79,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
        if(!proof)throw new HttpError('TEMPORARILY_UNAVAILABLE');
        result={tool,docket:p.docket,...await requestCustomerResend(scope,id,p.docket,proof,dependencies)};
       }
+      if(tool==='delay')result={...(result as object),delay:await access.readDelay(scope,item.grant,item.docket)};
       reply=renderResult(validateResult(tool,result));
      }catch(error) {
       if(!(error instanceof HttpError))throw error;
@@ -82,8 +92,9 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
     }
    } else {outcome='unavailable';reply=clarification;}
   }
+  if(dependencies.configuration.customer_quotes_enabled&&intent!=='quote'&&!fallback)await saveDraft(scope,c.id,null);
   await repository.advance(scope,c,selected,pending,state,source.now);
-  await repository.record(scope,id,source.installation_id,contact,c,intent,outcome,provenance);
+  await repository.record(scope,id,source.installation_id,contact,c,intent,outcome,provenance,quoteId);
   if(reply)await enqueueReply(scope,dependencies,id,source.installation_id,contact,source.occurred_at,reply);
   return outcome;
  }

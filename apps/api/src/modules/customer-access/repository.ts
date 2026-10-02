@@ -104,3 +104,10 @@ export async function eta(scope:TenantAccess,id:string) {
     WHERE {{franchise:x.organization_id:x.franchise_id}} AND x.parcel_id=$1
     ORDER BY e.occurred_at DESC,x.route_version DESC,e.event_id DESC LIMIT 1`,[id])).rows[0]?.revised_eta_at??null;
 }
+export async function delay(scope:TenantAccess,id:string) {
+  return (await scopedQuery<{total_delay_minutes:number;outcome:string;kind:string}>(scope,['whatsapp.inbox.work'],`SELECT x.total_delay_minutes,x.outcome,e.event_type AS kind
+    FROM shipit.route_parcel_effects x JOIN shipit.domain_events e
+    ON e.organization_id=x.organization_id AND e.franchise_id=x.franchise_id AND e.event_id=x.event_id
+    WHERE {{franchise:x.organization_id:x.franchise_id}} AND x.parcel_id=$1
+    ORDER BY e.occurred_at DESC,x.route_version DESC,e.event_id DESC LIMIT 1`,[id])).rows[0];
+}

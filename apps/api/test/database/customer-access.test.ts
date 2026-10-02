@@ -29,7 +29,7 @@ await test('forward migration preserves populated shipments and never backfills 
   const snapshot=async()=>Object.fromEntries(await Promise.all(['customers','bookings','parcels'].map(async table=>
     [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY id`)).rows])));
   const before=await snapshot();db.migrate=migrate;
-  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   for(const table of ['customer_access_bindings','customer_access_commands','customer_tracking_grants']) {
     assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
     await assert.rejects(s.pool.query(`SELECT * FROM shipit.${table}`));
@@ -196,6 +196,9 @@ await test('tracking reads the committed route arrival ETA, delay and arrival wi
   const selection=await withTransaction(s.pool,tx=>service.select(issueTenantAccess(tx,{action:'whatsapp.inbox.work',actor:{type:'service',id:'whatsapp-inbox-worker'},
     organizationId:org,permittedFranchiseIds:[A],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),inbox));
   const grant=selection.items[0]!.grant,result=await service.track(grant);
+  const delay=()=>withTransaction(s.pool,tx=>service.readDelay(issueTenantAccess(tx,{action:'whatsapp.inbox.work',actor:{type:'service',id:'whatsapp-inbox-worker'},
+    organizationId:org,permittedFranchiseIds:[A],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),grant,result.docket));
+  assert.deepEqual(await delay(),{state:'available',total_minutes:120});
   assert.deepEqual(result.eta,{state:'available',at:'2099-01-01T14:00:00.000Z',kind:'route_arrival'});
   assert.ok(result.timeline.some(e=>e.event==='parcel.dispatched'));
   await s.db.prepareDeliveries();const agent=await s.grant('delivery_agent',[A]),deliveryKey=randomUUID();
@@ -203,6 +206,7 @@ await test('tracking reads the committed route arrival ETA, delay and arrival wi
     {organization_id:org,franchise_id:A},deliveryKey,['idempotency-key',deliveryKey],
     {expected_version:result.version,agent_id:agent.id,handover_evidence_ref:randomUUID()},false,randomUUID());
   const lastMile=await service.track(grant);assert.equal(lastMile.status,'out_for_delivery');assert.deepEqual(lastMile.eta,{state:'unavailable',at:null});
+  assert.deepEqual(await delay(),{state:'unavailable',total_minutes:null});
   assert.ok(lastMile.timeline.some(e=>e.event==='delivery.attempt_started'));
   const key=randomUUID();await createRouteEventService(s.pool).execute(route.dispatcher.token,route.route.id,{organization_id:org,franchise_id:A},key,['idempotency-key',key],
     {kind:'arrival',expected_version:route.delay.version,manifest_id:route.route.current_manifest_id,manifest_version:route.route.version,

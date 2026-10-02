@@ -77,7 +77,7 @@ await test('signed conversation answers current tracking, replays once and survi
 await test('multiple shipments require explicit selection; pending tool resumes and a foreign docket cannot reuse old selection',{timeout:40000},async t=>{
  const s=await setup(t,2),id=await s.message('charges');assert.equal(await s.worker.tick(),'selection_required');
  assert.match(await s.reply(id),new RegExp(s.parcels[1]!.docket));
- const select=await s.message(s.parcels[1]!.docket);assert.equal(await s.worker.tick(),'answered');assert.equal((await s.turn(select)).intent,'charges');
+ const select=await s.message(s.parcels[1]!.docket.toLowerCase());assert.equal(await s.worker.tick(),'answered');assert.equal((await s.turn(select)).intent,'charges');
  assert.match(await s.reply(select),/Booked total/);assert.match(await s.reply(select),new RegExp(s.parcels[1]!.docket));
  const denied=await s.message('tracking docket FOREIGN47');assert.equal(await s.worker.tick(),'not_found');assert.doesNotMatch(await s.reply(denied),new RegExp(s.parcels[1]!.docket));
  const ambiguous=await s.message('ETA');assert.equal(await s.worker.tick(),'selection_required');assert.equal((await s.turn(ambiguous)).outcome,'selection_required');
@@ -96,6 +96,19 @@ await test('STOP is applied before tools; human request wins and pauses tools wi
  assert.equal((await s.db.adminQuery('SELECT count(*)::integer n FROM shipit.delivery_commands WHERE customer_inbox_id=$1',[afterStop])).rows[0]!.n,0);
  while(await s.outbound.tick()!==null){/* every queued reply is suppressed after STOP */}
  assert.equal(s.sends.length,0);
+});
+
+await test('pending consent defers a reply without purging it or consuming an external attempt',{timeout:40000},async t=>{
+ const s=await setup(t),id=await s.message('tracking');assert.equal(await s.worker.tick(),'answered');
+ const body=JSON.stringify(callback([{...inbound('wamid.'+randomUUID(),'hello'),from:'12025550166',timestamp:String(Math.floor(Date.now()/1000))}],{kind:'messages'}));
+ assert.equal((await s.app.inject({method:'POST',url:'/webhooks/whatsapp',headers:signed(body),payload:body})).statusCode,200);
+ assert.equal(await s.outbound.tick(),'retry_wait');assert.equal(s.sends.length,0);
+ const waiting=(await s.db.adminQuery('SELECT state,sealed_payload,attempts FROM shipit.whatsapp_outbound WHERE conversation_inbox_id=$1',[id])).rows[0]!;
+ assert.equal(waiting.state,'retry_wait');assert.ok(waiting.sealed_payload);assert.equal(waiting.attempts,0);
+ while(await createInboxWorker(s.pool).tick()!==null){/* process signed source */}
+ while(await createConsentWorker(s.pool,webhookConfig).tick()!==null){/* settle unrelated consent */}
+ s.whatsapp.clock=()=>new Date(Date.now()+3000);
+ assert.equal(await s.outbound.tick(),'accepted');assert.equal(s.sends.length,1);
 });
 
 await test('finance uses frozen booking/ledger and receipt snapshots; recipients get only tracking',{timeout:40000},async t=>{
@@ -161,7 +174,7 @@ await test('forward upgrade preserves existing operational rows and creates no a
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:30}),{applied:30});const migrate=db.migrate;db.migrate=async()=>({applied:0});
  const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
  const snapshot=async()=>JSON.stringify((await db.adminQuery('SELECT id,status,version,booking_id FROM shipit.parcels')).rows),before=await snapshot();
- assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.customer_conversation_turns')).rows[0]!.n,0);
 });
 

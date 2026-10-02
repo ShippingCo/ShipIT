@@ -339,13 +339,16 @@ await test('history joins one logical message, decision-only cutover/blocks and 
 
  await createOutboundWorker(s.pool,s.dependencies).tick();
  assert.equal((await list('messages')).items[0]!.message!.state,'accepted');assert.equal((await list('automation')).items[0]!.decision!.outcome,'queued');
- for(const options of [{cutover:true},{blocked:true},{suppressed:true}]) {
+});
+for(const options of [{cutover:true},{blocked:true},{suppressed:true}]) {
+ await test('history retains decision-only outcome '+Object.keys(options)[0],{timeout:30000},async t=>{
+  const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
   const fixture=await setup(t,!options.cutover,{missingBinding:options.blocked,consent:!options.suppressed});await fixture.worker.tick();
   const rows=await createHistoryService(fixture.pool,fixture.keys.browser).list(fixture.operator.token,'automation',fixture.query,randomUUID());
   assert.equal(rows.items.length,1);assert.equal(rows.items[0]!.decision!.outcome,options.cutover?'skipped':options.blocked?'blocked':'suppressed');
   if(options.cutover||options.blocked)assert.equal(rows.items[0]!.message,null);
- }
-});
+ });
+}
 await test('history Route-delay root and items correlate safely; W19 eligibility, cooldown and reminder identity stay separate',{timeout:60000},async t=>{
  const {createHistoryService}=await import('../../src/modules/whatsapp/history-service.ts');
  const s=await setup(t),fixture=await routeDelayFixture(s,4);await applyDelaySource(s,fixture.delay.event_id);await createRouteDelayFanoutWorker(s.pool,s.dependencies).tick();
