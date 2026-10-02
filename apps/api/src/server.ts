@@ -1,3 +1,5 @@
+import { createSupportService } from './modules/support/service.ts';
+import { registerSupport } from './modules/support/routes.ts';
 import { createPickupService } from './modules/pickups/service.ts';
 import { registerPickups } from './modules/pickups/routes.ts';
 import { createCustomerAccessService } from './modules/customer-access/service.ts';
@@ -115,6 +117,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
+      if(whatsapp)registerSupport(instance,createSupportService(database,whatsapp),config.environment!=='developer');
       if(whatsapp)registerPickups(instance,createPickupService(database,whatsapp),config.environment!=='developer');
       registerQuotePolicies(instance,createQuotePolicyService(database),config.environment!=='developer');
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');

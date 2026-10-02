@@ -73,3 +73,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0033: Customer shipment estimates](0033-customer-shipment-estimates.md): Explicit published-rate policy, durable quote dialogue, inclusive staff referral and expiring non-binding references for Issue #48; local review draft.
 
 - [0034 — Pickup requests](0034-pickup-requests.md)
+
+- [0035 — Human support handoff](0035-human-support-handoff.md)

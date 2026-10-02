@@ -19,6 +19,8 @@ import { enqueueReply } from './replies.ts';
 import * as repository from './repository.ts';
 import { quoteTurn } from '../customer-quotes/service.ts';
 import { saveDraft } from '../customer-quotes/repository.ts';
+import * as support from '../support/repository.ts';
+import { availability } from '../support/rules.ts';
 
 const handoff='Please contact the franchise directly for a person. An automatic staff case has not been created. Send RESUME to return to self-service.';
 export function createConversationWorker(database:DatabasePool,dependencies:WhatsappDependencies,key:Buffer,proof?:DeliveryProofConfiguration) {
@@ -44,9 +46,18 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   let intent:Intent=route.intent,outcome:repository.Outcome='answered',reply:string|null=null;
   let quoteId:string|null=null;
   const provenance:repository.Provenance[]=[];
+  const activeCase=await support.active(scope,c.id);
+  const handoffCase=async(reason:string)=>{
+   const bindings=selected?await selection(scope,source.installation_id,contact,selected):[];
+   const result=await support.open(scope,{conversation:c.id,installation:source.installation_id,contact,inbox:id,parcel:bindings[0]?.parcel_id??null,reason});
+   selected=null;pending=null;state='human_requested';outcome='human_requested';
+   reply=result.created?`Your request is saved as case ${result.value.id}. Automated answers are paused until staff resolve it. ${availability(dependencies.configuration.support_hours?.find(h=>h.franchise_id===scope.context.permittedFranchiseIds[0]),source.now)}`:null;
+  };
   if(route.intent==='stop'||route.intent==='start') {selected=null;pending=null;state='active';outcome='consent';}
   else if(await repository.consentRevoked(scope,source.installation_id,contact)) {selected=null;pending=null;state='active';outcome='consent';}
+  else if(activeCase) {await support.touch(scope,activeCase.id,id);selected=null;pending=null;state='human_requested';outcome='paused';}
   else if(fallback) {intent='clarify';outcome='unavailable';reply='Shipment information is temporarily unavailable. Please retry once or contact the franchise directly.';}
+  else if(dependencies.configuration.support_enabled&&(route.intent==='human'||state==='human_requested')) {await handoffCase('human_requested');}
   else if(route.intent==='human') {selected=null;pending=null;state='human_requested';outcome='human_requested';reply=handoff;}
   else if(route.intent==='resume') {selected=null;pending=null;state='active';reply=clarification;}
   else if(state==='human_requested') {outcome='paused';reply=handoff;}
@@ -98,7 +109,8 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
       } else throw error;
      }
     }
-   } else {outcome='unavailable';reply=clarification;}
+   } else if(dependencies.configuration.support_enabled) {await handoffCase('unknown_intent');}
+   else {outcome='unavailable';reply=clarification;}
   }
   if(dependencies.configuration.pickup_enabled&&intent!=='pickup'&&!fallback)await pickupDraft(scope,c.id,null);
   if(dependencies.configuration.customer_quotes_enabled&&intent!=='quote'&&!fallback)await saveDraft(scope,c.id,null);

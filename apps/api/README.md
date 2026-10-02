@@ -399,3 +399,7 @@ See [contract](../../docs/architecture/customer-quotes.md),
 ## Pickup requests (#49)
 
 The default-off `pickup_enabled` WhatsApp setting enables the signed customer pickup dialogue and staff decisions. Apply migration 33 and its runtime grants first. [Contract, APIs and recovery](../../docs/architecture/pickups.md). Staff use the production Pickups page; synthetic verification is `pnpm db:local exec node scripts/test-pickups.mjs`.
+
+## Human support (#50)
+
+Apply migration 34 and its runtime grants, then enable server-only `support_enabled` after conversation/outbound setup. The production Human support page provides case claim/assignment, replies, internal notes, resolution and reopen. [Contracts, hours, recovery and verification](../../docs/architecture/support.md).
