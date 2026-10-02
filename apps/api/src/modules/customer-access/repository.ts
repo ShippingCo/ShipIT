@@ -64,7 +64,7 @@ export async function selection(scope:TenantAccess,installation:string,contact:s
     LEFT JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id
     WHERE {{franchise:b.organization_id:b.franchise_id}} AND b.installation_id=$1 AND b.contact_key=$2 AND b.expires_at>clock_timestamp()
     AND ($3::text IS NULL OR p.docket=$3) AND (b.relation='recipient' OR c.contact_version=b.contact_version)
-    ORDER BY p.id,b.relation LIMIT 11`,[installation,contact,docket])).rows;
+    ORDER BY p.id,CASE WHEN b.relation='sender' THEN 0 ELSE 1 END LIMIT 11`,[installation,contact,docket])).rows;
 }
 export async function grant(scope:TenantAccess,b:Binding,inbox:string,id:string,digest:string) {
   const c=scope.context;
@@ -78,9 +78,9 @@ export async function grant(scope:TenantAccess,b:Binding,inbox:string,id:string,
 export async function tracking(scope:TenantAccess,digest:string,docket:string|null) {
   // Staff mutations lock the organization before parcel/binding rows. Acquire
   // that same root first so a read cannot deadlock with a concurrent rebind.
-  await scopedQuery(scope,['customer.tracking.read'],`SELECT o.id FROM shipit.organizations o
+  await scopedQuery(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT o.id FROM shipit.organizations o
     WHERE {{organization:o.id}} FOR SHARE`,[]);
-  return (await scopedQuery<{id:string;docket:string;status:string;version:number}>(scope,['customer.tracking.read'],`SELECT p.id,p.docket,p.status,p.version
+  return (await scopedQuery<{id:string;docket:string;status:string;version:number}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT p.id,p.docket,p.status,p.version
     FROM shipit.customer_tracking_grants g JOIN shipit.customer_access_bindings b
     ON b.organization_id=g.organization_id AND b.franchise_id=g.franchise_id AND b.id=g.binding_id AND b.version=g.binding_version
     JOIN shipit.parcels p ON p.organization_id=b.organization_id AND p.franchise_id=b.franchise_id AND p.id=b.parcel_id
@@ -92,14 +92,14 @@ export async function tracking(scope:TenantAccess,digest:string,docket:string|nu
     AND (b.relation='recipient' OR c.contact_version=b.contact_version) FOR SHARE OF b,i,f,o,p`,[digest,docket])).rows[0];
 }
 export async function timeline(scope:TenantAccess,id:string) {
-  return (await scopedQuery<{event_type:string;occurred_at:Date}>(scope,['customer.tracking.read'],`SELECT e.event_type,e.occurred_at FROM shipit.domain_events e
+  return (await scopedQuery<{event_type:string;occurred_at:Date}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT e.event_type,e.occurred_at FROM shipit.domain_events e
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.parcel_id=$1 AND e.event_type IN
     ('parcel.booked','parcel.checked_in','parcel.dispatched','parcel.in_transit','delivery.attempt_started','delivery.retry_started','delivery.attempt_failed',
      'parcel.held_at_office','delivery.completed','delivery.collected','delivery.reversed','parcel.rto_approved')
     ORDER BY e.aggregate_sequence DESC,e.event_id DESC LIMIT 20`,[id])).rows;
 }
 export async function eta(scope:TenantAccess,id:string) {
-  return (await scopedQuery<{revised_eta_at:Date|null}>(scope,['customer.tracking.read'],`SELECT x.revised_eta_at FROM shipit.route_parcel_effects x
+  return (await scopedQuery<{revised_eta_at:Date|null}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT x.revised_eta_at FROM shipit.route_parcel_effects x
     JOIN shipit.domain_events e ON e.organization_id=x.organization_id AND e.franchise_id=x.franchise_id AND e.event_id=x.event_id
     WHERE {{franchise:x.organization_id:x.franchise_id}} AND x.parcel_id=$1
     ORDER BY e.occurred_at DESC,x.route_version DESC,e.event_id DESC LIMIT 1`,[id])).rows[0]?.revised_eta_at??null;

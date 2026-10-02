@@ -170,3 +170,8 @@ The [WhatsApp provider registry](docs/architecture/whatsapp.md) validates regist
 recipient challenges, assigned-agent work and independent exceptional proof. A Parcel reaches
 `delivered` only through the atomic Deliveries transaction; payment remains independent and
 completion notifications use the ordinary Booking Customer contact and remain independent of payment state.
+
+[Trusted customer conversations](docs/architecture/conversations.md) build on verified
+shipment access with deterministic tracking/ETA/delay, saved charges, issued receipt
+summaries and recipient-only delivery-code resend. Routing is disabled by default;
+see [verification](docs/architecture/issue-47-verification.md) for local test evidence.

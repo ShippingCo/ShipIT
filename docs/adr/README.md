@@ -67,3 +67,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0030: Secure and atomic delivery proof](0030-secure-atomic-delivery-proof.md): Versioned protected challenges, atomic T05/T08/T06, independent exception approval and delivery-owned durable WhatsApp identities for Issue #42.
 
 - [0031: Private customer tracking](0031-private-customer-tracking.md): Explicit parcel relationship proof, W46 verification/rebind/revocation, signed installation identity and short-lived grants for Issue #46; local review draft.
+
+- [0032: Trusted customer conversations](0032-trusted-conversation-tools.md): Fixed allowlisted router, verified selection, authoritative projections, safe delivery resend and durable replies for Issue #47; local review draft.

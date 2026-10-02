@@ -67,6 +67,24 @@ export async function withNextInboxScope<T>(database:DatabasePool,work:(scope:Te
   });
 }
 
+/** Signed inbox ownership only; a savepoint removes all tool effects before fallback. */
+export async function withNextConversationScope<T>(database:DatabasePool,work:(scope:TenantAccess,id:string)=>Promise<T>,
+ fallback:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
+ return withTransaction(database,async tx=>{
+  await tx.query("SET LOCAL transaction_timeout = '15s'");
+  await tx.query("SET LOCAL statement_timeout = '3s'");
+  await tx.query("SET LOCAL lock_timeout = '1s'");
+  const row=(await tx.query<{organization_id:string;franchise_id:string;inbox_id:string}>(
+   'SELECT organization_id,franchise_id,inbox_id FROM shipit.customer_conversation_next()')).rows[0];
+  if(!row)return null;
+  const scope=issueTenantAccess(tx,{action:'whatsapp.inbox.work',actor:{type:'service',id:'whatsapp-inbox-worker'},organizationId:row.organization_id,
+   permittedFranchiseIds:[row.franchise_id],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'});
+  await tx.query('SAVEPOINT conversation_tool');
+  try {const result=await work(scope,row.inbox_id);await tx.query('RELEASE SAVEPOINT conversation_tool');return result;}
+  catch {await tx.query('ROLLBACK TO SAVEPOINT conversation_tool');return fallback(scope,row.inbox_id);}
+ });
+}
+
 /** Consent consumption has an independent durable receipt; inbox completion is not opt-in. */
 export async function withNextConsentScope<T>(database:DatabasePool,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T|null> {
   return withTransaction(database,async tx=>{

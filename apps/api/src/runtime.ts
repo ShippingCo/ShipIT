@@ -2,6 +2,7 @@ import { parseWhatsappConfiguration } from './modules/whatsapp/config.ts';
 import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createInboxWorker } from './modules/whatsapp/inbox-worker.ts';
 import { createConsentWorker } from './modules/whatsapp/consent-worker.ts';
+import { createConversationWorker } from './modules/conversations/worker.ts';
 import { createOutboundWorker } from './modules/whatsapp/outbound-worker.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
@@ -72,6 +73,7 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   }
   finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   if (signal?.aborted) throw new Error('STARTUP_ABORTED');
+  if(whatsapp?.configuration.conversation_enabled&&!auth)throw new ConfigurationError([{field:'AUTH_SECRET_REF',code:'REQUIRED'}]);
   const database = createPool(createDatabaseConfig({ connectionString: resolved, environment: config.environment,
     tls: config.databaseTls, applicationName: 'shipit_api' }));
   let app;
@@ -95,6 +97,7 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   if(whatsapp?.configuration.webhook) {
     const worker=createInboxWorker(database);
     const consent=createConsentWorker(database,whatsapp.configuration.webhook);
+    const conversation=whatsapp.configuration.conversation_enabled&&auth?createConversationWorker(database,whatsapp,auth.keys.browser,deliveryProof):undefined;
     let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve();
     const cycle=async()=>{
       try {
@@ -106,6 +109,10 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
         for(let n=0;n<20&&!stopped;n++) {
           const outcome=await consent.tick();if(outcome===null)break;
           if(['key_unavailable','source_invalid'].includes(outcome))app.log.warn({event:'whatsapp_consent_quarantined',code:'MANUAL_REVIEW_REQUIRED'},'Consent processing needs review');
+        }
+        if(conversation)for(let n=0;n<20&&!stopped;n++) {
+          const outcome=await conversation.tick();if(outcome===null)break;
+          if(['invalid','unavailable'].includes(outcome))app.log.warn({event:'customer_conversation_attention',code:'MANUAL_REVIEW_REQUIRED'},'Customer assistance needs review');
         }
       }catch{app.log.error({event:'whatsapp_inbox_failed',code:'TEMPORARILY_UNAVAILABLE'},'Webhook processing unavailable');}
       if(!stopped)timer=setTimeout(()=>{pending=cycle();},1000);

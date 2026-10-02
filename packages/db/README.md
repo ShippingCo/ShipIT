@@ -723,3 +723,26 @@ referenced by grants and are rejected at read time rather than copied during a r
 No existing phone, consent, booking or parcel is granted access by migration. Rollback
 disables the customer access flag and keeps additive evidence; repair schema forward.
 See [customer access](../../docs/architecture/customer-access.md).
+
+## Issue #47 runtime privileges
+
+Apply the forward conversation migration after #46 (migration 30). Retain existing
+customer-access, Booking/ledger/receipt, inbox/consent, outbound and delivery runtime
+grants. Add only the following; `prepareConversations()` is the executable test reference.
+
+```sql
+GRANT SELECT,INSERT ON shipit.customer_conversations,
+  shipit.customer_conversation_turns TO runtime_role;
+GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version)
+  ON shipit.customer_conversations TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.customer_conversation_next() TO runtime_role;
+```
+
+The scheduler accepts no client owner selector and returns only persisted scope/inbox
+references. PUBLIC cannot execute it. Turns reject UPDATE/DELETE; do not grant DDL,
+ownership, DELETE/TRUNCATE or broad UPDATE. The migration backfills no channel access.
+Old staff delivery commands retain their principal; only signed-inbox resend permits a
+null staff principal. New conversation outbound sources require an owning turn receipt.
+Populated migration-30 upgrade, repeat no-op and fresh schema are tested. Disable the
+flag for rollback and keep compatible outbound workers until new sources are drained or
+suppressed. See [operations](../../docs/architecture/conversations.md).
