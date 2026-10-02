@@ -29,7 +29,7 @@ no staff operation or membership.
 STOP/START take priority over every question. Revoked consent prevents tools and new
 replies. HUMAN takes priority over tools and pauses self-service until RESUME or expiry.
 The message asks the customer to contact the franchise and explicitly says no automatic
-case has been created. Staff case creation belongs to #50.
+case has been created. When `support_enabled` is on, [#50 human support](support.md) creates a durable case instead. Active cases pause ordinary answers until staff resolve them, including after expiry, RESUME or disabling new case creation.
 
 ## Persistence and recovery
 

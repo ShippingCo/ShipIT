@@ -12,7 +12,7 @@ export function routeMessage(input:unknown):Route {
  if(consent!=='other')return {...none,intent:consent};
  // STOP inside a request must never fall through to a shipment answer.
  if(/\b(stop|unsubscribe)\b/i.test(text))return {...none,intent:'stop'};
- if(/\b(human|person|staff|operator|call me|talk to someone)\b/i.test(text))return {...none,intent:'human'};
+ if(/\b(human|person|staff|operator|call me|talk to someone)\b/i.test(text)||/^help$/i.test(text))return {...none,intent:'human'};
  if(/^resume$/i.test(text))return {...none,intent:'resume'};
  if(/\b(sql|endpoint|ignore (?:the )?rules|bypass|system prompt)\b|https?:\/\//i.test(text))return none;
  if(/^(?:pickup|pickups|cancel pickup|submit pickup)(?:\s|$)/i.test(text))return {...none,intent:'pickup'};

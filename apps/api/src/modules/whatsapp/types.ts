@@ -8,7 +8,7 @@ export interface AutomationPolicyBinding {
   readonly policy_id:string; readonly policy_version:number; readonly template_name:string; readonly template_language:string;
   readonly variables:readonly string[];
 }
-export interface WhatsappConfiguration { readonly graph_version:string; readonly bindings:readonly Binding[]; readonly webhook?:import('./webhook-payload.ts').BusinessWebhookConfig; readonly outbound_enabled?:boolean; readonly customer_access_enabled?:boolean; readonly conversation_enabled?:boolean; readonly customer_quotes_enabled?:boolean; readonly pickup_enabled?:boolean; readonly automation?:{readonly policies:readonly AutomationPolicyBinding[]} }
+export interface WhatsappConfiguration { readonly graph_version:string; readonly bindings:readonly Binding[]; readonly webhook?:import('./webhook-payload.ts').BusinessWebhookConfig; readonly outbound_enabled?:boolean; readonly customer_access_enabled?:boolean; readonly conversation_enabled?:boolean; readonly customer_quotes_enabled?:boolean; readonly pickup_enabled?:boolean; readonly support_enabled?:boolean; readonly support_hours?:readonly import('../support/rules.ts').SupportHours[]; readonly automation?:{readonly policies:readonly AutomationPolicyBinding[]} }
 export interface Template {
   provider_id:string|null; name:string; language:string; status:string; category:string;
   shape_hash:string; variables:readonly {type:'text'}[]; supported:boolean;

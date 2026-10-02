@@ -1,3 +1,4 @@
+import { authorize as authorizeSupport } from '../support/notifications.ts';
 import { authorizePickup } from '../pickups/notifications.ts';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
@@ -41,11 +42,11 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
      await repository.update(scope,m,'suppressed','installation_unavailable',now,{purge:true});return {result:'suppressed'} as const;
     }
     let recipient:string;
-    if(input.source_kind==='pickup') {
+    if(input.source_kind==='pickup'||input.source_kind==='support') {
      if(input.source_id!==m.source_id||input.affected_entity_id!==m.affected_entity_id||input.purpose!=='requested_assistance'||input.format!=='text') {
       await repository.update(scope,m,'suppressed','source_invalid',now,{purge:true});return {result:'suppressed'} as const;
      }
-     const channel=await authorizePickup(scope,dependencies,m,installation,now);
+     const channel=await (input.source_kind==='support'?authorizeSupport:authorizePickup)(scope,dependencies,m,installation,now);
      if(channel==='pending') {await repository.update(scope,m,'retry_wait','consent_processing_pending',now,{delay:2});return {result:'retry_wait'} as const;}
      if(channel==='window_closed') {await repository.update(scope,m,'failed','customer_window_closed',now);return {result:'failed'} as const;}
      if(!channel) {await repository.update(scope,m,'suppressed','customer_access_unavailable',now,{purge:true});return {result:'suppressed'} as const;}

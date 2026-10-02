@@ -1,3 +1,4 @@
+import { hoursInput } from '../support/rules.ts';
 import { ConfigurationError, type RuntimeEnvironment } from '../../env.ts';
 import { parseStrictJson } from '../../plugins/json.ts';
 import { object,uuid } from '../pricing/validation.ts';
@@ -9,7 +10,11 @@ export const providerIdPattern=/^[1-9][0-9]{0,31}$/;
 export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnvironment):WhatsappConfiguration {
   try {
     if(raw.length>262144||environment==='demo')throw new Error();
-    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled','customer_quotes_enabled','pickup_enabled']);
+    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled','customer_quotes_enabled','pickup_enabled','support_enabled','support_hours']);
+    if(input.support_enabled!==undefined&&(typeof input.support_enabled!=='boolean'||(input.support_enabled&&!input.conversation_enabled)))throw new Error();
+    if(input.support_hours!==undefined&&(!Array.isArray(input.support_hours)||input.support_hours.length>1000))throw new Error();
+    const supportHours=(input.support_hours as unknown[]|undefined)?.map(hoursInput);
+    if(supportHours&&new Set(supportHours.map(h=>h.franchise_id)).size!==supportHours.length)throw new Error();
     if(input.pickup_enabled!==undefined&&(typeof input.pickup_enabled!=='boolean'||(input.pickup_enabled&&!input.customer_quotes_enabled)))throw new Error();
     if(input.customer_quotes_enabled!==undefined&&(typeof input.customer_quotes_enabled!=='boolean'||(input.customer_quotes_enabled&&!input.conversation_enabled)))throw new Error();
     if(input.conversation_enabled!==undefined&&(typeof input.conversation_enabled!=='boolean'||(input.conversation_enabled&&(!input.customer_access_enabled||!input.outbound_enabled||!input.webhook))))throw new Error();
@@ -58,6 +63,7 @@ export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnviron
       });
       automation=Object.freeze({policies:Object.freeze(policies)});
     }
-    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(input.customer_quotes_enabled!==undefined?{customer_quotes_enabled:input.customer_quotes_enabled as boolean}:{}),...(input.pickup_enabled!==undefined?{pickup_enabled:input.pickup_enabled as boolean}:{}),...(automation?{automation}:{})});
+    if(supportHours?.some(h=>!bindings.some(b=>b.franchise_id===h.franchise_id)))throw new Error();
+    return Object.freeze({...(input.support_enabled!==undefined?{support_enabled:input.support_enabled as boolean}:{}),...(supportHours?{support_hours:supportHours}:{}),graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(input.customer_quotes_enabled!==undefined?{customer_quotes_enabled:input.customer_quotes_enabled as boolean}:{}),...(input.pickup_enabled!==undefined?{pickup_enabled:input.pickup_enabled as boolean}:{}),...(automation?{automation}:{})});
   }catch{throw new ConfigurationError([{field:'WHATSAPP_CONFIG_REF',code:'INVALID_FORMAT'}]);}
 }

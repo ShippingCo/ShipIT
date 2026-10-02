@@ -37,6 +37,12 @@ export async function authorizeReply(scope:TenantAccess,dependencies:WhatsappDep
    WHERE {{franchise:j.organization_id:j.franchise_id}} AND j.id=$1 AND j.installation_id=$2 AND j.state='completed'
     AND r.intent='other' AND r.outcome IN ('unchanged','contact_ambiguous')`,[m.source_id,m.installation_id])).rows[0];
  if(!row||row.contact_key!==m.contact_key||row.occurred_at>now||now.getTime()-row.occurred_at.getTime()>=900000)return null;
+ {
+  const active=(await scopedQuery<{id:string;state:string}>(scope,['outbox.work'],`SELECT c.id,c.state FROM shipit.support_cases c WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.installation_id=$1 AND c.contact_key=$2 AND c.state<>'resolved'`,[installation.id,m.contact_key])).rows[0];
+  // Even previously queued answers must not compete with human ownership.
+  if(active&&(row.outcome!=='human_requested'||active.state==='claimed'))return null;
+  if(!active&&row.outcome==='human_requested'&&dependencies.configuration.support_enabled)return null;
+ }
  if(row.conversation_state==='human_requested'&&row.conversation_expires>now&&!['human','clarify'].includes(row.intent)&&row.outcome!=='paused')return null;
  const state=(await scopedQuery<{state:string}>(scope,['outbox.work'],`SELECT s.state FROM shipit.whatsapp_consent_state s
   WHERE {{franchise:s.organization_id:s.franchise_id}} AND s.installation_id=$1 AND s.contact_key=$2`,[installation.id,m.contact_key])).rows[0];

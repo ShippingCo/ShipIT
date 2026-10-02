@@ -70,7 +70,7 @@ export async function withOutboxScope<T>(database:DatabasePool,token:string,orga
 }
 /** R29 configuration / R16-R17 safe history and W45 administration. No org-admin write inheritance. */
 export async function withWhatsappScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
-  action:'whatsapp.read'|'whatsapp.write'|'whatsapp.consent.read'|'customer.access.manage'|'pickups.read'|'pickups.decide',correlationId:string,
+  action:'whatsapp.read'|'whatsapp.write'|'whatsapp.consent.read'|'customer.access.manage'|'pickups.read'|'pickups.decide'|'support.read'|'support.write',correlationId:string,
   work:(scope:import('../security/scope.ts').TenantAccess,revision:string,permissions:{redrive:boolean;remind:boolean})=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,token);
@@ -82,8 +82,8 @@ export async function withWhatsappScope<T>(database:DatabasePool,token:string,or
     const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    if(!local.some(m=>(action.startsWith('pickups.')?['franchise_admin','operator']:action==='whatsapp.consent.read'?['franchise_admin','operator','dispatcher']:['franchise_admin']).includes(m.role))&&!((action==='whatsapp.read'||action==='whatsapp.consent.read'||action==='pickups.read')&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
-    if((action==='whatsapp.write'||action==='customer.access.manage'||action==='pickups.decide')&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+    if(!local.some(m=>((action.startsWith('pickups.')||action.startsWith('support.'))?['franchise_admin','operator']:action==='whatsapp.consent.read'?['franchise_admin','operator','dispatcher']:['franchise_admin']).includes(m.role))&&!((action==='whatsapp.read'||action==='whatsapp.consent.read'||action==='pickups.read'||action==='support.read')&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if((action==='whatsapp.write'||action==='customer.access.manage'||action==='pickups.decide'||action==='support.write')&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
     return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])),{

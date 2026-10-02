@@ -775,3 +775,20 @@ GRANT UPDATE(pickup_draft) ON shipit.customer_conversations TO runtime_role;
 ```
 
 No DELETE, broad UPDATE, DDL or public privileges. The bounded expired-draft scheduler retains its existing EXECUTE signature/grant. See [pickup rollout and recovery](../../docs/architecture/pickups.md).
+
+## Issue #50 runtime privileges
+
+Apply migration 34 before deploying compatible conversation/outbound workers. Preserve
+all previous grants; use `prepareSupport()` as the executable test reference.
+
+```sql
+GRANT SELECT,INSERT ON shipit.support_cases,shipit.support_events,shipit.support_commands TO runtime_role;
+GRANT UPDATE(state,assigned_staff_id,version,updated_at,inbox_id) ON shipit.support_cases TO runtime_role;
+```
+
+The conversation/outbound role needs SELECT on support_cases and the conversation
+consumer needs UPDATE(inbox_id,updated_at) even when new case creation is disabled:
+existing human ownership must still pause automated answers. Retain conversation
+UPDATE(state,selected_docket,pending_intent,version), membership reads and existing
+outbound INSERT/SELECT privileges for staff commands. No DELETE, TRUNCATE, DDL or
+public privilege is added. See [human support](../../docs/architecture/support.md).

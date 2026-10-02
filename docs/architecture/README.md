@@ -236,3 +236,5 @@ all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 [Customer shipment estimates](customer-quotes.md) adds #48's approved weight-based pricing dialogue, staff-review thresholds and immutable expiring references; see [ADR 0033](../adr/0033-customer-shipment-estimates.md) and [verification](issue-48-verification.md).
 
 - [Pickup requests](pickups.md) — scoped customer requests, staff decisions and durable notifications (#49).
+
+- [Human support](support.md) — scoped case ownership, safe replies and durable bot pause (#50).

@@ -642,3 +642,16 @@ These tests preserve server-owned pickup decisions, private detail loading, keyb
 | apps/web/src/test/pickups.test.tsx: retries the same uncertain decision and exposes saved state with failed messaging | preserve | assistant |
 | apps/web/src/test/pickups.test.tsx: accepts only with a valid agreed window and explicit review, then shows the saved result | preserve | assistant |
 | apps/web/src/test/pickups.test.tsx: shows a stale-version failure and read-only staff cannot act | preserve | assistant |
+
+## Issue #50 support queue regression additions
+
+These tests preserve scoped staff ownership, private notes, customer reply recovery and accessible case handling. Owner: #50 under the assistant group.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/support.test.tsx: loads private detail on selection and returns keyboard focus after close | preserve | assistant |
+| apps/web/src/test/support.test.tsx: handles empty, loading and retriable read errors | preserve | assistant |
+| apps/web/src/test/support.test.tsx: claims a case then shows owner reply and internal-note actions | preserve | assistant |
+| apps/web/src/test/support.test.tsx: preserves an uncertain reply intent and exposes blocked delivery after retry | preserve | assistant |
+| apps/web/src/test/support.test.tsx: keeps drafts after stale state and denies read-only staff mutation | preserve | assistant |
+| apps/web/src/test/support.test.tsx: requires a reason to reopen a resolved case | preserve | assistant |
