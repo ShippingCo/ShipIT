@@ -630,3 +630,15 @@ Issue #44 production projection joins provider-backed message/automation evidenc
 | apps/web/src/test/messaging.test.tsx: denies %s navigation and direct route | preserve | messaging |
 | apps/web/src/test/messaging.test.tsx: allows %s navigation | preserve | messaging |
 | apps/web/src/test/messaging.test.tsx: rejects malformed successful status DTOs | preserve | messaging |
+
+## Issue #49 reviewed production pickup regressions
+
+These tests preserve server-owned pickup decisions, private detail loading, keyboard access and retry safety. Owner: #49 under the assistant group.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/pickups.test.tsx: loads private details only after selection; keyboard-accessible dialog restores focus | preserve | assistant |
+| apps/web/src/test/pickups.test.tsx: shows empty and recoverable read errors | preserve | assistant |
+| apps/web/src/test/pickups.test.tsx: retries the same uncertain decision and exposes saved state with failed messaging | preserve | assistant |
+| apps/web/src/test/pickups.test.tsx: accepts only with a valid agreed window and explicit review, then shows the saved result | preserve | assistant |
+| apps/web/src/test/pickups.test.tsx: shows a stale-version failure and read-only staff cannot act | preserve | assistant |

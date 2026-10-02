@@ -3,7 +3,7 @@ import type { OutboundInput,ResolvedOutboundInput } from './outbound-rules.ts';
 
 export interface Outbound {
  id:string;organization_id:string;franchise_id:string;installation_id:string;customer_id:string|null;delivery_recipient_ref:string|null;contact_version:string;contact_key:string;
- source_id:string;affected_entity_id:string;source_kind:'event'|'inbox'|'delivery_challenge'|'conversation';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
+ source_id:string;affected_entity_id:string;source_kind:'event'|'inbox'|'delivery_challenge'|'conversation'|'pickup';purpose:OutboundInput['purpose'];fingerprint:string;sealed_payload:string|null;key_version:string;expires_at:Date;
  state:string;reason_code:string;version:number;attempts:number;cycle_attempts:number;attempt_id:string|null;lease_until:Date|null;available_at:Date;created_at:Date;
 }
 type MessageSummary=Pick<Outbound,'id'|'state'|'reason_code'|'version'|'attempts'|'cycle_attempts'|'created_at'|'available_at'|'expires_at'>;

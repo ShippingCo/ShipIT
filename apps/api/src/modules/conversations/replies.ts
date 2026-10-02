@@ -45,6 +45,7 @@ export async function authorizeReply(scope:TenantAccess,dependencies:WhatsappDep
    AND NOT EXISTS(SELECT 1 FROM shipit.whatsapp_consent_receipts r WHERE r.inbox_id=j.id)) AS pending`,[installation.id])).rows[0]!.pending;
  if(state?.state==='revoked')return null;
  if(pending)return 'pending';
+ if(row.intent==='pickup'&&!dependencies.configuration.pickup_enabled)return null;
  if(row.intent==='quote'&&!dependencies.configuration.customer_quotes_enabled)return null;
  if(row.quote_id) {
   const quote=await readQuote(scope,row.quote_id,installation.id,m.contact_key),policy=await quotePolicy(scope);

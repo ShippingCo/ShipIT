@@ -2,7 +2,7 @@ import { consentIntent } from '../whatsapp/consent-rules.ts';
 
 export const tools=['tracking','eta','delay','charges','receipt','resend'] as const;
 export type Tool=typeof tools[number];
-export type Intent=Tool|'quote'|'stop'|'start'|'human'|'resume'|'clarify';
+export type Intent=Tool|'pickup'|'quote'|'stop'|'start'|'human'|'resume'|'clarify';
 export interface Route {intent:Intent;docket:string|null;selectionOnly:boolean}
 /** Fixed vocabulary. Customer text can narrow a docket but never choose SQL or an API. */
 export function routeMessage(input:unknown):Route {
@@ -15,6 +15,7 @@ export function routeMessage(input:unknown):Route {
  if(/\b(human|person|staff|operator|call me|talk to someone)\b/i.test(text))return {...none,intent:'human'};
  if(/^resume$/i.test(text))return {...none,intent:'resume'};
  if(/\b(sql|endpoint|ignore (?:the )?rules|bypass|system prompt)\b|https?:\/\//i.test(text))return none;
+ if(/^(?:pickup|pickups|cancel pickup|submit pickup)(?:\s|$)/i.test(text))return {...none,intent:'pickup'};
  if(/^(?:quote|confirm quote)(?:\s|$)/i.test(text))return {...none,intent:'quote'};
  const match=text.match(/\b(?:docket|shipment|parcel)\s+([A-Z0-9][A-Z0-9-]{0,39})\b/i);
  // Production dockets contain a digit; plain words such as "parcel status" aren't slots.
