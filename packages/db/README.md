@@ -763,3 +763,15 @@ are added. Existing quotes and policies are immutable. Migration creates no enab
 policy or customer grant. Disable the feature and keep compatible workers for queued
 reply suppression before a code rollback; repair schema forward. See
 [customer estimates](../../docs/architecture/customer-quotes.md).
+
+## Issue #49 runtime privileges
+
+Apply migration 33 after #48; retain existing conversation/outbound grants.
+
+```sql
+GRANT SELECT,INSERT ON shipit.pickup_requests,shipit.pickup_events,shipit.pickup_commands TO runtime_role;
+GRANT UPDATE(state,version,assigned_staff_id,agreed_start,agreed_end,updated_at) ON shipit.pickup_requests TO runtime_role;
+GRANT UPDATE(pickup_draft) ON shipit.customer_conversations TO runtime_role;
+```
+
+No DELETE, broad UPDATE, DDL or public privileges. The bounded expired-draft scheduler retains its existing EXECUTE signature/grant. See [pickup rollout and recovery](../../docs/architecture/pickups.md).

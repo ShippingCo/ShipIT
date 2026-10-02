@@ -1,3 +1,5 @@
+import { pickupTurn } from '../pickups/customer.ts';
+import { draft as pickupDraft } from '../pickups/repository.ts';
 import type { DatabasePool } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
 import { withNextConversationScope } from '../security/jobs.ts';
@@ -21,6 +23,7 @@ import { saveDraft } from '../customer-quotes/repository.ts';
 const handoff='Please contact the franchise directly for a person. An automatic staff case has not been created. Send RESUME to return to self-service.';
 export function createConversationWorker(database:DatabasePool,dependencies:WhatsappDependencies,key:Buffer,proof?:DeliveryProofConfiguration) {
  const clarification='Please ask for tracking, ETA, delay, charges, receipt or delivery-code resend. '+
+  (dependencies.configuration.pickup_enabled?'Send PICKUP with your quote reference to request collection. ':'')+
   (dependencies.configuration.customer_quotes_enabled?'Send QUOTE for a shipping estimate, or HUMAN to contact staff.':'Send HUMAN to contact staff.');
  const config=dependencies.configuration.webhook!,access=createCustomerAccessService(database,config,key);
  async function process(scope:TenantAccess,id:string,fallback=false):Promise<string> {
@@ -47,6 +50,11 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   else if(route.intent==='human') {selected=null;pending=null;state='human_requested';outcome='human_requested';reply=handoff;}
   else if(route.intent==='resume') {selected=null;pending=null;state='active';reply=clarification;}
   else if(state==='human_requested') {outcome='paused';reply=handoff;}
+  else if(dependencies.configuration.pickup_enabled&&(route.intent==='pickup'||(live&&c.pickup_draft!==null&&route.intent!=='quote'))) {
+   intent='pickup';selected=null;pending=null;
+   const result=await pickupTurn(scope,{inbox:id,installation:source.installation_id,contact,conversation:c.id,now:source.now},text,live?c.pickup_draft:null);
+   reply=result.reply;outcome=result.outcome;
+  }
   else if(dependencies.configuration.customer_quotes_enabled&&(route.intent==='quote'||(live&&c.quote_draft!==null&&route.intent==='clarify'))) {
    intent='quote';selected=null;pending=null;
    const result=await quoteTurn(scope,{inbox:id,installation:source.installation_id,contact,conversation:c.id,now:source.now},text,live?c.quote_draft:null);
@@ -92,6 +100,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
     }
    } else {outcome='unavailable';reply=clarification;}
   }
+  if(dependencies.configuration.pickup_enabled&&intent!=='pickup'&&!fallback)await pickupDraft(scope,c.id,null);
   if(dependencies.configuration.customer_quotes_enabled&&intent!=='quote'&&!fallback)await saveDraft(scope,c.id,null);
   await repository.advance(scope,c,selected,pending,state,source.now);
   await repository.record(scope,id,source.installation_id,contact,c,intent,outcome,provenance,quoteId);

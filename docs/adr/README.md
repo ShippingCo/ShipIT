@@ -71,3 +71,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0032: Trusted customer conversations](0032-trusted-conversation-tools.md): Fixed allowlisted router, verified selection, authoritative projections, safe delivery resend and durable replies for Issue #47; local review draft.
 
 - [0033: Customer shipment estimates](0033-customer-shipment-estimates.md): Explicit published-rate policy, durable quote dialogue, inclusive staff referral and expiring non-binding references for Issue #48; local review draft.
+
+- [0034 — Pickup requests](0034-pickup-requests.md)

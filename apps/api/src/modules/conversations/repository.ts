@@ -4,7 +4,7 @@ import type { Intent,Tool } from './router.ts';
 import type { Binding } from '../customer-access/repository.ts';
 import type { QuoteDraft } from '../customer-quotes/rules.ts';
 
-export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null}
+export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null;pickup_draft:import('../pickups/rules.ts').PickupDraft|null}
 export interface Provenance {binding_id:string;binding_version:number;parcel_id:string;parcel_version:number}
 export type Outcome='answered'|'selection_required'|'not_found'|'forbidden'|'unavailable'|'human_requested'|'paused'|'consent'|'stale'|'invalid';
 export async function source(scope:TenantAccess,id:string) {
@@ -23,7 +23,7 @@ export async function conversation(scope:TenantAccess,installation:string,contac
  await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversations(id,organization_id,franchise_id,installation_id,contact_key,expires_at)
   SELECT $1,{{organization}},$2,$3,$4,$5 WHERE {{franchise:$6:$2}} ON CONFLICT(installation_id,contact_key) DO NOTHING`,
  [randomUUID(),c.permittedFranchiseIds[0],installation,contact,new Date(now.getTime()+900000),c.organizationId]);
- return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version,c.quote_draft
+ return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version,c.quote_draft,c.pickup_draft
   FROM shipit.customer_conversations c WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.installation_id=$1 AND c.contact_key=$2 FOR UPDATE`,[installation,contact])).rows[0]!;
 }
 export async function consentRevoked(scope:TenantAccess,installation:string,contact:string) {

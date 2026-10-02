@@ -432,3 +432,7 @@ summaries. Delivery resend additionally checks the retained actual recipient and
 signed-inbox principal restricted to that one operation. It cannot start, complete,
 replace or approve delivery proof. `read_only` still cannot attest a binding. Dispatch
 rechecks contact/resource generation and consent. See [contract](conversations.md).
+
+## Issue #49 R22/W28 activation
+
+`pickups.read` uses R22: selected own-franchise org-admin reads, plus franchise-admin/operator reads. `pickups.decide` uses W28 for local franchise-admin/operator decisions and self-assignment on acceptance. No dispatcher/read_only/agent/accountant rights or org-admin write inheritance. Customer create/status/cancel uses the signed installation/contact principal, not staff membership. See [pickup contract](pickups.md).

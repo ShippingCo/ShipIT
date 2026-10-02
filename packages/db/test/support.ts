@@ -162,6 +162,7 @@ export interface DisposableDatabase {
   prepareCustomerAccess(): Promise<void>;
   prepareConversations(): Promise<void>;
   prepareCustomerQuotes(): Promise<void>;
+  preparePickups(): Promise<void>;
   prepareWhatsapp(): Promise<void>;
   prepareWhatsappInbox(): Promise<void>;
   prepareWhatsappConsent(): Promise<void>;
@@ -367,6 +368,15 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_conversations,shipit.customer_conversation_turns TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.customer_conversation_next() TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async preparePickups() {
+      await handle.prepareCustomerQuotes();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.pickup_requests,shipit.pickup_events,shipit.pickup_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,version,assigned_staff_id,agreed_start,agreed_end,updated_at) ON shipit.pickup_requests TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(pickup_draft) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareCustomerQuotes() {

@@ -1555,6 +1555,31 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/pickups.test.tsx",
+        "name": "loads private details only after selection; keyboard-accessible dialog restores focus",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/pickups.test.tsx",
+        "name": "shows empty and recoverable read errors",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/pickups.test.tsx",
+        "name": "retries the same uncertain decision and exposes saved state with failed messaging",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/pickups.test.tsx",
+        "name": "accepts only with a valid agreed window and explicit review, then shows the saved result",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/pickups.test.tsx",
+        "name": "shows a stale-version failure and read-only staff cannot act",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/receipt.test.tsx",
         "name": "renders booked paise and saved rounding without settlement or a moving ETA",
         "cases": null
@@ -3462,6 +3487,46 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/pickups.test.tsx",
+      "name": "loads private details only after selection; keyboard-accessible dialog restores focus",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "assistant",
+      "reason": "Issue #49: scoped production pickup decisions, private detail access, capacity review, keyboard focus and recoverable errors; no browser operational authority."
+    },
+    {
+      "file": "apps/web/src/test/pickups.test.tsx",
+      "name": "shows empty and recoverable read errors",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "assistant",
+      "reason": "Issue #49: scoped production pickup decisions, private detail access, capacity review, keyboard focus and recoverable errors; no browser operational authority."
+    },
+    {
+      "file": "apps/web/src/test/pickups.test.tsx",
+      "name": "retries the same uncertain decision and exposes saved state with failed messaging",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "assistant",
+      "reason": "Issue #49: scoped production pickup decisions, private detail access, capacity review, keyboard focus and recoverable errors; no browser operational authority."
+    },
+    {
+      "file": "apps/web/src/test/pickups.test.tsx",
+      "name": "accepts only with a valid agreed window and explicit review, then shows the saved result",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "assistant",
+      "reason": "Issue #49: scoped production pickup decisions, private detail access, capacity review, keyboard focus and recoverable errors; no browser operational authority."
+    },
+    {
+      "file": "apps/web/src/test/pickups.test.tsx",
+      "name": "shows a stale-version failure and read-only staff cannot act",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "assistant",
+      "reason": "Issue #49: scoped production pickup decisions, private detail access, capacity review, keyboard focus and recoverable errors; no browser operational authority."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
