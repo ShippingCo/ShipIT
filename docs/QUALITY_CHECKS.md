@@ -325,3 +325,15 @@ failure fails the gate. Generated test credentials stay server-side and the exac
 container is removed, including interrupted runs. No hosted credentials or skip fallback.
 Clamd wire tests run in `pnpm test:api`; attachment ownership/migration tests run in
 `pnpm db:local test:db`. See the [verification record](architecture/issue-31-verification.md).
+
+## Issue #48 Windows aggregate verification budget
+
+The full API database group reached its 15-minute aggregate deadline on the local
+Windows/Docker host before all 360 cases completed. Windows now allows 30 minutes for
+that group and 45 minutes for its enclosing `db:local quality`/`test:db` command.
+Linux CI retains its existing 15-minute API group/job limits and 180-second file limit.
+Windows files have a 300-second aggregate limit after three existing files repeatedly
+exceeded 180 seconds. Individual test deadlines, two file workers, strict no-skip completion checks and
+cleanup requirements are unchanged. This changes the local suite envelope only;
+it does not turn a timed-out or failed test into a pass. See
+[Issue #48 verification](architecture/issue-48-verification.md) for actual results.

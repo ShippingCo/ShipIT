@@ -2,7 +2,7 @@ import { consentIntent } from '../whatsapp/consent-rules.ts';
 
 export const tools=['tracking','eta','delay','charges','receipt','resend'] as const;
 export type Tool=typeof tools[number];
-export type Intent=Tool|'stop'|'start'|'human'|'resume'|'clarify';
+export type Intent=Tool|'quote'|'stop'|'start'|'human'|'resume'|'clarify';
 export interface Route {intent:Intent;docket:string|null;selectionOnly:boolean}
 /** Fixed vocabulary. Customer text can narrow a docket but never choose SQL or an API. */
 export function routeMessage(input:unknown):Route {
@@ -15,9 +15,10 @@ export function routeMessage(input:unknown):Route {
  if(/\b(human|person|staff|operator|call me|talk to someone)\b/i.test(text))return {...none,intent:'human'};
  if(/^resume$/i.test(text))return {...none,intent:'resume'};
  if(/\b(sql|endpoint|ignore (?:the )?rules|bypass|system prompt)\b|https?:\/\//i.test(text))return none;
+ if(/^(?:quote|confirm quote)(?:\s|$)/i.test(text))return {...none,intent:'quote'};
  const match=text.match(/\b(?:docket|shipment|parcel)\s+([A-Z0-9][A-Z0-9-]{0,39})\b/i);
  // Production dockets contain a digit; plain words such as "parcel status" aren't slots.
- const exact=/^[A-Z0-9][A-Z0-9-]{0,39}$/.test(text)&&/\d/.test(text)?text:null;
+ const exact=/^[A-Z0-9][A-Z0-9-]{0,39}$/i.test(text)&&/\d/.test(text)?text.toUpperCase():null;
  const candidates=text.match(/\b[A-Z0-9][A-Z0-9-]{0,39}\b/gi)?.filter(v=>/\d/.test(v))??[];
  if(candidates.length>1)return none;
  const docket=exact??(match&&(/\d/.test(match[1]!)||/^docket\b/i.test(match[0]))?match[1]!.toUpperCase():candidates[0]?.toUpperCase()??null);

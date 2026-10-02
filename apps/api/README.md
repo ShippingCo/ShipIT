@@ -384,3 +384,14 @@ Apply the forward migration and narrow runtime grants before enabling. See
 [contract and recovery](../../docs/architecture/conversations.md),
 [ADR](../../docs/adr/0032-trusted-conversation-tools.md) and
 [acceptance evidence](../../docs/architecture/issue-47-verification.md).
+
+## Customer shipment estimates (#48)
+
+The server-only `customer_quotes_enabled` flag adds a validated QUOTE dialogue to
+the existing conversation worker. It defaults false and requires conversation setup.
+Franchise admins explicitly select published rates, eligible lanes and inclusive
+staff-review thresholds through the session/CSRF-protected quote-policy API. No
+booking or payment is created. Apply migration 32 and its runtime grants first.
+See [contract](../../docs/architecture/customer-quotes.md),
+[ADR](../../docs/adr/0033-customer-shipment-estimates.md) and
+[verification](../../docs/architecture/issue-48-verification.md).

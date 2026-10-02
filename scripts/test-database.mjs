@@ -65,7 +65,8 @@ export async function executeDatabaseTests(files, registry, { signal, timeoutMs 
   // Domain races inside each file retain their own concurrent requests/connections.
   // Aggregate budgets include repeated migrations and the 1000-Parcel event test.
   // Individual tests keep their explicit 20/30/60-second deadlines.
-  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-concurrency=2', '--test-timeout=180000',
+  const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-concurrency=2',
+    `--test-timeout=${process.platform === 'win32' ? 300000 : 180000}`,
     `--test-reporter=${pathToFileURL(reporter).href}`, ...files], {
     cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32',
   });
@@ -148,8 +149,11 @@ async function main() {
     const apiFiles = (await readdir(apiFolder)).filter(name => name.endsWith('.test.ts')).sort().map(name => join(apiFolder, name));
     // Hundreds of API scenarios repeatedly install the full schema on Windows.
     // Keep the aggregate bounded while retaining every individual test deadline
-    // and the 180-second file limit; this does not permit skipping failed work.
-    const apiResult = await executeDatabaseTests(apiFiles, registry, { signal: controller.signal, timeoutMs: 900_000 });
+    // and the platform's bounded file limit; this does not permit skipping failed work.
+    const apiResult = await executeDatabaseTests(apiFiles, registry, { signal: controller.signal,
+      // Windows Docker's repeated fixture setup exceeded the 15-minute aggregate
+      // budget with 360 API cases. Preserve individual deadlines and Linux CI's cap.
+      timeoutMs: process.platform === 'win32' ? 1_800_000 : 900_000 });
     console.log(`PostgreSQL integration tests: ${result.passed} DB + ${apiResult.passed} API passed, 0 failed/skipped/cancelled/todo.`);
   } catch (error) {
     const safeCodes = ['DB_TEST_CONFIG_INVALID', 'DB_TEST_CONNECTION_FAILED', 'DB_TEST_SUITE_EMPTY',

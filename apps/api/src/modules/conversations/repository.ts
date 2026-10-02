@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { scopedQuery,type TenantAccess } from '../security/scope.ts';
 import type { Intent,Tool } from './router.ts';
 import type { Binding } from '../customer-access/repository.ts';
+import type { QuoteDraft } from '../customer-quotes/rules.ts';
 
-export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number}
+export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null}
 export interface Provenance {binding_id:string;binding_version:number;parcel_id:string;parcel_version:number}
 export type Outcome='answered'|'selection_required'|'not_found'|'forbidden'|'unavailable'|'human_requested'|'paused'|'consent'|'stale'|'invalid';
 export async function source(scope:TenantAccess,id:string) {
@@ -22,7 +23,7 @@ export async function conversation(scope:TenantAccess,installation:string,contac
  await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversations(id,organization_id,franchise_id,installation_id,contact_key,expires_at)
   SELECT $1,{{organization}},$2,$3,$4,$5 WHERE {{franchise:$6:$2}} ON CONFLICT(installation_id,contact_key) DO NOTHING`,
  [randomUUID(),c.permittedFranchiseIds[0],installation,contact,new Date(now.getTime()+900000),c.organizationId]);
- return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version
+ return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version,c.quote_draft
   FROM shipit.customer_conversations c WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.installation_id=$1 AND c.contact_key=$2 FOR UPDATE`,[installation,contact])).rows[0]!;
 }
 export async function consentRevoked(scope:TenantAccess,installation:string,contact:string) {
@@ -33,10 +34,10 @@ export async function advance(scope:TenantAccess,c:Conversation,selection:string
  await scopedQuery(scope,['whatsapp.inbox.work'],`UPDATE shipit.customer_conversations c SET selected_docket=$2,pending_intent=$3,state=$4,expires_at=$5,version=version+1
   WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.id=$1 AND c.version=$6`,[c.id,selection,pending,state,new Date(now.getTime()+900000),c.version]);
 }
-export async function record(scope:TenantAccess,inbox:string,installation:string,contact:string|null,c:Conversation|null,intent:Intent,outcome:Outcome,provenance:Provenance[]) {
+export async function record(scope:TenantAccess,inbox:string,installation:string,contact:string|null,c:Conversation|null,intent:Intent,outcome:Outcome,provenance:Provenance[],quoteId:string|null=null) {
  const x=scope.context;
- await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversation_turns(inbox_id,organization_id,franchise_id,installation_id,contact_key,conversation_id,intent,outcome,provenance,correlation_id)
-  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9 WHERE {{franchise:$10:$2}}`,[inbox,x.permittedFranchiseIds[0],installation,contact,c?.id??null,intent,outcome,JSON.stringify(provenance),x.correlationId,x.organizationId]);
+ await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversation_turns(inbox_id,organization_id,franchise_id,installation_id,contact_key,conversation_id,intent,outcome,provenance,correlation_id,quote_id)
+  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$11 WHERE {{franchise:$10:$2}}`,[inbox,x.permittedFranchiseIds[0],installation,contact,c?.id??null,intent,outcome,JSON.stringify(provenance),x.correlationId,x.organizationId,quoteId]);
 }
 export async function shipment(scope:TenantAccess,b:Binding) {
  // Recheck the selected binding under a row lock before any read or side effect.

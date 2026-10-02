@@ -122,9 +122,11 @@ await test('history representative 10000-intent query plan uses tenant indexes w
  SELECT gen_random_uuid(),organization_id,franchise_id,installation_id,customer_id,contact_version,contact_key,
  source_id,gen_random_uuid(),source_kind,purpose,fingerprint,key_version,expires_at,'suppressed','synthetic',created_at-n*interval '1 second',correlation_id
  FROM shipit.whatsapp_outbound CROSS JOIN generate_series(1,10000) n WHERE id=$1`,[id]);
- await s.db.adminQuery(`INSERT INTO shipit.whatsapp_outbound_attempts(id,organization_id,franchise_id,intent_id,installation_id,attempt,outcome,reason_code,provider_message_id)
- SELECT gen_random_uuid(),organization_id,franchise_id,id,installation_id,n,'accepted','provider_accepted','wamid.'||replace(id::text,'-','')||'_'||n
- FROM shipit.whatsapp_outbound CROSS JOIN generate_series(1,3) n`);
+ // Preserve all 30,003 attempts while bounding each fixture statement. The
+ // history query and its plan/row-count assertions below remain unchanged.
+ for(let attempt=1;attempt<=3;attempt++)await s.db.adminQuery(`INSERT INTO shipit.whatsapp_outbound_attempts(id,organization_id,franchise_id,intent_id,installation_id,attempt,outcome,reason_code,provider_message_id)
+ SELECT gen_random_uuid(),organization_id,franchise_id,id,installation_id,$1::integer,'accepted','provider_accepted','wamid.'||replace(id::text,'-','')||'_'||$1::text
+ FROM shipit.whatsapp_outbound`,[attempt]);
  await s.db.adminQuery(`INSERT INTO shipit.whatsapp_delivery_observations(organization_id,franchise_id,installation_id,message_id,progress,failure_observed,last_event_at)
  SELECT organization_id,franchise_id,installation_id,provider_message_id,1,false,recorded_at FROM shipit.whatsapp_outbound_attempts`);
  await s.db.adminQuery('ANALYZE shipit.whatsapp_outbound');await s.db.adminQuery('ANALYZE shipit.whatsapp_outbound_attempts');await s.db.adminQuery('ANALYZE shipit.whatsapp_delivery_observations');

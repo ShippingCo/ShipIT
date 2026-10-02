@@ -746,3 +746,20 @@ null staff principal. New conversation outbound sources require an owning turn r
 Populated migration-30 upgrade, repeat no-op and fresh schema are tested. Disable the
 flag for rollback and keep compatible outbound workers until new sources are drained or
 suppressed. See [operations](../../docs/architecture/conversations.md).
+
+## Issue #48 runtime privileges
+
+Apply migration 32 after the conversation migration. Retain earlier Pricing read,
+conversation and signed-channel privileges. `prepareCustomerQuotes()` is the test reference.
+
+```sql
+GRANT SELECT,INSERT ON shipit.customer_quote_policies,
+  shipit.customer_quote_policy_commands,shipit.customer_quotes TO runtime_role;
+GRANT UPDATE(quote_draft) ON shipit.customer_conversations TO runtime_role;
+```
+
+No public privileges, mutable pricing grants, broad UPDATE, DELETE, TRUNCATE or DDL
+are added. Existing quotes and policies are immutable. Migration creates no enabled
+policy or customer grant. Disable the feature and keep compatible workers for queued
+reply suppression before a code rollback; repair schema forward. See
+[customer estimates](../../docs/architecture/customer-quotes.md).

@@ -1,5 +1,7 @@
 import { createCustomerAccessService } from './modules/customer-access/service.ts';
 import { registerCustomerAccess } from './modules/customer-access/routes.ts';
+import { createQuotePolicyService } from './modules/customer-quotes/policy-service.ts';
+import { registerQuotePolicies } from './modules/customer-quotes/routes.ts';
 import { createHistoryService } from './modules/whatsapp/history-service.ts';
 import { createWhatsappService } from './modules/whatsapp/service.ts';
 import { createConsentService } from './modules/whatsapp/consent-service.ts';
@@ -111,6 +113,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
+      registerQuotePolicies(instance,createQuotePolicyService(database),config.environment!=='developer');
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));

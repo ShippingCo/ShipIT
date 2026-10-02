@@ -9,7 +9,8 @@ export const providerIdPattern=/^[1-9][0-9]{0,31}$/;
 export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnvironment):WhatsappConfiguration {
   try {
     if(raw.length>262144||environment==='demo')throw new Error();
-    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled']);
+    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled','customer_quotes_enabled']);
+    if(input.customer_quotes_enabled!==undefined&&(typeof input.customer_quotes_enabled!=='boolean'||(input.customer_quotes_enabled&&!input.conversation_enabled)))throw new Error();
     if(input.conversation_enabled!==undefined&&(typeof input.conversation_enabled!=='boolean'||(input.conversation_enabled&&(!input.customer_access_enabled||!input.outbound_enabled||!input.webhook))))throw new Error();
     if(input.customer_access_enabled!==undefined&&(typeof input.customer_access_enabled!=='boolean'||(input.customer_access_enabled&&!input.webhook)))throw new Error();
     if(input.outbound_enabled!==undefined&&(typeof input.outbound_enabled!=='boolean'||(input.outbound_enabled&&!input.webhook)))throw new Error();
@@ -56,6 +57,6 @@ export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnviron
       });
       automation=Object.freeze({policies:Object.freeze(policies)});
     }
-    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(automation?{automation}:{})});
+    return Object.freeze({graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(input.customer_quotes_enabled!==undefined?{customer_quotes_enabled:input.customer_quotes_enabled as boolean}:{}),...(automation?{automation}:{})});
   }catch{throw new ConfigurationError([{field:'WHATSAPP_CONFIG_REF',code:'INVALID_FORMAT'}]);}
 }

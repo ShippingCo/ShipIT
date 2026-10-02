@@ -6,6 +6,7 @@ import { outboundInput,outboundFingerprint,sealOutbound } from '../whatsapp/outb
 import type { WhatsappDependencies,Installation } from '../whatsapp/types.ts';
 import type { Outbound } from '../whatsapp/outbound-repository.ts';
 import type { Provenance } from './repository.ts';
+import { read as readQuote,policy as quotePolicy } from '../customer-quotes/repository.ts';
 
 export async function enqueueReply(scope:TenantAccess,dependencies:WhatsappDependencies,inbox:string,installation:string,contact:string,sourceAt:Date,text:string) {
  const config=dependencies.configuration.webhook!,c=scope.context,id=randomUUID();
@@ -26,9 +27,9 @@ export async function authorizeReply(scope:TenantAccess,dependencies:WhatsappDep
   b.waba_id===installation.waba_id&&b.phone_number_id===installation.phone_number_id&&b.credential_ref===installation.credential_ref);
  if(!registered)return null;
  const row=(await scopedQuery<{waba_id:string;phone_number_id:string;event_key:string;sealed_payload:string;key_version:string;occurred_at:Date;
-  provenance:Provenance[];contact_key:string;outcome:string;intent:string;conversation_state:string;conversation_expires:Date}>(scope,['outbox.work'],
+  provenance:Provenance[];contact_key:string;outcome:string;intent:string;conversation_state:string;conversation_expires:Date;quote_id:string|null}>(scope,['outbox.work'],
   `SELECT i.waba_id,i.phone_number_id,j.event_key,j.sealed_payload,j.key_version,j.occurred_at,t.provenance,t.contact_key,t.outcome,t.intent,
-   c.state AS conversation_state,c.expires_at AS conversation_expires FROM shipit.whatsapp_inbox j
+   c.state AS conversation_state,c.expires_at AS conversation_expires,t.quote_id FROM shipit.whatsapp_inbox j
    JOIN shipit.whatsapp_installations i ON i.organization_id=j.organization_id AND i.franchise_id=j.franchise_id AND i.id=j.installation_id
    JOIN shipit.customer_conversation_turns t ON t.organization_id=j.organization_id AND t.franchise_id=j.franchise_id AND t.inbox_id=j.id
    JOIN shipit.whatsapp_consent_receipts r ON r.organization_id=j.organization_id AND r.franchise_id=j.franchise_id AND r.inbox_id=j.id
@@ -42,7 +43,13 @@ export async function authorizeReply(scope:TenantAccess,dependencies:WhatsappDep
  const pending=(await scopedQuery<{pending:boolean}>(scope,['outbox.work'],`SELECT EXISTS(SELECT 1 FROM shipit.whatsapp_inbox j
   WHERE {{franchise:j.organization_id:j.franchise_id}} AND j.installation_id=$1 AND j.kind='inbound'
    AND NOT EXISTS(SELECT 1 FROM shipit.whatsapp_consent_receipts r WHERE r.inbox_id=j.id)) AS pending`,[installation.id])).rows[0]!.pending;
- if(state?.state==='revoked'||pending)return null;
+ if(state?.state==='revoked')return null;
+ if(pending)return 'pending';
+ if(row.intent==='quote'&&!dependencies.configuration.customer_quotes_enabled)return null;
+ if(row.quote_id) {
+  const quote=await readQuote(scope,row.quote_id,installation.id,m.contact_key),policy=await quotePolicy(scope);
+  if(!quote||quote.expires_at<=now||quote.policy_id!==(policy?.id??null)||(!quote.reason&&!policy?.configuration.enabled))return null;
+ }
  for(const evidence of [...row.provenance].sort((a,b)=>a.parcel_id.localeCompare(b.parcel_id))) {
   const current=(await scopedQuery(scope,['outbox.work'],`SELECT b.id FROM shipit.customer_access_bindings b
    JOIN shipit.parcels p ON p.organization_id=b.organization_id AND p.franchise_id=b.franchise_id AND p.id=b.parcel_id

@@ -45,6 +45,9 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
       await repository.update(scope,m,'suppressed','source_invalid',now,{purge:true});return {result:'suppressed'} as const;
      }
      const channel=await authorizeReply(scope,dependencies,m,installation,now);
+     if(channel==='pending') {
+      await repository.update(scope,m,'retry_wait','consent_processing_pending',now,{delay:2});return {result:'retry_wait'} as const;
+     }
      if(!channel) {await repository.update(scope,m,'suppressed','customer_access_unavailable',now,{purge:true});return {result:'suppressed'} as const;}
      recipient=channel;
     } else if(input.purpose==='delivery_otp') {

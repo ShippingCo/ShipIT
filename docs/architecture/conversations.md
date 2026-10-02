@@ -74,8 +74,14 @@ older strict configuration parsers do not recognize it even when false.
 
 See [ADR 0032](../adr/0032-trusted-conversation-tools.md) for recovered decisions,
 research, alternatives and implementation plan, and [verification](issue-47-verification.md)
-for acceptance evidence. Quotes, pickups, staff cases, languages/AI and outcome metrics
-remain #48–#52. Live Meta qualification and production rollout are separate work.
+for acceptance evidence. [Quotes](customer-quotes.md) are implemented in #48;
+pickups, staff cases, languages/AI and outcome metrics remain #49–#52.
+Live Meta qualification and production rollout are separate work.
+
+The #48 review repairs make exact docket selection case insensitive, report recorded
+delay minutes while still relevant, and defer replies while consent processing is
+pending. Deferral retains the encrypted payload without consuming a send attempt;
+revocation and expiry still suppress it.
 
 ## Reproducible fictional verification
 
