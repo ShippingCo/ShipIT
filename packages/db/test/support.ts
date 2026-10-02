@@ -159,6 +159,7 @@ export interface DisposableDatabase {
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
   prepareEway(): Promise<void>;
+  prepareCustomerAccess(): Promise<void>;
   prepareWhatsapp(): Promise<void>;
   prepareWhatsappInbox(): Promise<void>;
   prepareWhatsappConsent(): Promise<void>;
@@ -355,6 +356,16 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT ON shipit.eway_records,shipit.eway_record_revisions,shipit.eway_commands,shipit.eway_policies TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT ON shipit.eway_records,shipit.eway_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(version,declared_goods_value_paise,declaration_source_ref,issuer,external_reference,source_ref,source_issued_at,official_valid_until,validity_evidence_ref,vehicle_number,distance_km,estimate,estimate_policy_id,actor_id,captured_at,reason_code,reason_ref,command_id,correlation_id) ON shipit.eway_records TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCustomerAccess() {
+      await handle.prepareWhatsappInbox();
+      await handle.prepareRoutes();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.customer_access_bindings,shipit.customer_access_commands,shipit.customer_tracking_grants TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(installation_id,contact_key,customer_id,contact_version,version,evidence_ref,inbox_id,actor_id,correlation_id,verified_at,expires_at) ON shipit.customer_access_bindings TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.customer_tracking_scope(text) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareWhatsapp() {

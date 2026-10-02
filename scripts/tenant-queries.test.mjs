@@ -271,3 +271,14 @@ test('message history joins require ownership and the actual checker rejects an 
   assert.equal(result.status,1);assert.match(result.stderr,/TENANT_QUERY_GATE/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('private tracking requires both owners and cannot expose its scope adapter elsewhere',()=>{
+ const repository='apps/api/src/modules/customer-access/repository.ts';
+ for(const table of ['customer_access_bindings','customer_access_commands','customer_tracking_grants']) {
+  assert.deepEqual(inspectSource(repository,`scopedQuery(scope,['customer.tracking.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  assert.ok(inspectSource(repository,`scopedQuery(scope,['customer.tracking.read'],'SELECT id FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
+ }
+ const adapter="import {withCustomerTrackingScope} from '../security/jobs.ts'";
+ assert.deepEqual(inspectSource('apps/api/src/modules/customer-access/service.ts',adapter),[]);
+ assert.ok(inspectSource('apps/api/src/modules/whatsapp/service.ts',adapter).length);
+});

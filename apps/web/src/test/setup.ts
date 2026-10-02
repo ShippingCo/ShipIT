@@ -1,8 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach } from 'vitest';
+import { afterEach, beforeAll, beforeEach } from 'vitest';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+// App loads this module lazily. Compile it before flow assertions so cold Vite
+// startup is not charged to Testing Library's one-second UI response deadline.
+// App still owns the lazy render, loading state, authentication and API calls.
+beforeAll(async () => { await import('../operator/OperatorApp'); });
 
 /* jsdom implements neither ResizeObserver nor element layout, and several Radix
    primitives measure their trigger before positioning. Stub the observer and give
