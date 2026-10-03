@@ -8,6 +8,11 @@ export function manualCapabilities(evidenceId: string, verifiedAt: string): Capa
     purchase_estimate_import: { enabled: false }, purchase_estimate_api: { enabled: false }, booking_api: { enabled: false } };
 }
 
+/** Local installation API composes manual entry with the reviewed generic CSV service. */
+export function localCapabilities(evidenceId: string, verifiedAt: string): Capabilities {
+  return {...manualCapabilities(evidenceId,verifiedAt),tracking_import:{enabled:true,evidenceId,verifiedAt}};
+}
+
 /** Receives validated, server-authored evidence. It has no network or domain write capability. */
 export function manualAdapter(installation: Installation): CarrierAdapter {
   return {

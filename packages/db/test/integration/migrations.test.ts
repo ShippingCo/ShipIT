@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 37 });
+  assert.deepEqual(await database.migrate(), { applied: 38 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 37);
+  assert.equal(initial.length, 38);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -71,7 +71,7 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
   const tables = await owner.query<{ schema: string; name: string }>(
     `SELECT schemaname AS schema, tablename AS name FROM pg_tables
      WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename`);
-    assert.deepEqual(tables.rows, [...['attachment_audit_events','attachment_commands','attachments','audit_records','auth_challenges','auth_delivery_jobs','auth_identifiers','auth_rate_limits','auth_security_events','auth_sessions','auth_users'].map(name=>({schema:'shipit',name})),...['booking_audit_events','booking_commands','booking_obligations','bookings','carrier_commands','carrier_dockets','carrier_installations','carrier_mappings','carrier_observations','carrier_references','conversation_inference_budgets','conversation_inferences','customer_access_bindings','customer_access_commands','customer_audit_events','customer_commands','customer_conversation_turns','customer_conversations','customer_quote_policies','customer_quote_policy_commands','customer_quotes','customer_tracking_grants','customers','delivery_attempts','delivery_audit_events','delivery_challenge_sends','delivery_challenges','delivery_commands','delivery_exception_approvals','delivery_exception_requests','delivery_proofs','delivery_recipients','domain_events','eway_commands','eway_policies','eway_record_revisions','eway_records','franchises'].map(name=>({schema:'shipit',name})),
+    assert.deepEqual(tables.rows, [...['attachment_audit_events','attachment_commands','attachments','audit_records','auth_challenges','auth_delivery_jobs','auth_identifiers','auth_rate_limits','auth_security_events','auth_sessions','auth_users'].map(name=>({schema:'shipit',name})),...['booking_audit_events','booking_commands','booking_obligations','bookings','carrier_commands','carrier_dockets','carrier_import_commits','carrier_import_outcomes','carrier_import_runs','carrier_installations','carrier_mappings','carrier_observations','carrier_references','conversation_inference_budgets','conversation_inferences','customer_access_bindings','customer_access_commands','customer_audit_events','customer_commands','customer_conversation_turns','customer_conversations','customer_quote_policies','customer_quote_policy_commands','customer_quotes','customer_tracking_grants','customers','delivery_attempts','delivery_audit_events','delivery_challenge_sends','delivery_challenges','delivery_commands','delivery_exception_approvals','delivery_exception_requests','delivery_proofs','delivery_recipients','domain_events','eway_commands','eway_policies','eway_record_revisions','eway_records','franchises'].map(name=>({schema:'shipit',name})),
     ...['invitation_franchise_scopes','issued_receipts','lot_audit_events','lot_code_counters','lot_commands','lot_memberships','lots','membership_audit_events','membership_franchise_scopes','membership_invitations','memberships'].map(name=>({schema:'shipit',name})),
     { schema: 'shipit', name: 'notification_automation_decisions' }, { schema: 'shipit', name: 'notification_policy_activations' },
     { schema: 'shipit', name: 'onboarding_commands' }, { schema: 'shipit', name: 'organizations' },
@@ -87,7 +87,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 36 });
+  assert.deepEqual(await database.migrate(), { applied: 37 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -103,7 +103,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1790960400000-notification-automation',
     '1791046800000-route-delay-fanout',
     '1791133200000-secure-delivery-proof',
-    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers',
+    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers','1791997200000-carrier-csv-imports',
   ]);
 });
 
@@ -193,5 +193,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 37 });
+  assert.deepEqual(await database.migrate(), { applied: 38 });
 });

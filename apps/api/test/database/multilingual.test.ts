@@ -162,7 +162,7 @@ await test('#51 populated upgrade preserves conversation identity and default lo
  const conversation=randomUUID(),admin=await s.grant('franchise_admin',[A]),binding={key:'upgrade51',organization_id:org,franchise_id:A,waba_id:'100001',phone_number_id:'100002',credential_ref:'whatsapp:upgrade51/v1'};
  await createWhatsappService(s.pool,{configuration:{graph_version:'v24.0',bindings:[binding]},provider:{validate:async()=>{},template:async()=>{throw new Error('unused');},send:async()=>({kind:'unavailable',reason:'unused'})}}).execute(admin.token,null,'connect',{organization_id:org,franchise_id:A},randomUUID(),{binding_key:binding.key,expected_version:0},randomUUID());
  await db.adminQuery(`INSERT INTO shipit.customer_conversations(id,organization_id,franchise_id,installation_id,contact_key,expires_at) SELECT $1,organization_id,franchise_id,id,$2,clock_timestamp()+interval '15 minutes' FROM shipit.whatsapp_installations`,[conversation,'a'.repeat(64)]);
- db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
+ db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});
  const row=(await db.adminQuery('SELECT id,locale,locale_explicit,version FROM shipit.customer_conversations')).rows[0]!;assert.deepEqual(row,{id:conversation,locale:'en',locale_explicit:false,version:1});
  assert.ok(s.pool);
 });
