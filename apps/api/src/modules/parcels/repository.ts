@@ -2,6 +2,13 @@ import { scopedQuery, assertTenantAccess, type TenantAccess } from '../security/
 import { HttpError } from '../../plugins/errors.ts';
 import type { ParcelDto } from '../bookings/types.ts';
 import type { ParcelCommandInput,ParcelLifecycleRow,ParcelOperation,ParcelTransitionDto } from './types.ts';
+export async function dispatchedRoute(scope:TenantAccess,parcelId:string) {
+  const row=(await scopedQuery<{route_id:string}>(scope,['parcels.transit'],`SELECT m.route_id FROM shipit.parcel_commands c
+    JOIN shipit.route_manifests m ON m.organization_id=c.organization_id AND m.franchise_id=c.franchise_id AND m.id=(c.input->>'manifest_id')::uuid
+    WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.parcel_id=$1 AND c.operation_id='api.v1.parcels.dispatch'
+    AND c.state='committed' ORDER BY c.expected_version DESC LIMIT 1`,[parcelId])).rows[0];
+  if(!row)throw new HttpError('PARCEL_STATE_CONFLICT');return row.route_id;
+}
 export async function insert(scope: TenantAccess, booking: string, index: number, parcel: ParcelDto, manual: string|null) {
   const c = assertTenantAccess(scope,['parcels.create']);
   const row = (await scopedQuery<{docket:string}>(scope,['parcels.create'],`INSERT INTO shipit.parcels

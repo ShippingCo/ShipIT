@@ -81,3 +81,4 @@ Live authentication delivery setup remains deferred to M3.
 - [0038 — Carrier capability contract](0038-carrier-capability-contract.md)
 - [0039 — Durable manual carrier evidence](0039-manual-carrier-evidence.md)
 - [0040 — Bounded carrier CSV imports](0040-csv-carrier-imports.md)
+- [0041 — Reviewed carrier tracking reconciliation](0041-carrier-reconciliation.md)

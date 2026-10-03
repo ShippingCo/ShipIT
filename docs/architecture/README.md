@@ -257,3 +257,6 @@ all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 - [Assistant outcome evidence](assistant-outcomes.md) — deduplicated turn measures, private weekly aggregates and bilingual regression qualification (#52).
 
 [Manual carrier workflow](manual-carriers.md) adds W26/R19-scoped references and pending tracking evidence on the carrier contract. See [verification](issue-54-verification.md).
+
+[Carrier reconciliation](carrier-reconciliation.md) adds #58's deduplicated review queue,
+guarded T04 application and last-known freshness. [Verification](issue-58-verification.md).

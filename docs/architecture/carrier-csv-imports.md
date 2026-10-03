@@ -19,6 +19,10 @@ cannot overwrite them. Tracking rows save carrier claims as `pending_review`; ev
 `delivered_claim` cannot deliver a parcel, collect money, change prices or send WhatsApp.
 #58 owns reconciliation and guarded application, #59 rates and #147 actual costs.
 
+[#58's review service](carrier-reconciliation.md) now consumes accepted tracking
+observations, deduplicates shared external source IDs across file/poll channels and
+records guarded human decisions. CSV validation and row outcomes remain unchanged.
+
 Local installation listings now enable `tracking_import` for this generic CSV service.
 The manual adapter itself still supports only manual observations. All network/rate/
 booking capabilities remain false; this does not qualify a carrier-specific file dialect.

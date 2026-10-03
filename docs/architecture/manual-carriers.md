@@ -4,6 +4,10 @@ Issue [#54](https://github.com/ShippingCo/ShipIT/issues/54), extending the
 [v1 carrier contract](carrier-contract.md). [Decision](../adr/0039-manual-carrier-evidence.md)
 and [verification](issue-54-verification.md).
 
+[#58 reconciliation](carrier-reconciliation.md) now projects saved observations into
+a scoped review queue. The original evidence remains immutable; any approved state
+effect is a separate decision through the Parcel service.
+
 ## What it does
 
 A shop can book normally without a carrier connection. Its franchise admin can then
