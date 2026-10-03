@@ -10,7 +10,8 @@ export function manualCapabilities(evidenceId: string, verifiedAt: string): Capa
 
 /** Local installation API composes manual entry with the reviewed generic CSV service. */
 export function localCapabilities(evidenceId: string, verifiedAt: string): Capabilities {
-  return {...manualCapabilities(evidenceId,verifiedAt),tracking_import:{enabled:true,evidenceId,verifiedAt}};
+  return {...manualCapabilities(evidenceId,verifiedAt),tracking_import:{enabled:true,evidenceId,verifiedAt},
+    selling_rate_import:{enabled:true,evidenceId,verifiedAt},purchase_estimate_import:{enabled:true,evidenceId,verifiedAt}};
 }
 
 /** Receives validated, server-authored evidence. It has no network or domain write capability. */

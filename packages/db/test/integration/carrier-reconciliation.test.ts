@@ -39,7 +39,7 @@ await test('reconciliation migration backfills existing observations, preserves 
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_tracking_records') AS relation")).rows[0]!.relation,null);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.carrier_observations')).rows,before);
-  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await db.adminQuery('SELECT id,observation_id,source_id,status,time_reason FROM shipit.carrier_tracking_records')).rows,
     [{id,observation_id:id,source_id:'manual:'+source,status:'delivered_claim',time_reason:'unknown_timezone'}]);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.carrier_observations')).rows,before);

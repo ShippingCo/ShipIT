@@ -1,6 +1,7 @@
 import { createCarrierService } from './modules/carriers/service.ts';
 import { createCarrierReconciliationService } from './modules/carriers/reconciliation-service.ts';
 import { createCarrierImportService } from './modules/carriers/import-service.ts';
+import { createCarrierRateService } from './modules/carriers/rate-service.ts';
 import { registerCarriers } from './modules/carriers/routes.ts';
 import { createSupportService } from './modules/support/service.ts';
 import { registerSupport } from './modules/support/routes.ts';
@@ -133,7 +134,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
-      registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock));
+      registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock),createCarrierRateService(database,pricingClock));
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       if(whatsapp?.configuration.customer_access_enabled&&whatsapp.configuration.webhook)registerCustomerAccess(instance,createCustomerAccessService(database,whatsapp.configuration.webhook,auth.keys.browser),config.environment!=='developer');
       if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp),createOutboundService(database,auth.keys.browser),createAutomationReadService(database,auth.keys.browser),createHistoryService(database,auth.keys.browser));

@@ -49,22 +49,26 @@ export function parseCsv(source: string): string[][] {
   return rows;
 }
 
-export function upload(value: unknown) {
-  const b = object(value, ['kind','content_base64','columns','status_mapping']);
-  if (b.kind !== 'shipments' && b.kind !== 'tracking') throw new CsvError('INVALID_KIND');
-  const kind: ImportKind = b.kind, wanted = fields[kind];
-  if (typeof b.content_base64 !== 'string' || b.content_base64.length > Math.ceil(csvLimits.bytes / 3) * 4)
+export function decodeCsv(content: unknown) {
+  if (typeof content !== 'string' || content.length > Math.ceil(csvLimits.bytes / 3) * 4)
     throw new CsvError('FILE_TOO_LARGE');
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(b.content_base64)) throw new CsvError('INVALID_BASE64');
-  const bytes = Buffer.from(b.content_base64, 'base64');
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content)) throw new CsvError('INVALID_BASE64');
+  const bytes = Buffer.from(content, 'base64');
   if (bytes.length > csvLimits.bytes) throw new CsvError('FILE_TOO_LARGE');
-  if (bytes.toString('base64') !== b.content_base64) throw new CsvError('INVALID_BASE64');
+  if (bytes.toString('base64') !== content) throw new CsvError('INVALID_BASE64');
   let source: string;
   try { source = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new CsvError('UTF8_REQUIRED'); }
   if ([...source].some(ch => { const n=ch.charCodeAt(0); return (n<32 && ![9,10,13].includes(n)) || n===127; })) throw new CsvError('TEXT_CSV_REQUIRED');
   const records = parseCsv(source), headers = records.shift();
   if (!headers?.length || !records.length) throw new CsvError('EMPTY_FILE');
   if (headers.some(h => !/^[A-Za-z][A-Za-z0-9_ -]{0,63}$/.test(h)) || new Set(headers).size !== headers.length) throw new CsvError('INVALID_HEADERS', 1);
+  return {headers,records,file_sha256:createHash('sha256').update(bytes).digest('hex')};
+}
+export function upload(value: unknown) {
+  const b = object(value, ['kind','content_base64','columns','status_mapping']);
+  if (b.kind !== 'shipments' && b.kind !== 'tracking') throw new CsvError('INVALID_KIND');
+  const kind: ImportKind = b.kind, wanted = fields[kind];
+  const {headers,records,file_sha256}=decodeCsv(b.content_base64);
   const columns = object(b.columns, [...wanted]);
   if (wanted.some(f => typeof columns[f] !== 'string' || !headers.includes(columns[f] as string)) ||
       new Set(Object.values(columns)).size !== wanted.length || headers.length !== wanted.length) throw new CsvError('COLUMN_MAPPING', 1);
@@ -88,5 +92,5 @@ export function upload(value: unknown) {
     result.candidate = { ...values, ...(kind === 'tracking' ? {status: mapping[values.status_code!]!} : {}) } as unknown as Candidate;
     return result;
   });
-  return { kind, file_sha256: createHash('sha256').update(bytes).digest('hex'), rows };
+  return { kind, file_sha256, rows };
 }

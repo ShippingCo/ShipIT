@@ -61,6 +61,10 @@ export async function publicationConflict(scope:TenantAccess,row:VersionRow) {
     AND state='published' AND (version_number >= $1 OR (effective_from<$3 AND $2<effective_to)) LIMIT 1`,
   [row.version_number,row.effective_from,row.effective_to])).rows.length>0;
 }
+export async function intervalConflict(scope:TenantAccess,from:string,to:string) {
+  return (await scopedQuery(scope,['pricing.publish'],`SELECT id FROM shipit.pricing_versions WHERE {{franchise:organization_id:franchise_id}}
+    AND state='published' AND effective_from<$2 AND $1<effective_to LIMIT 1`,[from,to])).rows.length>0;
+}
 export async function publish(scope:TenantAccess,id:string,expected:number) {
   const c=assertTenantAccess(scope,['pricing.publish']);
   const row=(await scopedQuery<VersionRow>(scope,['pricing.publish'],`UPDATE shipit.pricing_versions SET state='published',revision=revision+1,

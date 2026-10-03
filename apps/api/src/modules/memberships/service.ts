@@ -667,6 +667,7 @@ export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:
 export async function withCarrierScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
   action:'carriers.read'|'carriers.write',correlationId:string,
   work:(scope:{access:import('../security/scope.ts').TenantAccess;agentOnly:boolean;revision:string;
+    pricingDraft:import('../security/scope.ts').TenantAccess|null;pricingPublish:import('../security/scope.ts').TenantAccess|null;
     transit:import('../security/scope.ts').TenantAccess|null;events:import('../security/scope.ts').TenantAccess|null})=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,sessionToken);
@@ -690,7 +691,10 @@ export async function withCarrierScope<T>(database:DatabasePool,sessionToken:str
     const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
       organizationWide:false,correlationId,provenance:'membership' as const};
     const canTransit=action==='carriers.write'&&parcelCommandScope('parcels.transit',memberships).includes(franchiseId);
-    return work({transit:canTransit?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
+    const canPrice=action==='carriers.write'&&pricingScope('pricing.publish',memberships,all).includes(franchiseId);
+    return work({pricingDraft:canPrice?issueTenantAccess(tx,{...context,action:'pricing.draft'}):null,
+      pricingPublish:canPrice?issueTenantAccess(tx,{...context,action:'pricing.publish'}):null,
+      transit:canTransit?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
       events:canTransit?issueTenantAccess(tx,{...context,action:'parcels.events'}):null,
       access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),

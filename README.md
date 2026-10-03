@@ -175,3 +175,7 @@ completion notifications use the ordinary Booking Customer contact and remain in
 shipment access with deterministic tracking/ETA/delay, saved charges, issued receipt
 summaries and recipient-only delivery-code resend. Routing is disabled by default;
 see [verification](docs/architecture/issue-47-verification.md) for local test evidence.
+
+[Reviewed carrier rates](docs/architecture/carrier-rates.md) normalize bounded CSV files
+into explicitly approved selling policies or separate purchase estimates. Pricing retains
+immutable source references; old bookings and receipts keep their original charges.

@@ -21,7 +21,7 @@ await test('carrier migration preserves populated #53 schema, rolls back failure
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_installations') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:4});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual(await snapshot(),before);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.carrier_installations')).rows[0]!.n,0);
   await db.prepareCarriers();

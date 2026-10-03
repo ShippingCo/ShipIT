@@ -49,6 +49,30 @@ export async function validatePricingSnapshot(scope:TenantAccess,quoteId:string,
   // Fresh independent value; caller may freeze/persist without aliasing the stored evidence.
   return structuredClone(recalculated);
 }
+/** Carrier approval uses the owning pricing rules in the same authorized transaction. */
+export async function importedPricingConflict(scope:TenantAccess,from:string,to:string) {
+  return repository.intervalConflict(scope,from,to);
+}
+export async function publishImportedPricing(draftScope:TenantAccess,publishScope:TenantAccess,input:unknown,now:Date) {
+  assertTenantAccess(draftScope,['pricing.draft']);assertTenantAccess(publishScope,['pricing.publish']);
+  const body=validate.draft(input);
+  await active(draftScope);
+  const row=await repository.create(draftScope,body);
+  await appendPricing(draftScope,row.id,row.revision,null,'pricing.draft','policy_change');
+  return publishPricingVersion(publishScope,row.id,row.revision,now);
+}
+async function publishPricingVersion(scope:TenantAccess,id:string,expected:number,now:Date) {
+  const row=await repository.find(scope,id);
+  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');
+  if(row.revision!==expected||row.state!=='draft')throw new HttpError('VERSION_CONFLICT');
+  assertRules(versionDto(row,await repository.rules(scope,row.id)));
+  if(row.effective_from.getTime()<now.getTime()||await repository.publicationConflict(scope,row))throw new HttpError('RATE_CONFLICT');
+  let published;
+  try {published=await repository.publish(scope,id,expected);}
+  catch(error) {if(error instanceof DatabaseError&&error.sqlState==='23514')throw new HttpError('RATE_CONFLICT');throw error;}
+  await appendPricing(scope,row.id,published.revision,null,'pricing.publish','policy_publication');
+  return versionDto(published,await repository.rules(scope,row.id));
+}
 export function createPricingService(database:DatabasePool,clock:()=>Date=()=>new Date()) {
   function scoped<T>(session:string,organization:unknown,franchise:unknown,action:PricingAction,correlationId:string,object:boolean,
     work:(scope:TenantAccess)=>Promise<T>) {
@@ -107,15 +131,7 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
       return scoped(session,organization,franchise,'pricing.publish',correlationId,true,async scope=>{
         const versionId=validate.uuid(id);await load(scope,versionId);const body=validate.publish(input);
         return command(scope,'api.v1.pricing.publish',key,versionId,body,async()=>{
-          const row=(await repository.find(scope,versionId))!;
-          if(row.revision!==body.expected_version||row.state!=='draft')throw new HttpError('VERSION_CONFLICT');
-          assertRules(versionDto(row,await repository.rules(scope,row.id)));
-          if(row.effective_from.getTime()<clock().getTime()||await repository.publicationConflict(scope,row))throw new HttpError('RATE_CONFLICT');
-          let published;
-          try {published=await repository.publish(scope,versionId,body.expected_version);}
-          catch(error) {if(error instanceof DatabaseError&&error.sqlState==='23514')throw new HttpError('RATE_CONFLICT');throw error;}
-          await appendPricing(scope,row.id,published.revision,null,'pricing.publish','policy_publication');
-          return versionDto(published,await repository.rules(scope,row.id));
+          return publishPricingVersion(scope,versionId,body.expected_version,clock());
         });
       });
     },
