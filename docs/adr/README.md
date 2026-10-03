@@ -79,3 +79,4 @@ Live authentication delivery setup remains deferred to M3.
 - [0036 — Multilingual intent boundary](0036-multilingual-intent-boundary.md)
 - [0037 — Assistant outcome evidence](0037-assistant-outcome-evidence.md)
 - [0038 — Carrier capability contract](0038-carrier-capability-contract.md)
+- [0039 — Durable manual carrier evidence](0039-manual-carrier-evidence.md)

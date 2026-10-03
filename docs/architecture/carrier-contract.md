@@ -16,6 +16,10 @@ and this guide. It does not register adapters, save installations, accept files,
 reconcile observations, publish rates, provide screens or produce financial reports.
 No LLM is involved; the existing Groq integration is untouched.
 
+The subsequent [#54 manual workflow](manual-carriers.md) implements scoped persistence,
+manual adaptation and authorized API commands on this contract. Later import/reconciliation
+and network capabilities remain separate.
+
 ## Milestone sequence
 
 | Issue | User outcome and dependency |

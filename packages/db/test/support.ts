@@ -158,6 +158,7 @@ export interface DisposableDatabase {
   preparePayments(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
+  prepareCarriers(): Promise<void>;
   prepareEway(): Promise<void>;
   prepareCustomerAccess(): Promise<void>;
   prepareConversations(): Promise<void>;
@@ -351,6 +352,13 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         // obligation trigger still rejects every actual UPDATE, including id=id.
         await owner.query(`GRANT UPDATE(id) ON shipit.booking_obligations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_payment_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCarriers() {
+      await handle.prepareBookings();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.carrier_installations,shipit.carrier_mappings,shipit.carrier_dockets,shipit.carrier_references,shipit.carrier_observations,shipit.carrier_commands TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareEway() {
