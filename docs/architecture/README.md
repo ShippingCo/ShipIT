@@ -238,3 +238,4 @@ all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 - [Pickup requests](pickups.md) — scoped customer requests, staff decisions and durable notifications (#49).
 
 - [Human support](support.md) — scoped case ownership, safe replies and durable bot pause (#50).
+- [Assistant outcome evidence](assistant-outcomes.md) — deduplicated turn measures, private weekly aggregates and bilingual regression qualification (#52).

@@ -655,3 +655,4 @@ These tests preserve scoped staff ownership, private notes, customer reply recov
 | apps/web/src/test/support.test.tsx: preserves an uncertain reply intent and exposes blocked delivery after retry | preserve | assistant |
 | apps/web/src/test/support.test.tsx: keeps drafts after stale state and denies read-only staff mutation | preserve | assistant |
 | apps/web/src/test/support.test.tsx: requires a reason to reopen a resolved case | preserve | assistant |
+| apps/web/src/test/support.test.tsx: gives the support dialog an accessible name, handles Escape and restores keyboard focus | preserve | assistant |
