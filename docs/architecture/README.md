@@ -1,5 +1,10 @@
 # Production architecture
 
+Issue #53: [carrier capability contract](carrier-contract.md),
+[research decision](../adr/0038-carrier-capability-contract.md) and
+[contract verification](issue-53-verification.md). Server-only contracts and fictional
+fixtures; production manual/file/live paths remain with #54–#60.
+
 Issue [#2](https://github.com/ShippingCo/ShipIT/issues/2), 6 September 2026.
 Baseline: `91dde097307a1558ca0c27474b546189985def82` from freshly pulled `main`.
 
