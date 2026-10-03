@@ -295,7 +295,7 @@ test('conversation state is franchise-private and scheduler stays in its signed 
 
 test('carrier storage requires franchise predicates and routes expose query data only',()=>{
  const file='apps/api/src/modules/carriers/repository.ts';
- for(const table of ['carrier_installations','carrier_mappings','carrier_dockets','carrier_references','carrier_observations','carrier_commands']){
+ for(const table of ['carrier_installations','carrier_mappings','carrier_dockets','carrier_references','carrier_observations','carrier_commands','carrier_import_runs','carrier_import_commits','carrier_import_outcomes']){
   assert.deepEqual(inspectSource(file,`scopedQuery(scope,['carriers.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
   assert.ok(inspectSource(file,`scopedQuery(scope,['carriers.read'],'SELECT id FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
  }

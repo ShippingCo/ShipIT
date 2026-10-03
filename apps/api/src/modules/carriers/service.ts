@@ -4,7 +4,7 @@ import { HttpError } from '../../plugins/errors.ts';
 import { withCarrierScope } from '../memberships/service.ts';
 import { digest } from '../pricing/idempotency.ts';
 import { ewayCursorCodec } from '../eway/cursor.ts';
-import { manualAdapter, manualCapabilities } from './manual.ts';
+import { manualAdapter, manualCapabilities, localCapabilities } from './manual.ts';
 import type { Installation, Observation } from './contract.ts';
 import * as v from './validation.ts';
 import * as r from './repository.ts';
@@ -80,7 +80,7 @@ export function createCarrierService(database:DatabasePool,key:Buffer,clock=()=>
       const rows=await r.list(s,kind,parent,after,q.limit),more=rows.length>q.limit,items=rows.slice(0,q.limit);
       return {items:kind==='installations'?items.map(item=>{
         const row=item as Pick<r.InstallationRow,'id'|'command_id'|'created_at'>;
-        return {...item,mode:'manual',capabilities:manualCapabilities(row.command_id,new Date(row.created_at).toISOString())};
+        return {...item,mode:'manual',capabilities:localCapabilities(row.command_id,new Date(row.created_at).toISOString())};
       }):items,page:{has_more:more,next_cursor:more?cursors.encode(binding,items.at(-1)!.id):null}};
     });
   }

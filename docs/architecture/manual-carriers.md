@@ -12,6 +12,9 @@ the carrier reported. A `delivered_claim` remains a manual claim pending review:
 parcel does not become delivered and no payment is collected. There are no provider
 credentials, network calls, additional packages, LLM calls or background sends.
 
+The [#55 CSV service](carrier-csv-imports.md) now adds reviewed file imports to these
+installations. Listings advertise `tracking_import`; the manual adapter stays manual-only.
+
 This is an API/service workflow, with no new operator screen. The issue permits
 service-only delivery; the reproducible API fixture below exercises the real routes,
 sessions, CSRF, owning services and PostgreSQL. It is not a browser or live-carrier demo.
@@ -104,7 +107,7 @@ Disabled organizations/franchises reject writes, including replays. Dependency f
 The manual adapter supplies #53 `Observation` to the shared `ingest` persistence boundary.
 It receives no delivery/payment executor. Observations never emit lifecycle events or trigger
 WhatsApp. #58 owns reconciliation, conflict review and guarded domain-command application;
-there is intentionally no “apply status” endpoint here. #55 can build validated file ingestion
+there is intentionally no “apply status” endpoint here. #55 builds validated file ingestion
 on these scoped identities and evidence tables. #59 owns rate import/publication; #147 owns
 actual cost. No estimate, actual cost, profit or price changes are invented here.
 

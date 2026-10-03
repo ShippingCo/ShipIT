@@ -138,7 +138,7 @@ await test('forward upgrade preserves existing operational rows and creates no a
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:30}),{applied:30});const migrate=db.migrate;db.migrate=async()=>({applied:0});
  const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
  const snapshot=async()=>JSON.stringify((await db.adminQuery('SELECT id,status,version,booking_id FROM shipit.parcels')).rows),before=await snapshot();
- assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:8});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.customer_conversation_turns')).rows[0]!.n,0);
 });
 

@@ -1,5 +1,8 @@
 # Production architecture
 
+Issue #55: [validated carrier CSV imports](carrier-csv-imports.md),
+[research decision](../adr/0040-csv-carrier-imports.md), and [verification](issue-55-verification.md).
+
 Issue #53: [carrier capability contract](carrier-contract.md),
 [research decision](../adr/0038-carrier-capability-contract.md) and
 [contract verification](issue-53-verification.md). Server-only contracts and fictional
