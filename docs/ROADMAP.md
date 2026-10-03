@@ -49,3 +49,34 @@ The draft DAG was checked for cycles, missing references, duplicate titles and m
 Follow [CONTRIBUTING](../CONTRIBUTING.md) and the [mandatory workflow](ENGINEERING_WORKFLOW.md): latest main → issue branch → scoped work/tests/checks → push → linked PR → CI/review → merge → checkout/pull main → clean branch → next issue. Product security is implemented in each relevant issue; M7 hardens and verifies it.
 
 See [prototype transition](PROTOTYPE_TO_PRODUCTION.md) and [inspection/reference findings](REPOSITORY_INSPECTION.md). GitHub issue bodies are authoritative if an indexed title/dependency is later refined; update the index when roadmap boundaries change.
+
+<!-- finance-plan:2026-10-03 -->
+## Approved financial-management expansion — 2026-10-03
+
+The original milestone table and initial-ready discussion above are historical planning
+snapshots retained in full. The current approved plan contains **96 issues**: the original
+82 plus [#137–#150](https://github.com/ShippingCo/ShipIT/milestone/7), all assigned to M6.
+M6 therefore has **21 issues**, replacing the initial count of seven for current planning.
+No existing milestone is removed or renumbered; M4's #46–#52 scope is unchanged.
+
+See the [10-module map and ordering](FINANCIAL_MANAGEMENT_PLAN.md) and the
+[additive dependency index](ISSUE_INDEX.md#approved-financial-management-expansion--2026-10-03).
+
+- M5 retains every carrier integration task and adds selling-rate versus courier-cost
+  provenance to #53/#59. No live bank connection is required for the first finance release.
+- M6 retains sales/GST, ageing, delivery-performance, messaging and settings work, and
+  adds payment evidence/reconciliation, cashbook/closing, monthly customer accounts,
+  agent custody/settlement, adjustment audit, costs/contribution, owner dashboard,
+  scheduled summaries and accountant exports.
+- M7 retains every readiness gate and extends restore, monitoring, permissions/privacy,
+  concurrency/recovery, runbooks and pilot review to the new financial sources.
+
+Build #137's financial contracts first, then the source workflows, then their dependent
+reports. #61's common reporting layer can begin on its existing prerequisites. Expanded
+#67 reconciles a complete shop day and monthly cycle before the #76 release decision.
+
+The old M8 enterprise-billing boundary means ShipIT SaaS subscription/commercial billing.
+The newly approved M6 account billing is a courier shop billing its regular shipping
+customers; it does not introduce enterprise SSO, corporate deployment or an analytics warehouse.
+Bank reconciliation starts with manual review and supported statement files. Government
+filing, automatic payroll deductions and unverified live bank integrations remain outside scope.

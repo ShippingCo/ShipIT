@@ -51,3 +51,19 @@ reporting and courier collections cannot depend on subscription activation. M8 b
 is separate from a parcel's To-Pay ledger and cannot repurpose delivery/provider retries
 as billable usage. Later commercial changes require their own tests and release review;
 M7 acceptance does not pre-approve unimplemented M8 features.
+
+<!-- finance-plan:2026-10-03 -->
+## Additional financial exit gates — 2026-10-03
+
+The original gates above remain required. The [approved finance plan](../FINANCIAL_MANAGEMENT_PLAN.md)
+adds M6 #137–#150 (21 total M6 issues) and extends M5/M7 as follows:
+
+| Milestone | Added required exit evidence |
+| --- | --- |
+| M5 | #53/#59 preserve courier/service identity and distinguish selling rates, estimated purchase costs and actual cost evidence; manual/file fallback remains valid. |
+| M6 | All 10 modules reconcile across a complete day/month through expanded #67. Payment recording, bank verification, cash/agent custody and seller COD remain distinct. Monthly billing cannot double-count sales; missing cost is unknown, never fabricated profit. |
+| M7 | #69–#72/#74–#76 verify restored financial evidence, privacy/permissions, race/retry safety, operational alerts and usable daily/monthly runbooks with supported statement/accounting formats. |
+
+Regular shop account-customer billing (#141/#142) is required M6 scope, distinct from
+M8 SaaS subscriptions. No completed foundation is reopened merely to host the new work.
+All new issues are ancestors of #76, and no M8 issue enters the pilot prerequisite graph.
