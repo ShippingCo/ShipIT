@@ -1,10 +1,11 @@
 """Validate tracked planning contracts without adding a runtime dependency."""
 from pathlib import Path
+from functools import cache
 import re
 import runpy
 ROOT = Path(__file__).resolve().parents[1]
 required = ["CONTRIBUTING.md", "SECURITY.md", "docs/ROADMAP.md", "docs/ISSUE_INDEX.md", "docs/ENGINEERING_WORKFLOW.md", "docs/PROTOTYPE_TO_PRODUCTION.md", ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/implementation.md", ".github/ISSUE_TEMPLATE/bug.md", ".github/ISSUE_TEMPLATE/research.md", ".github/ISSUE_TEMPLATE/security-infrastructure.md"]
-required.extend(["docs/QUALITY_CHECKS.md", "docs/ISSUE_5_VERIFICATION.md", "README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
+required.extend(["docs/FINANCIAL_MANAGEMENT_PLAN.md", "docs/QUALITY_CHECKS.md", "docs/ISSUE_5_VERIFICATION.md", "README.md", "apps/api/README.md", "packages/db/README.md", "packages/shared/README.md"])
 # Architecture/ADR documents use the same fence/link validation as existing planning.
 required.extend(str(path.relative_to(ROOT)) for folder in ("docs/architecture", "docs/adr")
                 for path in sorted((ROOT / folder).glob("*.md")))
@@ -29,12 +30,48 @@ for name in required:
         assert (ROOT / name).parent.joinpath(target).exists(), f"Broken local link: {name}: {target}"
 index = (ROOT / "docs/ISSUE_INDEX.md").read_text()
 rows = [line for line in index.splitlines() if line.startswith("| PLAN-") or re.match(r"\| \[#[0-9]+\]", line)]
-assert len(rows) == 82, f"Expected 82 initial planned issues, found {len(rows)}; revise roadmap intentionally if scope changes"
-assert len(set(rows)) == 82
+# Preserve all 82 initial issues and intentionally add the 14 approved finance issues.
+expected_ids = set(range(2, 84)) | set(range(137, 151))
+assert len(rows) == len(expected_ids), f"Expected {len(expected_ids)} planned issues, found {len(rows)}"
+graph = {}
+for row in rows:
+    cells = row.split("|")
+    issue = int(re.search(r"\[#(\d+)\]", cells[1])[1])
+    assert issue not in graph, f"Duplicate issue #{issue}"
+    graph[issue] = set(map(int, re.findall(r"\[#(\d+)\]", cells[3])))
+assert set(graph) == expected_ids, "Missing or unexpected planned issue IDs"
+for row in index.splitlines():
+    match = re.match(r"\| Extra prerequisites for #(\d+) \|([^|]+)\|", row)
+    if match:
+        issue = int(match[1])
+        assert issue in graph, f"Unknown extended issue #{issue}"
+        graph[issue].update(map(int, re.findall(r"\[#(\d+)\]", match[2])))
+visited, active = set(), set()
+def visit(issue):
+    assert issue in graph, f"Unknown dependency #{issue}"
+    assert issue not in active, f"Circular dependency at #{issue}"
+    if issue in visited:
+        return
+    active.add(issue)
+    for prerequisite in graph[issue]:
+        visit(prerequisite)
+    active.remove(issue)
+    visited.add(issue)
+for issue in graph:
+    visit(issue)
+@cache
+def ancestors(issue):
+    result = set(graph[issue])
+    for prerequisite in graph[issue]:
+        result.update(ancestors(prerequisite))
+    return result
+pilot = ancestors(76)
+assert set(range(137, 151)) <= pilot, "Every new finance issue must feed the pilot gate"
+assert not set(range(77, 84)) & pilot, "M8 must not block the pilot"
 # The #3 document model runs in CI through this existing planning entry point.
 runpy.run_path(str(ROOT / "scripts/validate_domain_contract.py"), run_name="__main__")
 # The #4 bounded API/event model uses the same existing CI entry point.
 runpy.run_path(str(ROOT / "scripts/validate_api_event_contract.py"), run_name="__main__")
 runpy.run_path(str(ROOT / "scripts/validate_security_contract.py"), run_name="__main__")
 runpy.run_path(str(ROOT / "scripts/validate_money_tax_proof_privacy.py"), run_name="__main__")
-print("Planning checks passed: required files, workflow, nine milestones, 82 issue rows, architecture/ADR fences, local links and security contract.")
+print("Planning checks passed: required files, workflow, nine milestones, 96 issue rows, acyclic finance dependencies, architecture/ADR fences, local links and security contract.")
