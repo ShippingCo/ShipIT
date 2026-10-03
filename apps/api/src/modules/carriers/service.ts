@@ -8,6 +8,7 @@ import { manualAdapter, manualCapabilities, localCapabilities } from './manual.t
 import type { Installation, Observation } from './contract.ts';
 import * as v from './validation.ts';
 import * as r from './repository.ts';
+import { manualHealth } from './health.ts';
 type Operation='installation'|'mapping'|'reference'|'observation';
 function manifest(row:r.InstallationRow):Installation {
   return {contractVersion:1,id:row.id,organizationId:row.organization_id,franchiseIds:[row.franchise_id],courierId:row.courier_id,
@@ -29,7 +30,7 @@ export function createCarrierService(database:DatabasePool,key:Buffer,clock=()=>
       const command=randomUUID(),id=randomUUID(),now=clock();let version=1,reason='manual_setup';
       if(operation==='installation'&&'label' in input){
         if(input.courier_id)await r.courier(s,input.courier_id);
-        await r.addInstallation(s,id,input.courier_id??randomUUID(),input.label,command,now);
+        await r.addInstallation(s,id,input.courier_id??randomUUID(),input.label,command,now,input.file_import??true);
       }
       if(operation==='mapping'&&'kind' in input){
         const before=await r.latestMapping(s,installed!.id,input.kind,input.source_code);
@@ -79,10 +80,20 @@ export function createCarrierService(database:DatabasePool,key:Buffer,clock=()=>
       const after=q.cursor?cursors.decode(q.cursor,binding):null;
       const rows=await r.list(s,kind,parent,after,q.limit),more=rows.length>q.limit,items=rows.slice(0,q.limit);
       return {items:kind==='installations'?items.map(item=>{
-        const row=item as Pick<r.InstallationRow,'id'|'command_id'|'created_at'>;
-        return {...item,mode:'manual',capabilities:localCapabilities(row.command_id,new Date(row.created_at).toISOString())};
+        const row=item as Pick<r.InstallationRow,'id'|'command_id'|'created_at'|'file_import'>;
+        return {...item,mode:'manual',capabilities:(row.file_import?localCapabilities:manualCapabilities)(row.command_id,new Date(row.created_at).toISOString())};
       }):items,page:{has_more:more,next_cursor:more?cursors.encode(binding,items.at(-1)!.id):null}};
     });
   }
-  return {mutate,list};
+  async function health(session:string,idInput:unknown,query:unknown,correlation:string) {
+    const id=v.uuid(idInput,'$'),q=v.selection(query);
+    return withCarrierScope(database,session,q.organizationId,q.franchiseId,'carriers.read',correlation,async({access:s,agentOnly})=>{
+      if(agentOnly)throw new HttpError('ACTION_FORBIDDEN');
+      const row=await r.installation(s,id);
+      return {installation_id:id,mode:'manual',capability_version:row.revision,
+        capabilities:(row.file_import?localCapabilities:manualCapabilities)(row.command_id,new Date(row.created_at).toISOString()),
+        api:{state:'not_applicable',reason:'live_api_not_selected'},manual:await manualHealth(s,id,clock())};
+    });
+  }
+  return {mutate,list,health};
 }

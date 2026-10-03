@@ -4,6 +4,12 @@ import * as v from '../../src/modules/carriers/validation.ts';
 import { manualAdapter,manualCapabilities } from '../../src/modules/carriers/manual.ts';
 import { installation,context,observation } from '../carrier-fixtures.ts';
 describe('manual carrier boundary',()=>{
+  it('accepts an explicit manual-only selection without changing legacy command fingerprints',()=>{
+    expect(v.installation({label:'AGC'})).toEqual({label:'AGC',courier_id:null});
+    expect(v.installation({label:'AGC',file_import:false})).toEqual({label:'AGC',courier_id:null,file_import:false});
+    for(const value of ['false',null,0,{}])expect(()=>v.installation({label:'AGC',file_import:value})).toThrow();
+    expect(()=>v.installation({label:'AGC',tracking_api:true})).toThrow();
+  });
   it.each(['','X\n','https://secret.test','x?token=1','a@b.test','x'.repeat(129),'a b',null,42])('rejects unsafe code %j',value=>expect(()=>v.code(value)).toThrow());
   it('preserves exact codes, explicit unknown time and rejects caller authority',()=>{
     expect(v.code('a/B.01')).toBe('a/B.01');

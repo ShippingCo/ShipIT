@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { provisionDatabase } from '../support.ts';
+import { legacyCarrierInstallation } from '../legacy-carrier.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { createCarrierService } from '../../../../apps/api/src/modules/carriers/service.ts';
 import { referenceInput } from '../../../../apps/api/test/carrier-support.ts';
@@ -16,7 +17,7 @@ await test('reconciliation migration backfills existing observations, preserves 
   const migrate=db.migrate;db.migrate=async()=>({applied:0});
   const s=await bookingSetup(t,db),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);await db.prepareCarriers();
   const parcel=booked.json().parcels[0].id as string,q={organization_id:org,franchise_id:A},service=createCarrierService(s.pool,s.keys.browser,s.clock);
-  const installation=await service.mutate('installation',s.local.token,null,randomUUID(),{label:'PRE-58'},q,randomUUID());
+  const installation=await legacyCarrierInstallation(db,{organization:org,franchise:A,actor:s.local.id,label:'PRE-58',now:s.clock()});
   const ref=await service.mutate('reference',s.local.token,parcel,randomUUID(),referenceInput(installation.id),q,randomUUID());
   const id=randomUUID(),command=randomUUID(),source=randomUUID(),owner=db.ownerPool();
   const evidence={contractVersion:1,reference:{organizationId:org,franchiseId:A,installationId:installation.id,externalDocket:'SYN-54'},
@@ -39,7 +40,7 @@ await test('reconciliation migration backfills existing observations, preserves 
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_tracking_records') AS relation")).rows[0]!.relation,null);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.carrier_observations')).rows,before);
-  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await db.adminQuery('SELECT id,observation_id,source_id,status,time_reason FROM shipit.carrier_tracking_records')).rows,
     [{id,observation_id:id,source_id:'manual:'+source,status:'delivered_claim',time_reason:'unknown_timezone'}]);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.carrier_observations')).rows,before);
