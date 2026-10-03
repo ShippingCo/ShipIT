@@ -77,3 +77,4 @@ Live authentication delivery setup remains deferred to M3.
 - [0035 — Human support handoff](0035-human-support-handoff.md)
 
 - [0036 — Multilingual intent boundary](0036-multilingual-intent-boundary.md)
+- [0037 — Assistant outcome evidence](0037-assistant-outcome-evidence.md)

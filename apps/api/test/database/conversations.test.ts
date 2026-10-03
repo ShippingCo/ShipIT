@@ -129,6 +129,8 @@ await test('expired source, malformed encrypted input and database failure are c
  assert.equal(await s.outbound.tick(),'uncertain');assert.equal(await s.outbound.tick(),null);assert.equal(s.sends.length,1);
  const owner=s.db.ownerPool();try {await owner.query('REVOKE SELECT ON shipit.booking_obligations FROM '+s.db.runtimeRole);}finally{await owner.close();}
  const fail=await s.message('charges');assert.equal(await s.worker.tick(),'unavailable');assert.match(await s.reply(fail),/retry once/);assert.equal((await s.turn(fail)).provenance.length,0);
+ assert.deepEqual((await s.db.adminQuery('SELECT intent,metric_category,metric_reason FROM shipit.customer_conversation_turns WHERE inbox_id=$1',[fail])).rows[0],{intent:'charges',metric_category:'failure',metric_reason:'dependency'});
+ assert.deepEqual((await s.db.adminQuery('SELECT metric_category,metric_reason FROM shipit.customer_conversation_turns WHERE inbox_id=$1',[stale])).rows[0],{metric_category:'failure',metric_reason:'stale'});
  const disabled=createConversationWorker(s.pool,{...s.whatsapp,configuration:{...s.whatsapp.configuration,conversation_enabled:false}},s.keys.browser);assert.equal(await disabled.tick(),null);
 });
 
@@ -136,7 +138,7 @@ await test('forward upgrade preserves existing operational rows and creates no a
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:30}),{applied:30});const migrate=db.migrate;db.migrate=async()=>({applied:0});
  const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
  const snapshot=async()=>JSON.stringify((await db.adminQuery('SELECT id,status,version,booking_id FROM shipit.parcels')).rows),before=await snapshot();
- assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.customer_conversation_turns')).rows[0]!.n,0);
 });
 
