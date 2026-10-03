@@ -436,3 +436,7 @@ rechecks contact/resource generation and consent. See [contract](conversations.m
 ## Issue #49 R22/W28 activation
 
 `pickups.read` uses R22: selected own-franchise org-admin reads, plus franchise-admin/operator reads. `pickups.decide` uses W28 for local franchise-admin/operator decisions and self-assignment on acceptance. No dispatcher/read_only/agent/accountant rights or org-admin write inheritance. Customer create/status/cancel uses the signed installation/contact principal, not staff membership. See [pickup contract](pickups.md).
+
+## Issue #58 R19/W26/W09 composition
+
+Carrier reconciliation reads use R19 within the selected installation/franchise. W26 permits franchise-admin review/rejection. Applying a movement report additionally requires a current explicit dispatcher W09 grant in that same franchise, including replay. No admin inheritance, new role, proof or payment permission is introduced. See [carrier reconciliation](carrier-reconciliation.md).

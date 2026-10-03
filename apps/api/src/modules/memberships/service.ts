@@ -666,7 +666,8 @@ export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:
 /** R19/W26: local manual configuration does not grant organization-wide installation access. */
 export async function withCarrierScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
   action:'carriers.read'|'carriers.write',correlationId:string,
-  work:(scope:{access:import('../security/scope.ts').TenantAccess;agentOnly:boolean;revision:string})=>Promise<T>):Promise<T> {
+  work:(scope:{access:import('../security/scope.ts').TenantAccess;agentOnly:boolean;revision:string;
+    transit:import('../security/scope.ts').TenantAccess|null;events:import('../security/scope.ts').TenantAccess|null})=>Promise<T>):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,sessionToken);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -686,7 +687,12 @@ export async function withCarrierScope<T>(database:DatabasePool,sessionToken:str
       if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
       if(franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
     }
-    return work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
+      organizationWide:false,correlationId,provenance:'membership' as const};
+    const canTransit=action==='carriers.write'&&parcelCommandScope('parcels.transit',memberships).includes(franchiseId);
+    return work({transit:canTransit?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
+      events:canTransit?issueTenantAccess(tx,{...context,action:'parcels.events'}):null,
+      access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),
       agentOnly:agent&&!staff&&!orgRead,revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
   });

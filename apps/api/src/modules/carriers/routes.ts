@@ -3,10 +3,13 @@ import type { createCarrierService } from './service.ts';
 import { idempotencyKey } from './validation.ts';
 import type { createCarrierImportService } from './import-service.ts';
 import { CsvError, csvLimits } from './csv.ts';
-export function registerCarriers(app:FastifyInstance,service:ReturnType<typeof createCarrierService>,secure:boolean,imports:ReturnType<typeof createCarrierImportService>) {
+import type { createCarrierReconciliationService } from './reconciliation-service.ts';
+export function registerCarriers(app:FastifyInstance,service:ReturnType<typeof createCarrierService>,secure:boolean,imports:ReturnType<typeof createCarrierImportService>,review:ReturnType<typeof createCarrierReconciliationService>) {
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
   const key=(request:FastifyRequest)=>idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders);
   const installations='/api/v1/carriers/installations';
+  app.get<{Params:{id:string}}>(installations+'/:id/reconciliation',{exposeHeadRoute:false},request=>review.list(session(request),request.params.id,request.query,request.id));
+  app.post<{Params:{id:string}}>('/api/v1/carriers/reconciliation/:id/resolve',request=>review.resolve(session(request),request.params.id,key(request),request.body,request.query,request.id));
   app.post<{Params:{id:string}}>(installations+'/:id/imports',async(request,reply)=>{
     try { return reply.code(201).send(await imports.create(session(request),request.params.id,key(request),request.body,request.query,request.id)); }
     catch(error){

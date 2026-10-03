@@ -12,6 +12,22 @@ import * as repository from './repository.ts';
 import type { TenantAccess } from '../security/scope.ts';
 import { closeForFailure } from '../deliveries/repository.ts';
 
+/** Approved carrier movement uses the owning T04 guard and the same atomic outbox. */
+export async function transitForCarrier(command:TenantAccess,events:TenantAccess,parcelId:string,expectedVersion:number,evidence:string,time:string) {
+  const before=await repository.load(command,parcelId);
+  const route=await repository.dispatchedRoute(command,parcelId);
+  const input={expected_version:expectedVersion,evidence_ref:evidence,route_id:route};
+  guard(before,'parcels.transit',input,command.context.actor.id);
+  const commandId=randomUUID(),eventId=randomUUID();
+  await repository.reserve(command,commandId,before,'parcels.transit',keyDigest('carrier:'+evidence),fingerprint('parcels.transit',parcelId,input),input);
+  const after=await repository.mutate(command,before,commandId,'parcels.transit',time);
+  if(!after)throw new HttpError('VERSION_CONFLICT');
+  await repository.appendTransition(command,commandId,eventId,before,after,'parcels.transit',input,time);
+  await repository.appendEvent(events,commandId,eventId,after,'parcels.transit',input,time);
+  await repository.complete(command,commandId,dto(after,eventId,time,input));
+  return eventId;
+}
+
 /** Owning-domain T04 seam for a Route coordinator's existing transaction. */
 export async function transitForRoute(command:TenantAccess, events:TenantAccess, parcelId:string, routeId:string, evidence:string, time:string) {
   const before=await repository.load(command,parcelId);

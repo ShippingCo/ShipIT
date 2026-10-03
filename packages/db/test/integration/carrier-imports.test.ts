@@ -26,7 +26,7 @@ await test('CSV migration preserves populated #54 evidence, rolls back failure a
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_import_runs') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   await db.prepareCarriers();
   // The replaced command constraint still accepts old manual provenance.
   await service.mutate('installation',s.local.token,null,randomUUID(),{label:'POST-55'},q,randomUUID());

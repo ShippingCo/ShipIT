@@ -1,6 +1,7 @@
 import { scopedQuery, assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import type { Dimensions, Mapping, Observation } from './contract.ts';
+import { record } from './reconciliation-repository.ts';
 const read = ['carriers.read','carriers.write'] as const;
 const write = ['carriers.write'] as const;
 export interface InstallationRow { id:string; organization_id:string; franchise_id:string; courier_id:string; label:string; revision:number; command_id:string; created_at:Date }
@@ -86,6 +87,7 @@ export async function ingest(s:TenantAccess,id:string,parcelId:string,referenceI
   const c=assertTenantAccess(s,write);
   await scopedQuery(s,['carriers.write'],`INSERT INTO shipit.carrier_observations(id,organization_id,franchise_id,parcel_id,reference_id,parcel_version,evidence,command_id,received_at,status_code)
     SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$10 WHERE {{franchise:$9:$2}}`,[id,c.permittedFranchiseIds[0],parcelId,referenceId,parcelVersion,evidence,command,now,c.organizationId,statusCode]);
+  await record(s,id,parcelId,referenceId,evidence,statusCode,id);
 }
 export async function list(s:TenantAccess,kind:'installations'|'mappings'|'references'|'observations',parent:string|null,after:string|null,limit:number) {
   if(kind==='installations')return (await scopedQuery<{id:string}>(s,['carriers.read'],`SELECT id,courier_id,label,revision,command_id,created_at FROM shipit.carrier_installations
