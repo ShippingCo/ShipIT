@@ -10,6 +10,15 @@ const value:SupportDetail={id,state:'open',version:1,reason:'human_requested',as
  current_actor_id:actor,staff:[{id:actor}],availability:'Staff hours are not configured.',history:[],context:[{intent:'human',outcome:'human_requested',recorded_at:instant}]};
 function fixture(detail:SupportDetail=value):SupportSource{return {list:vi.fn(async()=>({items:[detail],page:{has_more:false,next_cursor:null}})),detail:vi.fn(async()=>detail),command:vi.fn(()=>({id:'intent50'} as unknown as CommandIntent)),execute:vi.fn(async()=>detail)};}
 describe('human support queue',()=>{
+ it('gives the support dialog an accessible name, handles Escape and restores keyboard focus',async()=>{
+  render(<SupportQueue source={fixture()} canWrite={true}/>);
+  const trigger=await screen.findByRole('button',{name:/Review case/});trigger.focus();fireEvent.click(trigger);
+  const dialog=await screen.findByRole('dialog',{name:'Support case'});
+  expect(dialog).toHaveAccessibleDescription('Private staff workspace. Internal notes are never sent to the customer.');
+  await screen.findByLabelText('Action');fireEvent.keyDown(dialog,{key:'Escape',code:'Escape'});
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(trigger).toHaveFocus();
+ });
  it('loads private detail on selection and returns keyboard focus after close',async()=>{
   const source=fixture();render(<SupportQueue source={source} canWrite={true}/>);expect(screen.getByRole('status')).toHaveTextContent('Loading');
   const button=await screen.findByRole('button',{name:/Review case/});expect(source.detail).not.toHaveBeenCalled();button.focus();fireEvent.click(button);

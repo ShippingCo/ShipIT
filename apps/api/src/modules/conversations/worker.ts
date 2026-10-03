@@ -24,6 +24,7 @@ import { availability } from '../support/rules.ts';
 import { languageChoice,selectLocale,languageAcknowledgment,localizeReply } from './language.ts';
 import { prepareInput,interpretedRoute,TIMEOUT_MS,MIN_CONFIDENCE,validateInterpretation,validatedCompletion,type PreparedInput,type InterpretationResult } from './interpreter.ts';
 import * as inferenceRepository from './inference-repository.ts';
+import { isThanks,toolEvidence,type Evidence } from './outcomes.ts';
 
 type PreparedTurn={inbox:string;input:PreparedInput};
 type Completion={inbox:string;result:InterpretationResult};
@@ -60,6 +61,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   if(choice)c.locale_explicit=true;
   let selected=live?c.selected_docket:null,pending=live?c.pending_intent:null,state=live?c.state:'active';
   let intent:Intent,outcome:repository.Outcome='answered',reply:string|null=null;
+  let evidence:Evidence|undefined;
   let quoteId:string|null=null;
   const provenance:repository.Provenance[]=[];
   const activeCase=await support.active(scope,c.id);
@@ -69,7 +71,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   // Consent must finish before external disclosure or any interpreted operation.
   if(await inferenceRepository.pendingConsent(scope,source.installation_id))return null;
   const registered=dependencies.configuration.bindings.some(b=>b.organization_id===scope.context.organizationId&&b.franchise_id===scope.context.permittedFranchiseIds[0]&&b.waba_id===source.waba_id&&b.phone_number_id===source.phone_number_id);
-  if(!fallback&&registered&&!revoked&&!activeCase&&state==='active'&&!choice&&route.intent==='clarify'&&!route.selectionOnly&&
+  if(!fallback&&registered&&!revoked&&!activeCase&&state==='active'&&!choice&&!isThanks(text)&&route.intent==='clarify'&&!route.selectionOnly&&
    !(live&&(c.quote_draft!==null||c.pickup_draft!==null))) {
    const input=prepareInput(text);
    if(completion&&inference?.state==='reserved'&&completion.result.category==='interpreted'&&completion.result.value&&input) {
@@ -96,7 +98,8 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   else if(revoked) {selected=null;pending=null;state='active';outcome='consent';}
   else if(activeCase) {await support.touch(scope,activeCase.id,id);selected=null;pending=null;state='human_requested';outcome='paused';}
   else if(choice) {reply=languageAcknowledgment;}
-  else if(fallback) {intent='clarify';outcome='unavailable';reply='Shipment information is temporarily unavailable. Please retry once or contact the franchise directly.';}
+  else if(isThanks(text)&&!c.quote_draft&&!c.pickup_draft) {evidence={category:'thanks',reason:'none'};reply=c.locale==='hi'?'आपका स्वागत है।':'You are welcome.';}
+  else if(fallback) {outcome='unavailable';evidence={category:'failure',reason:'dependency'};reply='Shipment information is temporarily unavailable. Please retry once or contact the franchise directly.';}
   else if(dependencies.configuration.support_enabled&&(route.intent==='human'||state==='human_requested')) {await handoffCase('human_requested');}
   else if(route.intent==='human') {selected=null;pending=null;state='human_requested';outcome='human_requested';reply=handoff;}
   else if(route.intent==='resume') {selected=null;pending=null;state='active';reply=clarification;}
@@ -139,23 +142,25 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
        result={tool,docket:p.docket,...await requestCustomerResend(scope,id,p.docket,proof,dependencies)};
       }
       if(tool==='delay')result={...(result as object),delay:await access.readDelay(scope,item.grant,item.docket)};
-      reply=renderResult(validateResult(tool,result),c.locale);
+      const validated=validateResult(tool,result);evidence=toolEvidence(validated);
+      reply=renderResult(validated,c.locale);
      }catch(error) {
       if(!(error instanceof HttpError))throw error;
       // SQL failures escape to the transaction savepoint; controlled domain denial has no side effect.
       if(['ACTION_FORBIDDEN','RESOURCE_NOT_FOUND','DELIVERY_RESEND_COOLDOWN','DELIVERY_RESEND_LIMIT','DELIVERY_CHALLENGE_EXPIRED','DELIVERY_CHALLENGE_LOCKED','PARCEL_STATE_CONFLICT'].includes(error.code)) {
        outcome=error.code==='ACTION_FORBIDDEN'?'forbidden':'unavailable';
+       evidence={category:'failure',reason:error.code==='ACTION_FORBIDDEN'?'authorization':error.code==='RESOURCE_NOT_FOUND'?'missing_data':'dependency'};
        reply=tool==='receipt'?'An issued receipt is unavailable for this request. Please contact the franchise.':tool==='resend'?'Delivery-code assistance is unavailable or limited for this request. Please contact the franchise.':'This information is unavailable for this verified relationship. Please contact the franchise.';
       } else throw error;
      }
     }
    } else if(dependencies.configuration.support_enabled) {await handoffCase('unknown_intent');}
-   else {outcome='unavailable';reply=clarification;}
+   else {outcome='unavailable';evidence={category:'failure',reason:'interpretation'};reply=clarification;}
   }
   if(dependencies.configuration.pickup_enabled&&intent!=='pickup'&&!fallback&&!choice)await pickupDraft(scope,c.id,null);
   if(dependencies.configuration.customer_quotes_enabled&&intent!=='quote'&&!fallback&&!choice)await saveDraft(scope,c.id,null);
   await repository.advance(scope,c,selected,pending,state,source.now);
-  await repository.record(scope,id,source.installation_id,contact,c,intent,outcome,provenance,quoteId);
+  await repository.record(scope,id,source.installation_id,contact,c,intent,outcome,provenance,quoteId,evidence);
   if(reply)await enqueueReply(scope,dependencies,id,source.installation_id,contact,source.occurred_at,localizeReply(reply,c.locale));
   return outcome;
  }

@@ -1606,6 +1606,11 @@
       },
       {
         "file": "apps/web/src/test/support.test.tsx",
+        "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/support.test.tsx",
         "name": "loads private detail on selection and returns keyboard focus after close",
         "cases": null
       },
@@ -3597,6 +3602,14 @@
       "group": "receipts",
       "disposition": "preserve",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/support.test.tsx",
+      "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
+      "cases": null,
+      "group": "assistant",
+      "disposition": "preserve",
+      "reason": "Issue 52: accessible support dialog, Escape dismissal and restored keyboard focus."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",

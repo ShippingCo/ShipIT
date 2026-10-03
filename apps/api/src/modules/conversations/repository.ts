@@ -3,6 +3,7 @@ import { scopedQuery,type TenantAccess } from '../security/scope.ts';
 import type { Intent,Tool } from './router.ts';
 import type { Binding } from '../customer-access/repository.ts';
 import type { QuoteDraft } from '../customer-quotes/rules.ts';
+import { outcomeEvidence,type Evidence } from './outcomes.ts';
 
 export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null;pickup_draft:import('../pickups/rules.ts').PickupDraft|null;locale:import('./language.ts').Locale;locale_explicit:boolean}
 export interface Provenance {binding_id:string;binding_version:number;parcel_id:string;parcel_version:number}
@@ -34,10 +35,12 @@ export async function advance(scope:TenantAccess,c:Conversation,selection:string
  await scopedQuery(scope,['whatsapp.inbox.work'],`UPDATE shipit.customer_conversations c SET selected_docket=$2,pending_intent=$3,state=$4,expires_at=$5,version=version+1,locale=$7,locale_explicit=$8
   WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.id=$1 AND c.version=$6`,[c.id,selection,pending,state,new Date(now.getTime()+900000),c.version,c.locale,c.locale_explicit]);
 }
-export async function record(scope:TenantAccess,inbox:string,installation:string,contact:string|null,c:Conversation|null,intent:Intent,outcome:Outcome,provenance:Provenance[],quoteId:string|null=null) {
+export async function record(scope:TenantAccess,inbox:string,installation:string,contact:string|null,c:Conversation|null,intent:Intent,outcome:Outcome,provenance:Provenance[],quoteId:string|null=null,evidence:Evidence=outcomeEvidence(intent,outcome)) {
  const x=scope.context;
- await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversation_turns(inbox_id,organization_id,franchise_id,installation_id,contact_key,conversation_id,intent,outcome,provenance,correlation_id,quote_id)
-  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$11 WHERE {{franchise:$10:$2}}`,[inbox,x.permittedFranchiseIds[0],installation,contact,c?.id??null,intent,outcome,JSON.stringify(provenance),x.correlationId,x.organizationId,quoteId]);
+ await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversation_turns(inbox_id,organization_id,franchise_id,installation_id,contact_key,conversation_id,intent,outcome,provenance,correlation_id,quote_id,metric_category,metric_reason,metric_latency_ms,metric_locale)
+  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,
+   LEAST(900000,GREATEST(0,floor(extract(epoch FROM clock_timestamp()-j.received_at)*1000)))::integer,$13
+  FROM shipit.whatsapp_inbox j WHERE {{franchise:j.organization_id:j.franchise_id}} AND j.id=$1`,[inbox,x.permittedFranchiseIds[0],installation,contact,c?.id??null,intent,outcome,JSON.stringify(provenance),x.correlationId,quoteId,evidence.category,evidence.reason,c?.locale??null]);
 }
 export async function shipment(scope:TenantAccess,b:Binding) {
  // Recheck the selected binding under a row lock before any read or side effect.
