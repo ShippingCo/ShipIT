@@ -3,6 +3,7 @@ import { createMetaProvider } from './modules/whatsapp/provider.ts';
 import { createInboxWorker } from './modules/whatsapp/inbox-worker.ts';
 import { createConsentWorker } from './modules/whatsapp/consent-worker.ts';
 import { createConversationWorker } from './modules/conversations/worker.ts';
+import { createGroqInterpreter } from './modules/conversations/interpreter.ts';
 import { createOutboundWorker } from './modules/whatsapp/outbound-worker.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { parseAttachmentConfiguration, attachmentAdapters } from './modules/attachments/config.ts';
@@ -56,7 +57,8 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
     resolved=values[0];
     if(values[3]!==undefined){
       const configuration=parseWhatsappConfiguration(values[3],config.environment);
-      whatsapp={configuration,provider:createMetaProvider({configuration,secrets:secretResolver})};
+      whatsapp={configuration,provider:createMetaProvider({configuration,secrets:secretResolver}),
+        interpreter:config.interpreter?createGroqInterpreter(config.interpreter):undefined};
     }
     if(values[4]!==undefined){
       try {deliveryProof=parseDeliveryProofConfiguration(values[4]);}
@@ -81,6 +83,8 @@ export async function startRuntime({ config, secretResolver, logSink, signal }: 
   catch { attachments?.store.close?.(); await database.close(); throw new Error('STARTUP_FAILED'); }
   if(attachments)app.addHook('onClose',async()=>{attachments.store.close?.();});
   const lifecycle = attachLifecycle(app, database);
+  if(config.interpreter?.enabled&&whatsapp&&!whatsapp.interpreter)
+    app.log.warn({event:'language_interpreter_disabled',code:'CONFIGURATION_INCOMPLETE'},'Language interpretation requires a key and approved privacy policy; deterministic replies remain available');
   if(whatsapp?.configuration.outbound_enabled) {
     const worker=createOutboundWorker(database,whatsapp);
     let timer:ReturnType<typeof setTimeout>|undefined,stopped=false,pending:Promise<void>=Promise.resolve(),cycles=0;

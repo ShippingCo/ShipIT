@@ -7,7 +7,16 @@ import * as repository from './repository.ts';
 
 const manual='Please contact the franchise for staff review. No booking or staff case has been created.';
 const money=(v:string)=>`${BigInt(v)/100n}.${String(BigInt(v)%100n).padStart(2,'0')}`;
-export function renderEstimate(q:repository.Estimate,refreshed=false) {
+export function renderEstimate(q:repository.Estimate,refreshed=false,locale:'en'|'hi'='en') {
+ if(locale==='hi') {
+  const prefix=refreshed?'पिछला अनुमान समाप्त हो गया या नीति बदल गई है। यह नया परिणाम है। ':'';
+  const reasons:Record<string,string>={policy_unavailable:'नीति उपलब्ध नहीं',unsupported_origin:'प्रस्थान स्थान समर्थित नहीं',manual_review:'कर्मचारी की समीक्षा ज़रूरी',heavy:'भारी पार्सल',large:'बड़ा पार्सल',unsupported_lane:'मार्ग समर्थित नहीं',dimensional_review:'माप की समीक्षा ज़रूरी',rate_unavailable:'दर उपलब्ध नहीं'};
+  if(q.reason)return `${prefix}अनुमान संदर्भ ${q.id}: अनुमान उपलब्ध नहीं (${reasons[q.reason]??'कर्मचारी की समीक्षा ज़रूरी'})। फ्रैंचाइज़ी से संपर्क करें। कोई बुकिंग या कर्मचारी केस नहीं बना है।`;
+  return `${prefix}अनुमान संदर्भ ${q.id}: भाड़े का अनुमान INR ${money(q.total_paise!)} (भाड़ा INR ${money(q.freight_paise!)}, पैकिंग INR ${money(q.packing_paise!)})। `+
+   `एक पैकेट, ${q.input.weight_grams} g वास्तविक वजन, ${q.input.dimensions_mm.join(' x ')} mm, ${q.input.origin_key} से ${q.input.destination_key}, सेवा ${q.input.service}। `+
+   `कर, अंतिम देय राशि का राउंडिंग, पिकअप, बीमा और विशेष हैंडलिंग शामिल नहीं हैं। मान्य है: ${q.expires_at.toISOString()}। यह बुकिंग का बिल नहीं है। `+
+   `जाँचने या नया अनुमान पाने के लिए QUOTE ${q.id} भेजें। बुकिंग की पुष्टि नहीं हुई है; बुकिंग के लिए फ्रैंचाइज़ी से संपर्क करें।`;
+ }
  const prefix=refreshed?'The previous estimate expired or its policy changed. Here is a refreshed result. ':'';
  if(q.reason)return `${prefix}Quote reference ${q.id}: estimate unavailable (${q.reason.replaceAll('_',' ')}). ${manual}`;
  return `${prefix}Quote reference ${q.id}: non-binding estimate INR ${money(q.total_paise!)} (freight INR ${money(q.freight_paise!)}, packing INR ${money(q.packing_paise!)}). `+
@@ -15,7 +24,7 @@ export function renderEstimate(q:repository.Estimate,refreshed=false) {
   `Excludes tax, final payable rounding, pickup, insurance and special handling. Valid until ${q.expires_at.toISOString()}. This is not a booked invoice. `+
   `Send QUOTE ${q.id} to refresh/check it. Booking is not confirmed; contact the franchise to book.`;
 }
-export async function quoteTurn(scope:TenantAccess,context:{inbox:string;installation:string;contact:string;conversation:string;now:Date},text:string,draft:QuoteDraft|null) {
+export async function quoteTurn(scope:TenantAccess,context:{inbox:string;installation:string;contact:string;conversation:string;now:Date},text:string,draft:QuoteDraft|null,locale:'en'|'hi'='en') {
  assertTenantAccess(scope,['whatsapp.inbox.work']);
  const {inbox,installation,contact,conversation,now}=context;
  if(await repository.limited(scope,installation,contact,now))return {reply:'Quote assistance has reached its hourly limit. Please try later or contact the franchise.',quoteId:null,outcome:'unavailable' as const};
@@ -27,7 +36,7 @@ export async function quoteTurn(scope:TenantAccess,context:{inbox:string;install
   input=validatedInput(prior.input);
   if(prior.expires_at>now&&prior.policy_id===policy?.id&&policy.configuration.enabled) {
    await repository.saveDraft(scope,conversation,null);
-   return {reply:renderEstimate(prior),quoteId:prior.id,outcome:prior.reason?'unavailable' as const:'answered' as const};
+   return {reply:renderEstimate(prior,false,locale),quoteId:prior.id,outcome:prior.reason?'unavailable' as const:'answered' as const};
   }
  } else if(/^quote$/i.test(text.trim())) {
   await repository.saveDraft(scope,conversation,{});
@@ -51,5 +60,5 @@ export async function quoteTurn(scope:TenantAccess,context:{inbox:string;install
  }
  await repository.save(scope,inbox,installation,contact,result);
  await repository.saveDraft(scope,conversation,null);
- return {reply:renderEstimate(result,!!prior),quoteId:result.id,outcome:result.reason?'unavailable' as const:'answered' as const};
+ return {reply:renderEstimate(result,!!prior,locale),quoteId:result.id,outcome:result.reason?'unavailable' as const:'answered' as const};
 }

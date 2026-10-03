@@ -19,7 +19,8 @@
     "@shippingco/db": "workspace:*",
     "@shippingco/shared": "workspace:*",
     "fastify": "5.12.3",
-    "file-type": "22.1.1"
+    "file-type": "22.1.1",
+    "groq-sdk": "1.6.0"
   },
   "devDependencies": {
     "@shippingco/testkit": "workspace:*",

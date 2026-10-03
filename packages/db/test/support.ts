@@ -368,6 +368,12 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_conversations,shipit.customer_conversation_turns TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.conversation_inferences') AS table_name")).rows[0]?.table_name) {
+          await owner.query(`GRANT UPDATE(locale,locale_explicit) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
+          await owner.query(`GRANT SELECT,INSERT ON shipit.conversation_inferences,shipit.conversation_inference_budgets TO ${identifier(resource.runtimeRole)}`);
+          await owner.query(`GRANT UPDATE(state,latency_ms,input_tokens,output_tokens,estimated_micro_usd) ON shipit.conversation_inferences TO ${identifier(resource.runtimeRole)}`);
+          await owner.query(`GRANT UPDATE(day_start,minute_start,day_calls,minute_calls,reserved_micro_usd) ON shipit.conversation_inference_budgets TO ${identifier(resource.runtimeRole)}`);
+        }
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.customer_conversation_next() TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.support_cases') AS table_name")).rows[0]?.table_name) {
           await owner.query(`GRANT SELECT ON shipit.support_cases TO ${identifier(resource.runtimeRole)}`);

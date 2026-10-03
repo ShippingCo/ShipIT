@@ -4,7 +4,7 @@ import type { Intent,Tool } from './router.ts';
 import type { Binding } from '../customer-access/repository.ts';
 import type { QuoteDraft } from '../customer-quotes/rules.ts';
 
-export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null;pickup_draft:import('../pickups/rules.ts').PickupDraft|null}
+export interface Conversation {id:string;selected_docket:string|null;pending_intent:Tool|null;state:'active'|'human_requested';expires_at:Date;version:number;quote_draft:QuoteDraft|null;pickup_draft:import('../pickups/rules.ts').PickupDraft|null;locale:import('./language.ts').Locale;locale_explicit:boolean}
 export interface Provenance {binding_id:string;binding_version:number;parcel_id:string;parcel_version:number}
 export type Outcome='answered'|'selection_required'|'not_found'|'forbidden'|'unavailable'|'human_requested'|'paused'|'consent'|'stale'|'invalid';
 export async function source(scope:TenantAccess,id:string) {
@@ -23,7 +23,7 @@ export async function conversation(scope:TenantAccess,installation:string,contac
  await scopedQuery(scope,['whatsapp.inbox.work'],`INSERT INTO shipit.customer_conversations(id,organization_id,franchise_id,installation_id,contact_key,expires_at)
   SELECT $1,{{organization}},$2,$3,$4,$5 WHERE {{franchise:$6:$2}} ON CONFLICT(installation_id,contact_key) DO NOTHING`,
  [randomUUID(),c.permittedFranchiseIds[0],installation,contact,new Date(now.getTime()+900000),c.organizationId]);
- return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version,c.quote_draft,c.pickup_draft
+ return (await scopedQuery<Conversation>(scope,['whatsapp.inbox.work'],`SELECT c.id,c.selected_docket,c.pending_intent,c.state,c.expires_at,c.version,c.quote_draft,c.pickup_draft,c.locale,c.locale_explicit
   FROM shipit.customer_conversations c WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.installation_id=$1 AND c.contact_key=$2 FOR UPDATE`,[installation,contact])).rows[0]!;
 }
 export async function consentRevoked(scope:TenantAccess,installation:string,contact:string) {
@@ -31,8 +31,8 @@ export async function consentRevoked(scope:TenantAccess,installation:string,cont
   WHERE {{franchise:s.organization_id:s.franchise_id}} AND s.installation_id=$1 AND s.contact_key=$2`,[installation,contact])).rows[0]?.state==='revoked';
 }
 export async function advance(scope:TenantAccess,c:Conversation,selection:string|null,pending:Tool|null,state:Conversation['state'],now:Date) {
- await scopedQuery(scope,['whatsapp.inbox.work'],`UPDATE shipit.customer_conversations c SET selected_docket=$2,pending_intent=$3,state=$4,expires_at=$5,version=version+1
-  WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.id=$1 AND c.version=$6`,[c.id,selection,pending,state,new Date(now.getTime()+900000),c.version]);
+ await scopedQuery(scope,['whatsapp.inbox.work'],`UPDATE shipit.customer_conversations c SET selected_docket=$2,pending_intent=$3,state=$4,expires_at=$5,version=version+1,locale=$7,locale_explicit=$8
+  WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.id=$1 AND c.version=$6`,[c.id,selection,pending,state,new Date(now.getTime()+900000),c.version,c.locale,c.locale_explicit]);
 }
 export async function record(scope:TenantAccess,inbox:string,installation:string,contact:string|null,c:Conversation|null,intent:Intent,outcome:Outcome,provenance:Provenance[],quoteId:string|null=null) {
  const x=scope.context;

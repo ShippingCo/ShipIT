@@ -792,3 +792,11 @@ existing human ownership must still pause automated answers. Retain conversation
 UPDATE(state,selected_docket,pending_intent,version), membership reads and existing
 outbound INSERT/SELECT privileges for staff commands. No DELETE, TRUNCATE, DDL or
 public privilege is added. See [human support](../../docs/architecture/support.md).
+
+## Issue #51 runtime privileges
+
+Migration 35 adds channel language choice, safe inference receipts and organization budgets.
+Apply the [exact multilingual grants](../../docs/architecture/multilingual-assistant.md#setup-and-rollout)
+alongside the existing conversation privileges before deploying the updated worker. No
+public read/write endpoint or new staff privilege is introduced. Existing data defaults to
+English; forward migration tests preserve conversation identity and business state.

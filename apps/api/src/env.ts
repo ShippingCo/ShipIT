@@ -1,6 +1,7 @@
 import { isIP } from 'node:net';
 import { X509Certificate } from 'node:crypto';
 import type { DatabaseEnvironment, DatabaseTls } from '@shippingco/db';
+import { MODEL } from './modules/conversations/interpreter-policy.ts';
 
 export type RuntimeEnvironment = Exclude<DatabaseEnvironment, 'test'>;
 export interface RuntimeConfig {
@@ -17,6 +18,7 @@ export interface RuntimeConfig {
   readonly storageSecretRef?: string;
   readonly whatsappConfigRef?: string;
   readonly deliveryProofSecretRef?: string;
+  readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
 export class ConfigurationError extends Error {
@@ -108,6 +110,14 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   if(deliveryProofSecretRef!==undefined&&(!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(deliveryProofSecretRef)||deliveryProofSecretRef.includes('://')))issue('DELIVERY_PROOF_SECRET_REF','INVALID_FORMAT');
   if(deliveryProofSecretRef?.startsWith('local:')&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('DELIVERY_PROOF_SECRET_REF','INCONSISTENT');
   if(env.LOCAL_DELIVERY_PROOF_JSON!==undefined&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('LOCAL_DELIVERY_PROOF_JSON','INCONSISTENT');
+  const llmEnabled=env.LLM_ENABLED==='true';
+  if(env.LLM_ENABLED!==undefined&&!['true','false',''].includes(env.LLM_ENABLED))issue('LLM_ENABLED','INVALID_FORMAT');
+  if(env.LLM_MODEL!==undefined&&env.LLM_MODEL!==''&&env.LLM_MODEL!==MODEL)issue('LLM_MODEL','INVALID_FORMAT');
+  const privacyPolicyRef=env.LLM_PRIVACY_POLICY_REF||undefined;
+  if(privacyPolicyRef&&!/^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}$/.test(privacyPolicyRef))issue('LLM_PRIVACY_POLICY_REF','INVALID_FORMAT');
+  if(llmEnabled&&environment==='demo')issue('LLM_ENABLED','INCONSISTENT');
+  const apiKey=env.LLM_API_KEY||undefined;
+  if(llmEnabled&&apiKey&&(!/^[\x21-\x7e]{16,512}$/.test(apiKey)))issue('LLM_API_KEY','INVALID_FORMAT');
   if (issues.length) throw new ConfigurationError(issues);
   return Object.freeze({ environment: environment!, host, port, logLevel: logLevel as RuntimeConfig['logLevel'],
     allowedOrigins: Object.freeze(allowedOrigins), trustedProxyHops, trustedProxyAddresses: Object.freeze(trustedProxyAddresses), databaseSecretRef,
@@ -116,5 +126,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     ...(storageSecretRef ? {storageSecretRef} : {}),
     ...(whatsappConfigRef ? {whatsappConfigRef} : {}),
     ...(deliveryProofSecretRef ? {deliveryProofSecretRef} : {}),
+    // A closure prevents accidental config serialization from exposing the credential.
+    interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
   });
 }

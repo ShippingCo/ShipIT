@@ -78,6 +78,9 @@ for acceptance evidence. [Quotes](customer-quotes.md) are implemented in #48;
 pickups, staff cases, languages/AI and outcome metrics remain #49–#52.
 Live Meta qualification and production rollout are separate work.
 
+Issue #51 adds [saved English/Hindi language preference and optional Groq interpretation](multilingual-assistant.md).
+Fixed commands and trusted services retain authority; no model generates operational answers.
+
 The #48 review repairs make exact docket selection case insensitive, report recorded
 delay minutes while still relevant, and defer replies while consent processing is
 pending. Deferral retains the encrypted payload without consuming a send attempt;
