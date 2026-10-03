@@ -663,6 +663,35 @@ export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:
   });
 }
 
+/** R19/W26: local manual configuration does not grant organization-wide installation access. */
+export async function withCarrierScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
+  action:'carriers.read'|'carriers.write',correlationId:string,
+  work:(scope:{access:import('../security/scope.ts').TenantAccess;agentOnly:boolean;revision:string})=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,sessionToken);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const parent=await authorityRepository.lockOrganization(tx,organizationId);
+    if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+    const staff=local.some(m=>(action==='carriers.write'?['franchise_admin']:['franchise_admin','operator','dispatcher','read_only']).includes(m.role));
+    const orgRead=action==='carriers.read'&&all.includes(franchiseId);
+    const agent=action==='carriers.read'&&local.some(m=>m.role==='delivery_agent');
+    if(!staff&&!orgRead&&!agent)throw new HttpError('ACTION_FORBIDDEN');
+    if(action==='carriers.write'){
+      if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+      const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);
+      if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+      if(franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
+    }
+    return work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),
+      agentOnly:agent&&!staff&&!orgRead,revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
+  });
+}
+
 /** R15/W23: one selected owner chain, no operational role inheritance. */
 export async function withEwayScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
   action:import('../eway/types.ts').EwayAction,correlationId:string,

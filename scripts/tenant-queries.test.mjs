@@ -292,3 +292,13 @@ test('conversation state is franchise-private and scheduler stays in its signed 
  assert.deepEqual(inspectSource('apps/api/src/modules/conversations/worker.ts',adapter),[]);
  assert.ok(inspectSource('apps/api/src/modules/whatsapp/service.ts',adapter).length);
 });
+
+test('carrier storage requires franchise predicates and routes expose query data only',()=>{
+ const file='apps/api/src/modules/carriers/repository.ts';
+ for(const table of ['carrier_installations','carrier_mappings','carrier_dockets','carrier_references','carrier_observations','carrier_commands']){
+  assert.deepEqual(inspectSource(file,`scopedQuery(scope,['carriers.read'],'SELECT id FROM shipit.${table} WHERE {{franchise:organization_id:franchise_id}}')`),[]);
+  assert.ok(inspectSource(file,`scopedQuery(scope,['carriers.read'],'SELECT id FROM shipit.${table} WHERE {{organization:organization_id}}')`).length);
+ }
+ assert.deepEqual(inspectSource('apps/api/src/modules/carriers/routes.ts','service.read(request.query)'),[]);
+ assert.ok(inspectSource('apps/api/src/modules/carriers/routes.ts',"request.query('SELECT * FROM shipit.carrier_installations')").length);
+});
