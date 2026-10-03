@@ -29,7 +29,7 @@ await test('forward migration preserves populated shipments and never backfills 
   const snapshot=async()=>Object.fromEntries(await Promise.all(['customers','bookings','parcels'].map(async table=>
     [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY id`)).rows])));
   const before=await snapshot();db.migrate=migrate;
-  assert.deepEqual(await db.migrate(),{applied:5});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   for(const table of ['customer_access_bindings','customer_access_commands','customer_tracking_grants']) {
     assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
     await assert.rejects(s.pool.query(`SELECT * FROM shipit.${table}`));

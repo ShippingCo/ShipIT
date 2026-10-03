@@ -53,6 +53,14 @@ non-owner with minimum required grants. #68 provisions deployment identities and
 network isolation; #11 wires runtime secret resolution and lifecycle.
 
 The example file contains names and empty values only. Local `.env` files stay ignored.
+
+Issue #51 adds optional server `LLM_ENABLED`, `LLM_API_KEY`, `LLM_MODEL` and
+`LLM_PRIVACY_POLICY_REF`. The existing API environment boundary privately captures the key
+and passes it explicitly to the official Groq client; no `GROQ_API_KEY` copy is required.
+Missing key/policy or disabled AI preserves deterministic functionality. A configured model
+must be exactly `qwen/qwen3.8-27b`; thinking is fixed to `none` in server code.
+See the [multilingual operating contract](multilingual-assistant.md) for privacy approval,
+limits, rollout and synthetic verification. These values must never be browser configuration.
 Production uses version-pinned managed references and workload identity. Secret values do not
 belong in source, images, command arguments, CI output, deployment manifests, tickets, or chat.
 

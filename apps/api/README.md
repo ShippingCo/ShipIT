@@ -403,3 +403,10 @@ The default-off `pickup_enabled` WhatsApp setting enables the signed customer pi
 ## Human support (#50)
 
 Apply migration 34 and its runtime grants, then enable server-only `support_enabled` after conversation/outbound setup. The production Human support page provides case claim/assignment, replies, internal notes, resolution and reopen. [Contracts, hours, recovery and verification](../../docs/architecture/support.md).
+
+## Multilingual assistance (#51)
+
+Apply migration 35 and the [multilingual runtime grants and configuration](../../docs/architecture/multilingual-assistant.md).
+Customers can send LANGUAGE HI/EN. Optional Groq interpretation uses the existing server
+LLM_API_KEY; AI defaults off. Fixed language commands and trusted replies remain available
+without a model. [Acceptance and verification](../../docs/architecture/issue-51-verification.md).

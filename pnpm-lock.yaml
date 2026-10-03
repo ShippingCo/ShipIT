@@ -68,6 +68,9 @@ importers:
       file-type:
         specifier: 22.1.1
         version: 22.1.1
+      groq-sdk:
+        specifier: 1.6.0
+        version: 1.6.0
     devDependencies:
       '@shippingco/testkit':
         specifier: workspace:*
@@ -2130,6 +2133,10 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
+
+  groq-sdk@1.6.0:
+    resolution: {integrity: sha512-ggMgo6n84aZdNObgkSbSxWrdAq4wABsViIRb5e4N15bMUtDLZVhqlgZOI7X4TeqdBMdaVUOuUdZxAZIp06u0vw==}
+    hasBin: true
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -5162,6 +5169,8 @@ snapshots:
   globals@16.5.0: {}
 
   gopd@1.2.0: {}
+
+  groq-sdk@1.6.0: {}
 
   has-flag@4.0.0: {}
 

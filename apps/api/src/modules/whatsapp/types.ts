@@ -29,5 +29,5 @@ export interface Provider {
   send(binding:Binding,template:Template,recipient:string,variables:unknown,purpose?:'delivery_otp'|'updates'|'requested_assistance'|'consent_disclosure'):Promise<SendOutcome>;
   sendText?(binding:Binding,recipient:string,text:string):Promise<SendOutcome>;
 }
-export interface WhatsappDependencies { configuration:WhatsappConfiguration; provider:Provider; clock?:()=>Date }
+export interface WhatsappDependencies { configuration:WhatsappConfiguration; provider:Provider; clock?:()=>Date; interpreter?:import('../conversations/interpreter.ts').Interpreter }
 export interface AdapterOptions { configuration:WhatsappConfiguration; secrets:SecretResolver; transport?:typeof fetch }

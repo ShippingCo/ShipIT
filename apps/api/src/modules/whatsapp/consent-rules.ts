@@ -6,8 +6,8 @@ export type ConsentIntent = 'stop' | 'start' | 'other';
 /** Closed commands take precedence over every conversational intent. */
 export function consentIntent(text: string): ConsentIntent {
   const value = text.trim().replace(/\s+/g, ' ').toUpperCase();
-  if (/\b(STOP|UNSUBSCRIBE)\b/.test(value)) return 'stop';
-  if (value === 'START' || value === 'START UPDATES') return 'start';
+  if (/\b(STOP|UNSUBSCRIBE)\b/.test(value)||/^(?:संदेश बंद करो|मैसेज बंद करो|बंद करो|रोकें|संदेश रोकें)$/u.test(value)) return 'stop';
+  if (value === 'START' || value === 'START UPDATES'||value==='संदेश चालू करो') return 'start';
   return 'other';
 }
 
