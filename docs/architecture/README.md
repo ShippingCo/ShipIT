@@ -1,5 +1,9 @@
 # Production architecture
 
+Issue #57: [Maruti access research](../integrations/maruti-research.md),
+[acceptance and verification](issue-57-verification.md). Innofulfill publishes API
+documentation; authorized pilot access remains unverified. Manual mode is recommended.
+
 Issue #56: [Akash Ganga access research](../integrations/akash-ganga-research.md),
 [acceptance and verification](issue-56-verification.md). Live access is unverified;
 the recommended pilot uses the existing manual workflow.
