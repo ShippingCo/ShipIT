@@ -1,5 +1,9 @@
 # Production architecture
 
+Issue #56: [Akash Ganga access research](../integrations/akash-ganga-research.md),
+[acceptance and verification](issue-56-verification.md). Live access is unverified;
+the recommended pilot uses the existing manual workflow.
+
 Issue #55: [validated carrier CSV imports](carrier-csv-imports.md),
 [research decision](../adr/0040-csv-carrier-imports.md), and [verification](issue-55-verification.md).
 
