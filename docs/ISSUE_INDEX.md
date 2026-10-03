@@ -80,6 +80,12 @@ Compact planning map only. Read each GitHub issue for full scope, risks, accepta
 
 ## M5 — Courier Integrations & Pricing
 
+Issue #53's [carrier contract](architecture/carrier-contract.md) defines independent
+manual/file/API capabilities, stable courier/service/destination identity and separate
+selling-rate versus estimated/actual-cost provenance. See its
+[verification record](architecture/issue-53-verification.md) for local implementation status;
+the historical planning labels below are not a live readiness check.
+
 | Issue | Implementation scope | Prerequisites | Initial status |
 | --- | --- | --- | --- |
 | [#53](https://github.com/ShippingCo/ShipIT/issues/53) | Add carrier adapter contract and capability model | [#2](https://github.com/ShippingCo/ShipIT/issues/2), [#3](https://github.com/ShippingCo/ShipIT/issues/3), [#4](https://github.com/ShippingCo/ShipIT/issues/4) | Blocked |
