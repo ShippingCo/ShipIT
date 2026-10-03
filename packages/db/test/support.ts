@@ -363,6 +363,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
           await owner.query(`GRANT SELECT,INSERT ON shipit.carrier_import_runs,shipit.carrier_import_commits,shipit.carrier_import_outcomes TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.carrier_tracking_records') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT,INSERT ON shipit.carrier_tracking_records,shipit.carrier_tracking_decisions,shipit.carrier_tracking_checkpoints TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.carrier_rate_imports') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT,INSERT ON shipit.carrier_rate_imports,shipit.carrier_rate_approvals,shipit.carrier_rate_commands TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
     async prepareEway() {

@@ -4,10 +4,17 @@ import { idempotencyKey } from './validation.ts';
 import type { createCarrierImportService } from './import-service.ts';
 import { CsvError, csvLimits } from './csv.ts';
 import type { createCarrierReconciliationService } from './reconciliation-service.ts';
-export function registerCarriers(app:FastifyInstance,service:ReturnType<typeof createCarrierService>,secure:boolean,imports:ReturnType<typeof createCarrierImportService>,review:ReturnType<typeof createCarrierReconciliationService>) {
+import type { createCarrierRateService } from './rate-service.ts';
+export function registerCarriers(app:FastifyInstance,service:ReturnType<typeof createCarrierService>,secure:boolean,imports:ReturnType<typeof createCarrierImportService>,review:ReturnType<typeof createCarrierReconciliationService>,rates:ReturnType<typeof createCarrierRateService>) {
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
   const key=(request:FastifyRequest)=>idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders);
   const installations='/api/v1/carriers/installations';
+  app.post<{Params:{id:string}}>(installations+'/:id/rates',async(request,reply)=>{
+    try {return reply.code(201).send(await rates.create(session(request),request.params.id,key(request),request.body,request.query,request.id));}
+    catch(error){if(error instanceof CsvError)return reply.code(422).send({error:{code:'VALIDATION_FAILED',message:'Check the rate file.',correlation_id:request.id,details:[{field:'csv',code:error.issue,row:error.row}]}});throw error;}
+  });
+  app.get<{Params:{id:string}}>('/api/v1/carriers/rates/:id',{exposeHeadRoute:false},request=>rates.read(session(request),request.params.id,request.query,request.id));
+  app.post<{Params:{id:string}}>('/api/v1/carriers/rates/:id/approve',request=>rates.approve(session(request),request.params.id,key(request),request.body,request.query,request.id));
   app.get<{Params:{id:string}}>(installations+'/:id/reconciliation',{exposeHeadRoute:false},request=>review.list(session(request),request.params.id,request.query,request.id));
   app.post<{Params:{id:string}}>('/api/v1/carriers/reconciliation/:id/resolve',request=>review.resolve(session(request),request.params.id,key(request),request.body,request.query,request.id));
   app.post<{Params:{id:string}}>(installations+'/:id/imports',async(request,reply)=>{

@@ -42,7 +42,8 @@ No decimal kilograms, dimensional formula or floating-point slab comparison is a
 Each rule is [min_weight_grams,max_weight_grams), with null maximum meaning unbounded within
 the supported safe-integer input range. Destination is an explicit uppercase ASCII key
 [A-Z][A-Z0-9_]{0,31}; there is no city/distance inference, wildcard, hierarchy or alias fallback.
-Services are `standard`, `express`, `same_city`. Carrier normalization remains #59.
+Services are `standard`, `express`, `same_city`. [Carrier rate imports](carrier-rates.md)
+now bind reviewed carrier mapping versions to these service/destination identifiers.
 
 Precedence is exact tenant → one effective published version → exact destination/service →
 one weight interval. There are no priority tiers. Equal-key weight overlaps cannot publish;

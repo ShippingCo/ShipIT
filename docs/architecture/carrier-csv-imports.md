@@ -24,9 +24,12 @@ observations, deduplicates shared external source IDs across file/poll channels 
 records guarded human decisions. CSV validation and row outcomes remain unchanged.
 
 Local installation listings now enable `tracking_import` for this generic CSV service.
-The manual adapter itself still supports only manual observations. All network/rate/
+The manual adapter itself still supports only manual observations. Its network/rate/
 booking capabilities remain false; this does not qualify a carrier-specific file dialect.
 Both local paths use the same installation, immutable references and ingestion boundary.
+
+#59 now enables separate reviewed [selling-rate and purchase-estimate file imports](carrier-rates.md)
+on the local installation. Live rate APIs and external booking remain unavailable.
 
 ## Permissions and API
 
