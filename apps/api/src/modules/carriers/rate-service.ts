@@ -62,7 +62,7 @@ export function createCarrierRateService(database:DatabasePool,clock=()=>new Dat
     create(session:string,installationInput:unknown,keyInput:unknown,input:unknown,query:unknown,correlation:string) {
       const installationId=v.uuid(installationInput,'$'),key=v.keyDigest(v.idempotencyKey(keyInput));
       return scoped(session,query,correlation,async({access:s,pricingPublish})=>{
-        await carriers.installation(s,installationId);
+        await carriers.fileInstallation(s,installationId);
         const parsed=rateUpload(input),fingerprint=digest({installationId,input});
         const prior=await r.prior(s,'preview',key,fingerprint);
         if(prior)return summary(s,prior.import_id);
@@ -94,7 +94,7 @@ export function createCarrierRateService(database:DatabasePool,clock=()=>new Dat
       const id=v.uuid(idInput,'$'),key=v.keyDigest(v.idempotencyKey(keyInput)),body=v.object(input,['expected_version']);
       const expected=integer(body.expected_version,'expected_version',1,2),fingerprint=digest({id,expected});
       return scoped(session,query,correlation,async({access:s,pricingDraft,pricingPublish})=>{
-        const run=await r.get(s,id);
+        const run=await r.get(s,id);await carriers.fileInstallation(s,run.installation_id);
         if(await r.prior(s,'approve',key,fingerprint))return summary(s,id);
         const approved=await r.approval(s,id);
         if(approved||expected!==1)throw new HttpError('VERSION_CONFLICT');

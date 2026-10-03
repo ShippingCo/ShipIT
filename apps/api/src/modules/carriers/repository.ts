@@ -4,11 +4,16 @@ import type { Dimensions, Mapping, Observation } from './contract.ts';
 import { record } from './reconciliation-repository.ts';
 const read = ['carriers.read','carriers.write'] as const;
 const write = ['carriers.write'] as const;
-export interface InstallationRow { id:string; organization_id:string; franchise_id:string; courier_id:string; label:string; revision:number; command_id:string; created_at:Date }
+export interface InstallationRow { id:string; organization_id:string; franchise_id:string; courier_id:string; label:string; revision:number; command_id:string; created_at:Date; file_import:boolean }
 export interface MappingRow { id:string; installation_id:string; kind:'service'|'location'; source_code:string; normalized_id:string; version:number }
 export interface ReferenceRow { id:string; installation_id:string; parcel_id:string; external_docket:string; version:number; dimensions:Dimensions }
 export interface ObservationRow { id:string; reference_id:string; parcel_version:number; evidence:Observation; review_state:'pending_review' }
 export interface CommandResult { id:string; version:number }
+export async function fileInstallation(s:TenantAccess,id:string) {
+  const row=await installation(s,id);
+  if(!row.file_import)throw new HttpError('ACTION_FORBIDDEN');
+  return row;
+}
 export async function installation(s:TenantAccess,id:string) {
   const row=(await scopedQuery<InstallationRow>(s,['carriers.read','carriers.write'],`SELECT * FROM shipit.carrier_installations
     WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[id])).rows[0];
@@ -37,10 +42,10 @@ export async function receipt(s:TenantAccess,id:string,operation:string,key:stri
     SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12 WHERE {{franchise:$13:$2}}`,
   [id,c.permittedFranchiseIds[0],c.actor.id,operation,key,fingerprint,result.id,result.version,reason,result,c.correlationId,now,c.organizationId]);
 }
-export async function addInstallation(s:TenantAccess,id:string,courier:string,label:string,command:string,now:Date) {
+export async function addInstallation(s:TenantAccess,id:string,courier:string,label:string,command:string,now:Date,fileImport=true) {
   const c=assertTenantAccess(s,write);
-  await scopedQuery(s,['carriers.write'],`INSERT INTO shipit.carrier_installations(id,organization_id,franchise_id,courier_id,label,command_id,created_at)
-    SELECT $1,{{organization}},$2,$3,$4,$5,$6 WHERE {{franchise:$7:$2}}`,[id,c.permittedFranchiseIds[0],courier,label,command,now,c.organizationId]);
+  await scopedQuery(s,['carriers.write'],`INSERT INTO shipit.carrier_installations(id,organization_id,franchise_id,courier_id,label,command_id,created_at,file_import)
+    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$8 WHERE {{franchise:$7:$2}}`,[id,c.permittedFranchiseIds[0],courier,label,command,now,c.organizationId,fileImport]);
 }
 export async function courier(s:TenantAccess,id:string) {
   if(!(await scopedQuery(s,['carriers.read','carriers.write'],`SELECT id FROM shipit.carrier_installations
@@ -90,7 +95,7 @@ export async function ingest(s:TenantAccess,id:string,parcelId:string,referenceI
   await record(s,id,parcelId,referenceId,evidence,statusCode,id);
 }
 export async function list(s:TenantAccess,kind:'installations'|'mappings'|'references'|'observations',parent:string|null,after:string|null,limit:number) {
-  if(kind==='installations')return (await scopedQuery<{id:string}>(s,['carriers.read'],`SELECT id,courier_id,label,revision,command_id,created_at FROM shipit.carrier_installations
+  if(kind==='installations')return (await scopedQuery<{id:string}>(s,['carriers.read'],`SELECT id,courier_id,label,revision,command_id,created_at,file_import FROM shipit.carrier_installations
     WHERE {{franchise:organization_id:franchise_id}} AND ($1::uuid IS NULL OR id>$1) ORDER BY id LIMIT $2`,[after,limit+1])).rows;
   if(kind==='mappings')return (await scopedQuery<{id:string}>(s,['carriers.read'],`SELECT id,installation_id,kind,source_code,normalized_id,version FROM shipit.carrier_mappings
     WHERE {{franchise:organization_id:franchise_id}} AND ($1::uuid IS NULL OR id>$1) AND installation_id=$3 ORDER BY id LIMIT $2`,[after,limit+1,parent])).rows;

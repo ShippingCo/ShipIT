@@ -260,3 +260,6 @@ all cases also remain mandatory in `pnpm db:local quality` and existing CI.
 
 [Carrier reconciliation](carrier-reconciliation.md) adds #58's deduplicated review queue,
 guarded T04 application and last-known freshness. [Verification](issue-58-verification.md).
+
+[Akash Ganga manual pilot](carrier-pilot.md) qualifies #60's manual-only path,
+scoped operational health and recovery. [Verification](issue-60-verification.md).

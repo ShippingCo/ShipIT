@@ -9,6 +9,7 @@ export function registerCarriers(app:FastifyInstance,service:ReturnType<typeof c
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
   const key=(request:FastifyRequest)=>idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders);
   const installations='/api/v1/carriers/installations';
+  app.get<{Params:{id:string}}>(installations+'/:id/health',{exposeHeadRoute:false},request=>service.health(session(request),request.params.id,request.query,request.id));
   app.post<{Params:{id:string}}>(installations+'/:id/rates',async(request,reply)=>{
     try {return reply.code(201).send(await rates.create(session(request),request.params.id,key(request),request.body,request.query,request.id));}
     catch(error){if(error instanceof CsvError)return reply.code(422).send({error:{code:'VALIDATION_FAILED',message:'Check the rate file.',correlation_id:request.id,details:[{field:'csv',code:error.issue,row:error.row}]}});throw error;}

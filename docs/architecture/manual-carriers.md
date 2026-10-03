@@ -51,8 +51,9 @@ Bodies reject unknown keys; callers cannot provide actor, ownership, receive tim
 
 | Method and path | Body / result |
 | --- | --- |
-| POST `/api/v1/carriers/installations` | `{label, courier_id?}`; courier ID omitted/null creates an identity |
+| POST `/api/v1/carriers/installations` | `{label, courier_id?, file_import?}`; courier ID omitted/null creates an identity; explicit false disables all file imports |
 | GET `/api/v1/carriers/installations` | Scoped manual installations, independent capabilities; every network capability false |
+| GET `/api/v1/carriers/installations/:id/health` | Scoped manual source, age, actor and unresolved review counts; see [pilot runbook](carrier-pilot.md) |
 | POST `/api/v1/carriers/installations/:id/mappings` | `{kind, source_code, normalized_id, expected_version, reason_code}` |
 | GET `/api/v1/carriers/installations/:id/mappings` | Immutable service/location mapping versions |
 | POST `/api/v1/parcels/:id/carriers/references` | `{installation_id, external_docket, service_code, origin_code, destination_code, expected_version, reason_code}` |

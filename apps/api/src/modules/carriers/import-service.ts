@@ -53,7 +53,7 @@ export function createCarrierImportService(database:DatabasePool,clock=()=>new D
     const installationId=v.uuid(installationInput,'$'),q=v.selection(query),key=v.keyDigest(v.idempotencyKey(keyInput));
     // Authorization precedes parsing and every tenant lookup. Raw bytes live only in this request.
     return withCarrierScope(database,session,q.organizationId,q.franchiseId,'carriers.write',correlation,async({access:s})=>{
-      const installation=await r.installation(s,installationId),parsed=upload(body),fingerprint=digest({installationId,body});
+      const installation=await r.fileInstallation(s,installationId),parsed=upload(body),fingerprint=digest({installationId,body});
       const old=await ir.priorRun(s,key,fingerprint);
       if(old){const saved=await ir.run(s,old.id);return summarize(saved,await ir.outcomes(s,saved.id));}
       const now=clock(),seen=new Map<string,string>();
@@ -80,7 +80,7 @@ export function createCarrierImportService(database:DatabasePool,clock=()=>new D
     const id=v.uuid(idInput,'$'),q=v.selection(query);
     return withCarrierScope(database,session,q.organizationId,q.franchiseId,'carriers.read',correlation,async({access:s,agentOnly})=>{
       if(agentOnly)throw new HttpError('ACTION_FORBIDDEN');
-      const run=await ir.run(s,id);await r.installation(s,run.installation_id);
+      const run=await ir.run(s,id);await r.fileInstallation(s,run.installation_id);
       return summarize(run,await ir.outcomes(s,id));
     });
   }
@@ -90,13 +90,13 @@ export function createCarrierImportService(database:DatabasePool,clock=()=>new D
     const selected=(b.rows as number[]).slice().sort((a,b)=>a-b);
     const scope=<T>(work:(s:TenantAccess)=>Promise<T>)=>withCarrierScope(database,session,q.organizationId,q.franchiseId,'carriers.write',correlation,({access})=>work(access));
     await scope(async s=>{
-      const run=await ir.run(s,id);await r.installation(s,run.installation_id);
+      const run=await ir.run(s,id);await r.fileInstallation(s,run.installation_id);
       if(selected.some(n=>!run.rows.some(row=>row.row===n&&!row.error)))throw new HttpError('VALIDATION_FAILED');
       await ir.commitIntent(s,randomUUID(),id,key,digest({id,rows:selected}),clock());
     });
     // Deliberately sequential, independently atomic rows. A dependency failure leaves later rows unapplied.
     for(const number of selected)await scope(async s=>{
-      const run=await ir.run(s,id),installation=await r.installation(s,run.installation_id);
+      const run=await ir.run(s,id),installation=await r.fileInstallation(s,run.installation_id);
       if((await ir.outcomes(s,id)).some(o=>o.row_number===number))return;
       const row=run.rows.find(row=>row.row===number)!,c=row.candidate!,now=clock();
       const parcel=await ir.docket(s,c.docket);

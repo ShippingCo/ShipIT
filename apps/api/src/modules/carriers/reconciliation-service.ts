@@ -23,7 +23,7 @@ export function createCarrierReconciliationService(database:DatabasePool,key:Buf
   async function list(session:string,idInput:unknown,query:unknown,correlation:string) {
     const id=v.uuid(idInput,'$'),q=v.selection(query,true);
     return withCarrierScope(database,session,q.organizationId,q.franchiseId,'carriers.read',correlation,async({access:s,agentOnly,revision})=>{
-      if(agentOnly)throw new HttpError('ACTION_FORBIDDEN');await r.installation(s,id);
+      if(agentOnly)throw new HttpError('ACTION_FORBIDDEN');const installation=await r.installation(s,id);
       const binding=digest({id,q:{organization:q.organizationId,franchise:q.franchiseId,limit:q.limit},actor:s.context.actor.id,revision});
       const rows=await rr.queue(s,id,q.cursor?codec.decode(q.cursor,binding):null,q.limit),items=[];
       for(const row of rows.slice(0,q.limit)){
@@ -37,7 +37,7 @@ export function createCarrierReconciliationService(database:DatabasePool,key:Buf
       }
       const check=await rr.checkpoint(s,id),fresh=await rr.freshness(s,id);
       return {items,page:{has_more:rows.length>q.limit,next_cursor:rows.length>q.limit?codec.encode(binding,items.at(-1)!.id):null},
-        freshness:{...fresh,as_of:clock().toISOString(),state:check?.state??'not_connected',checked_at:check?.checked_at??null,
+        freshness:{...fresh,as_of:clock().toISOString(),state:!installation.file_import&&!check?'manual_only':check?.state??'not_connected',checked_at:check?.checked_at??null,
           checkpoint_version:check?.version??0,last_known:true}};
     });
   }

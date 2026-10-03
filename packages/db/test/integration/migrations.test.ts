@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 40 });
+  assert.deepEqual(await database.migrate(), { applied: 41 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 40);
+  assert.equal(initial.length, 41);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -87,7 +87,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 39 });
+  assert.deepEqual(await database.migrate(), { applied: 40 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -103,7 +103,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1790960400000-notification-automation',
     '1791046800000-route-delay-fanout',
     '1791133200000-secure-delivery-proof',
-    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers','1791997200000-carrier-csv-imports','1792083600000-carrier-reconciliation','1792170000000-carrier-rates',
+    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers','1791997200000-carrier-csv-imports','1792083600000-carrier-reconciliation','1792170000000-carrier-rates','1792256400000-manual-carrier-qualification',
   ]);
 });
 
@@ -193,5 +193,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 40 });
+  assert.deepEqual(await database.migrate(), { applied: 41 });
 });

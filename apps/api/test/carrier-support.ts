@@ -17,7 +17,7 @@ export async function carrierSetup(t:Parameters<typeof bookingSetup>[0]) {
   }
   const install=()=>request('POST','carriers/installations',{label:'SYN-CARRIER'});
   const link=(installation:string,body=referenceInput(installation),key=randomUUID(),id=parcel)=>request('POST',`parcels/${id}/carriers/references`,body,s.local.token,key);
-  const observe=(reference:string,body=observationInput(reference),key=randomUUID())=>request('POST',`parcels/${parcel}/carriers/observations`,body,s.local.token,key);
+  const observe=(reference:string,body:unknown=observationInput(reference),key=randomUUID())=>request('POST',`parcels/${parcel}/carriers/observations`,body,s.local.token,key);
   const counts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.carrier_commands) commands,
     (SELECT count(*)::int FROM shipit.carrier_references) refs,(SELECT count(*)::int FROM shipit.carrier_observations) observations,
     (SELECT count(*)::int FROM shipit.audit_history WHERE resource_type='carrier') audits`)).rows[0];

@@ -12,8 +12,11 @@ export function code(value: unknown): string {
   return value;
 }
 export function installation(value: unknown) {
-  const b = object(value, ['label','courier_id']);
-  return { label: code(b.label), courier_id: b.courier_id === undefined || b.courier_id === null ? null : uuid(b.courier_id, '$') };
+  const b = object(value, ['label','courier_id','file_import']);
+  if (b.file_import !== undefined && typeof b.file_import !== 'boolean') fail();
+  // Preserve old command fingerprints and generic installations when omitted.
+  return { label: code(b.label), courier_id: b.courier_id === undefined || b.courier_id === null ? null : uuid(b.courier_id, '$'),
+    ...(b.file_import === undefined ? {} : {file_import:b.file_import as boolean}) };
 }
 export function mapping(value: unknown) {
   const b = object(value, ['kind','source_code','normalized_id','expected_version','reason_code']);

@@ -83,3 +83,4 @@ Live authentication delivery setup remains deferred to M3.
 - [0040 — Bounded carrier CSV imports](0040-csv-carrier-imports.md)
 - [0041 — Reviewed carrier tracking reconciliation](0041-carrier-reconciliation.md)
 - [0042 — Reviewed carrier rate imports](0042-reviewed-carrier-rates.md)
+- [0043 — Manual carrier qualification](0043-manual-carrier-qualification.md)
