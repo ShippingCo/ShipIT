@@ -203,3 +203,125 @@ with `SYN_REVIEW`. A new report shows ₹0 gross, ₹134 collections and ₹134 
 Record a ₹134 actual refund with a synthetic returned-to reference: a new report
 shows ₹134 refunds and zero credit; old reports and the issued statement remain
 unchanged. No real transfer occurs. See the [verification record](issue-62-verification.md).
+
+## To-Pay ageing and collection reconciliation (#63)
+
+The user selected the original report scope on 2026-10-04 after reviewing the
+missing expanded finance producers. This does **not** complete all of #63.
+Monthly debtor terms/opening balances, combined receipt allocations, unallocated
+advances and producer-backed overdue alerts remain blocked by #137/#138/#141/#142.
+ADR 0045's correction/refund equations and statement policy remain unchanged.
+
+`POST /api/v1/reports/ageing` accepts the usual organization/franchise selection,
+Idempotency-Key and `{anchor:"booking"|"due", status:null|parcelStatus,
+customer_id:null|UUID, balances:"outstanding"|"all"}`. Defaults are booking age,
+all statuses, all authorized customers and outstanding only. Unknown fields,
+arbitrary historical cutoffs and policy overrides are rejected. This is one
+franchise per snapshot; R11 reads/E03 exports and creating-actor ownership apply.
+`GET /api/v1/reports/ageing/:id` (offset in multiples of 100) and `/export` use
+the same stored rows. Every read/export rechecks current membership. Unknown
+and foreign customer IDs or snapshots return the same controlled not-found.
+
+Each booking appears once with its parcels. A status filter matches any parcel
+and includes the whole booking debt once; there is no invented per-parcel split.
+All booking dates are eligible, so old debt is never hidden by a recent cohort.
+Delivery never settles debt. Original gross includes booked tax and rounding;
+adjusted gross subtracts approved reductions. Net collections = collections −
+reversals − actual refunds. Outstanding = max(adjusted gross − net collections,0);
+refundable credit = max(net collections − adjusted gross,0), kept separate.
+Customer totals group the existing private booking customer ID, not a newly
+invented debtor account. Read-only drill-through retains entry IDs, sequences,
+reversal links, correction IDs and parcel status without contacts or payment
+external references. Cash custody is not a reporting balance input.
+
+Age is the difference between Asia/Kolkata calendar dates at capture, with
+exclusive buckets 0–30, 31–60 and 61+ days. Negative ages are explicitly Future;
+missing anchors are Unknown. Booking age is never labelled days overdue. Due
+dates and overdue flags remain null until a reviewed due-date producer exists;
+selecting due-date age therefore puts current rows into Unknown. It never
+substitutes booking date for a missing due date. Bucket totals age remaining
+outstanding only, not original gross or settled amounts.
+
+Capture uses one PostgreSQL 18 statement snapshot across all sources; as-of
+means facts visible to that query, not arbitrary backdated reconstruction.
+Totals, customer groups, history, pages and formula-safe CSV use stored evidence.
+The CSV includes the saved filter, source versions and collection/correction
+history. The current 5,000-row/8 MiB/24-hour and actor quota bounds apply; narrow
+by customer/status on REPORT_LIMIT_EXCEEDED. Retrying uncertain creation must
+reuse the exact key/body; changed intent conflicts. Expiry requires a new
+snapshot. Source/audit failure rolls back capture. Access is audited without
+customer contact or raw request logging.
+
+No schema, grant or configuration change beyond existing migration 43 and
+report grants is needed. Released migrations and fixture counts remain unchanged.
+Compatible rollback removes these routes/UI; saved snapshots expire normally.
+No background worker, provider call, LLM, auto-collection or mutable balance is
+introduced. Broader account workflows stay with their owning issues.
+
+Design sources: reuse [ADR 0044](../adr/0044-bounded-report-snapshots.md) and
+[ADR 0045](../adr/0045-sales-and-financial-evidence.md), especially
+[PostgreSQL statement snapshots](https://www.postgresql.org/docs/18/transaction-iso.html).
+Adopt the [distinction between due-date ageing and invoice age](https://stripe.com/resources/more/what-is-an-aging-report-what-is-in-one-and-how-to-use-it),
+using the issue's three buckets and retaining unknown due terms. A due-date
+policy and second financial authority are deliberately not inferred.
+
+Verification: `pnpm db:local demo:reports` now includes the ageing database
+scenarios alongside snapshot/storage checks. `pnpm test:api`, `pnpm test:web`
+and `pnpm db:local quality` include the focused business/UI/database regressions.
+The real database fixture delivers a synthetic parcel through the proof service,
+leaves it unpaid, records a partial collection and reversal, and reconciles the
+saved CSV to its ledger without multiplying its two parcels.
+
+Manual check: start the existing loopback `apps/api/test/report-browser-demo.ts`
+fixture and Vite as described above, open Reports → To-Pay ageing, create a
+snapshot, inspect Collection history and parcels, reload, then download CSV.
+Switch Age from to Due date and create a new snapshot: dates/age must be Unknown.
+Set `REPORT_DEMO_AGEING=1` before starting the fixture to deliver one parcel,
+collect ₹10 and reverse ₹4 through the real services. Filter Delivered and verify
+₹128 outstanding from ₹134 tax-inclusive gross. The second parcel remains booked;
+the obligation must still appear once. All dates includes the
+existing future-dated synthetic booking, labelled Future rather than overdue.
+
+### Local verification of the original #63 scope — 2026-10-04
+
+Base: `3eb0e0142d63a13806e2f100eed2bdaf84160421`, latest main containing
+PR #162; clean issue branch `issue-63-to-pay-ageing`. Original prerequisites
+#29/#61 are merged. #62's head passed all seven remote checks, including
+PostgreSQL integration; no subsequent payment-race fix was found. Expanded
+finance prerequisites remain open. No commit, push, PR or deployment was made.
+
+- Passed `pnpm db:local demo:reports`: eight real PostgreSQL scenarios, including
+  three ageing scenarios for tax-inclusive debt, delivery, reversals, refunds,
+  A/B/C authorization, restart, exact replay, expiry and atomic failure.
+- Passed focused ageing business tests (3) and UI tests (2). Initial UI failures
+  exposed select accessible-name ambiguity, fixed with explicit labels. The
+  initial DB failure was a test using a nonexistent membership column; the final
+  test uses the real membership revocation service. The full focused suite passed
+  after that correction, with no weakened assertion or increased timeout.
+- Full `pnpm db:local quality` passed 35 tooling tests, planning, lint and tenant
+  checks, five typechecks, 22 testkit and 12 DB harness unit tests, 658 API tests,
+  196 web tests, three real object-store contract tests and 74 schema tests.
+  Its 47-file API database group reached `DB_TEST_TIMEOUT` at the unchanged
+  1,800-second Windows aggregate cap. **The full quality gate did not pass.**
+- Progress diagnostics showed continuously registered fixtures and advancing
+  test files, with no long query/lock wait in the sampled database activity.
+  The final-only reporter did not preserve a complete API result before timeout.
+  These samples do not establish a complete root cause or prove every file passed.
+  No overlapping database suite ran; no blind aggregate retry was launched.
+  The inherited #62 payment-race failure remains unexplained, not claimed fixed.
+- The separately required final `pnpm build` passed API and web production builds.
+  `pnpm check:migrations` confirms all 43 released migrations unchanged. A file
+  hash manifest confirmed reviewed source stayed unchanged during the quality run.
+- Real browser on an isolated local port verified delivered/unpaid filtering,
+  the ₹134 − (₹10 − ₹4) = ₹128 calculation, two parcels counted once, history,
+  reload, explicit unknown due-date bucket, keyboard capture and a 390px viewport
+  without horizontal overflow. Browser warning/error log was empty. CSV initiation
+  succeeded but the browser download event timed out; native downloaded-file
+  delivery remains unverified. API tests independently verified CSV bytes/sums.
+- Disposable database/object-store/browser fixtures were cleaned up. The user's
+  pre-existing localhost:5173 server was preserved. No production data was used.
+
+The original implementation is reviewable, but aggregate DB verification and
+expanded producer-dependent acceptance remain incomplete; do not close #63 or
+claim merge readiness from these results. Current-change remote CI is not run
+because publication is outside authorization.

@@ -1,6 +1,7 @@
 export type * from './tax.ts';
 export * from './report.ts';
 export * from './sales.ts';
+export * from './ageing.ts';
 /** Minimal browser-safe onboarding and shell contracts. No authentication secrets or DB rows. */
 export type OperatorRole = 'org_admin' | 'franchise_admin' | 'operator' | 'dispatcher' | 'delivery_agent' | 'accountant' | 'read_only';
 export interface PermittedFranchise {

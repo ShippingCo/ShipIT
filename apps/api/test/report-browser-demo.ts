@@ -4,6 +4,9 @@ import { tmpdir } from 'node:os';
 import { join,dirname } from 'node:path';
 import type { TestContext } from 'node:test';
 import { cleanupRegisteredResources } from '../../../packages/db/test/support.ts';
+import { randomUUID } from 'node:crypto';
+import { org,A } from './audit-support.ts';
+import { startTestDelivery,testDeliveryCode } from './delivery-support.ts';
 import { paymentSetup,collectionInput } from './payment-support.ts';
 import { buildServer } from '../src/server.ts';
 import { parseEnvironment } from '../src/env.ts';
@@ -15,7 +18,14 @@ const cleanup:(()=>unknown)[]=[],t={after:(f:()=>unknown)=>cleanup.push(f)} as u
 let finish!:()=>void;const stop=new Promise<void>(resolve=>{finish=resolve;});process.once('SIGINT',finish);process.once('SIGTERM',finish);
 try {
   const s=await paymentSetup(t);await s.db.prepareReports();
-  if(process.env.REPORT_DEMO_PAID==='1'){
+  if(process.env.REPORT_DEMO_AGEING==='1'){
+    const paid=await s.pay(collectionInput(1000));if(paid.statusCode!==200)throw new Error('SYNTHETIC_PAYMENT_FAILED');
+    if((await s.reverse(paid.json().entry.id,400)).statusCode!==200)throw new Error('SYNTHETIC_REVERSAL_FAILED');
+    const agent=await s.grant('delivery_agent',[A]),parcel=s.booked.parcels[0].id,started=await startTestDelivery(s,parcel,agent);
+    const proof=await testDeliveryCode(s,parcel),key=randomUUID();
+    await started.service.complete(agent.token,parcel,{organization_id:org,franchise_id:A},key,['Idempotency-Key',key],
+      {expected_version:5,challenge_ref:started.state.challenge_ref,challenge_version:started.state.challenge_version,proof},false,randomUUID());
+  } else if(process.env.REPORT_DEMO_PAID==='1'){
     const paid=await s.pay(collectionInput(s.gross));if(paid.statusCode!==200)throw new Error('SYNTHETIC_PAYMENT_FAILED');
   }
   const webOrigin=process.env.REPORT_DEMO_WEB_PORT==='5174'?'http://localhost:5174':'http://localhost:5173';

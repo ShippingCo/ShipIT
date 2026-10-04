@@ -677,3 +677,6 @@ export bytes, performs no network or storage write, and cannot change money.
 | --- | --- | --- |
 | apps/web/src/test/sales.test.tsx: creates through the labelled keyboard form, reloads saved filters, shows zero sales and requests the saved CSV | preserve | reports |
 | apps/web/src/test/sales.test.tsx: retries the exact uncertain intent and denies exports for a read-only report grant | preserve | reports |
+
+| apps/web/src/test/ageing.test.tsx: uses explicit age and status filters, restores saved evidence and exports the saved ID | preserve | reports |
+| apps/web/src/test/ageing.test.tsx: keeps uncertain intent after edits and recovers expired reads without granting export | preserve | reports |
