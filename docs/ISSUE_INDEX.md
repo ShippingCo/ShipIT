@@ -99,6 +99,14 @@ the historical planning labels below are not a live readiness check.
 
 ## M6 — Reporting, Compliance & Operations
 
+Local #61 implementation (2026-10-04, not yet published/merged): the
+[report guide](architecture/reporting.md) defines single-franchise booking snapshots,
+separate financial measures, source versions, unknown evidence, Kolkata cutoff rules,
+limits and runtime grants. See [verification](architecture/issue-61-verification.md)
+and [PR draft](architecture/issue-61-pr-draft.md). Its actual #15/#21/#23/#29 prerequisites
+and #60 were verified merged; historical table labels below are not readiness evidence.
+Downstream consumers remain separate issues and require their own prerequisites.
+
 | Issue | Implementation scope | Prerequisites | Initial status |
 | --- | --- | --- | --- |
 | [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Implement scoped reporting queries and safe CSV exports | [#15](https://github.com/ShippingCo/ShipIT/issues/15), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#23](https://github.com/ShippingCo/ShipIT/issues/23), [#29](https://github.com/ShippingCo/ShipIT/issues/29) | Blocked |

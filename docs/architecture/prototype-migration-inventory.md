@@ -656,3 +656,14 @@ These tests preserve scoped staff ownership, private notes, customer reply recov
 | apps/web/src/test/support.test.tsx: keeps drafts after stale state and denies read-only staff mutation | preserve | assistant |
 | apps/web/src/test/support.test.tsx: requires a reason to reopen a resolved case | preserve | assistant |
 | apps/web/src/test/support.test.tsx: gives the support dialog an accessible name, handles Escape and restores keyboard focus | preserve | assistant |
+
+## Issue #61 scoped report regression additions
+
+Reports use the production scoped API and server snapshots. The new timer only revokes
+a temporary download Blob URL; it schedules no financial or messaging effect.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/reports.test.tsx: keyboard form creates a snapshot and reloads its server totals with empty export | preserve | reports |
+| apps/web/src/test/reports.test.tsx: reload keeps snapshot identity, denies export without grant and shows safe expiry errors | preserve | reports |
+| apps/web/src/test/reports.test.tsx: an uncertain capture retries the same immutable request after editing the draft | preserve | reports |

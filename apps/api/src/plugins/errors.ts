@@ -3,6 +3,9 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  REPORT_LIMIT_EXCEEDED:[413,'Report is too large. Choose a shorter date range.'],
+  REPORT_QUOTA_EXCEEDED:[429,'Twenty saved reports are still active. Reuse a saved report or wait for expiry.'],
+  REPORT_EXPIRED:[410,'Report has expired. Create a new snapshot with a new request key.'],
   DELIVERY_PROOF_INVALID:[422,'Recipient proof was not accepted.'],
   DELIVERY_CHALLENGE_EXPIRED:[409,'Delivery challenge has expired. Replace it before retrying.'],
   DELIVERY_CHALLENGE_LOCKED:[409,'Delivery challenge is locked and requires independent review.'],

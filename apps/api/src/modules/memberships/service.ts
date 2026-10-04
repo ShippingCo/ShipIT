@@ -620,6 +620,23 @@ export async function withPaymentScope<T>(database:DatabasePool,sessionToken:str
   });
 }
 
+/** Report evidence uses R11 financial reads and E03 exports; technical capture grants no money mutation. */
+export async function withReportScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,token);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+    const permitted=exporting?memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds):paymentScope('payments.read',memberships,all);
+    if(!permitted.includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+    return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,
+      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+  });
+}
+
 /** R13 retrieval owns only canonical materialization and a minimum immutable payment entry. */
 export async function withReceiptScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,franchiseId:string,
   correlationId:string,work:(scopes:import('../receipts/types.ts').ReceiptScopes)=>Promise<T>):Promise<T> {

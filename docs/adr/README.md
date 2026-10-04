@@ -84,3 +84,4 @@ Live authentication delivery setup remains deferred to M3.
 - [0041 — Reviewed carrier tracking reconciliation](0041-carrier-reconciliation.md)
 - [0042 — Reviewed carrier rate imports](0042-reviewed-carrier-rates.md)
 - [0043 — Manual carrier qualification](0043-manual-carrier-qualification.md)
+- [0044 — Bounded report snapshots](0044-bounded-report-snapshots.md)
