@@ -348,6 +348,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.payment_commands,shipit.payment_entries TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.financial_changes') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT,INSERT ON shipit.financial_changes,shipit.account_statements,shipit.account_statement_lines,shipit.financial_access_events TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,entry_id,http_status,result,committed_at,retain_until) ON shipit.payment_commands TO ${identifier(resource.runtimeRole)}`);
         // PostgreSQL requires a column UPDATE privilege for FOR UPDATE. The immutable
         // obligation trigger still rejects every actual UPDATE, including id=id.
@@ -357,6 +359,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     },
     async prepareReports() {
       await handle.preparePayments();
+      await handle.prepareReceipts();
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.report_snapshots,shipit.report_access_events TO ${identifier(resource.runtimeRole)}`);

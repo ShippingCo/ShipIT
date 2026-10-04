@@ -192,3 +192,15 @@ work may start as its original contracts permit. Status labels are not proof of 
 Existing issues #53, #59, #61–#64, #66–#67, #69–#72 and #74–#76 contain labelled
 additions preserving every original body and acceptance criterion. All new issues
 feed the #76 pilot gate; no M8 commercial issue is a prerequisite for this expansion.
+
+## Issue #62 local implementation note (2026-10-04)
+
+The sales/GST implementation and necessary bounded financial producers are
+documented in [reporting](architecture/reporting.md),
+[ADR 0045](adr/0045-sales-and-financial-evidence.md) and the
+[verification record](architecture/issue-62-verification.md).
+Combined prerequisites remain #21, #30, #61, #139 and #142. The local producer
+subset supports reductions, actual refunds and account statements without duplicate
+sales; it does not close the wider credit/allocation workflows in #137-#142.
+Initial tracker status above is historical; publication, review and dependency
+closure must be verified before claiming the GitHub issue complete.

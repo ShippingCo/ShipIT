@@ -36,8 +36,11 @@ export function createPaymentService(database:DatabasePool) {
       }
       const before=await repository.projection(s.command,o);
       if(before.version===2147483647)throw new HttpError('VERSION_CONFLICT');
-      if(target)reverse(BigInt(o.total_paise),BigInt(before.collected_paise),BigInt(target.amount_paise),await repository.reversed(s.command,o,target.id),input.amount_paise);
-      else collect(BigInt(o.total_paise),BigInt(before.collected_paise),input.amount_paise);
+      if(target)reverse(BigInt(Math.max(before.gross_paise,before.collected_paise)),BigInt(before.collected_paise),BigInt(target.amount_paise),await repository.reversed(s.command,o,target.id),input.amount_paise);
+      else {
+        if(before.outstanding_paise===0)throw new HttpError('PAYMENT_OVER_COLLECTION');
+        collect(BigInt(before.gross_paise),BigInt(before.collected_paise),input.amount_paise);
+      }
       await repository.reserve(s.command,command,o,key,intent,input,targetId,time);
       const entry=await repository.append(s.command,command,randomUUID(),o,before.version+1,input,target,time);
       const payment=await repository.projection(s.command,o),result={payment,entry:repository.entryDto(entry)};

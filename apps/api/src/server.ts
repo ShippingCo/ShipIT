@@ -33,6 +33,8 @@ import { createReceiptService } from './modules/receipts/service.ts';
 import { registerReceipts } from './modules/receipts/routes.ts';
 import { createPaymentService } from './modules/payments/service.ts';
 import { createReportService } from './modules/reports/service.ts';
+import { createSalesService } from './modules/reports/sales-service.ts';
+import { createFinanceService } from './modules/reports/finance-service.ts';
 import { registerReports } from './modules/reports/routes.ts';
 import { registerPayments } from './modules/payments/routes.ts';
 import { createRouteService } from './modules/routes/service.ts';
@@ -143,7 +145,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
-      registerReports(instance,createReportService(database),config.environment!=='developer');
+      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');

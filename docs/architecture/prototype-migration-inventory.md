@@ -667,3 +667,13 @@ a temporary download Blob URL; it schedules no financial or messaging effect.
 | apps/web/src/test/reports.test.tsx: keyboard form creates a snapshot and reloads its server totals with empty export | preserve | reports |
 | apps/web/src/test/reports.test.tsx: reload keeps snapshot identity, denies export without grant and shows safe expiry errors | preserve | reports |
 | apps/web/src/test/reports.test.tsx: an uncertain capture retries the same immutable request after editing the draft | preserve | reports |
+
+## Issue #62 reviewed additions
+
+Sales uses the scoped API seam. Its one-second object-URL cleanup timer holds only
+export bytes, performs no network or storage write, and cannot change money.
+
+| Test | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/sales.test.tsx: creates through the labelled keyboard form, reloads saved filters, shows zero sales and requests the saved CSV | preserve | reports |
+| apps/web/src/test/sales.test.tsx: retries the exact uncertain intent and denies exports for a read-only report grant | preserve | reports |

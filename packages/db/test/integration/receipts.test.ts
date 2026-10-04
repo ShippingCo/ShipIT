@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 import { provisionDatabase } from '../support.ts';
 import { receiptSetup } from '../../../../apps/api/test/receipt-support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
-import { createPaymentService } from '../../../../apps/api/src/modules/payments/service.ts';
 import { createReceiptService } from '../../../../apps/api/src/modules/receipts/service.ts';
 import { collectionInput } from '../../../../apps/api/test/payment-support.ts';
 import { org,A,B,otherOrg } from '../../../../apps/api/test/audit-support.ts';
@@ -16,7 +15,21 @@ await test('populated pre-30 migration rolls back on failure, preserves source f
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:18}),{applied:18});
  const migrate=db.migrate;db.migrate=async()=>({applied:0});const s=await bookingSetup(t,db);await db.preparePayments();
  const booking=await s.book();assert.equal(booking.statusCode,201,booking.body);
- const key=randomUUID(),paid=await createPaymentService(s.pool).execute(s.local.token,booking.json().id,null,{organization_id:org,franchise_id:A},key,['idempotency-key',key],collectionInput(100),'payments.collect',randomUUID());
+ // Seed the historical v18 producer with its real constraints. Today's payment service
+ // correctly requires migration 43, so it must not be used to manufacture old data.
+ const legacy=await db.ownerPool().connect(),command=randomUUID(),entry=randomUUID(),reference=randomUUID(),correlation=randomUUID(),at=new Date().toISOString();
+ try {
+  await legacy.query('BEGIN');
+  await legacy.query(`INSERT INTO shipit.payment_commands(id,organization_id,franchise_id,principal_id,booking_id,obligation_id,operation_id,key_digest,fingerprint,input,correlation_id,occurred_at)
+   VALUES($1,$2,$3,$4,$5,$6,'api.v1.payments.collect',$7,$7,$8,$9,$10)`,[command,org,A,s.local.id,booking.json().id,booking.json().payment_obligation.id,'a'.repeat(64),collectionInput(100,reference),correlation,at]);
+  await legacy.query(`INSERT INTO shipit.payment_entries(id,organization_id,franchise_id,booking_id,obligation_id,command_id,kind,amount_paise,currency,context,method,collection_reference,sequence,actor_id,correlation_id,occurred_at)
+   VALUES($1,$2,$3,$4,$5,$6,'collection',100,'INR','to_pay','cash',$7,1,$8,$9,$10)`,[entry,org,A,booking.json().id,booking.json().payment_obligation.id,command,reference,s.local.id,correlation,at]);
+  await legacy.query('SELECT shipit.append_payment_audit($1,$2,$3,$4,$5)',[org,A,booking.json().id,command,entry]);
+  await legacy.query(`UPDATE shipit.payment_commands SET state='committed',entry_id=$2,http_status=200,result=shipit.payment_result(organization_id,franchise_id,$2),committed_at=clock_timestamp(),retain_until='infinity' WHERE id=$1`,[command,entry]);
+  await legacy.query('COMMIT');
+ }catch(error){await legacy.query('ROLLBACK');throw error;}finally{legacy.release();}
+ const paid={entry:{id:entry}};
+
  const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','booking_obligations','payment_entries','payment_commands','domain_events'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows])));
  const before=await snapshot();db.migrate=migrate;
  const dir=await mkdtemp(join(tmpdir(),'shipit-receipt-upgrade-'));t.after(async()=>{assert.equal(dirname(dir),tmpdir());await rm(dir,{recursive:true,force:true});});
@@ -24,7 +37,7 @@ await test('populated pre-30 migration rolls back on failure, preserves source f
  await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});assert.equal((await db.adminQuery("SELECT to_regclass('shipit.issued_receipts') relation")).rows[0]!.relation,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,18);assert.deepEqual(await snapshot(),before);
- assert.deepEqual(await db.migrate(),{applied:24});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
+ assert.deepEqual(await db.migrate(),{applied:25});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.issued_receipts')).rows[0]!.n,0);assert.deepEqual(await snapshot(),before);
  const dto=await createReceiptService(s.pool).read(s.local.token,booking.json().id,paid.entry.id,{organization_id:org,franchise_id:A},randomUUID());
  assert.equal(dto.kind,'collection_acknowledgement');assert.notEqual(dto.issued_at,booking.json().confirmed_at);assert.deepEqual(await snapshot(),before);

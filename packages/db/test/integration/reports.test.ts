@@ -7,7 +7,7 @@ await test('report migration preserves existing booking evidence and restricts r
   const migrate=db.migrate;db.migrate=async()=>({applied:0});const s=await bookingSetup(t,db);
   assert.equal((await s.book()).statusCode,201);
   const before=(await db.adminQuery('SELECT id,tax_snapshot,final_payable_paise FROM shipit.bookings')).rows;
-  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await db.adminQuery('SELECT id,tax_snapshot,final_payable_paise FROM shipit.bookings')).rows,before);
   await db.prepareReports();
   await assert.rejects(s.pool.query('UPDATE shipit.report_snapshots SET fingerprint=fingerprint'));

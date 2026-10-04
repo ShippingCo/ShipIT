@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join,dirname } from 'node:path';
 import type { TestContext } from 'node:test';
 import { cleanupRegisteredResources } from '../../../packages/db/test/support.ts';
-import { paymentSetup } from './payment-support.ts';
+import { paymentSetup,collectionInput } from './payment-support.ts';
 import { buildServer } from '../src/server.ts';
 import { parseEnvironment } from '../src/env.ts';
 if(process.env.NODE_ENV!=='test'||process.env.TEST_DATABASE_IDENTITY!=='db_test')throw new Error('SYNTHETIC_FIXTURE_ONLY');
@@ -15,6 +15,9 @@ const cleanup:(()=>unknown)[]=[],t={after:(f:()=>unknown)=>cleanup.push(f)} as u
 let finish!:()=>void;const stop=new Promise<void>(resolve=>{finish=resolve;});process.once('SIGINT',finish);process.once('SIGTERM',finish);
 try {
   const s=await paymentSetup(t);await s.db.prepareReports();
+  if(process.env.REPORT_DEMO_PAID==='1'){
+    const paid=await s.pay(collectionInput(s.gross));if(paid.statusCode!==200)throw new Error('SYNTHETIC_PAYMENT_FAILED');
+  }
   const webOrigin=process.env.REPORT_DEMO_WEB_PORT==='5174'?'http://localhost:5174':'http://localhost:5173';
   const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3061',LOG_LEVEL:'silent',ALLOWED_ORIGINS:webOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
   const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:s.clock});cleanup.push(()=>app.close());

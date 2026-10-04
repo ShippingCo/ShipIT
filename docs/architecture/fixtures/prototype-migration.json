@@ -1620,6 +1620,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/sales.test.tsx",
+        "name": "creates through the labelled keyboard form, reloads saved filters, shows zero sales and requests the saved CSV",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/sales.test.tsx",
+        "name": "retries the exact uncertain intent and denies exports for a read-only report grant",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
         "cases": null
@@ -1754,6 +1764,10 @@
       },
       {
         "file": "apps/web/src/operations/Reports.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/Sales.tsx",
         "kind": "setTimeout"
       },
       {
@@ -3645,6 +3659,22 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
+    },
+    {
+      "file": "apps/web/src/test/sales.test.tsx",
+      "name": "creates through the labelled keyboard form, reloads saved filters, shows zero sales and requests the saved CSV",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
+    },
+    {
+      "file": "apps/web/src/test/sales.test.tsx",
+      "name": "retries the exact uncertain intent and denies exports for a read-only report grant",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",

@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 46)]:
+    for prefix, count in [("R", 30), ("E", 4), ("W", 48)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
