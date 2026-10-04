@@ -12,7 +12,7 @@ await test('manual-only rollout preserves populated installations and immutable 
   const {id}=await legacyCarrierInstallation(db,{organization:org,franchise:A,actor:s.local.id,label:'LEGACY-FICTIONAL',now:s.clock()});
   const owner=db.ownerPool();
   const before=(await db.adminQuery('SELECT id,command_id,created_at FROM shipit.carrier_installations')).rows;
-  assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual((await db.adminQuery('SELECT id,command_id,created_at FROM shipit.carrier_installations')).rows,before);
   assert.equal((await db.adminQuery('SELECT file_import FROM shipit.carrier_installations WHERE id=$1',[id])).rows[0]!.file_import,true);
   await assert.rejects(owner.query('UPDATE shipit.carrier_installations SET file_import=false WHERE id=$1',[id]));

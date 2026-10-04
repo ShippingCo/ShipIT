@@ -85,6 +85,15 @@ await test('finance uses frozen booking/ledger and receipt snapshots; recipients
  const collected=await s.message('balance');assert.equal(await s.worker.tick(),'answered');assert.match(await s.reply(collected),/Collected INR 1\.00/);
  const remaining=BigInt(old)-100n;assert.match(await s.reply(collected),new RegExp(`Remaining INR ${remaining/100n}\\.${String(remaining%100n).padStart(2,'0')}`));
  const receipt=await s.message('receipt');assert.equal(await s.worker.tick(),'answered');assert.match(await s.reply(receipt),new RegExp(issued.number));
+ // Corrected money must also reach the deterministic customer answer, without
+ // replacing the original receipt or granting finance data to a recipient.
+ const finance=(await import('../../src/modules/reports/finance-service.ts')).createFinanceService(s.pool);
+ const current=await finance.read(s.local.token,s.q,booking,randomUUID()),cancelKey=randomUUID();
+ await finance.change(s.local.token,s.q,cancelKey,['idempotency-key',cancelKey],{booking_id:booking,expected_version:current.version,payment_version:current.payment_version,
+  kind:'cancellation',reason:'booking_cancelled',approval_ref:'SYN_CUSTOMER_CORRECTION',...Object.fromEntries(['pre_tax','taxable','cgst','sgst','igst','rounding'].map(k=>[k,Number(current[k as keyof typeof current])]))},randomUUID());
+ const refundKey=randomUUID();await finance.change(s.local.token,s.q,refundKey,['idempotency-key',refundKey],{booking_id:booking,expected_version:1,payment_version:1,kind:'refund',reason:'customer_refund',approval_ref:'SYN_REVIEW',returned_to_ref:'SYN_RETURN',refund:100},randomUUID());
+ const corrected=await s.message('charges');assert.equal(await s.worker.tick(),'answered');assert.match(await s.reply(corrected),/Adjusted charge INR 0\.00/);assert.match(await s.reply(corrected),/Actually refunded INR 1\.00/);assert.match(await s.reply(corrected),/Remaining INR 0\.00/);
+ assert.deepEqual(await receiptService.read(s.operator.token,booking,null,s.q,randomUUID()),issued);
  const recipient='+12025550101',proof=await s.message('hello',recipient);await s.bind(proof,s.parcel,'recipient');await s.worker.tick();
  const forbidden=await s.message('charges',recipient);assert.equal(await s.worker.tick(),'forbidden');assert.doesNotMatch(await s.reply(forbidden),/Booked total/);
  const tracked=await s.message('tracking',recipient);assert.equal(await s.worker.tick(),'answered');assert.match(await s.reply(tracked),/booked/);
@@ -138,7 +147,7 @@ await test('forward upgrade preserves existing operational rows and creates no a
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:30}),{applied:30});const migrate=db.migrate;db.migrate=async()=>({applied:0});
  const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
  const snapshot=async()=>JSON.stringify((await db.adminQuery('SELECT id,status,version,booking_id FROM shipit.parcels')).rows),before=await snapshot();
- assert.deepEqual(await db.migrate(),{applied:12});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});assert.equal(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.customer_conversation_turns')).rows[0]!.n,0);
 });
 

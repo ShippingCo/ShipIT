@@ -40,6 +40,7 @@ export function createReportService(database:DatabasePool) {
       if(offset<0||offset>reportLimits.rows||offset%reportLimits.page!==0)throw new FieldValidationError('$','OUT_OF_RANGE');
       return withReportScope(database,session,q.organizationId,q.franchiseId,exporting,correlation,async scope=>{
         const saved=await repository.get(scope,id);
+        if(saved.metadata.definition!=='booking_cohort_v1')throw new HttpError('RESOURCE_NOT_FOUND');
         await repository.audit(scope,id,exporting?'report.export':'report.read');
         return exporting?{snapshot:saved.metadata,columns:exportColumns,csv:reportCsv(saved.metadata,saved.rows)}:page(saved,offset);
       });

@@ -7,13 +7,22 @@ import { reports,type ReportSource } from '../data-access/reports';
 import { useCommand } from './hooks';
 import { TextField,SelectField } from '../components/m3/Input';
 import { ApiFailure } from '../data-access/errors';
+import { sales } from '../data-access/sales';
+import { SalesView } from './Sales';
 
 const amount=(m:ReportMoney)=>m.state==='unknown'?'Unknown':`₹${(BigInt(m.paise)/100n).toLocaleString('en-IN')}.${(BigInt(m.paise)%100n).toString().padStart(2,'0')}`;
 export default function Reports({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
   const source=useMemo(()=>reports(scopedApi(controller)),[controller]);
+  const salesSource=useMemo(()=>sales(scopedApi(controller)),[controller]);
+  const [reportParams]=useSearchParams();
+  const [view,setView]=useState<'sales'|'bookings'>(reportParams.has('snapshot')?'bookings':'sales');
   if(!roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r)))return <p role="alert">Reports are unavailable for this role.</p>;
-  return <ReportView source={source} canExport={roles.some(r=>['franchise_admin','accountant'].includes(r))}/>;
+  const canExport=roles.some(r=>['franchise_admin','accountant'].includes(r));
+  const context=controller.snapshot().context;
+  const franchises=(context?.franchises??[]).filter(f=>f.organization.id===salesSourceOrganization(controller)).map(f=>({id:f.id,name:f.display_name}));
+  return <><nav aria-label="Report type"><button className="btn btn-outlined" aria-pressed={view==='sales'} onClick={()=>setView('sales')}>Sales and GST</button><button className="btn btn-outlined" aria-pressed={view==='bookings'} onClick={()=>setView('bookings')}>Booking snapshots</button></nav>{view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={roles.includes('franchise_admin')} franchises={franchises}/>:<ReportView source={source} canExport={canExport}/>}</>;
 }
+function salesSourceOrganization(controller:ScopeController){return controller.runtime.ticket().authority?.organizationId;}
 export function ReportView({source,canExport}:{source:ReportSource;canExport:boolean}) {
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const [from,setFrom]=useState(today),[to,setTo]=useState(today),[sort,setSort]=useState<'confirmed_asc'|'confirmed_desc'>('confirmed_desc');
@@ -44,6 +53,7 @@ export function ReportView({source,canExport}:{source:ReportSource;canExport:boo
   }catch(e){failure(e);}finally{setBusy(false);}}
   const pending=busy||command.phase==='pending';
   return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">Reports</h1>
+    <p>Original booking amounts and recorded collections. Use Sales and GST for financial corrections, actual refunds and adjusted balances.</p>
     <p>Booking snapshot · Asia/Kolkata. Collections include payments received up to capture for these bookings, including later days.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}>
       <TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>

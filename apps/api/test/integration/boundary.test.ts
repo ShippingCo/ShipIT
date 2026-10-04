@@ -11,6 +11,18 @@ function setup(...args: Parameters<typeof harness>) { const h = harness(...args)
 const command = (payload: string, contentType = 'application/json') => ({ method: 'POST' as const, url: '/synthetic-command', headers: { 'content-type': contentType }, payload });
 
 describe('security and HTTP boundary', () => {
+  it('rejects hidden fractional finance amounts before database access', async () => {
+    const { app, database, handler } = setup();
+    app.post('/api/v1/finance/changes', handler);
+    for (const token of ['1.0000000000000000000001', '1e-999', '9007199254740991.1']) {
+      const result = await app.inject({ method: 'POST', url: '/api/v1/finance/changes',
+        headers: { 'content-type': 'application/json' }, payload: '{"refund":' + token + '}' });
+      expect(result.statusCode).toBe(422);
+      expect(result.json().error.code).toBe('VALIDATION_FAILED');
+    }
+    expect(database.query).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+  });
   it('builds and injects without listening or requiring DB availability', async () => {
     const { app, database } = setup();
     expect(app.server.listening).toBe(false); expect(database.query).not.toHaveBeenCalled();

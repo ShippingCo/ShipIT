@@ -620,9 +620,25 @@ export async function withPaymentScope<T>(database:DatabasePool,sessionToken:str
   });
 }
 
+/** Financial evidence commands: explicit local franchise-admin authority, never report-read inheritance. */
+export async function withFinancialScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:'finance.adjust'|'finance.statement',correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T>{
+ return membershipTransaction(database,async tx=>{
+  const session=await authenticated(tx,token);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+  const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+  if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+  if(!memberships.some(m=>m.role==='franchise_admin'&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
+  if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+  return work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+ });
+}
+
 /** Report evidence uses R11 financial reads and E03 exports; technical capture grants no money mutation. */
 export async function withReportScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
-  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>,franchiseIds:readonly string[]=[franchiseId]):Promise<T> {
   return membershipTransaction(database,async tx=>{
     const session=await authenticated(tx,token);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -632,8 +648,9 @@ export async function withReportScope<T>(database:DatabasePool,token:string,orga
     if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
     const permitted=exporting?memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds):paymentScope('payments.read',memberships,all);
     if(!permitted.includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+    if(!franchiseIds.length||franchiseIds.length>50||!franchiseIds.includes(franchiseId)||franchiseIds.some(id=>!permitted.includes(id)))throw new HttpError('RESOURCE_NOT_FOUND');
     return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,
-      permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+      permittedFranchiseIds:[franchiseId,...franchiseIds.filter(id=>id!==franchiseId)],organizationWide:false,correlationId,provenance:'membership'}));
   });
 }
 

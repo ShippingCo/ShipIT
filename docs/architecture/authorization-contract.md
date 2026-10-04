@@ -169,6 +169,8 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W44 | Quarantined outbox job redrive with expected revision, original identity and closed repair reason (`outbox.redrive`) | - | F | - | - | - | - | - |
 | W45 | WhatsApp installation connect, rotate, disable and template synchronization | - | F | - | - | - | - | - |
 | W46 | Verify/rebind/revoke explicit parcel customer tracking access (`customer.access.manage`), with independent evidence | - | F | - | - | - | - | - |
+| W47 | Approved charge/tax reduction or actual refund evidence (`finance.adjust`) | - | F | - | - | - | - | - |
+| W48 | Issue immutable account statement (`finance.statement`) | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement

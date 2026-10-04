@@ -4,7 +4,7 @@ import { assertTenantAccess, scopedQuery, type TenantAccess } from '../security/
 import { HttpError } from '../../plugins/errors.ts';
 import { utcRange } from './rules.ts';
 const actions=['reports.capture'] as const;
-export interface SavedReport { id:string; fingerprint:string; metadata:ReportSnapshot; rows:ReportRow[]; expired:boolean }
+export interface SavedReport<M=ReportSnapshot,R=ReportRow> { id:string; fingerprint:string; metadata:M; rows:R[]; expired:boolean }
 export async function lock(scope:TenantAccess) {
   // Same lock order as monetary commands; bounds concurrent capture/quota checks per franchise.
   const result=await scopedQuery(scope,['reports.capture'],`SELECT id FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`);
@@ -13,14 +13,14 @@ export async function lock(scope:TenantAccess) {
   await scopedQuery(scope,['reports.capture'],`UPDATE shipit.report_snapshots SET metadata=NULL,rows=NULL
     WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND expires_at<=clock_timestamp() AND metadata IS NOT NULL`,[c.actor.id]);
 }
-export async function replay(scope:TenantAccess,key:string) {
+export async function replay<M=ReportSnapshot,R=ReportRow>(scope:TenantAccess,key:string) {
   const c=assertTenantAccess(scope,actions);
-  return (await scopedQuery<SavedReport>(scope,['reports.capture'],`SELECT id,fingerprint,metadata,rows,expires_at<=clock_timestamp() AS expired
-    FROM shipit.report_snapshots WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND key_digest=$2`,[c.actor.id,key])).rows[0];
+  return (await scopedQuery<SavedReport<M,R>>(scope,['reports.capture'],`SELECT id,fingerprint,metadata,rows,expires_at<=clock_timestamp() AS expired
+    FROM shipit.report_snapshots WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND key_digest=$2 AND franchise_id=$3`,[c.actor.id,key,c.permittedFranchiseIds[0]])).rows[0];
 }
-export async function get(scope:TenantAccess,id:string) {
+export async function get<M=ReportSnapshot,R=ReportRow>(scope:TenantAccess,id:string) {
   const c=assertTenantAccess(scope,actions);
-  const result=(await scopedQuery<SavedReport>(scope,['reports.capture'],`SELECT id,fingerprint,metadata,rows,expires_at<=clock_timestamp() AS expired
+  const result=(await scopedQuery<SavedReport<M,R>>(scope,['reports.capture'],`SELECT id,fingerprint,metadata,rows,expires_at<=clock_timestamp() AS expired
     FROM shipit.report_snapshots WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND actor_id=$2`,[id,c.actor.id])).rows[0];
   if(!result||result.expired)throw new HttpError('RESOURCE_NOT_FOUND');
   return result;
@@ -47,7 +47,7 @@ export async function capture(scope:TenantAccess,filter:ReportFilter) {
   if(filter.sort==='confirmed_desc')result.rows.reverse();
   return {as_of:result.as_of.toISOString(),rows:result.rows};
 }
-export async function save(scope:TenantAccess,key:string,fingerprint:string,metadata:ReportSnapshot,rows:ReportRow[]) {
+export async function save(scope:TenantAccess,key:string,fingerprint:string,metadata:{id:string;as_of:string;expires_at:string},rows:readonly unknown[]) {
   const c=assertTenantAccess(scope,actions);
   if(Buffer.byteLength(JSON.stringify(rows))>reportLimits.bytes)throw new HttpError('REPORT_LIMIT_EXCEEDED');
   const count=(await scopedQuery<{n:number}>(scope,['reports.capture'],`SELECT count(*)::int n FROM shipit.report_snapshots

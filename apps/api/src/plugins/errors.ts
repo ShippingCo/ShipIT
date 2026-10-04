@@ -3,6 +3,8 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  FINANCIAL_CONFLICT:[409,'Correction or refund exceeds the available balance. Refresh the saved evidence.'],
+  STATEMENT_EMPTY:[409,'No unissued shipments in this customer period. Existing statements remain available.'],
   REPORT_LIMIT_EXCEEDED:[413,'Report is too large. Choose a shorter date range.'],
   REPORT_QUOTA_EXCEEDED:[429,'Twenty saved reports are still active. Reuse a saved report or wait for expiry.'],
   REPORT_EXPIRED:[410,'Report has expired. Create a new snapshot with a new request key.'],

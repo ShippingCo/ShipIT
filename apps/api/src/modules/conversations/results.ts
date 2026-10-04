@@ -3,7 +3,7 @@ import type { Tool } from './router.ts';
 
 export type ToolResult=
  |{tool:'tracking'|'eta'|'delay';docket:string;status:string;version:number;eta:{state:'available'|'unavailable';at:string|null;kind?:'route_arrival'};timeline:{event:string;at:string}[];delay?:{state:'available'|'unavailable';total_minutes:number|null}}
- |{tool:'charges';docket:string;booked_paise:string;collected_paise:string;remaining_paise:string;ledger_version:number}
+ |{tool:'charges';docket:string;booked_paise:string;collected_paise:string;remaining_paise:string;ledger_version:number;correction?:{adjusted_paise:string;refunded_paise:string;refundable_credit_paise:string}}
  |{tool:'receipt';docket:string;number:string;issued_at:string;booked_paise:string}
  |{tool:'resend';docket:string;state:'queued'|'failed';reason_code:string};
 const statuses=['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'];
@@ -18,6 +18,7 @@ export function validateResult(tool:Tool,value:unknown):ToolResult {
  const keys=tool==='charges'?['tool','docket','booked_paise','collected_paise','remaining_paise','ledger_version']:
  tool==='receipt'?['tool','docket','number','issued_at','booked_paise']:tool==='resend'?['tool','docket','state','reason_code']:['tool','docket','status','version','eta','timeline'];
  if(tool==='delay')keys.push('delay');
+ if(tool==='charges'&&b.correction!==undefined){keys.push('correction');const c=b.correction;if(!c||typeof c!=='object'||Array.isArray(c))return fail();const correction=c as Record<string,unknown>;if(Object.keys(correction).length!==3||!['adjusted_paise','refunded_paise','refundable_credit_paise'].every(k=>money(correction[k])))return fail();}
  if(Object.keys(b).length!==keys.length||Object.keys(b).some(k=>!keys.includes(k)))return fail();
  if(tool==='charges') {if(!money(b.booked_paise)||!money(b.collected_paise)||!money(b.remaining_paise)||!Number.isSafeInteger(b.ledger_version)||Number(b.ledger_version)<0)return fail();}
  else if(tool==='receipt') {if(typeof b.number!=='string'||!/^RCT-\d{19}$/.test(b.number)||!instant(b.issued_at)||!money(b.booked_paise))return fail();}
@@ -40,14 +41,14 @@ export function validateResult(tool:Tool,value:unknown):ToolResult {
 const rupees=(v:string)=>{const n=BigInt(v),sign=n<0n?'-':'',a=n<0n?-n:n;return `${sign}INR ${a/100n}.${String(a%100n).padStart(2,'0')}`;};
 export function renderResult(r:ToolResult,locale:'en'|'hi'='en'):string {
  if(locale==='hi') {
-  if(r.tool==='charges')return `${r.docket}: बुकिंग की कुल राशि ${rupees(r.booked_paise)}। जमा ${rupees(r.collected_paise)}। बाकी ${rupees(r.remaining_paise)}। ये सहेजे गए बुकिंग और भुगतान रिकॉर्ड हैं।`;
+  if(r.tool==='charges')return `${r.docket}: बुकिंग की कुल राशि ${rupees(r.booked_paise)}। जमा ${rupees(r.collected_paise)}। बाकी ${rupees(r.remaining_paise)}।${r.correction?` सुधार के बाद राशि ${rupees(r.correction.adjusted_paise)}। वापस किए गए ${rupees(r.correction.refunded_paise)}। वापस करने योग्य ${rupees(r.correction.refundable_credit_paise)}।`:''} ये सहेजे गए बुकिंग और भुगतान रिकॉर्ड हैं।`;
   if(r.tool==='receipt')return `${r.docket}: जारी बुकिंग रसीद ${r.number}, ${r.issued_at}। कुल बुकिंग राशि ${rupees(r.booked_paise)}। यह रसीद का सार है; पूरे दस्तावेज़ के लिए फ्रैंचाइज़ी से संपर्क करें।`;
   if(r.tool==='resend')return r.state==='queued'?`${r.docket}: सत्यापित प्राप्तकर्ता को डिलीवरी कोड दोबारा भेजने का अनुरोध कतार में है। भेजने की पुष्टि अभी नहीं हुई है।`:`${r.docket}: डिलीवरी कोड भेजना उपलब्ध नहीं है। फ्रैंचाइज़ी से संपर्क करें।`;
   const states:Record<string,string>={booked:'बुक किया गया',checked_in:'केंद्र में प्राप्त',dispatched:'रवाना',in_transit:'रास्ते में',out_for_delivery:'डिलीवरी के लिए निकला',failed_attempt:'डिलीवरी का प्रयास असफल',held_at_office:'कार्यालय में रखा',delivered:'डिलीवर हुआ',rto:'वापसी'};
   const eta=r.eta.state==='available'?`दर्ज मार्ग-आगमन अनुमान: ${r.eta.at}। यह डिलीवरी का वादा नहीं है।`:'अभी पहुँचने का अनुमान उपलब्ध नहीं है।';
   return `${r.docket}: दर्ज स्थिति ${states[r.status]} (संस्करण ${r.version})। ${eta}${r.tool==='delay'?(r.delay?.state==='available'?` दर्ज मार्ग देरी: ${r.delay.total_minutes} मिनट। कारण का अनुमान नहीं लगाया गया है।`:' दर्ज मार्ग देरी उपलब्ध नहीं है।'):''}`;
  }
- if(r.tool==='charges')return `${r.docket}: Booked total ${rupees(r.booked_paise)}. Collected ${rupees(r.collected_paise)}. Remaining ${rupees(r.remaining_paise)}. These are saved booking and payment records.`;
+ if(r.tool==='charges')return `${r.docket}: Booked total ${rupees(r.booked_paise)}. Collected ${rupees(r.collected_paise)}. Remaining ${rupees(r.remaining_paise)}.${r.correction?` Adjusted charge ${rupees(r.correction.adjusted_paise)}. Actually refunded ${rupees(r.correction.refunded_paise)}. Refundable credit ${rupees(r.correction.refundable_credit_paise)}.`:''} These are saved booking and payment records.`;
  if(r.tool==='receipt')return `${r.docket}: Issued booking receipt ${r.number}, ${r.issued_at}. Booked total ${rupees(r.booked_paise)}. This is a receipt summary; contact the franchise for the full document.`;
  if(r.tool==='resend')return r.state==='queued'?`${r.docket}: Delivery-code resend queued to the verified delivery recipient. Sending is not yet confirmed.`:`${r.docket}: Delivery-code send unavailable. Contact the franchise.`;
  const eta=r.eta.state==='available'?`Recorded route-arrival estimate: ${r.eta.at}. This is not a delivery promise.`:'A current arrival estimate is unavailable.';
