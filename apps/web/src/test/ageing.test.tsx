@@ -15,7 +15,7 @@ describe('ageing report UI',()=>{
     const source=fixture();render(<MemoryRouter><AgeingView source={source} canExport={true}/></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Age from'),{target:{value:'due'}});fireEvent.change(screen.getByLabelText('Parcel status'),{target:{value:'delivered'}});
     const create=screen.getByRole('button',{name:'Create ageing snapshot'});create.focus();expect(create).toHaveFocus();fireEvent.submit(create.closest('form')!);
-    expect(await screen.findByText('No matching balances. CSV contains headers.')).toBeVisible();expect(source.intent).toHaveBeenCalledWith({anchor:'due',status:'delivered',customer_id:null,balances:'outstanding'});
+    await waitFor(()=>expect(screen.getByText('No matching balances. CSV contains headers.')).toBeVisible());expect(source.intent).toHaveBeenCalledWith({anchor:'due',status:'delivered',customer_id:null,balances:'outstanding'});
     await waitFor(()=>expect(source.page).toHaveBeenCalledWith(id,0,expect.any(AbortSignal)));expect(screen.getByText(/Booking age is not days overdue/)).toBeVisible();
     const click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});Object.defineProperty(URL,'createObjectURL',{configurable:true,value:vi.fn(()=> 'blob:ageing')});Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:vi.fn()});
     fireEvent.click(screen.getByRole('button',{name:'Download matching ageing CSV'}));expect(await screen.findByText('CSV ready. Check your downloads.')).toBeVisible();expect(source.export).toHaveBeenCalledWith(id);click.mockRestore();
