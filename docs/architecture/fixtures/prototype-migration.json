@@ -1605,6 +1605,21 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/reports.test.tsx",
+        "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports.test.tsx",
+        "name": "reload keeps snapshot identity, denies export without grant and shows safe expiry errors",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports.test.tsx",
+        "name": "an uncertain capture retries the same immutable request after editing the draft",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
         "cases": null
@@ -1736,6 +1751,10 @@
       {
         "file": "apps/web/src/operations/Packages.tsx",
         "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/Reports.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/operator/Onboarding.tsx",
@@ -3602,6 +3621,30 @@
       "group": "receipts",
       "disposition": "preserve",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/reports.test.tsx",
+      "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
+    },
+    {
+      "file": "apps/web/src/test/reports.test.tsx",
+      "name": "reload keeps snapshot identity, denies export without grant and shows safe expiry errors",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
+    },
+    {
+      "file": "apps/web/src/test/reports.test.tsx",
+      "name": "an uncertain capture retries the same immutable request after editing the draft",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",

@@ -263,3 +263,6 @@ guarded T04 application and last-known freshness. [Verification](issue-58-verifi
 
 [Akash Ganga manual pilot](carrier-pilot.md) qualifies #60's manual-only path,
 scoped operational health and recovery. [Verification](issue-60-verification.md).
+
+[Scoped reports](reporting.md) adds #61's persistent filtered snapshots, exact totals,
+fixed pagination and private matching CSV. [Verification](issue-61-verification.md).
