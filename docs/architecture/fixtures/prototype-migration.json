@@ -930,6 +930,16 @@
     ],
     "tests": [
       {
+        "file": "apps/web/src/test/ageing.test.tsx",
+        "name": "uses explicit age and status filters, restores saved evidence and exports the saved ID",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/ageing.test.tsx",
+        "name": "keeps uncertain intent after edits and recovers expired reads without granting export",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/app.test.tsx",
         "name": "store seeds itself before first render even with empty localStorage",
         "cases": null
@@ -1759,6 +1769,10 @@
         "kind": "localStorage.removeItem"
       },
       {
+        "file": "apps/web/src/operations/Ageing.tsx",
+        "kind": "setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Packages.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2556,6 +2570,22 @@
     ]
   },
   "regressions": [
+    {
+      "file": "apps/web/src/test/ageing.test.tsx",
+      "name": "uses explicit age and status filters, restores saved evidence and exports the saved ID",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #63: authorized saved ageing, explicit unknown dates, matching CSV and exact uncertain retry."
+    },
+    {
+      "file": "apps/web/src/test/ageing.test.tsx",
+      "name": "keeps uncertain intent after edits and recovers expired reads without granting export",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #63: authorized saved ageing, explicit unknown dates, matching CSV and exact uncertain retry."
+    },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "store seeds itself before first render even with empty localStorage",

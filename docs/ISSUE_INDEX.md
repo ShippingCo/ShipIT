@@ -204,3 +204,11 @@ subset supports reductions, actual refunds and account statements without duplic
 sales; it does not close the wider credit/allocation workflows in #137-#142.
 Initial tracker status above is historical; publication, review and dependency
 closure must be verified before claiming the GitHub issue complete.
+
+## Issue #63 original reporting scope (2026-10-04)
+
+Local To-Pay ageing consumes existing booking obligations, collection/reversal
+entries and #62's financial changes. See [the report guide](architecture/reporting.md#to-pay-ageing-and-collection-reconciliation-63).
+The original report scope can be reviewed separately; expanded #63 remains
+blocked on monthly terms/debtor accounts, combined allocations and advances
+from #137/#138/#141/#142. This does not close those issues or claim all of #63.

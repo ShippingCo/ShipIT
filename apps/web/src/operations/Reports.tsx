@@ -9,18 +9,21 @@ import { TextField,SelectField } from '../components/m3/Input';
 import { ApiFailure } from '../data-access/errors';
 import { sales } from '../data-access/sales';
 import { SalesView } from './Sales';
+import { ageing } from '../data-access/ageing';
+import { AgeingView } from './Ageing';
 
 const amount=(m:ReportMoney)=>m.state==='unknown'?'Unknown':`₹${(BigInt(m.paise)/100n).toLocaleString('en-IN')}.${(BigInt(m.paise)%100n).toString().padStart(2,'0')}`;
 export default function Reports({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
   const source=useMemo(()=>reports(scopedApi(controller)),[controller]);
   const salesSource=useMemo(()=>sales(scopedApi(controller)),[controller]);
+  const ageingSource=useMemo(()=>ageing(scopedApi(controller)),[controller]);
   const [reportParams]=useSearchParams();
-  const [view,setView]=useState<'sales'|'bookings'>(reportParams.has('snapshot')?'bookings':'sales');
+  const [view,setView]=useState<'sales'|'bookings'|'ageing'>(reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
   if(!roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r)))return <p role="alert">Reports are unavailable for this role.</p>;
   const canExport=roles.some(r=>['franchise_admin','accountant'].includes(r));
   const context=controller.snapshot().context;
   const franchises=(context?.franchises??[]).filter(f=>f.organization.id===salesSourceOrganization(controller)).map(f=>({id:f.id,name:f.display_name}));
-  return <><nav aria-label="Report type"><button className="btn btn-outlined" aria-pressed={view==='sales'} onClick={()=>setView('sales')}>Sales and GST</button><button className="btn btn-outlined" aria-pressed={view==='bookings'} onClick={()=>setView('bookings')}>Booking snapshots</button></nav>{view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={roles.includes('franchise_admin')} franchises={franchises}/>:<ReportView source={source} canExport={canExport}/>}</>;
+  return <><nav aria-label="Report type"><button className="btn btn-outlined" aria-pressed={view==='ageing'} onClick={()=>setView('ageing')}>To-Pay ageing</button><button className="btn btn-outlined" aria-pressed={view==='sales'} onClick={()=>setView('sales')}>Sales and GST</button><button className="btn btn-outlined" aria-pressed={view==='bookings'} onClick={()=>setView('bookings')}>Booking snapshots</button></nav>{view==='ageing'?<AgeingView source={ageingSource} canExport={canExport}/>:view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={roles.includes('franchise_admin')} franchises={franchises}/>:<ReportView source={source} canExport={canExport}/>}</>;
 }
 function salesSourceOrganization(controller:ScopeController){return controller.runtime.ticket().authority?.organizationId;}
 export function ReportView({source,canExport}:{source:ReportSource;canExport:boolean}) {
