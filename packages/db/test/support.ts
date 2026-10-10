@@ -363,6 +363,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.report_snapshots,shipit.report_access_events TO ${identifier(resource.runtimeRole)}`);
+          // #64 reads immutable dispatch provenance; its producer trigger owns INSERT.
+          await owner.query(`GRANT SELECT ON shipit.parcel_dispatch_manifests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(metadata,rows) ON shipit.report_snapshots TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },

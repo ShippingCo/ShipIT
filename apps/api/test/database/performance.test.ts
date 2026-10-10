@@ -8,6 +8,8 @@ import {createPerformanceService} from '../../src/modules/reports/performance-se
 import type {PerformancePage} from '@shippingco/shared';
 async function setup(t:Parameters<typeof paymentSetup>[0]) {
   const s=await paymentSetup(t);await s.db.prepareReports();await s.db.prepareRoutes();await s.db.prepareDeliveries();
+  const rights=(await s.pool.query("SELECT has_table_privilege(current_user,'shipit.parcel_dispatch_manifests','SELECT') can_read,has_table_privilege(current_user,'shipit.parcel_dispatch_manifests','INSERT') can_insert,has_table_privilege(current_user,'shipit.parcel_dispatch_manifests','UPDATE') can_update" )).rows[0];
+  assert.deepEqual(rights,{can_read:true,can_insert:false,can_update:false});
   const date=new Date(Date.parse(s.booked.charges.confirmed_at)+19800000).toISOString().slice(0,10),filter={from_day:date,to_day:date,eta:'original'};
   const q={organization_id:org,franchise_id:A};
   const report=(method:'POST'|'GET',path='',body:unknown=filter,actor:{id:string;token:string}=s.local,key=randomUUID(),query:Record<string,string>=q)=>s.app.inject({method,

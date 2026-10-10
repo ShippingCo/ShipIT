@@ -800,3 +800,25 @@ Apply the [exact multilingual grants](../../docs/architecture/multilingual-assis
 alongside the existing conversation privileges before deploying the updated worker. No
 public read/write endpoint or new staff privilege is introduced. Existing data defaults to
 English; forward migration tests preserve conversation identity and business state.
+
+## Issue #64 performance report runtime privileges
+
+No migration is added. Retain #61 report snapshot/access-event SELECT/INSERT and
+UPDATE(metadata,rows), plus the existing membership/franchise lock privileges.
+The delivery-performance projection needs SELECT on these owning source tables:
+
+```sql
+GRANT SELECT ON shipit.bookings,shipit.parcels,shipit.parcel_transitions,
+  shipit.parcel_failed_attempts,shipit.parcel_commands,
+  shipit.parcel_dispatch_manifests,shipit.route_manifest_parcels,
+  shipit.routes,shipit.route_commands,shipit.route_parcel_effects,
+  shipit.delivery_proofs TO runtime_role;
+```
+
+The added dispatch-manifest permission is SELECT only: its existing security-definer
+producer trigger owns insertion. Do not grant broad source UPDATE/DELETE or public
+access. `prepareReports()` supplies that read grant in disposable fixtures; existing
+`prepareBookings()`, `prepareRoutes()` and `prepareDeliveries()` supply other source
+rights. Enable compatible report code only after grants are provisioned. Source facts
+remain immutable; rollback can disable the view/API without rewriting them. See the
+[performance definitions](../../docs/architecture/reporting.md#delivery-and-route-performance-64).
