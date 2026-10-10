@@ -532,3 +532,10 @@ Capture the audit before applying and compare its retained status with live evid
 For actual refunds, cancel a paid fictional charge, approve a partial refund, then
 record its source-account revision, actual Kolkata time and private return references.
 Disable new writes to stop entry while preserving source reads and exact replay.
+
+Final compatibility verification ran all 79 PostgreSQL schema cases successfully,
+including the populated pre-45 financial-history upgrade. Initial PR CI identified
+stale latest-schema upgrade-count assertions in 25 older fixtures; their expected
+counts were increased exactly for migration 45. Initial-version, no-op, failed
+migration/rollback and source-preservation assertions were retained. The full schema
+run then passed with zero failed, skipped or cancelled cases.

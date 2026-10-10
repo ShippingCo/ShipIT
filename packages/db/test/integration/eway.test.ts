@@ -20,7 +20,7 @@ await test('e-way migration upgrades populated attachment-era main, rolls back f
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.eway_records') relation")).rows[0]!.relation,null);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,20);assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:24});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareEway();assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:25});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareEway();assert.deepEqual(await snapshot(),before);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.eway_records')).rows[0]!.n,0);
   const state=await s.app.inject({url:'/api/v1/bookings/'+booked.json().id+'/eway?'+new URLSearchParams({organization_id:org,franchise_id:A}),cookies:s.cookies(s.operator.token)});
   assert.equal(state.statusCode,200,state.body);assert.equal(state.json().record,null);assert.equal(state.json().state.value_check_state,'unknown');
