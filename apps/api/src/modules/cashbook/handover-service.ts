@@ -129,7 +129,7 @@ export function createCashHandoverService(database:DatabasePool,writesEnabled=fa
     const rows=(await scopedQuery<CommandRow>(scope,['cashbook.select'],`SELECT c.*,COALESCE((SELECT jsonb_agg(jsonb_build_object('location_id',l.location_id,'direction',l.direction,'amount_paise',l.amount_paise::text) ORDER BY l.location_id) FROM shipit.cash_handover_legs l WHERE l.organization_id=c.organization_id AND l.franchise_id=c.franchise_id AND l.command_id=c.id),'[]'::jsonb) legs
      FROM shipit.cash_handover_commands c WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.handover_id=$1 AND c.version<$2 ORDER BY c.version DESC LIMIT 101`,[id,before])).rows;
     const commands=rows.slice(0,100).map(commandDto);
-    return {request:requestDto(request),version:position.version,accepted_paise:Number(position.accepted_paise),remaining_paise:Number(position.remaining_paise),ended_paise:Number(position.ended_paise),state:position.state,current_source_version:Number(position.source_version),commands,next_cursor:rows.length>100?rows[99]!.version:null};
+    return {source_custodian_id:request.source_custodian_id,target_custodian_id:request.target_custodian_id,request:requestDto(request),version:position.version,accepted_paise:Number(position.accepted_paise),remaining_paise:Number(position.remaining_paise),ended_paise:Number(position.ended_paise),state:position.state,current_source_version:Number(position.source_version),commands,next_cursor:rows.length>100?rows[99]!.version:null};
    });
   }
  };

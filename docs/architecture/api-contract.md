@@ -451,6 +451,13 @@ Services, not routes or callers, own approval, amounts, source versions and cust
 | `/snapshots`, `/snapshots/:id`, `/snapshots/:id/export`, `/snapshots/:id/rows/:row` | POST finance snapshot capture; GET retained pages, principal-bound CSV result and owned captured source detail |
 | `/requests/:request_id/attachments` | Existing seven private attachment operations, with a server-selected expense parent: GET list/content, POST uploads/finalize/cancel/download-grants, PUT upload content |
 
+Handover detail includes `source_custodian_id` and `target_custodian_id` from its
+scoped participant lookup. These IDs identify recovery choices even if location
+selectors have not loaded the relevant page; they grant no authority to send,
+accept, reject or cancel. Every command still checks current membership and the
+named custodian server-side. No extra location lookup or operator ledger permission
+is required. This response does not expose an unrelated custodian directory.
+
 New financial writes require literal `CASHBOOK_ENABLED=true`; the default is false
 and demo activation is rejected. Historical reads, authorized snapshot capture and
 exact completed-command replay remain available with new writes disabled. Attachment

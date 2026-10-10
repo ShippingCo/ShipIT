@@ -1233,9 +1233,9 @@ a different request immediately hides the preceding detail/actions. Explicit
 selector labels support keyboard and assistive technology. Response projections
 reject inconsistent request/decision/effect links, self approval, monetary control
 totals, handover conservation and paired acceptance legs; they discard unknown
-private fields. Report and location-configuration adapters are prepared, but their
-UI and private expense attachment UI are still outstanding. These adapters do not
-establish full report or configuration acceptance by themselves.
+private fields. Captured report and location-configuration views are implemented below; private
+expense attachment UI is still outstanding. Component evidence does not establish
+native browser or live-provider qualification.
 
 Ten focused web checks cover protocol integrity, lost response and same-key replay,
 blocked navigation, current scope revocation, another-admin review/application,
@@ -1251,8 +1251,74 @@ quality/CI/review and merge remain required before #140 can close.
 The final web slice passes 228 tests across 21 files, web typecheck, production web
 build, root lint/query AST and whitespace checks. Logs are retained locally under
 `140-cashbook-web-{focused-final,regression-final,final-types,build,final-lint}`.
-The ten cashbook checks are included in the 228, not additional cases. Native
-browser qualification and disabled/inactive custody recovery controls still need
-explicit acceptance; the current UI derives response choices from active permitted
-location selections. Do not infer full recovery acceptance from the partial
-acknowledgement fixture.
+The ten cashbook checks are included in the 228, not additional cases. Native browser qualification still needs explicit acceptance. The recovery detail
+contract below removes dependency on the currently loaded location choices; the
+location list itself retains inactive rows. Do not infer full recovery acceptance
+from the partial acknowledgement fixture.
+
+
+#### Captured sources, configuration and custody recovery UI
+
+Finance readers can capture sources filtered by Kolkata occurrence days, payment
+method, source kind and location; open a saved snapshot; page its original rows;
+read composite source detail; and inspect its filtered controls alongside complete
+current recorded positions at the same cutoff. The two sets of controls are
+explicitly labelled. Unknown custody and shortfalls remain visible. Receipt
+allocations do not become new receipt rows. Amounts use exact decimal paise for
+aggregate display. Franchise admins and accountants can download the matching
+CSV; org admins read without export and operators have no captured finance view.
+
+The browser retains identical snapshot metadata across pages, detail and export.
+A response changing the saved cutoff or controls fails instead of mixing evidence.
+Download reads are aborted on unmount/current scope loss and check the scope again
+before creating a local blob. The lifetime works with the application's existing
+React StrictMode effect cleanup. Capture uses the shared command lifecycle and
+keeps its exact identity after an uncertain response. The client default order
+matches the server's `occurred_desc` when optional filters are omitted.
+
+Franchise admins configure actual receiving-account/custodian locations, using
+current account versions and the selected location version. Existing account and
+custodian identity is fixed; new revisions rename, deactivate, reactivate or
+refresh the recorded account revision. Inactive locations can be opened by their
+reference. Actual account and employee selectors are paged, with loading/failure
+states and no fabricated defaults. Receiving accounts remain configured through
+the existing Money receipts workflow.
+
+Expense/fund inbox filters now include status, kind, category, method, source
+location, responsible employee and occurrence range. Kolkata input becomes an
+inclusive start and explicitly exclusive end in UTC. Detail shows category,
+responsible employee and source/target references without placing private payees
+in list responses. Finance readers also see permitted custody history without
+reservation/acknowledgement forms.
+
+Handover detail returns the scoped source/target custodian IDs already joined by
+its participant lookup. Current senders/receivers can find recovery controls even
+when a selector page is absent, including after account/location deactivation.
+This introduces no additional query, table, grant, custodian directory or operator
+ledger access. The command service still checks current named membership and
+validates movement capacity/revisions; rejection/cancellation moves no cash.
+The existing real PostgreSQL current-authority/private-paging/inactive-source
+recovery case passed with explicit participant assertions, original 60-second
+case deadline, zero bad statuses, and disposable cluster/data/lease cleanup.
+
+Nineteen focused component checks use actual adapters with controlled fictional
+transport. They include capture paging/detail/control retention, exact capture
+replay, CSV mismatch rejection, successful StrictMode export, late export discard
+after scope invalidation, finance read/export distinctions, exact location revision
+inputs, half-open Kolkata request filters and recovery without selector/cross-parent
+reads. The initial report detail fixture looked up an ID appearing both as source
+and request; it now explicitly expects both displayed references. The failed log
+is retained. These checks do not establish native browser qualification. Full
+attachment UI, direct SQL lifecycle acceptance and final full-issue quality/CI/
+review/merge remain required before #140 closes.
+
+The final finance-view increment passes all five workspace typechecks, 237 web
+tests across 21 files, production web build, root lint/query AST and whitespace
+checks. The nineteen cashbook checks are included in that 237. Native recovery
+passed separately with its existing original deadline and cleaned infrastructure.
+Final logs: `140-cashbook-finance-ui-final-{types,web,build,lint}` and
+`140-custody-recovery-native`. Diagnosed failures remain in the override, cleanup
+and detail-fixture failure logs. The URL test shim needed explicit TypeScript
+`override` modifiers; delayed blob cleanup needed to retain its original URL
+implementation rather than look up a restored global after test teardown. No
+assertion, compiler option, timeout or asynchronous-error check was weakened.
