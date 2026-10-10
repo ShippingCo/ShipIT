@@ -1471,3 +1471,22 @@ thirty new cashbook/expense proof test declarations and five UI effects had no
 reviewed dispositions. Their reports/proof ownership and preservation rationale
 are now recorded in the existing inventory and document; callers, routes, exports,
 storage operations and fingerprints did not drift. The validator was unchanged.
+
+
+Final source review corrected one controlled handover fixture: an acknowledgement
+previously overwrote the parent inbox identity and requested amount. The fixture
+now updates only the cumulative custody state/version and history. The existing
+partial-acceptance UI test additionally requires the refreshed inbox to retain
+its original 20000-paise request with 10000 accepted and 10000 remaining, without
+a read-error fallback. All 20 cashbook UI cases pass after this correction; no
+production handover behavior changed.
+
+Whole local quality passed pinned tooling, planning, gate/unit checks, lint, types,
+689 API and 248 web tests, then failed Docker-backed attachment creation/cleanup.
+Separate API/web production build and 45-file migration-history checks passed.
+The complete native cashbook file reached its existing 300000ms deadline after
+19 passing cases (one cancelled file); it is not a full pass. The nine unreached
+cases passed separately under unchanged original deadlines, with no failures,
+cancellations, skips or todos. Thus all 28 distinct cases have passing evidence
+across those runs; the cancelled aggregate remains recorded. Both native database
+clusters/data/leases were cleaned. Full final-head Linux CI remains the release gate.
