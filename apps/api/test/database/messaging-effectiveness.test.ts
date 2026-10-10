@@ -44,6 +44,7 @@ await test('effectiveness API saves only public cells, restarts, retries and den
   }
   const other=await s.grant('franchise_admin',[A]);await assert.rejects(service.read(other.token,saved.snapshot.id,q,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
   await assert.rejects(service.read(s.local.token,saved.snapshot.id,{...q,conversation_id:randomUUID()},randomUUID()),{code:'VALIDATION_FAILED'});
+  for(const section of [['messaging'],{},1])await assert.rejects(service.read(s.local.token,saved.snapshot.id,{...q,section},randomUUID()),{code:'VALIDATION_FAILED'});
   const raw=JSON.stringify([response.json(),s.logs]);for(const marker of ['contact_key','conversation_id','provider_message_id','sealed_payload','phone_normalized','transcript','plaintext'])assert.equal(raw.includes(marker),false);
 });
 

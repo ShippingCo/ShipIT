@@ -29,7 +29,7 @@ export function createEffectivenessService(database:DatabasePool,hours:readonly 
     },
     async read(session:string,idInput:unknown,query:unknown,correlation:string) {
       const b=object(query,['organization_id','franchise_id','section','category']),q=selection({organization_id:b.organization_id,franchise_id:b.franchise_id}),id=uuid(idInput);
-      if(b.section!==undefined&&!['messaging','assistant','queue'].includes(String(b.section))||b.category!==undefined&&(typeof b.category!=='string'||!/^[a-z_]{1,64}$/.test(b.category)||b.section===undefined))throw new HttpError('VALIDATION_FAILED');
+      if(b.section!==undefined&&(typeof b.section!=='string'||!['messaging','assistant','queue'].includes(b.section))||b.category!==undefined&&(typeof b.category!=='string'||!/^[a-z_]{1,64}$/.test(b.category)||b.section===undefined))throw new HttpError('VALIDATION_FAILED');
       const section=(b.section??null) as EffectivenessSection|null,category=(b.category??null) as string|null;
       return withMessagingReportScope(database,session,q.organizationId,q.franchiseId,correlation,async scope=>{
         const saved=await repository.get<EffectivenessSnapshot,EffectivenessCell>(scope,id);
