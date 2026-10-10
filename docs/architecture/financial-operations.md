@@ -1,0 +1,287 @@
+# Financial operations contract (#137)
+
+Status: **proposed; business ratification pending**. Prepared 10 October 2026
+against main `7ff46da`. This is a contract proposal, not permission to enable new
+financial actions. [Payments](payments.md), [ADR 0045](../adr/0045-sales-and-financial-evidence.md),
+[role matrix](authorization-contract.md) and [module plan](../FINANCIAL_MANAGEMENT_PLAN.md)
+retain authority for their already-approved scope.
+
+## Existing evidence and approval gates
+
+Merged foundations #8/#14/#16/#19/#20/#21/#22/#29/#30/#42 provide money,
+membership, audit, customer, frozen pricing/tax, booking, payment, receipt and
+delivery ownership. Their PRs are ancestors of the base. #62's partial PR #162
+establishes bounded corrections/refunds and account **statements**, with W47/W48
+franchise-admin authority. It does not ratify the wider #137–#142 workflows.
+
+| Decision | Evidence / status | Owner and gate |
+| --- | --- | --- |
+| Statements group existing obligations without booking new revenue; not tax invoices | ADR 0045 and merged PR #162 | Preserve accepted boundary; accountant qualifies any later statutory document in #150 |
+| Exact INR paise, immutable booked tax, separate COD ownership, append-only corrections | Existing domain contracts and approved finance expansion | Preserve; no new approval requested |
+| D137-1 permissions below | Proposal only | Product owner approves precise role/action changes; maintainer independently reviews PR |
+| D137-2 debtor, due dates and credit rules below | Proposal only | Product owner approves; accountant reviews ledger consequences |
+| D137-3 new/returning and financial metrics below | Proposal only | Product owner approves definitions |
+| D137-4 cash close, self-approval and reopening below | Proposal only | Product owner approves responsibility policy |
+| D137-5 cancellation/refund and fee treatment below | Proposal only | Product owner approves operating policy; accountant qualifies tax/document treatment |
+| Target accounting format, bank/card sample mappings and statutory numbering | Unresolved external inputs | #150 accountant mapping; #146 evidence-format owner; do not claim qualification without reviewed fixtures |
+
+Approval evidence must identify decision IDs, approver, date and immutable review
+or conversation reference. A prepared document, CI pass or agent review is not
+ratification. Issue #137 remains open until all its required decisions are approved
+and normal review/CI/merge conditions hold. Later external format qualification
+belongs to #146/#150; this contract names those gates rather than claiming support.
+
+## Definitions and source ownership
+
+All measures declare owner, source IDs/versions, business date, as-of cutoff and
+currency. Event time is UTC; business dates are Asia/Kolkata. Mutation values are
+positive integer paise; aggregate arithmetic uses numeric/BigInt and decimal
+strings when JSON safe integers are insufficient. Signed effects are derived from
+entry kind, never supplied as unexplained negative money.
+
+| Measure | Meaning and authoritative owner |
+| --- | --- |
+| Original billed gross | Frozen Booking charge including tax and rounding (#21/#22) |
+| Adjusted billed gross | Original components minus approved linked reductions (#139); financial cancellation is distinct from physical shipment cancellation |
+| Tax-exclusive revenue | Adjusted taxable plus non-taxable charge components; excludes GST, seller COD, advances, transfers and bank matching (#139/#62) |
+| Recorded collections | Actual receipt inflows less corrections of incorrectly recorded receipts (#29/#138); does not imply bank verification |
+| Refund outflow | Actual money returned with beneficiary/evidence reference (#139); adjustment approval alone is not a refund |
+| Outstanding | Remaining source obligation after valid allocations, reductions and refunds; no second balance authority (#138/#142/#63) |
+| Refundable credit | Customer funds above adjusted obligation; shown separately, never hidden negative debt (#139) |
+| Advance | Actual received, unapplied customer funds; customer liability until allocated/refunded (#138/#142); neither credit permission nor sales |
+| Seller COD liability | Goods principal owned by identified seller/beneficiary; separate from freight revenue and agent fees (#144) |
+| Cash custody | Named employee/agent/drawer possession, independent of customer's settled debt (#140/#144) |
+| Verified settlement | External account credit/debit matched to recorded evidence; matching creates no receipt or sale (#146) |
+| Expense / direct contribution | Approved expense record (#140); shipment tax-exclusive revenue minus attributable costs with provenance (#147); unknown cost gives unknown contribution, not zero cost |
+
+For existing single-booking sources, let G = adjusted gross, C = collections minus
+recording reversals, F = actual refunds and H = C - F. Then
+outstanding = max(G - H, 0), refundable credit = max(H - G, 0), and
+G + refundable credit = H + outstanding. A reduction of G may create refundable
+credit; only F records money leaving. Original tax/receipt evidence never changes.
+Allocation and unapplied-advance totals must be kept separately when #142 generalizes
+this equation; subtracting an account receipt from each shipment is forbidden.
+
+## D137-1: proposed permission extensions
+
+Use the existing seven roles. The current matrix remains effective until this
+proposal is explicitly ratified and the owning implementation updates it.
+`F` means current explicit own-franchise membership; `O` is existing declared
+own-organization read only; `A` means active own assignment and minimal evidence.
+All unlisted grants are denied. Custody never grants customer-directory access.
+
+| Action | Proposed grant | Owner / constraint |
+| --- | --- | --- |
+| Record actual receipt and allocate it | franchise_admin, operator: F | #138/#142; extends W20 deliberately; no accountant or org_admin write |
+| Reverse mistaken receipt; approve discount/cancellation/refund | franchise_admin: F | #139; existing W21/W47 ceiling retained; operator may request only |
+| Record expense or initiate cash transfer/count | franchise_admin, operator: F | #140/#145; no requester-provided approval flag |
+| Approve expense, cash close, discrepancy/reopen | franchise_admin: F | #140/#145; distinct approval evidence and expected version |
+| Import statements, propose/confirm or reject reconciliation match | accountant, franchise_admin: F | #146; no creation of collection/expense by matching |
+| Configure receiving account, monthly terms, credit limit or negotiated rate | franchise_admin: F | #138/#141; administrator-only configuration, no org_admin implicit mutation |
+| Issue account statement and approve account corrections | franchise_admin: F | #142; preserves W48; accountant may preview/export only |
+| Register temporary agent; accept/reject custody handover and approve settlement | franchise_admin: F | #143/#144; active employee records do not automatically become members |
+| Record own handover request / acknowledge own assignment | delivery_agent: A | #143/#144; no general ledger mutation, customer-payment reversal or beneficiary-money deduction |
+| Read/export financial evidence | Existing R25/R28/E03 grants | org_admin own-org read; franchise_admin/accountant F exports; operator minimum recording result only |
+
+Separate request, approval, record, reconcile and export. Server derives ownership,
+actor/time and grants; nested references, replay, background execution and downloads
+reauthorize. Admin in franchise A cannot write B even in the same org. Org admins
+cannot export without a separate permitted franchise grant. Read-only never mutates.
+Agent registration without authenticated membership supports admin-recorded evidence
+only; it does not invent login rights. #143 owns that access lifecycle.
+
+## D137-2: proposed account, due-date and credit policy
+
+The responsible debtor is an explicitly selected franchise-private customer/account,
+not an inferred phone match or physical recipient. An ordinary sender defaults to
+the booking customer only when confirmed by the booking contract; freight payer
+exceptions require explicit source ownership. Seller COD has a separate beneficiary.
+
+Ordinary To-Pay obligations are payable on the saved booking business date.
+Monthly accounts require explicitly configured terms: closing day and nonnegative
+days after closing. No automatic universal net-30 policy. Freeze due day and terms
+version per obligation; legacy records lacking approved due evidence show **unknown
+due**, never invented historical overdue. Monthly statements group those obligations
+without changing frozen due dates; changed terms affect future bookings only.
+
+Age since booking and days overdue are separate fields. Overdue starts the day
+after due day; not-yet-due balances are separate. Known overdue buckets are 0–30,
+31–60 and 61+ calendar days, disjoint, with explicit unknown-due count/amount.
+#63's existing booking-age buckets keep their original definition and version.
+
+An account has active/suspended state and an approved paise credit limit.
+Credit is permission to defer payment, not receipt evidence. Booking checks outstanding
+plus new adjusted exposure against the frozen limit under the account lock; pending
+uncommitted bookings cannot both consume the same capacity. Advances reduce exposure
+only through explicit valid allocation. Limit overrides require franchise-admin
+approval evidence for that booking; no silent bypass by role or frontend flag.
+
+## D137-3: proposed customer and dashboard definitions
+
+New customer means their first confirmed, non-financially-cancelled booking within
+the selected franchise-private relationship. Returning means an earlier eligible
+booking existed before the current booking, even outside the report period. Ties
+use confirmed timestamp and immutable ID. A later cancellation is evaluated at
+the stated cutoff and does not delete historical source evidence. No cross-franchise
+phone/person merging. Customer count is distinct relationship IDs, not parcels.
+
+Booking count is commercial bookings; shipment/parcel count remains separate.
+Average bill = adjusted billed gross divided by eligible booking count, labelled
+with rounding; zero denominator shows unavailable. Today/yesterday share local-day
+definitions and cutoff/freshness. Collection-day receipts and booking-cohort receipts
+are labelled distinctly. Financial comparisons retain complete versus partial-day
+labels. Net shop profit is deferred until expense completeness/allocation policy
+is approved; direct contribution never claims to be net profit.
+
+## D137-4: proposed closing and responsibility policy
+
+Expected drawer = approved opening + actual cash inflows - actual cash outflows.
+UPI/card are receiving-account records, not drawer inflows. Transfers have equal
+linked out/in ownership; initiated is not received. Count variance = counted -
+expected, signed and explicit. Neither shortage nor agent retention reopens debt
+or creates an automatic payroll deduction.
+
+States: draft count -> submitted -> approved -> superseded by approved reopen.
+Only a franchise admin approves/reopens with reason and source version. Where a
+second admin exists, require a distinct approver. For a sole-admin shop, explicit
+self-approval is allowed and visibly labelled; it must not masquerade as independent
+review. Submitted count and approval are immutable; reopening adds a linked version.
+Late evidence is a visible subsequent correction/variance requiring reconciliation,
+never an edit of closed evidence. No invented lockout time or overnight cutoff.
+
+Custody handover states: requested -> accepted/rejected; settlement states:
+draft -> submitted -> approved. Do not remove sender custody on an unacknowledged
+transfer. Partial acknowledged amounts create linked evidence and leave the rest
+outstanding. Agent fees are a separate approved expense; never silently net them
+against seller principal. Closed settlement reopening follows the same append-only
+approval rule as drawer close.
+
+## D137-5: proposed correction, cancellation and refund policy
+
+Preserve #62's component-wise reviewed reductions and explicit actual refunds.
+Operators may request an action; only franchise admins approve/apply it, referencing
+reason and evidence. This proposal adds no automatic upward debit producer.
+Cancellation never implies zero cost or completed physical RTO. After payment,
+cancel adjusted charges first; then refund at most available refundable credit.
+Refund recording requires evidence of actual return and target beneficiary; no live
+gateway call or claim of bank confirmation. Incorrect-receipt reversal is distinct
+from a customer refund. Expected payment/financial versions reject stale approvals.
+No universal refund deadline, fee percentage or statutory treatment is invented.
+
+Monthly statements stay statements. #150 must obtain accountant-reviewed document
+types, statutory numbering and correction mappings before advertising invoice/software
+compatibility. Existing receipts are not automatically relabelled as tax invoices.
+
+## Contract ownership, integrity and migration handoff
+
+Proposed v1 names below are gated on ratification; owners finalize wire DTOs and
+closed reason/state enums in their own issue before adding routes. Reuse the
+current session, CSRF, scope, idempotency, audit and event conventions.
+
+| Owner | Proposed contract families / retained facts |
+| --- | --- |
+| #138 | payment receipt/method/account/allocation; retain existing payment entries and opaque receipt references |
+| #139 | financial request/approval/change/refund; reuse `financial_changes` and source component/version lineage |
+| #140 | expense, cash movement, transfer acknowledgement; actor/custodian/account/version |
+| #141 | debtor account, terms/limit/rate versions; franchise-private customer FK |
+| #142 | statement issue, receipt allocation, advance application/refund; reuse `account_statements` and source-line uniqueness |
+| #143/#144 | agent assignment/handover/settlement, COD beneficiary liability; assignment does not transfer financial ownership |
+| #145/#146 | cash-close approval/reopen; statement-import/match/exception; match does not create money |
+| #147–#150 | cost provenance, comparable dashboard, summaries, accountant export mapping; consumers never become ledger authorities |
+
+Every owned entity has composite organization/franchise/resource foreign keys,
+stable ID, source/version references and appropriate scoped uniqueness/indexes.
+No cascade deletion of financial evidence. Multiple obligations in an allocation
+lock in stable ID order after membership/account authorization, and commit receipt,
+allocations, audit and required durable event atomically. Allocation sums cannot
+exceed receipt capacity or obligation balance; advance/refund races share the same
+source lock. Versions reject stale decisions; constraints enforce invariants independently.
+
+Identity is scoped actor + versioned operation + request key digest, with canonical
+intent fingerprint. Same identity/intent returns original result after current
+authorization; changed intent conflicts. Before-commit failure rolls back all owned
+effects. Lost commit response retries the exact identity, never a new key. No blind
+retry of uncertain external acceptance. Import identities include receiving account,
+currency, format/version and external transaction identity, not file name/amount alone.
+Overlapping statements cannot consume a transaction/receipt twice; amount-only is
+a suggestion. Card gross/fee/net settlement requires explicit batch evidence.
+
+Consumers use one consistent cutoff and source versions; no current-policy tax
+recalculation. Unknown bank match, due day, cost, method/account or legacy allocation
+remains unknown. Each producer supplies an additive fresh/populated upgrade plan,
+explicit legacy semantics and backward-compatible readers. Never edit released
+migrations or pretend synthetic backfill verifies a real historical event.
+
+## Worked fictional acceptance examples (contract evidence)
+
+All rupee amounts here represent exact integer paise internally. IDs below are
+fictional aliases scoped to org A/franchise A1; not production evidence.
+
+| Scenario / source | Independent reconciliation |
+| --- | --- |
+| B1 booked ₹1,000; R1 ₹600 day 1; R2 ₹400 day 2 | One booked sale ₹1,000; dated net collections ₹600 + ₹400; due ₹400 then ₹0; later allocation/banking adds no sale/receipt |
+| B2 freight ₹100; seller S1 goods COD ₹2,000; agent AG1 collects ₹2,100 | Shop freight collection ₹100; seller liability ₹2,000; agent custody ₹2,100. Acknowledged shop handover moves custody only; seller payout extinguishes liability, not shop expense. Fee ₹50 is separate expense; principal stays ₹2,000 |
+| B3 ₹1,000, B4 ₹500; month-end statement ST1; receipt R3 ₹900 | Statement source gross ₹1,500, no new sale/debt. Explicit allocations ₹600 to B3 and ₹300 to B4; due ₹400 + ₹200 = ₹600 |
+| Cancel B3 after that payment; refund RF1 ₹600 | B3 adjusted gross ₹0, held ₹600, refundable credit ₹600, due ₹0 before refund. After actual refund held/credit ₹0. B4 remains gross ₹500, held ₹300, due ₹200. Adjusted sales ₹500; dated inflows ₹900, refund outflow ₹600, retained ₹300. ST1 retains original source values; linked correction is shown separately |
+| R4 ₹700 received as advance; allocate ₹200 later | Advance ₹700 then ₹500, booking due reduces by ₹200, total actual receipts still ₹700; no new receipt/revenue on allocation |
+| Drawer opening ₹1,000; freight cash ₹100; COD cash ₹2,000; seller payout ₹2,000; cash expense ₹50; UPI ₹300 | Expected drawer ₹1,050. Count ₹1,040 gives variance -₹10. UPI does not alter drawer. Freight revenue ₹100, COD is liability, payout not expense, ₹50 expense. No employee deduction or debt reopening |
+| Card receipts ₹5,000, evidenced fees ₹100, bank settlement ₹4,900 | Existing receipts remain ₹5,000; fee expense ₹100; matched bank credit ₹4,900. No additional sale/receipt. Without fee/batch evidence leave exception unresolved |
+
+Authorization tabletop: org A has A1/A2, unrelated org C has C1. A1 operator may
+record only an A1 receipt under proposed D137-1; A1 accountant reconciles/exports
+A1 finance but cannot issue/refund or browse delivery history. Org A admin reads
+declared A1/A2 aggregates without write/export inheritance. AG1 sees only active
+assigned work and permitted own evidence. A1 guessed A2/C1 IDs and unknown IDs share
+controlled 404; visible but denied action is 403. Revoke before replay/export/job
+execution: deny without rows/totals or a second effect. These are required runtime
+tests for owners, not claims that proposed APIs have been executed.
+
+Failure tabletop: concurrent ₹600 + ₹600 allocations against ₹1,000 permit at most
+one ₹600 (remaining ₹400); duplicate key appends once; changed body conflicts;
+stale approval fails; uncertain commit retries identical intent; missing bank/cost/due
+evidence stays unknown. #67 independently reconciles the combined day/month, denied
+scopes and recovery; M7 repeats restore/security/release qualification. Report/public
+fixtures contain no real PII, raw bank statements, OTPs or credentials.
+
+## Research decisions, cost and verification
+
+- Adopt scoped intent identity and atomic persistence from [AWS Builders' Library](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/).
+  Applies to lost responses/repeated approvals; reuse current command receipts and
+  exact retries, with storage cost but no extra queue/framework. Owners verify
+  duplicates, changed intent and before/after-commit faults.
+- Adapt [PostgreSQL 18 isolation](https://www.postgresql.org/docs/18/transaction-iso.html):
+  statement snapshots for coherent reports, explicit shared balance locks for
+  writes, full-transaction retry where serialization requires it. Our lock-order
+  recommendation is an application design inference. Cost is short lock contention;
+  defer distributed locks/warehouse. Owners verify real concurrent transactions.
+- Adapt [Stripe's immutable credit ledger and cash/credit distinction](https://docs.stripe.com/invoicing/customer/balance):
+  separate reductions, actual received money and actual refunds. Use our existing
+  source services rather than Stripe's automatic invoice-credit behavior. Cost is
+  linked entries; no provider integration. Verify source-to-total examples above.
+- Defer statutory document certification: [CBIC invoice rules](https://cbic-gst.gov.in/gst-invoice-rules.html)
+  show document-specific requirements. This is not a current-law completeness
+  certification; a qualified accountant must review the applicable rules/mapping.
+  Cost is one targeted qualified review in #150, no government-filing feature.
+
+No runtime schema, UI, provider, credential or deployment change occurs in #137.
+Verification is repository planning/link checks and reproducible arithmetic/tabletop
+review. Runtime authorization/concurrency/restore tests remain with the owning
+implementation issues. CI cannot approve these business policies.
+
+## Local verification on the proposed document revision
+
+10 October 2026, base `7ff46da`; only this contract, the architecture index link and
+engineering workflow continuation section changed. Pinned toolchain, `pnpm
+check:planning`, `pnpm check:migrations`, `pnpm test:quality` (35 passed), `pnpm lint`
+and `pnpm typecheck` passed. All seven walkthroughs were independently checked with
+Node BigInt assertions of the listed paise balances. Unit/API/web stages passed;
+`pnpm test` failed at container-backed attachments because the Docker engine was
+unavailable. The initial `pnpm db:local quality` failed at container creation and
+cleanup; no complete quality/DB/attachment pass is claimed. Full logs are in ignored
+`node_modules/.cache/goal/137-*.log`. Build and final-commit CI are recorded in the PR.
+
+Reproduce: use the pinned PATH/PYTHON in QUALITY_CHECKS, run `pnpm check:planning`
+and `pnpm check:migrations`, independently trace each named source in the example
+tables, then run `pnpm db:local quality` with an available Docker engine. Contract
+arithmetic and existing runtime regression checks cannot ratify proposed policy or
+qualify the future finance APIs. Required business and independent review remain open.
