@@ -21,7 +21,7 @@ export default function Reports({controller,roles}:{controller:ScopeController;r
   const ageingSource=useMemo(()=>ageing(scopedApi(controller)),[controller]);
   const performanceSource=useMemo(()=>performance(scopedApi(controller)),[controller]);
   const canFinance=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
-  const canPerformance=roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only'].includes(r));
+  const canPerformance=roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only','delivery_agent'].includes(r));
   const [reportParams]=useSearchParams();
   const [view,setView]=useState<'sales'|'bookings'|'ageing'|'performance'>(reportParams.has('performance_snapshot')||!canFinance?'performance':reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
   if(!canFinance&&!canPerformance)return <p role="alert">Reports are unavailable for this role.</p>;

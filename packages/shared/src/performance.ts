@@ -21,7 +21,7 @@ export interface PerformanceSummary {
 export interface PerformanceGroup { key:string|null; summary:PerformanceSummary }
 export interface PerformanceSnapshot {
   id:string;schema_version:1;definition:'delivery_performance_v1';timezone:'Asia/Kolkata';
-  organization_id:string;franchise_id:string;filter:PerformanceFilter;as_of:string;expires_at:string;
+  organization_id:string;franchise_id:string;audience:'franchise'|'assignment';filter:PerformanceFilter;as_of:string;expires_at:string;
   freshness:{state:'captured';captured_at:string};count:number;summary:PerformanceSummary;
   destinations:PerformanceGroup[];routes:PerformanceGroup[];
 }

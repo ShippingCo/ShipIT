@@ -1,10 +1,10 @@
-import {reportLimits,type PerformanceFilter,type PerformanceRow} from '@shippingco/shared';
-import {scopedQuery,type TenantAccess} from '../security/scope.ts';
+import {reportLimits,type PerformanceFilter,type PerformanceRow,type PerformanceSnapshot} from '@shippingco/shared';
+import {scopedQuery,assertTenantAccess,type TenantAccess} from '../security/scope.ts';
 import {HttpError} from '../../plugins/errors.ts';
 import {utcRange} from './rules.ts';
 import {performanceTiming} from './performance-rules.ts';
 type SourceRow=Omit<PerformanceRow,'duration_seconds'|'outcome'>;
-export async function capturePerformance(scope:TenantAccess,filter:PerformanceFilter) {
+export async function capturePerformance(scope:TenantAccess,filter:PerformanceFilter,agentOnly=false) {
   const range=utcRange(filter);
   // One statement, one parcel row. Every optional producer is reduced before joining.
   const result=(await scopedQuery<{as_of:Date;rows:SourceRow[]}>(scope,['reports.capture'],`
@@ -25,6 +25,9 @@ export async function capturePerformance(scope:TenantAccess,filter:PerformanceFi
       FROM shipit.parcels p JOIN shipit.bookings b ON b.organization_id=p.organization_id AND b.franchise_id=p.franchise_id AND b.id=p.booking_id
       LEFT JOIN LATERAL (SELECT min(t.occurred_at) AS occurred_at FROM shipit.parcel_transitions t
         WHERE t.organization_id=p.organization_id AND t.franchise_id=p.franchise_id AND t.parcel_id=p.id AND t.to_status='dispatched') dispatch ON true
+      LEFT JOIN LATERAL (SELECT a.agent_id FROM shipit.delivery_attempts a
+        WHERE a.organization_id=p.organization_id AND a.franchise_id=p.franchise_id AND a.parcel_id=p.id AND a.booking_id=p.booking_id
+        ORDER BY a.attempt_number DESC LIMIT 1) assignment ON true
       LEFT JOIN shipit.delivery_proofs proof ON proof.organization_id=p.organization_id AND proof.franchise_id=p.franchise_id AND proof.parcel_id=p.id AND proof.booking_id=p.booking_id
       CROSS JOIN LATERAL (SELECT count(*)::int n FROM shipit.parcel_failed_attempts f
         WHERE f.organization_id=p.organization_id AND f.franchise_id=p.franchise_id AND f.parcel_id=p.id) failures
@@ -49,10 +52,25 @@ export async function capturePerformance(scope:TenantAccess,filter:PerformanceFi
         min((c.input->>'effective_at')::timestamptz) FILTER (WHERE c.operation_id='api.v1.routes.arrival') arrived
         FROM shipit.route_commands c WHERE c.organization_id=p.organization_id AND c.franchise_id=p.franchise_id AND c.route_id=route.id
           AND c.state='committed' AND c.operation_id IN ('api.v1.routes.departure','api.v1.routes.arrival')) route_times
-      WHERE {{franchise:p.organization_id:p.franchise_id}} AND b.confirmed_at>=$1 AND b.confirmed_at<$2
+      WHERE {{franchise:p.organization_id:p.franchise_id}} AND b.confirmed_at>=$1 AND b.confirmed_at<$2 AND ($4::uuid IS NULL OR assignment.agent_id=$4::uuid)
       ORDER BY b.confirmed_at,p.id LIMIT $3
-    ) x`,[range.from,range.to,reportLimits.rows+1])).rows[0]!;
+    ) x`,[range.from,range.to,reportLimits.rows+1,agentOnly?assertTenantAccess(scope,['reports.capture']).actor.id:null])).rows[0]!;
   if(result.rows.length>reportLimits.rows)throw new HttpError('REPORT_LIMIT_EXCEEDED');
   const rows=result.rows.map(r=>performanceTiming(r,filter.eta));
   if(filter.sort==='confirmed_desc')rows.reverse();return {as_of:result.as_of.toISOString(),rows};
+}
+
+/** Recheck the whole immutable selection before returning any counts or pages. */
+export async function requirePerformanceAudience(scope:TenantAccess,snapshot:PerformanceSnapshot,rows:readonly PerformanceRow[],agentOnly:boolean) {
+  if(!agentOnly)return;
+  if(snapshot.audience!=='assignment')throw new HttpError('RESOURCE_NOT_FOUND');
+  if(!rows.length)return;
+  const result=(await scopedQuery<{n:number}>(scope,['reports.capture'],
+    `SELECT count(*)::int n FROM shipit.parcels p
+      JOIN LATERAL (SELECT a.agent_id FROM shipit.delivery_attempts a
+        WHERE a.organization_id=p.organization_id AND a.franchise_id=p.franchise_id AND a.parcel_id=p.id AND a.booking_id=p.booking_id
+        ORDER BY a.attempt_number DESC LIMIT 1) assignment ON true
+      WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=ANY($1::uuid[]) AND assignment.agent_id=$2::uuid`,
+    [rows.map(r=>r.id),assertTenantAccess(scope,['reports.capture']).actor.id])).rows[0]!;
+  if(result.n!==rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }

@@ -33,7 +33,7 @@ describe('delivery performance cohort and timing boundaries',()=>{
     for(const eta of ['latest',false])expect(()=>performanceFilter({...filter,eta})).toThrow();
     expect(()=>performanceFilter({...filter,franchise_id:'other'})).toThrow();
     const r=performanceTiming({...row,destination:'=formula'},'original');
-    const snapshot:PerformanceSnapshot={id:'s',schema_version:1,definition:'delivery_performance_v1',timezone:'Asia/Kolkata',organization_id:'o',franchise_id:'f',filter,
+    const snapshot:PerformanceSnapshot={id:'s',schema_version:1,definition:'delivery_performance_v1',timezone:'Asia/Kolkata',organization_id:'o',franchise_id:'f',audience:'franchise',filter,
       as_of:row.confirmed_at,expires_at:row.confirmed_at,freshness:{state:'captured',captured_at:row.confirmed_at},count:1,summary:performanceSummary([r]),destinations:performanceGroups([r],'destination'),routes:performanceGroups([r],'route_id')};
     const csv=performanceCsv(snapshot,[r]);expect(csv).toContain('"\'=formula"');expect(csv.split('\r\n')).toHaveLength(3);
   });

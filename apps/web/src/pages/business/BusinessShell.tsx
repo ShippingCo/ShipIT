@@ -24,7 +24,7 @@ export default function BusinessShell({context,select,controller}:{controller:Sc
  const location=useLocation(),current=context.franchises.find(franchise=>franchise.id===context.active_franchise_id);if(!current)return null;
  const segment=location.pathname.split('/').filter(Boolean)[1]??'';const area:Area=segment==='reports'||segment==='support'||segment==='pickups'||segment==='automation'||segment==='packages'||segment==='deliveries'||segment==='lots'||segment==='routes'||segment==='eway'||segment==='receipts'||segment==='settings'?segment:segment==='new-booking'||segment==='booking'?'booking':'workspace';
  const roles=current.roles,links=[
-  {area:'reports' as const,to:'/business/reports',icon:'query_stats',label:'Reports',show:can(roles,['org_admin','franchise_admin','accountant','operator','dispatcher','read_only'])},
+  {area:'reports' as const,to:'/business/reports',icon:'query_stats',label:'Reports',show:can(roles,['org_admin','franchise_admin','accountant','operator','dispatcher','read_only','delivery_agent'])},
   {area:'support' as const,to:'/business/support',icon:'support_agent',label:'Human support',show:can(roles,['org_admin','franchise_admin','operator'])},
   {area:'pickups' as const,to:'/business/pickups',icon:'local_shipping',label:'Pickups',show:can(roles,['org_admin','franchise_admin','operator'])},
   {area:'workspace' as const,to:'/business',icon:'space_dashboard',label:'Workspace',show:true},

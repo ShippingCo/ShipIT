@@ -35,7 +35,7 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
     {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void create(true)}>Retry same performance request</button>}
     {pending&&<p role="status">Loading performance…</p>}<p role="status" aria-live="polite">{notice}</p>
     {!pending&&notice&&id&&!result&&<button className="btn btn-outlined" onClick={()=>setRevision(n=>n+1)}>Retry saved performance</button>}
-    {result&&s&&<><p>Saved {result.snapshot.filter.from_day} through {result.snapshot.filter.to_day}; {result.snapshot.filter.eta} ETA basis.</p>
+    {result&&s&&<><p>{result.snapshot.audience==='assignment'?'Your latest assigned parcels only; no franchise totals.':'Owning franchise parcel cohort.'}</p><p>Saved {result.snapshot.filter.from_day} through {result.snapshot.filter.to_day}; {result.snapshot.filter.eta} ETA basis.</p>
       <p>Captured {new Date(result.snapshot.as_of).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST · {result.snapshot.count} total cohort parcels; {result.selection.count} selected.</p>
       <fieldset disabled={pending}><legend>Saved cohort selection</legend><SelectField label="Destination drill-through" value={destination} onChange={v=>{setDestination(v);setRoute('');}} options={[{value:'',label:'All destinations'},...result.snapshot.destinations.map(g=>({value:g.key??'$unknown',label:`${g.key??'Unknown destination'} · ${g.summary.booked} parcels`}))]}/>
       <SelectField label="Route drill-through" value={route} onChange={setRoute} options={[{value:'',label:'All routes'},...result.snapshot.routes.map(g=>({value:g.key??'$unknown',label:`${g.key??'Unknown route'} · ${g.summary.booked} parcels`}))]}/>

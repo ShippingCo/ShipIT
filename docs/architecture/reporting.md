@@ -366,10 +366,18 @@ join multiplies a parcel: the query starts at parcels and reduces each source re
 
 Read permissions use R26 full-franchise org-admin/franchise-admin/operator/dispatcher/
 read-only grants, separately from financial R25. E04 exports require explicit
-franchise-admin membership. Accountant-only and assignment-only agent grants cannot
-browse/export the full-franchise report; agents retain their existing assigned-delivery
-view. Capture is derived read evidence, not a new business mutation privilege.
-Revocation is rechecked on replay, pagination, drill-through and download.
+franchise-admin membership. Accountant-only grants cannot browse this report. An
+assignment-only delivery agent can capture only parcels whose latest persisted
+attempt belongs to that agent, including completed deliveries after the current
+assignment field clears. Metadata and CSV label the audience as assignment or
+franchise. Agent results contain no franchise totals and cannot be exported. A
+full operational grant takes precedence when an actor holds both grants.
+Capture is derived read evidence, not a new business mutation privilege. Current
+membership is checked on replay, pagination, drill-through and download. For agent
+reads/replays, the entire saved selection must still belong to that agent before
+any metadata/counts/pages return; reassignment or loss of the full-franchise grant
+makes an incompatible saved snapshot unavailable (404). Create a new snapshot to
+see the current assignment selection.
 
 Research: adapt [Google SRE's numerator/eligible-event approach](https://sre.google/workbook/implementing-slos/)
 for honest denominators/exclusions; using it for courier cohorts is our application

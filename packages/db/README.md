@@ -812,7 +812,7 @@ GRANT SELECT ON shipit.bookings,shipit.parcels,shipit.parcel_transitions,
   shipit.parcel_failed_attempts,shipit.parcel_commands,
   shipit.parcel_dispatch_manifests,shipit.route_manifest_parcels,
   shipit.routes,shipit.route_commands,shipit.route_parcel_effects,
-  shipit.delivery_proofs TO runtime_role;
+  shipit.delivery_proofs,shipit.delivery_attempts TO runtime_role;
 ```
 
 The added dispatch-manifest permission is SELECT only: its existing security-definer

@@ -21,8 +21,12 @@ await test('performance uses real delivery proof, immutable reload/replay and ma
   const initial=before.json<PerformancePage>();assert.equal(initial.snapshot.count,2);assert.equal(initial.snapshot.summary.open,2);
   const agent=await s.grant('delivery_agent',[A]),parcel=s.booked.parcels[0].id;
   const started=await startTestDelivery(s,parcel,agent),code=await testDeliveryCode(s,parcel),completionKey=randomUUID();
+  const assignedResponse=await s.report('POST','',s.filter,agent);assert.equal(assignedResponse.statusCode,200,assignedResponse.body);
+  const assigned=assignedResponse.json<PerformancePage>();assert.equal(assigned.snapshot.audience,'assignment');assert.equal(assigned.snapshot.count,1);
+  assert.deepEqual(assigned.rows.map(r=>r.id),[parcel]);assert.equal((await s.report('GET','/'+assigned.snapshot.id+'/export',undefined,agent)).statusCode,403);
   await started.service.complete(agent.token,parcel,s.q,completionKey,['idempotency-key',completionKey],
     {expected_version:5,challenge_ref:started.state.challenge_ref,challenge_version:started.state.challenge_version,proof:code},false,randomUUID());
+  assert.deepEqual((await s.report('GET','/'+assigned.snapshot.id,undefined,agent)).json(),assigned);
   const fresh=(await s.report('POST')).json<PerformancePage>();assert.equal(fresh.snapshot.count,2);
   assert.deepEqual(fresh.snapshot.summary.on_time,{numerator:0,denominator:0,excluded:1});
   assert.equal(fresh.snapshot.summary.delivered,1);assert.equal(fresh.snapshot.summary.dispatched,1);assert.equal(fresh.snapshot.summary.open,1);
@@ -44,10 +48,10 @@ await test('performance uses real delivery proof, immutable reload/replay and ma
   const safe=JSON.stringify({fresh,logs:s.logs,csv:exported.json().csv});
   for(const forbidden of [code,s.local.token,s.booked.customer.phone,s.booked.customer.address,'Synthetic Recipient'])assert.ok(!safe.includes(forbidden));
 });
-await test('R26 readers and E04 exports deny financial-only/assignment-only grants, foreign IDs and revocation',{timeout:60000},async t=>{
+await test('R26 readers and E04 exports deny financial-only reads, unauthorized exports, foreign IDs and revocation',{timeout:60000},async t=>{
   const s=await setup(t),snapshot=(await s.report('POST')).json<PerformancePage>(),id=snapshot.snapshot.id;
   for(const role of ['operator','dispatcher','read_only'] as const){const actor=await s.grant(role,[A]);assert.equal((await s.report('POST','',s.filter,actor)).statusCode,200);assert.equal((await s.report('GET','/'+id+'/export',undefined,actor)).statusCode,403);}
-  for(const role of ['accountant','delivery_agent'] as const){const actor=await s.grant(role,[A]);assert.equal((await s.report('POST','',s.filter,actor)).statusCode,403);}
+  for(const role of ['accountant'] as const){const actor=await s.grant(role,[A]);assert.equal((await s.report('POST','',s.filter,actor)).statusCode,403);}
   const orgReport=await s.report('POST','',s.filter,s.admin);assert.equal(orgReport.statusCode,200,orgReport.body);assert.equal((await s.report('GET','/'+orgReport.json().snapshot.id+'/export',undefined,s.admin)).statusCode,403);
   for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}]){
     const known=await s.report('GET','/'+id,undefined,s.local,randomUUID(),query),unknown=await s.report('GET','/'+randomUUID(),undefined,s.local,randomUUID(),query);
@@ -119,4 +123,26 @@ await test('booking cohorts include Kolkata midnight exactly and exclude both ad
   const page=response.json<PerformancePage>();assert.equal(page.snapshot.count,2);
   assert.deepEqual(page.rows.map(r=>r.booking_id).sort(),[ids[1],ids[2]].sort());
   assert.equal(page.snapshot.summary.open,2);assert.equal(page.snapshot.summary.delivered,0);
+});
+
+await test('agents cannot read reassigned snapshot counts, other agents or former franchise grants',{timeout:60000},async t=>{
+  const s=await setup(t),agent=await s.grant('delivery_agent',[A]),other=await s.grant('delivery_agent',[A]),parcel=s.booked.parcels[0].id;
+  const started=await startTestDelivery(s,parcel,agent),key=randomUUID();
+  const savedResponse=await s.report('POST','',s.filter,agent,key);assert.equal(savedResponse.statusCode,200,savedResponse.body);
+  const saved=savedResponse.json<PerformancePage>();assert.equal(saved.snapshot.count,1);
+  const empty=(await s.report('POST','',s.filter,other)).json<PerformancePage>();assert.equal(empty.snapshot.count,0);
+  assert.equal((await s.report('GET','/'+saved.snapshot.id,undefined,other)).statusCode,404);
+  const failed=await s.app.inject({method:'POST',url:`/api/v1/parcels/${parcel}/failed-attempt?`+new URLSearchParams(s.q),headers:{...s.headers,'idempotency-key':randomUUID()},cookies:s.cookies(agent.token),payload:JSON.stringify({expected_version:5,evidence_ref:randomUUID(),attempt_id:started.state.attempt_id,reason_code:'customer_unavailable'})});
+  assert.equal(failed.statusCode,200,failed.body);
+  const retryKey=randomUUID();await started.service.start(started.dispatcher.token,parcel,s.q,retryKey,['idempotency-key',retryKey],{expected_version:6,agent_id:other.id,handover_evidence_ref:randomUUID()},true,randomUUID());
+  assert.equal((await s.report('GET','/'+saved.snapshot.id,undefined,agent)).statusCode,404);
+  assert.equal((await s.report('POST','',s.filter,agent,key)).statusCode,404);
+  assert.equal((await s.report('POST','',s.filter,agent)).json().snapshot.count,0);
+  const replacement=(await s.report('POST','',s.filter,other)).json<PerformancePage>();assert.equal(replacement.snapshot.count,1);assert.equal(replacement.snapshot.summary.failed_attempts,1);
+  const fullKey=randomUUID(),full=(await s.report('POST','',s.filter,s.operator,fullKey)).json<PerformancePage>();assert.equal(full.snapshot.count,2);
+  const invitation=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:s.operator.id,role:'delivery_agent',franchise_ids:[A]});
+  await s.memberships.acceptInvitation(s.operator.token,{token:invitation.acceptance_token});
+  await s.db.adminQuery("UPDATE shipit.memberships SET lifecycle='revoked',version=version+1,revoked_at=clock_timestamp() WHERE user_id=$1 AND role='operator'",[s.operator.id]);
+  assert.equal((await s.report('GET','/'+full.snapshot.id,undefined,s.operator)).statusCode,404);
+  assert.equal((await s.report('POST','',s.filter,s.operator,fullKey)).statusCode,404);
 });

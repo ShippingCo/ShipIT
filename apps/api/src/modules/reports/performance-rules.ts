@@ -29,9 +29,9 @@ export function performanceGroups(rows:readonly PerformanceRow[],dimension:'dest
   for(const row of rows){const key=row[dimension],items=groups.get(key);if(items)items.push(row);else groups.set(key,[row]);}
   return [...groups].sort(([a],[b])=>(a??'').localeCompare(b??'')).map(([key,items])=>({key,summary:performanceSummary(items)}));
 }
-export const performanceColumns=['snapshot_id','as_of','timezone','from_day','to_day','eta_policy','parcel_id','booking_id','customer_id','parcel_version','destination','service','courier','status','failed_attempts','dispatched_at','delivered_at','original_eta_at','original_eta_version','revised_eta_at','revised_eta_version','route_id','manifest_id','route_departed_at','route_arrived_at','duration_seconds','outcome'] as const;
+export const performanceColumns=['snapshot_id','as_of','timezone','from_day','to_day','eta_policy','audience','parcel_id','booking_id','customer_id','parcel_version','destination','service','courier','status','failed_attempts','dispatched_at','delivered_at','original_eta_at','original_eta_version','revised_eta_at','revised_eta_version','route_id','manifest_id','route_departed_at','route_arrived_at','duration_seconds','outcome'] as const;
 export function performanceCsv(snapshot:PerformanceSnapshot,rows:readonly PerformanceRow[]) {
-  const records=rows.map(r=>[snapshot.id,snapshot.as_of,snapshot.timezone,snapshot.filter.from_day,snapshot.filter.to_day,snapshot.filter.eta,
+  const records=rows.map(r=>[snapshot.id,snapshot.as_of,snapshot.timezone,snapshot.filter.from_day,snapshot.filter.to_day,snapshot.filter.eta,snapshot.audience,
     r.id,r.booking_id,r.customer_id,String(r.version),r.destination??'unknown',r.service??'unknown',r.courier??'unknown',r.status,String(r.failed_attempts),
     r.dispatched_at??'unknown',r.delivered_at??'unknown',r.original_eta_at??'unknown',String(r.original_eta_version??'unknown'),
     r.revised_eta_at??'unknown',String(r.revised_eta_version??'unknown'),r.route_id??'unknown',r.manifest_id??'unknown',

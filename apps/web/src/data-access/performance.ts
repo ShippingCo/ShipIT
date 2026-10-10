@@ -8,7 +8,7 @@ const row=object({id:uuid,booking_id:uuid,customer_id:uuid,confirmed_at:instant,
   dispatched_at:nullable(instant),delivered_at:nullable(instant),original_eta_at:nullable(instant),revised_eta_at:nullable(instant),original_eta_version:nullable(integer()),revised_eta_version:nullable(integer()),
   route_id:nullable(uuid),manifest_id:nullable(uuid),route_departed_at:nullable(instant),route_arrived_at:nullable(instant),duration_seconds:nullable(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?v:protocol()),outcome:choice('on_time','delayed','open','rto','unknown')});
 const group=object({key:nullable(text),summary});
-const snapshot=object({id:uuid,schema_version:choice(1),definition:choice('delivery_performance_v1'),timezone:choice('Asia/Kolkata'),organization_id:uuid,franchise_id:uuid,
+const snapshot=object({id:uuid,schema_version:choice(1),definition:choice('delivery_performance_v1'),timezone:choice('Asia/Kolkata'),organization_id:uuid,franchise_id:uuid,audience:choice('franchise','assignment'),
   filter:object({from_day:text,to_day:text,sort:choice('confirmed_asc','confirmed_desc'),eta:choice('original','revised')}),as_of:instant,expires_at:instant,
   freshness:object({state:choice('captured'),captured_at:instant}),count:integer(),summary,destinations:array(group,reportLimits.rows),routes:array(group,reportLimits.rows)});
 const selection=object({destination:nullable(text),route_id:nullable(text),count:integer(),summary});
