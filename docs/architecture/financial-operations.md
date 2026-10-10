@@ -1391,3 +1391,31 @@ fabricated custody. Final API types, root lint/query AST and migration history p
 140-expense-sql-final-lint and 140-expense-sql-migrations. Native test resources and
 loopback cluster are cleaned after each run. These controlled metadata/storage fixtures
 do not qualify a live provider or finish native browser and full-issue release gates.
+
+### #140 owning refund HTTP qualification
+
+The actual server composition is qualified with both financial workflow and cashbook
+writes enabled, and with both disabled. New cash refund application requires the exact
+current cash location/revision; missing or incomplete custody evidence fails before any
+financial change. An approved but unexecuted refund remains blocked when writes are
+disabled. Existing legacy application replays with its original key/body across either
+configuration, retaining its original NULL custody evidence. Current actor/tenant grants
+are checked before replay, including sibling/unrelated scopes and revoked membership.
+
+The native scenario passes with the original 60-second deadline. A reviewed 100000-paise
+float remains unchanged by a legacy 10000-paise refund with unknown custody; the next
+20000-paise refund explicitly records its owning drawer, leaving 80000 known recorded
+paise. Replay across enabled/disabled servers adds no second outflow or source generation.
+Original collection count stays one, original refund evidence remains byte-for-byte equal,
+and financial sources reconcile gross 0, collections 50000 and refunds 30000. Live position
+comparisons require the same complete financial facts/source generation and a nondecreasing
+current cutoff; each read deliberately has its own as-of time.
+
+Logs: 140-refund-http-native, 140-refund-http-final-types and 140-refund-http-final-lint.
+Initial fixture failures are retained: the applied command identity was mistaken for the
+financial evidence identity (now queried by immutable request parent), and a live cutoff
+was incorrectly expected to equal an earlier read's time. An initial typecheck also caught
+a nonexistent derived field; assertions now reconcile the actual authoritative source DTO.
+No source/amount assertion, privacy check or deadline was relaxed. This adds acceptance
+evidence only, without changing the owning refund implementation or released schema.
+Native cluster/data/lease cleanup completed. Browser and final full-issue gates remain.
