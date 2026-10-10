@@ -1322,3 +1322,30 @@ and detail-fixture failure logs. The URL test shim needed explicit TypeScript
 `override` modifiers; delayed blob cleanup needed to retain its original URL
 implementation rather than look up a restored global after test teardown. No
 assertion, compiler option, timeout or asynchronous-error check was weakened.
+### #140 private expense proof UI
+
+Expense request detail now reuses the booking attachment transport and uploader with
+an explicit expense parent and purpose. The submitter adds optional supported private
+photos, voice notes or videos; permitted finance readers request ready bytes explicitly.
+Booking/parcel metadata, foreign grant URLs, mismatched parents and command identities
+are rejected before accepting evidence. Scope invalidation aborts work and revokes local
+previews. Approval hides new uploads and shows the frozen reviewed evidence references;
+the server remains authoritative over current access, review and file safety.
+
+An uncertain initiation, upload or cancellation retains its original intent and command
+identity. Cancellation stays visible until confirmed or current evidence reconciles it;
+an unknown cancellation cannot be presented as successful. Pending submitter proof work
+locks expense navigation and other financial commands. Read-only metadata loading does
+not lock another admin's review. Existing booking attachment callers retain their parent
+contract and use the same recovery implementation.
+
+Verification: final web suite passes 248 tests in 22 files, including 10 expense proof
+transport/lifecycle checks, 20 cashbook checks and 14 existing booking attachment checks
+(these counts are included in 248). All five workspace typechecks pass; after callback
+dependency fixes the affected web typecheck passes again. Root lint/query AST, production
+web build and whitespace checks pass. Controlled fictional HTTP/XHR and component
+fixtures prove the exercised UI recovery boundaries, not live storage/scanner or native
+browser qualification. Logs are ignored local 140-expense-proof-final-* files. The initial
+hook-dependency/unused projection lint failure is retained and corrected without relaxing
+the gate. Direct SQL lifecycle acceptance, native browser journeys and final full-issue
+quality/CI/review/merge remain required before #140 closes.
