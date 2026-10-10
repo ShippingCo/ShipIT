@@ -339,6 +339,10 @@ real PostgreSQL tests separately verify that authority, including legacy collect
 races, adjusted debt, cross-customer refusal and refund/correction interaction.
 Broader final acceptance, CI and review remain required before #138 completion.
 
+### Receipt design evidence
+
+This implementation reuses [the approved finance research decisions](financial-operations.md#research-decisions-cost-and-verification): scoped AWS-style intent retries, PostgreSQL transaction/row-lock isolation, and Stripe's distinction between actual cash and applied customer credit. ShippingCo adapts those practices by pairing each receipt allocation with the existing single-obligation ledger inside one root transaction. This is our application design; it adds no Stripe integration or automatic invoice-credit behavior. Additive source, revision and link rows plus deferred consistency checks cost database storage and transaction work, while avoiding a second mutable bill balance. Exact money examples, concurrent old/new writers, interrupted commits and populated upgrades verify that choice. Custody transfers, bank matching and cash refunds remain separate owning workflows.
+
 ### Receipt rollout and rollback
 
 The server defaults `MONEY_RECEIPTS_ENABLED=false`. Apply the forward schema and
