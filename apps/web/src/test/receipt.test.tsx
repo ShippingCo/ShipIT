@@ -1,6 +1,8 @@
+import {moneyReceiptResult,receivingAccountDto} from '../data-access/money-receipts';
 import { describe,it,expect,vi,afterEach } from 'vitest';
 import { render,fireEvent,screen,cleanup } from '@testing-library/react';
 import type { BookingReceiptDto,CollectionReceiptDto,ReceiptDto } from '@shippingco/shared';
+import { receiptDto } from '../data-access/receipts';
 import { receiptHTML,receiptMoney,printReceipt,renderReceiptView } from '../utils/receipt';
 const dto:BookingReceiptDto={id:'receipt-1',number:'RCT-0000000000000000001',schema_version:1,version:1,booking_id:'booking-1',issued_at:'2099-01-01T01:00:00.000Z',kind:'booking_charge',currency:'INR',booking_receipt_id:null,correction_of:null,
  issuer:{organization_name:'Synthetic Courier',franchise_name:'Synthetic Branch',franchise_code:'SYN',supplier_gstin:'27ABCDE1234F1Z5',supplier_state:'27'},
@@ -19,6 +21,34 @@ describe('issued receipt presentation',()=>{
   expect(receiptHTML(ack)).toContain('Collected amount');expect(receiptHTML(ack)).toContain('₹5.00');expect(receiptHTML(ack)).not.toMatch(/Booked total|PAID|SETTLED|outstanding/);
   const reversal:ReceiptDto={...ack,kind:'collection_reversal',correction_of:ack.id,entry:{...ack.entry,kind:'reversal',reversal_of:ack.entry.id,reason_code:'incorrect_amount',collection_reference:null}};
   expect(receiptHTML(reversal)).toContain('Reversed amount');expect(receiptHTML(reversal)).toContain('Corrects acknowledgement');
+ });
+ it('renders frozen receipt allocation evidence without a second cash inflow or private external reference',()=>{
+  const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+  const ack:CollectionReceiptDto={...dto,id:id(1),booking_id:id(2),schema_version:2,kind:'collection_acknowledgement',booking_receipt_id:id(3),correction_of:null,
+   entry:{id:id(4),kind:'collection',amount_paise:500,currency:'INR',context:'to_pay',method:'card',collection_reference:id(5),reversal_of:null,reason_code:null,version:1,occurred_at:dto.issued_at},
+   allocation_source:{receipt_id:id(6),allocation_id:id(7),kind:'allocation',receipt_occurred_at:'2098-12-31T12:00:00Z',receipt_recorded_at:'2098-12-31T12:05:00Z'}};
+  const parsed=receiptDto({...ack,allocation_source:{...ack.allocation_source,external_reference:'PRIVATE-SYN-REF'}}),html=receiptHTML(parsed);
+  expect(html).toContain('Applied amount');expect(html).toContain('Source receipt');expect(html).toContain('2098-12-31T12:00:00Z');
+  expect(html).not.toContain('Collected amount');expect(JSON.stringify(parsed)).not.toContain('PRIVATE-SYN-REF');
+  expect(()=>receiptDto({...ack,allocation_source:undefined})).toThrow();
+  expect(()=>receiptDto({...ack,allocation_source:{...ack.allocation_source,kind:'release'}})).toThrow();
+  expect(()=>receiptDto({...ack,entry:{...ack.entry,method:'credit'}})).toThrow();
+  for(const method of ['cash','upi','card','bank_transfer','other'])expect(receiptDto({...ack,entry:{...ack.entry,method}})).toMatchObject({entry:{method}});
+  const correction:ReceiptDto={...ack,kind:'collection_reversal',correction_of:ack.id,entry:{...ack.entry,kind:'reversal',reversal_of:ack.entry.id,reason_code:'incorrect_amount',collection_reference:null},allocation_source:{...ack.allocation_source!,kind:'release'}};
+  expect(receiptHTML(receiptDto(correction))).toContain('Released allocation');
+  const source={receipt_id:id(6),customer_id:id(8),version:1,currency:'INR',received_paise:1000,allocated_paise:500,unallocated_paise:500,
+   allocations:[{id:id(7),booking_id:id(2),payment_entry_id:id(4),kind:'allocation',amount_paise:500,release_of:null}]};
+  expect(moneyReceiptResult({...source,external_reference:'PRIVATE-SYN-REF',receiver_id:id(9)})).toEqual(source);
+  for(const patch of [{unallocated_paise:501},{allocated_paise:-1},{received_paise:Number.MAX_SAFE_INTEGER+1},{version:0},
+   {allocations:[source.allocations[0],source.allocations[0]]},{allocations:[{...source.allocations[0],kind:'release'}]},
+   {allocations:[{...source.allocations[0],release_of:id(10)}]}])expect(()=>moneyReceiptResult({...source,...patch})).toThrow();
+  expect(moneyReceiptResult({...source,allocated_paise:0,unallocated_paise:1000,allocations:[]})).toMatchObject({unallocated_paise:1000,allocations:[]});
+  const account={id:id(11),revision_id:id(12),version:1,name:'Synthetic receiving account',methods:['upi'],other_method_name:null,active:true,recorded_at:dto.issued_at};
+  expect(receivingAccountDto(account)).toEqual(account);
+  for(const patch of [{methods:[]},{methods:['upi','upi']},{methods:['cash','upi']},{methods:['other']},{other_method_name:'Unselected named method'}])expect(()=>receivingAccountDto({...account,...patch})).toThrow();
+  expect(receivingAccountDto({...account,methods:['other'],other_method_name:'Synthetic cheque'})).toMatchObject({methods:['other']});
+
+
  });
  it('escapes every layout text context and ignores foreign download and executable logo URLs',()=>{
   for(const text of ['<script>alert(1)</script>','<img src=x onerror=alert(1)>','"><svg/onload=alert(1)>']){

@@ -16,6 +16,8 @@ const consumer:Consumer={id:'synthetic',subscriptions:{'booking.created':[1]},or
 describe('outbox closed contracts',()=>{
   it('binds every envelope to trusted persisted ownership and event identity',()=>{
     expect(eventEnvelope(event,job)).toEqual(event);
+    const receipt={...event,event_type:'money_receipt.recorded',aggregate_type:'money_receipt',payload:{receipt_id:event.aggregate_id}};
+    expect(eventEnvelope(receipt,job)).toEqual(receipt);
     for(const patch of [{organization_id:randomUUID()},{franchise_id:randomUUID()},{event_id:randomUUID()},
       {aggregate_version:0},{aggregate_version:1.1},{schema_version:0},{aggregate_type:'invented'},
       {occurred_at:'tomorrow'},{payload:null},{actor:{type:'user',id:'secret@example.test'}},{raw:'secret'}]) {

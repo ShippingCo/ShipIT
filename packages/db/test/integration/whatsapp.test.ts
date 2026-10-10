@@ -4,7 +4,7 @@ import { cp,mkdtemp,readFile,writeFile,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,dirname,basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { provisionDatabase } from '../support.ts';
+import { provisionDatabase,preReceiptEvent } from '../support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { whatsappSetup } from '../../../../apps/api/test/whatsapp-support.ts';
 import { org,A,B } from '../../../../apps/api/test/audit-support.ts';
@@ -14,14 +14,14 @@ await test('WhatsApp additive upgrade preserves populated #35 baseline and audit
   const migrate=db.migrate;db.migrate=async()=>({applied:0});
   const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
   const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','parcels','domain_events','outbox_jobs','audit_history'].map(async table=>
-    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows])));
+    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows.map(row=>table==='domain_events'?preReceiptEvent(row):row)])));
   const before=await snapshot(),directory=await mkdtemp(join(tmpdir(),'shipit-whatsapp-upgrade-'));
   t.after(()=>{assert.equal(dirname(directory),tmpdir());assert.ok(basename(directory).startsWith('shipit-whatsapp-upgrade-'));return rm(directory,{recursive:true,force:true});});
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),directory,{recursive:true});
   const file=join(directory,'1790614800000-whatsapp-registry.cjs');
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT missing_issue36_function()');};\n");
   await assert.rejects(db.migrate({dir:directory}));assert.equal((await db.adminQuery("SELECT to_regclass('shipit.whatsapp_installations') value")).rows[0]!.value,null);
-  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:21});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:22});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
 });
 
 await test('WhatsApp owner constraints, immutable history, revisions and restricted runtime privileges',{timeout:30000},async t=>{

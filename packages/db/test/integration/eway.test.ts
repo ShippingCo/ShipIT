@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { provisionDatabase } from '../support.ts';
+import { provisionDatabase,preReceiptEvent } from '../support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { ewaySetup } from '../../../../apps/api/test/eway-support.ts';
 import { org,A,B } from '../../../../apps/api/test/audit-support.ts';
@@ -13,21 +13,21 @@ import { org,A,B } from '../../../../apps/api/test/audit-support.ts';
 await test('e-way migration upgrades populated attachment-era main, rolls back failure and leaves unknown declarations absent',{timeout:30000},async t=>{
   const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:20}),{applied:20});
   const migrate=db.migrate;db.migrate=async()=>({applied:0});const s=await bookingSetup(t,db),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);db.migrate=migrate;
-  const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','parcels','booking_commands','booking_obligations','domain_events','attachments'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows])));
+  const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','parcels','booking_commands','booking_obligations','domain_events','attachments'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows.map(row=>table==='domain_events'?preReceiptEvent(row):row)])));
   const before=await snapshot(),dir=await mkdtemp(join(tmpdir(),'shipit-eway-upgrade-'));t.after(()=>rm(dir,{recursive:true,force:true}));
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),dir,{recursive:true});const file=join(dir,'1790442000000-external-eway-records.cjs');
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
   await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.eway_records') relation")).rows[0]!.relation,null);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,20);assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:23});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareEway();assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:24});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareEway();assert.deepEqual(await snapshot(),before);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.eway_records')).rows[0]!.n,0);
   const state=await s.app.inject({url:'/api/v1/bookings/'+booked.json().id+'/eway?'+new URLSearchParams({organization_id:org,franchise_id:A}),cookies:s.cookies(s.operator.token)});
   assert.equal(state.statusCode,200,state.body);assert.equal(state.json().record,null);assert.equal(state.json().state.value_check_state,'unknown');
   // A released schema is repaired by a NEW migration; the installed file is never edited.
   const repair=await mkdtemp(join(tmpdir(),'shipit-eway-forward-'));t.after(()=>rm(repair,{recursive:true,force:true}));
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),repair,{recursive:true});
-  await writeFile(join(repair,'1792429200001-synthetic-forward-repair.cjs'),"exports.up=p=>p.sql('CREATE INDEX synthetic_eway_repair ON shipit.eway_records(organization_id,franchise_id,version)');exports.down=()=>{throw new Error('Forward only');};");
+  await writeFile(join(repair,'1792515600001-synthetic-forward-repair.cjs'),"exports.up=p=>p.sql('CREATE INDEX synthetic_eway_repair ON shipit.eway_records(organization_id,franchise_id,version)');exports.down=()=>{throw new Error('Forward only');};");
   assert.deepEqual(await db.migrate({dir:repair}),{applied:1});assert.deepEqual(await snapshot(),before);
 });
 

@@ -76,6 +76,10 @@ The rows cover every private concept in #2's module/data ownership table.
 | R28 | Immutable audit, sanitized references and authorized drill-through | O | F | - | - | - | F | - |
 | R29 | Private installations/credential configuration safe metadata only | O | F | - | - | - | - | - |
 | R30 | Adoption plan / conflict summary | P | F | - | - | - | - | - |
+| R31 | Receipt-workspace minimum balances, linked allocation history, owned bills, named receiving choices and eligible receiver IDs | O | F | F | - | - | F | - |
+| R32 | Actual receipt private finance evidence: source, account revision, receiver, initial custody, times and external reference | O | F | - | - | - | F | - |
+
+R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
 
 Projection qualifiers are mandatory:
 
@@ -171,6 +175,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W46 | Verify/rebind/revoke explicit parcel customer tracking access (`customer.access.manage`), with independent evidence | - | F | - | - | - | - | - |
 | W47 | Approved charge/tax reduction or actual refund evidence (`finance.adjust`) | - | F | - | - | - | - | - |
 | W48 | Issue immutable account statement (`finance.statement`) | - | F | - | - | - | - | - |
+| W49 | Record an actual receipt and its same-customer allocations (`money_receipts.record`) | - | F | F | - | - | - | - |
+| W50 | Apply existing unallocated receipt funds (`money_receipts.allocate`) | - | F | F | - | - | - | - |
+| W51 | Release a linked allocation with recorded reason (`money_receipts.correct`); no refund | - | F | - | - | - | - | - |
+| W52 | Configure a named receiving account/drawer revision (`receiving_accounts.configure`) | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement

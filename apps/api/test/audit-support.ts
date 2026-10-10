@@ -19,7 +19,7 @@ export async function auditSetup(t:TestContext,pricingClock?:()=>Date,database?:
   const auth=createAuthService(pool,keys),memberships=createMembershipService(pool),audit=createAuditService(pool,keys.browser);
   const logs:string[]=[],telemetry=createSecurityCounters();
   const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3000',LOG_LEVEL:'info',ALLOWED_ORIGINS:'http://localhost:5173',
-    TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
+    MONEY_RECEIPTS_ENABLED:'true',TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
   const app=buildServer({config,database:pool,auth:{keys,delivery:{},webhook:undefined},securityTelemetry:telemetry,pricingClock,logSink:{write:x=>logs.push(x)}});
   t.after(()=>app.close());
   async function user() {

@@ -714,5 +714,123 @@
       "franchise": "B1",
       "expected": 404
     }
+  ],
+  "money_receipt_permissions": {
+    "R31": [
+      "O",
+      "F",
+      "F",
+      "-",
+      "-",
+      "F",
+      "-"
+    ],
+    "R32": [
+      "O",
+      "F",
+      "-",
+      "-",
+      "-",
+      "F",
+      "-"
+    ],
+    "W49": [
+      "-",
+      "F",
+      "F",
+      "-",
+      "-",
+      "-",
+      "-"
+    ],
+    "W50": [
+      "-",
+      "F",
+      "F",
+      "-",
+      "-",
+      "-",
+      "-"
+    ],
+    "W51": [
+      "-",
+      "F",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-"
+    ],
+    "W52": [
+      "-",
+      "F",
+      "-",
+      "-",
+      "-",
+      "-",
+      "-"
+    ]
+  },
+  "money_receipt_scope_cases": [
+    {
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "resource": "finance1",
+      "rule": "R31",
+      "membership": true,
+      "permitted": true,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    },
+    {
+      "role": "operator",
+      "org": "A",
+      "franchise": "A2",
+      "resource": "finance1",
+      "rule": "R31",
+      "membership": true,
+      "permitted": false,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    },
+    {
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A2",
+      "resource": "finance1",
+      "rule": "R32",
+      "membership": true,
+      "permitted": true,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    },
+    {
+      "role": "org_admin",
+      "org": "A",
+      "franchise": "A1",
+      "resource": "finance1",
+      "rule": "W49",
+      "membership": true,
+      "permitted": false,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    },
+    {
+      "role": "franchise_admin",
+      "org": "B",
+      "franchise": "B1",
+      "resource": "finance1",
+      "rule": "W51",
+      "membership": true,
+      "permitted": false,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    },
+    {
+      "role": "operator",
+      "org": "A",
+      "franchise": "A1",
+      "resource": "finance1",
+      "rule": "W50",
+      "membership": false,
+      "permitted": false,
+      "actor": "00000000-0000-4000-8000-000000000501"
+    }
   ]
 }

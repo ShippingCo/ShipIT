@@ -516,6 +516,7 @@ prototype business behavior changes.
 | apps/web/src/test/app.test.tsx: cancelled reprint preserves the saved booking, payments and outbox | demo_only | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: renders booked paise and saved rounding without settlement or a moving ETA | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: keeps partial collection and reversal entry labels separate from booked total and settlement | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
+| apps/web/src/test/receipt.test.tsx: renders frozen receipt allocation evidence without a second cash inflow or private external reference | preserve | receipts | Issue #138: decode frozen source provenance, omit private references and label applied/released funds without recording another cash inflow. |
 | apps/web/src/test/receipt.test.tsx: escapes every layout text context and ignores foreign download and executable logo URLs | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
 | apps/web/src/test/receipt.test.tsx: cleans up private print markup even when browser print throws | preserve | receipts | Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens. |
@@ -551,7 +552,7 @@ Production counter and receipt modules use the scope runtime and purpose-specifi
 | apps/web/src/test/counter.test.tsx: rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity | preserve | seam |
 | apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
 | apps/web/src/test/counter.test.tsx: repeat selection fills empty values while preserving deliberate edits | preserve | seam |
-| apps/web/src/test/counter.test.tsx: Paid Now uses server obligation and stable reference; failed payment never undoes saved booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write | preserve | seam |
 | apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
 | apps/web/src/test/counter.test.tsx: keyboard form submission focuses first invalid field and describes the error | preserve | seam |
 | apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
@@ -594,7 +595,7 @@ production Packages composition; it is disposed with the active component/scope.
 | apps/web/src/test/operations.test.tsx: round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary | preserve | routes |
 | apps/web/src/test/operations.test.tsx: announces dashboard loading then renders bounded accessible cards and an honest empty result | preserve | seam |
 | apps/web/src/test/operations.test.tsx: offers controlled dashboard retry after an API failure without local fallback | preserve | seam |
-| apps/web/src/test/operations.test.tsx: uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read | preserve | parcels |
+| apps/web/src/test/operations.test.tsx: uses guarded package actions and directs new money recording to receipt evidence without OTP or delivery bypasses | preserve | parcels |
 | apps/web/src/test/operations.test.tsx: removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server | preserve | lots |
 | apps/web/src/test/operations.test.tsx: loads an authoritative active target lot and sends its server version in the move command | preserve | lots |
 | apps/web/src/test/operations.test.tsx: refreshes source and target after a stale target conflict and requires a deliberate new submission | preserve | lots |
@@ -701,3 +702,17 @@ counter or transcript becomes operational evidence.
 | --- | --- | --- |
 | apps/web/src/test/messaging-effectiveness.test.tsx: keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy | preserve | reports |
 | apps/web/src/test/messaging-effectiveness.test.tsx: retries saved failures and reuses the exact uncertain capture while keeping filters disabled | preserve | reports |
+
+## Issue #138 reviewed receipt workflow additions
+
+Counter and package entry points now direct actual money recording to named receipt
+evidence. Legacy server APIs and historical identities remain compatible. UI tests
+use controlled transport fixtures; separate native tests prove financial persistence.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/money-receipts.test.tsx: retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation | preserve | receipts |
+| apps/web/src/test/money-receipts.test.tsx: records one receipt across two current bill versions and displays the residual advance | preserve | receipts |
+| apps/web/src/test/money-receipts.test.tsx: applies an existing advance without recording another inflow | preserve | receipts |
+| apps/web/src/test/money-receipts.test.tsx: uses the original allocation history for an admin release and keeps private finance evidence role-scoped | preserve | receipts |
+| apps/web/src/test/money-receipts.test.tsx: configures a named other receiving method through an append-only administrator account revision | preserve | receipts |

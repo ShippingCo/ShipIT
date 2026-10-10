@@ -28,9 +28,9 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     if (first) document.getElementById(`counter-${first}`)?.focus();
   }, [state.errors]);
   useEffect(() => {
-    const preventLoss = (event: BeforeUnloadEvent) => { if (state.busy || [state.bookingPhase, state.customerPhase, state.paymentPhase].includes('uncertain')) { event.preventDefault(); event.returnValue = ''; } };
+    const preventLoss = (event: BeforeUnloadEvent) => { if (state.busy || [state.bookingPhase, state.customerPhase].includes('uncertain')) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', preventLoss); return () => window.removeEventListener('beforeunload', preventLoss);
-  }, [state.busy, state.bookingPhase, state.customerPhase, state.paymentPhase]);
+  }, [state.busy, state.bookingPhase, state.customerPhase]);
   const attachmentClient = useMemo(() => state.booking ? createAttachmentClient(controller.runtime, state.booking.id, {
     async request<T>(path: string, options?: Parameters<ReturnType<typeof createApiClient>['request']>[1]): Promise<T> {
       try { return await createApiClient().request<T>(path, options); }
@@ -48,14 +48,12 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     <section className="card counter-section"><h1 className="t-headline-sm" tabIndex={-1}>Booking saved</h1>
       <p>{state.booking.parcels.map(p => p.docket).join(', ')}</p><p className="t-headline-sm">Booked total {receiptMoney(state.booking.charges.tax.final_payable_paise)}</p>
       <p role="status" aria-live="polite">{state.message}</p>
-      <p>Outstanding {state.balance ? receiptMoney(state.balance.outstanding_paise) : receiptMoney(state.booking.payment_obligation.outstanding_paise)}{!state.balance && ' at booking confirmation'}</p>
-      {d.paymentMode === 'to_pay' ? <p>To Pay: no collection was recorded.</p> : <><p>Payment: {state.paymentPhase === 'ready' ? 'recorded' : state.paymentPhase === 'loading' ? 'recording…' : 'not confirmed'}</p>
-        {state.paymentPhase !== 'ready' && <button className="btn btn-filled" disabled={state.busy} onClick={() => { void workflow.collect(); }}>Retry payment</button>}
-        <button className="btn btn-outlined" disabled={state.busy} onClick={() => { void workflow.refreshPayment(); }}>Refresh payment status</button></>}
-      <div className="counter-actions"><button className="btn btn-outlined" disabled={state.busy || state.paymentPhase === 'uncertain'} onClick={startAnother}>Start another booking</button><Link to="/business/receipts">Open Receipts</Link></div>
+      <p>Outstanding {receiptMoney(state.booking.payment_obligation.outstanding_paise)} at booking confirmation</p>
+      <p>{d.paymentMode === 'to_pay' ? 'To Pay: no collection was recorded.' : 'Booking saved. Record the actual received money with its receiving account and source evidence.'}</p>
+      <Link className="btn btn-filled" to={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}>Record received money / apply advance</Link>
+      <div className="counter-actions"><button className="btn btn-outlined" disabled={state.busy} onClick={startAnother}>Start another booking</button><Link to="/business/receipts">Open Receipts</Link></div>
     </section>
     <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id} />
-    {state.payment && <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id} paymentId={state.payment.entry.id} />}
     <section className="card counter-section"><h2 className="t-title-lg">Private attachments</h2><p>Booking is saved independently of each upload. Files are saved only after server safety validation.</p>{attachmentClient && <AttachmentUploader client={attachmentClient} runtime={controller.runtime} />}</section>
   </div>;
   return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); void workflow.save(); }} aria-label="New booking">
@@ -92,7 +90,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       {state.quote && <><p>Server freight suggestion {receiptMoney(state.quote.freight_suggestion_paise)} · Freight {receiptMoney(state.quote.freight_paise)} · Packing {receiptMoney(state.quote.packing_paise)}</p><p>Override: {state.quote.override_status.replaceAll('_', ' ')} · Rate version {state.quote.rate_version_number}</p></>}
       {state.tax ? <><p>CGST {receiptMoney(state.tax.cgst_paise)} · SGST {receiptMoney(state.tax.sgst_paise)} · IGST {receiptMoney(state.tax.igst_paise)}</p><p>Tax {receiptMoney(state.tax.tax_total_paise)} · Rounding {receiptMoney(state.tax.rounding_adjustment_paise)}</p><p className="t-headline-sm">Server payable {receiptMoney(state.tax.final_payable_paise)}</p><p>Quote valid until {state.quote?.expires_at}. Tax valid until {state.tax.expires_at}. Final validation occurs at confirmation.</p></> : <p>Totals are not yet confirmed. Request server pricing and tax.</p>}
       <div className="counter-grid">{select('paymentMode', 'Payment choice', [{ value: 'to_pay', label: 'To Pay' }, { value: 'paid_counter', label: 'Paid now' }])}{d.paymentMode === 'paid_counter' && select('method', 'Payment method', [{ value: '', label: 'Select method' }, { value: 'cash', label: 'Cash' }, { value: 'upi', label: 'UPI (manual recording)' }])}</div>
-      {d.paymentMode === 'paid_counter' && <p>Records money actually received after the booking is saved. Collection requires a separate franchise-admin grant.</p>}
+      {d.paymentMode === 'paid_counter' && <p>After saving the booking, record received money with its named account and eligible receiver. A planned method alone records no money.</p>}
       <p role={['error', 'uncertain', 'stale'].some(p => [state.customerPhase, state.pricingPhase, state.taxPhase, state.bookingPhase].includes(p as typeof state.bookingPhase)) || Object.values(state.errors).some(Boolean) ? 'alert' : 'status'} aria-live="polite">{state.message}</p>
       <button className="btn btn-filled" disabled={state.busy || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} aria-busy={state.bookingPhase === 'loading'}>{state.bookingPhase === 'uncertain' ? 'Retry same booking' : 'Save booking'}</button>
       <p>Files can be attached after the booking is confirmed. Printing is optional.</p>

@@ -5,7 +5,7 @@ import { mkdtemp,cp,readFile,writeFile,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { provisionDatabase } from '../support.ts';
+import { provisionDatabase,preReceiptEvent } from '../support.ts';
 import { receiptSetup } from '../../../../apps/api/test/receipt-support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { createReceiptService } from '../../../../apps/api/src/modules/receipts/service.ts';
@@ -30,14 +30,15 @@ await test('populated pre-30 migration rolls back on failure, preserves source f
  }catch(error){await legacy.query('ROLLBACK');throw error;}finally{legacy.release();}
  const paid={entry:{id:entry}};
 
- const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','booking_obligations','payment_entries','payment_commands','domain_events'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows])));
+ const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','booking_obligations','payment_entries','payment_commands','domain_events'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows.map(row=>{if(table==='domain_events')return preReceiptEvent(row);if(table!=='payment_commands')return row;const legacy={...row};delete legacy.receipt_command_id;return legacy;})])));
  const before=await snapshot();db.migrate=migrate;
  const dir=await mkdtemp(join(tmpdir(),'shipit-receipt-upgrade-'));t.after(async()=>{assert.equal(dirname(dir),tmpdir());await rm(dir,{recursive:true,force:true});});
  await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),dir,{recursive:true});const file=join(dir,'1790269200000-immutable-issued-receipts.cjs');
  await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  await assert.rejects(db.migrate({dir}),{code:'DB_MIGRATION_FAILED'});assert.equal((await db.adminQuery("SELECT to_regclass('shipit.issued_receipts') relation")).rows[0]!.relation,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,18);assert.deepEqual(await snapshot(),before);
- assert.deepEqual(await db.migrate(),{applied:25});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
+ assert.deepEqual(await db.migrate(),{applied:26});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareReceipts();
+ assert.equal((await db.adminQuery('SELECT bool_and(receipt_command_id IS NULL) unknown FROM shipit.payment_commands')).rows[0]!.unknown,true);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.issued_receipts')).rows[0]!.n,0);assert.deepEqual(await snapshot(),before);
  const dto=await createReceiptService(s.pool).read(s.local.token,booking.json().id,paid.entry.id,{organization_id:org,franchise_id:A},randomUUID());
  assert.equal(dto.kind,'collection_acknowledgement');assert.notEqual(dto.issued_at,booking.json().confirmed_at);assert.deepEqual(await snapshot(),before);

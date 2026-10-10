@@ -38,5 +38,5 @@ export async function paymentSetup(t:Parameters<typeof bookingSetup>[0],requeste
  const counts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.payment_commands) commands,
   (SELECT count(*)::int FROM shipit.payment_entries) entries,(SELECT count(*)::int FROM shipit.payment_audit_events) audits,
   (SELECT count(*)::int FROM shipit.domain_events WHERE event_type='payment.settled') settlements`)).rows[0];
- return {...s,bookingId:booking,gross,booked:booked.json(),request,pay,reverse,current,paymentCounts:counts};
+ return {...s,paymentBookingInput:body,bookingId:booking,gross,booked:booked.json(),request,pay,reverse,current,paymentCounts:counts};
 }

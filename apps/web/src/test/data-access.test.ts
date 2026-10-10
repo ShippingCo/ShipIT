@@ -50,6 +50,12 @@ describe('single production API client', () => {
     const failure = await createApiClient().request<never>('/api/v1/operator-context', { validationFields: ['display_name'] }).catch(e => e as ApiFailure);
     expect(failure).toMatchObject({ code: 'VALIDATION_FAILED', correlationId: correlation, details: [{ field: 'display_name', code: 'REQUIRED' }] });
     expect(JSON.stringify(failure)).not.toContain('secret'); expect(failure.message).toBe('VALIDATION_FAILED');
+    for(const code of ['ALLOCATION_CONFLICT','PAYMENT_ALLOCATION_CORRECTION_REQUIRED']){
+      vi.stubGlobal('fetch',vi.fn().mockResolvedValue(json({error:{code,message:'private receipt evidence'}},409)));
+      const conflict=await createApiClient().request<never>('/api/v1/money-receipts').catch(e=>e as ApiFailure);
+      expect(conflict.code).toBe(code);expect(recoveryFor(conflict,true)).toBe('conflict');expect(JSON.stringify(conflict)).not.toContain('private receipt');
+    }
+
   });
   it.each([401, 403, 404, 408, 429, 500, 503])('handles non-JSON HTTP %s without raw response leakage', async status => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('private raw proxy detail', { status })));

@@ -9,7 +9,7 @@ export function eventEnvelope(value: unknown, job: Job): Event | null {
   if (!object(value) || Object.keys(value).some(k => !fields.includes(k)) || fields.some(k => !Object.hasOwn(value,k))) return null;
   if (value.event_id !== job.event_id || value.organization_id !== job.organization_id || value.franchise_id !== job.franchise_id ||
     typeof value.event_type !== 'string' || !/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(value.event_type) ||
-    !['booking','parcel','lot','route','payment_obligation'].includes(String(value.aggregate_type)) ||
+    !['booking','parcel','lot','route','payment_obligation','money_receipt'].includes(String(value.aggregate_type)) ||
     typeof value.aggregate_id !== 'string' || !uuid.test(value.aggregate_id) ||
     !Number.isSafeInteger(value.schema_version) || Number(value.schema_version) < 1 ||
     !Number.isInteger(value.aggregate_version) || Number(value.aggregate_version) < 1 || Number(value.aggregate_version) > 2147483647 ||

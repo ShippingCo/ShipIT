@@ -8,6 +8,7 @@ export function CommandNotice({phase,code,retry}:{phase:string;code?:string;retr
  if(phase==='pending')return <p role="status" aria-live="polite">Saving with the server…</p>;
  if(phase==='confirmed')return <p role="status" aria-live="polite">Server update confirmed.</p>;
  if(phase==='uncertain')return <div className="ops-alert"><p role="alert">The outcome is uncertain. Keep this exact request and reconcile it before making a replacement.</p>{retry&&<button className="btn btn-outlined" onClick={retry}>Retry same request</button>}</div>;
+ if(phase==='error'&&code==='MONEY_RECEIPTS_DISABLED')return <p role="alert" className="ops-alert">New receipt writes are disabled. Ask the administrator to complete rollout. Saved evidence and exact completed-request replay remain available.</p>;
  if(phase==='error')return <p role="alert" className="ops-alert">The server rejected the change{code?` (${code})`:''}. Refresh current state before changing a stale command.</p>;
  return null;
 }

@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 30), ("E", 4), ("W", 48)]:
+    for prefix, count in [("R", 32), ("E", 4), ("W", 52)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -99,6 +99,22 @@ def validate():
         # S/P are outside this object interpreter; adoption predicates are checked below.
         cells = set(rules[rule][2 + ROLES.index(case["role"])].split(","))
         return available & cells
+
+    receipt_permissions = {
+        "R31": ["O", "F", "F", "-", "-", "F", "-"],
+        "R32": ["O", "F", "-", "-", "-", "F", "-"],
+        "W49": ["-", "F", "F", "-", "-", "-", "-"],
+        "W50": ["-", "F", "F", "-", "-", "-", "-"],
+        "W51": ["-", "F", "-", "-", "-", "-", "-"],
+        "W52": ["-", "F", "-", "-", "-", "-", "-"]
+    }
+    assert fixture["money_receipt_permissions"] == receipt_permissions
+    for rule, permissions in receipt_permissions.items():
+        assert rules[rule][2:] == permissions, f"Receipt grant drift: {rule}"
+    assert len(fixture["money_receipt_scope_cases"]) == 6
+    for case in fixture["money_receipt_scope_cases"]:
+        resource = fixture["resources"][case["resource"]]
+        assert bool(scopes(case, resource, case["rule"])) == case["permitted"], case
 
     assert len(fixture["pricing_override_cases"]) == 21
     for case in fixture["pricing_override_cases"]:
@@ -210,7 +226,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 80 matrix rows including exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 88 matrix rows including exact R31/R32 and W49-W52 receipt permissions and six receipt scope cases, exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":

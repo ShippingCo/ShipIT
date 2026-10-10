@@ -45,7 +45,16 @@ agents have no financial report grant. An actor cannot retrieve another actor's 
 Membership revocation is checked on replay, pagination and download.
 
 Money semantics and research: [ADR 0044](../adr/0044-bounded-report-snapshots.md).
-These are booking-period net collections, not a receipts-by-collection-day report.
+These are booking-period net collections, not a receipts-by-collection-day report. With #138, the existing `collections` fields retain their
+booking-ledger meaning: legacy entries plus funds applied from actual receipts, less
+linked releases/reversals (and separately labelled actual refunds where supported).
+A multi-bill receipt contributes only its application to each bill, never its whole
+received amount to every bill. Unallocated advances stay in the receipt workspace.
+Allocation timestamps describe application, while receipt `occurred_at` describes
+actual money receipt; neither creates another booked sale. Receipt-date inflow and
+advance control totals must use each immutable `money_receipts` source once and its
+allocation balance, with legacy missing provenance explicitly unknown. Existing
+booking-period CSV schemas and saved snapshots retain their compatible meanings.
 For example a ₹1,000 booking with ₹600 collected before capture shows ₹400 outstanding.
 Collecting the remaining ₹400 later changes a new snapshot, never the saved one.
 

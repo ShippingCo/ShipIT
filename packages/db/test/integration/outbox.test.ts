@@ -4,7 +4,7 @@ import { cp,mkdtemp,readFile,writeFile,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,dirname,basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { provisionDatabase } from '../support.ts';
+import { provisionDatabase,preReceiptEvent } from '../support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { org,A,B } from '../../../../apps/api/test/audit-support.ts';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +14,7 @@ await test('outbox upgrade preserves populated producers and audit; failed migra
   const migrate=db.migrate;db.migrate=async()=>({applied:0});
   const s=await bookingSetup(t,db),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);db.migrate=migrate;
   const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','parcels','domain_events','booking_commands','audit_history'].map(async table=>
-    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows])));
+    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY ${table==='domain_events'?'event_id':'id'}`)).rows.map(row=>table==='domain_events'?preReceiptEvent(row):row)])));
   const before=await snapshot(),directory=await mkdtemp(join(tmpdir(),'shipit-outbox-upgrade-'));
   t.after(()=>{assert.equal(dirname(directory),tmpdir());assert.ok(basename(directory).startsWith('shipit-outbox-upgrade-'));return rm(directory,{recursive:true,force:true});});
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),directory,{recursive:true});
@@ -22,7 +22,7 @@ await test('outbox upgrade preserves populated producers and audit; failed migra
   await writeFile(file,(await readFile(file,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
   await assert.rejects(db.migrate({dir:directory}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.outbox_jobs') value")).rows[0]!.value,null);
-  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:22});assert.deepEqual(await db.migrate(),{applied:0});
+  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:23});assert.deepEqual(await db.migrate(),{applied:0});
   assert.deepEqual(await snapshot(),before);await db.prepareOutbox();
   const event=booked.json().event_id;
   await assert.rejects(db.adminQuery(`INSERT INTO shipit.outbox_jobs(organization_id,franchise_id,event_id,consumer_id) VALUES($1,$2,$3,'synthetic')`,[org,B,event]));

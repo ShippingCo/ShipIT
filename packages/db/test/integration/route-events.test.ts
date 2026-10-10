@@ -4,7 +4,7 @@ import { mkdtemp,cp,readFile,writeFile,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { provisionDatabase } from '../support.ts';
+import { provisionDatabase,preReceiptEvent } from '../support.ts';
 import { bookingSetup } from '../../../../apps/api/test/booking-support.ts';
 import { createRouteService } from '../../../../apps/api/src/modules/routes/service.ts';
 import { routeMetadata } from '../../../../apps/api/test/route-support.ts';
@@ -17,7 +17,7 @@ await test('Issue 27 populated Route upgrades atomically without rewriting recei
   const args=[s.operator.token,null,null,{organization_id:org,franchise_id:A},key,['idempotency-key',key],routeMetadata,'routes.create' as const,randomUUID()] as const;
   const route=await service.execute(...args);
   const snapshot=async()=>({commands:(await db.adminQuery('SELECT * FROM shipit.route_commands')).rows,
-    manifests:(await db.adminQuery('SELECT * FROM shipit.route_manifests')).rows,events:(await db.adminQuery("SELECT to_jsonb(e)-ARRAY['obligation_id','payment_command_id'] AS historical FROM shipit.domain_events e")).rows});
+    manifests:(await db.adminQuery('SELECT * FROM shipit.route_manifests')).rows,events:(await db.adminQuery("SELECT to_jsonb(e)-ARRAY['obligation_id','payment_command_id'] AS historical FROM shipit.domain_events e")).rows.map(row=>({historical:preReceiptEvent(row.historical)}))});
   const before=await snapshot();db.migrate=migrate;
   const directory=fileURLToPath(new URL('../../migrations/',import.meta.url));
   const temporary=await mkdtemp(join(tmpdir(),'shipit-route-events-upgrade-'));
@@ -27,7 +27,7 @@ await test('Issue 27 populated Route upgrades atomically without rewriting recei
   await assert.rejects(db.migrate({dir:temporary}),{code:'DB_MIGRATION_FAILED'});
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.route_parcel_effects') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:27});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareRoutes();
+  assert.deepEqual(await db.migrate(),{applied:28});assert.deepEqual(await db.migrate(),{applied:0});await db.prepareRoutes();
   assert.deepEqual(await snapshot(),before);assert.deepEqual(await service.execute(...args),route);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.domain_events WHERE obligation_id IS NOT NULL OR payment_command_id IS NOT NULL')).rows[0]!.n,0);
   assert.equal((await db.adminQuery('SELECT execution_state FROM shipit.routes WHERE id=$1',[route.id])).rows[0]!.execution_state,'pending');
