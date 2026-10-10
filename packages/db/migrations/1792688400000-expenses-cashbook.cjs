@@ -126,6 +126,7 @@ CREATE TABLE shipit.cashbook_requests (
 CREATE TABLE shipit.cashbook_request_decisions (
  id uuid PRIMARY KEY,organization_id uuid NOT NULL,franchise_id uuid NOT NULL,request_id uuid NOT NULL,
  decision text NOT NULL CHECK(decision IN ('approved','rejected')),
+ attachment_snapshot jsonb CHECK(attachment_snapshot IS NOT NULL AND jsonb_typeof(attachment_snapshot)='array' AND jsonb_array_length(attachment_snapshot)<=10),
  reason text NOT NULL CHECK(char_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason) AND reason !~ '[\x01-\x1f\x7f-\x9f]'),
  actor_id uuid NOT NULL REFERENCES shipit.auth_users(id),correlation_id uuid NOT NULL,
  key_digest text NOT NULL CHECK(key_digest ~ '^[a-f0-9]{64}$'),fingerprint text NOT NULL CHECK(fingerprint ~ '^[a-f0-9]{64}$'),
@@ -204,7 +205,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 DECLARE request shipit.cashbook_requests;
 BEGIN
  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASHBOOK_DECISION_IMMUTABLE' USING ERRCODE='23514';END IF;
- IF NEW.recorded_at IS NOT NULL THEN RAISE EXCEPTION 'CASHBOOK_DECISION_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
+ IF NEW.recorded_at IS NOT NULL OR NEW.attachment_snapshot IS NOT NULL THEN RAISE EXCEPTION 'CASHBOOK_DECISION_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
  IF NOT EXISTS(SELECT 1 FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id AND lifecycle='active' FOR UPDATE)
  THEN RAISE EXCEPTION 'CASHBOOK_DECISION_SCOPE_INVALID' USING ERRCODE='23514';END IF;
  SELECT * INTO request FROM shipit.cashbook_requests WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.request_id FOR UPDATE;
@@ -213,6 +214,11 @@ BEGIN
  THEN RAISE EXCEPTION 'CASHBOOK_DIFFERENT_ADMIN_REQUIRED' USING ERRCODE='23514';END IF;
  -- A different admin can reject a stale proposal without changing its original evidence.
  IF NEW.decision='approved' THEN PERFORM shipit.check_cashbook_request_sources(request);END IF;
+ IF NEW.decision='approved' AND EXISTS(SELECT 1 FROM shipit.attachments a WHERE a.organization_id=NEW.organization_id AND a.franchise_id=NEW.franchise_id AND a.expense_request_id=NEW.request_id AND a.state IN ('pending_upload','quarantined'))
+ THEN RAISE EXCEPTION 'CASHBOOK_ATTACHMENT_UNSETTLED' USING ERRCODE='23514';END IF;
+ SELECT COALESCE(jsonb_agg(jsonb_build_object('id',a.id,'version',a.version,'sha256',a.digest) ORDER BY a.id),'[]'::jsonb) INTO NEW.attachment_snapshot
+ FROM shipit.attachments a WHERE a.organization_id=NEW.organization_id AND a.franchise_id=NEW.franchise_id AND a.expense_request_id=NEW.request_id AND a.state='ready';
+
  NEW.recorded_at=date_trunc('milliseconds',clock_timestamp());RETURN NEW;
 END $fn$;
 CREATE TRIGGER cashbook_request_decision_guard BEFORE INSERT OR UPDATE OR DELETE ON shipit.cashbook_request_decisions
@@ -494,5 +500,65 @@ REVOKE ALL ON FUNCTION shipit.guard_cashbook_effect(),shipit.guard_cashbook_effe
 REVOKE ALL ON shipit.cashbook_source_versions,shipit.cash_locations,shipit.cash_location_revisions FROM PUBLIC;
 REVOKE ALL ON FUNCTION shipit.guard_cashbook_source_version(),shipit.bump_cashbook_source_version(),
  shipit.guard_cash_location_revision(),shipit.check_cash_location_complete() FROM PUBLIC;
+-- Explicit expense parents preserve the released booking/proof contracts and identities.
+ALTER TABLE shipit.attachments ALTER COLUMN booking_id DROP NOT NULL,ADD COLUMN expense_request_id uuid,
+ DROP CONSTRAINT attachments_purpose_check,DROP CONSTRAINT attachments_check,
+ ADD CONSTRAINT attachments_purpose_check CHECK(purpose IN ('shipment_evidence','parcel_proof','expense_evidence')),
+ ADD CONSTRAINT attachments_parent_kind CHECK(
+  (booking_id IS NOT NULL AND expense_request_id IS NULL AND purpose IN ('shipment_evidence','parcel_proof')) OR
+  (booking_id IS NULL AND expense_request_id IS NOT NULL AND purpose='expense_evidence' AND parcel_id IS NULL)),
+ ADD CONSTRAINT attachments_purpose_retention CHECK((purpose='parcel_proof' AND parcel_id IS NOT NULL AND retention_class='delivery_proof') OR (purpose IN ('shipment_evidence','expense_evidence') AND retention_class='operational_evidence')),
+ ADD CONSTRAINT attachments_expense_owner FOREIGN KEY(organization_id,franchise_id,expense_request_id) REFERENCES shipit.cashbook_requests(organization_id,franchise_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT attachments_expense_identity UNIQUE(organization_id,franchise_id,expense_request_id,id);
+CREATE INDEX attachments_expense_parent_idx ON shipit.attachments(organization_id,franchise_id,expense_request_id,created_at,id) WHERE expense_request_id IS NOT NULL;
+ALTER TABLE shipit.attachment_commands ALTER COLUMN booking_id DROP NOT NULL,ADD COLUMN expense_request_id uuid,
+ ADD CONSTRAINT attachment_commands_parent_kind CHECK((booking_id IS NULL)<>(expense_request_id IS NULL)),
+ ADD CONSTRAINT attachment_commands_expense_owner FOREIGN KEY(organization_id,franchise_id,expense_request_id,attachment_id) REFERENCES shipit.attachments(organization_id,franchise_id,expense_request_id,id) ON DELETE RESTRICT;
+ALTER TABLE shipit.attachment_audit_events ALTER COLUMN booking_id DROP NOT NULL,ADD COLUMN expense_request_id uuid,
+ ADD CONSTRAINT attachment_audit_parent_kind CHECK((booking_id IS NULL)<>(expense_request_id IS NULL)),
+ ADD CONSTRAINT attachment_audit_expense_owner FOREIGN KEY(organization_id,franchise_id,expense_request_id,attachment_id) REFERENCES shipit.attachments(organization_id,franchise_id,expense_request_id,id) ON DELETE RESTRICT;
+CREATE FUNCTION shipit.guard_expense_attachment_parent() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE request shipit.cashbook_requests;n integer;bytes bigint;pending integer;
+BEGIN
+ IF TG_OP='UPDATE' AND NEW.expense_request_id IS DISTINCT FROM OLD.expense_request_id THEN RAISE EXCEPTION 'ATTACHMENT_IDENTITY_IMMUTABLE' USING ERRCODE='23514';END IF;
+ IF NEW.expense_request_id IS NULL THEN RETURN NEW;END IF;
+ PERFORM id FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id FOR UPDATE;
+ SELECT * INTO request FROM shipit.cashbook_requests WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.expense_request_id FOR UPDATE;
+ IF request.id IS NULL OR request.kind<>'expense' THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_PARENT_INVALID' USING ERRCODE='23514';END IF;
+ IF NEW.actor_type='service' THEN
+  IF TG_OP<>'UPDATE' OR NEW.state NOT IN ('cleanup_pending','deleted') OR OLD.state IN ('ready','deleted') THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_ACTOR_INVALID' USING ERRCODE='23514';END IF;
+ ELSE
+  IF NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+   WHERE f.organization_id=request.organization_id AND f.franchise_id=request.franchise_id AND m.lifecycle='active' AND m.user_id::text=NEW.actor_id AND (m.role='franchise_admin' OR (m.role='operator' AND m.user_id=request.actor_id)))
+  THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_ACTOR_INVALID' USING ERRCODE='23514';END IF;
+  IF TG_OP='INSERT' AND NEW.initiated_actor::text<>NEW.actor_id THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_ACTOR_INVALID' USING ERRCODE='23514';END IF;
+ END IF;
+ IF EXISTS(SELECT 1 FROM shipit.cashbook_request_decisions d WHERE d.organization_id=request.organization_id AND d.franchise_id=request.franchise_id AND d.request_id=request.id)
+ AND NOT (TG_OP='UPDATE' AND OLD.state NOT IN ('ready','deleted') AND NEW.state IN ('canceled','cleanup_pending','deleted'))
+ THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_REVIEWED' USING ERRCODE='23514';END IF;
+ IF TG_OP='INSERT' THEN
+  SELECT count(*),COALESCE(sum(declared_size),0),count(*) FILTER(WHERE state<>'ready') INTO n,bytes,pending FROM shipit.attachments WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND expense_request_id=NEW.expense_request_id AND state<>'deleted';
+  IF n>=10 OR bytes+NEW.declared_size>33554432 OR pending>=3 THEN RAISE EXCEPTION 'ATTACHMENT_QUOTA' USING ERRCODE='23514';END IF;
+ END IF;RETURN NEW;
+END $fn$;
+CREATE TRIGGER expense_attachment_parent_guard BEFORE INSERT OR UPDATE ON shipit.attachments FOR EACH ROW EXECUTE FUNCTION shipit.guard_expense_attachment_parent();
+CREATE OR REPLACE FUNCTION shipit.audit_attachment() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE action_code text;
+BEGIN
+ action_code=CASE WHEN TG_OP='INSERT' THEN 'attachments.initiated' WHEN NEW.state='pending_upload' THEN 'attachments.upload' WHEN NEW.state='quarantined' AND NEW.scan_state='error' THEN 'attachments.scan_error' ELSE 'attachments.'||NEW.state END;
+ INSERT INTO shipit.attachment_audit_events(id,organization_id,franchise_id,booking_id,attachment_id,actor_type,actor_id,action,state,version,correlation_id,occurred_at,expense_request_id)
+ VALUES(gen_random_uuid(),NEW.organization_id,NEW.franchise_id,NEW.booking_id,NEW.id,NEW.actor_type,NEW.actor_id,action_code,NEW.state,NEW.version,NEW.correlation_id,date_trunc('milliseconds',clock_timestamp()),NEW.expense_request_id);RETURN NEW;
+END $fn$;
+CREATE OR REPLACE FUNCTION shipit.audit_attachment_grant() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE a shipit.attachments;
+BEGIN
+ IF NEW.operation='grant' THEN
+  SELECT * INTO a FROM shipit.attachments WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.attachment_id AND booking_id IS NOT DISTINCT FROM NEW.booking_id AND expense_request_id IS NOT DISTINCT FROM NEW.expense_request_id;
+  INSERT INTO shipit.attachment_audit_events(id,organization_id,franchise_id,booking_id,attachment_id,actor_type,actor_id,action,state,version,correlation_id,occurred_at,expense_request_id)
+  VALUES(gen_random_uuid(),NEW.organization_id,NEW.franchise_id,NEW.booking_id,NEW.attachment_id,'user',NEW.principal_id::text,'attachments.grant',a.state,a.version,NEW.id,NEW.created_at,NEW.expense_request_id);
+ END IF;RETURN NEW;
+END $fn$;
+REVOKE ALL ON FUNCTION shipit.guard_expense_attachment_parent() FROM PUBLIC;
 `);
 exports.down=()=>{throw new Error('Forward-only financial migration; disable writes or repair forward.');};

@@ -9,10 +9,10 @@ import {instant} from '../pricing/types.ts';
 import {HttpError,FieldValidationError} from '../../plugins/errors.ts';
 const actions=['cashbook.request','cashbook.approve','cashbook.select','cashbook.apply'] as const;
 interface RequestRow extends Omit<CashbookRequestDto,'amount_paise'|'expected_source_version'|'occurred_at'|'recorded_at'> {amount_paise:string;expected_source_version:string;occurred_at:Date;recorded_at:Date;fingerprint:string}
-interface DecisionRow extends Omit<CashbookDecisionDto,'version'|'recorded_at'> {recorded_at:Date;fingerprint:string}
+interface DecisionRow extends Omit<CashbookDecisionDto,'version'|'recorded_at'> {attachment_snapshot:NonNullable<CashbookDecisionDto['attachments']>;recorded_at:Date;fingerprint:string}
 interface Source {id:string;revision_id:string;kind:'cash'|'noncash';custodian_id:string|null;active:boolean;account_active:boolean;account_current:boolean;methods:ReceiptMethod[]}
 export const requestDto=(r:RequestRow):CashbookRequestDto=>({id:r.id,...(r.payment_method?{payment_method:r.payment_method}:{}),kind:r.kind,source_location_id:r.source_location_id,source_revision_id:r.source_revision_id,target_location_id:r.target_location_id,target_revision_id:r.target_revision_id,expected_source_version:Number(r.expected_source_version),amount_paise:Number(r.amount_paise),currency:r.currency,category:r.category,payee:r.payee,responsible_employee_id:r.responsible_employee_id,reason:r.reason,occurred_at:instant(r.occurred_at),actor_id:r.actor_id,recorded_at:instant(r.recorded_at),...(r.correction_of?{correction_of:r.correction_of}:{})});
-const decisionDto=(r:DecisionRow):CashbookDecisionDto=>({id:r.id,request_id:r.request_id,decision:r.decision,reason:r.reason,actor_id:r.actor_id,recorded_at:instant(r.recorded_at),version:2});
+const decisionDto=(r:DecisionRow):CashbookDecisionDto=>({id:r.id,request_id:r.request_id,decision:r.decision,reason:r.reason,actor_id:r.actor_id,recorded_at:instant(r.recorded_at),version:2,...(r.attachment_snapshot.length?{attachments:r.attachment_snapshot}:{})});
 export function cashbookText(value:unknown,max:number):string {
  if(typeof value!=='string'||value.length>max*4||!value.trim()||[...value.trim()].length>max||[...value].some(char=>{const code=char.codePointAt(0)!;return code<32||(code>=127&&code<=159)||(code>=0xd800&&code<=0xdfff);}))throw new FieldValidationError('$','INVALID_FORMAT');return value.trim();
 }
@@ -92,6 +92,8 @@ export function createCashbookRequestService(database:DatabasePool,writesEnabled
     if(request.actor_id===c.actor.id)throw new HttpError('CASHBOOK_APPROVAL_REQUIRED');
     if((await scopedQuery(scope,['cashbook.approve'],`SELECT id FROM shipit.cashbook_request_decisions WHERE {{franchise:organization_id:franchise_id}} AND request_id=$1`,[id])).rows[0])throw new HttpError('VERSION_CONFLICT');
     if(input.decision==='approved')await validateSources(scope,requestDto(request));
+    if(input.decision==='approved'&&(await scopedQuery(scope,['cashbook.approve'],`SELECT id FROM shipit.attachments WHERE {{franchise:organization_id:franchise_id}} AND expense_request_id=$1 AND state IN ('pending_upload','quarantined') LIMIT 1`,[id])).rows.length)throw new HttpError('ATTACHMENT_NOT_READY');
+
     const decisionId=randomUUID();await scopedQuery(scope,['cashbook.approve'],`INSERT INTO shipit.cashbook_request_decisions(id,organization_id,franchise_id,request_id,decision,reason,actor_id,correlation_id,key_digest,fingerprint)
      SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9 WHERE {{franchise:$10:$2}}`,[decisionId,c.permittedFranchiseIds[0],id,input.decision,input.reason,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);
     return decisionDto((await scopedQuery<DecisionRow>(scope,['cashbook.approve'],`SELECT * FROM shipit.cashbook_request_decisions WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[decisionId])).rows[0]!);

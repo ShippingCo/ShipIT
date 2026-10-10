@@ -18,7 +18,7 @@ export interface CashbookRequestDto extends CashbookRequestInput {
  id:string;actor_id:string;recorded_at:string;
 }
 export interface CashbookDecisionInput {decision:'approved'|'rejected';reason:string;expected_version:1}
-export interface CashbookDecisionDto {id:string;request_id:string;decision:'approved'|'rejected';reason:string;actor_id:string;recorded_at:string;version:2}
+export interface CashbookDecisionDto {attachments?:{id:string;version:number;sha256:string}[];id:string;request_id:string;decision:'approved'|'rejected';reason:string;actor_id:string;recorded_at:string;version:2}
 export interface CashbookRequestDetail {request:CashbookRequestDto;decision:CashbookDecisionDto|null;effect:CashbookEffectDto|null;version:1|2|3}
 
 export interface CashbookApplyInput {expected_version:2;decision_id:string}

@@ -1027,3 +1027,63 @@ static check occurred in this slice. Expense DTOs now require an explicit method
 runtime expense boundary; the new feature has not yet been wired into HTTP or enabled.
 Private attachment parent/snapshot authorization, API/UI journeys, broader final gates
 and reviewed PR delivery remain required for full #140 completion.
+
+### #140 reviewed expense attachment foundation
+
+Unreleased migration46 extends the existing private attachment metadata, commands
+and audit tables with an explicit expense-request parent. Every row has exactly
+one booking or expense parent and an owned composite foreign key. Expense evidence
+is restricted to an expense proposal (including its linked correction), with no
+parcel parent or inherited delivery-agent access. Released migrations remain unchanged.
+Booking DTOs, grant payloads, retained command fingerprints and purpose rules remain
+unchanged. Existing ready attachment immutability and cleanup discovery are reused.
+
+Expense metadata writes require a current local franchise admin or the current
+operator who submitted the proposal. Worker updates remain restricted to cleaning
+non-ready evidence. The expense parent lock enforces the existing 8 MiB file,
+10 item, 32 MiB aggregate and three pending limits per exact expense, alongside the
+existing media, integrity and lifecycle constraints. Approval and upload share the
+franchise/request lock order; an upload racing review cannot be added after approval.
+Approval rejects pending or quarantined evidence and generates an immutable sorted
+snapshot of ready file IDs, versions and SHA-256 digests. Callers cannot supply this
+snapshot. Ready evidence cannot change after review; rejected unsettled evidence
+can still be canceled or cleaned. Later evidence belongs to a new correction request.
+This is ShippingCo's implementation of D140-1's exact approved-request contract,
+using the existing short-transaction and idempotency practices researched above.
+
+Cashbook decision DTOs include the snapshot only when it contains evidence, retaining
+existing empty-evidence response shapes. The approval service independently rejects
+unsettled evidence before the SQL guard. Its runtime identity needs scoped internal
+SELECT access to attachment metadata; deployment grants and the private expense
+read/download service remain part of the outstanding HTTP integration work.
+
+The native metadata fixture verifies unsettled and forged approvals, exact retained
+snapshots, wrong/non-expense parents, other-operator denial, reviewed immutability,
+expense audit ownership, competing pending quota reservations, upload/review races
+and cleanup after rejection. These SQL metadata fixtures are not scanner or object
+store qualification. Populated migration45 evidence includes a ready booking file,
+retained grant command and all original audits: every original field remains equal
+after migration46 and no expense/custody backfill is created. Actual upload/scanning,
+private download grants with post-provider authority checks, expense routes and UI,
+and final full-issue acceptance/delivery remain outstanding.
+
+
+Foundation static verification passed: all five workspace typechecks, repository lint
+including the tenant-query AST gate, migration history (all 45 released files
+unchanged), and diff checks. The first metadata fixture failed because its actor
+parameter was used as both UUID and text without the existing explicit casts;
+strict TypeScript also required asserting count-row presence. These fixture errors
+were corrected without changing the assertions or deadlines; original failure logs
+remain in ignored `140-expense-attachment-fixture-*` files. The package-local lint
+command does not exist; the required root lint command passed instead.
+
+Native foundation verification passed 39 distinct cases: cashbook services19
+(16 in `140-expense-attachment-cashbook-compatibility.log`, three handovers in
+`140-expense-attachment-handover-compatibility.log`), schema/populated upgrades4
+(`140-expense-attachment-populated-upgrades.log`), and existing booking attachments16
+(`140-expense-attachment-booking-boundaries.log`). Earlier focused metadata and booking
+lifecycle passes cover the same cases and are not counted twice. Original case/file
+deadlines remained unchanged; final scoped runs had zero failures, skips, cancellations
+or todos, and all disposable clusters/data/leases were cleaned. This verifies the
+schema foundation and existing synthetic-provider booking paths, not live expense
+storage/scanner qualification or full #140 delivery.
