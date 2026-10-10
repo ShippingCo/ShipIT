@@ -763,3 +763,19 @@ export async function withEwayScope<T>(database:DatabasePool,sessionToken:string
     }
   });
 }
+
+/** R26 full-franchise performance projection; E04 exports remain franchise-admin only. */
+export async function withPerformanceScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const session=await authenticated(tx,token);
+    if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+    if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+    const permitted=memberships.some(m=>m.franchiseIds.includes(franchiseId)&&(exporting?m.role==='franchise_admin':['franchise_admin','operator','dispatcher','read_only'].includes(m.role)))||(!exporting&&all.includes(franchiseId));
+    if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
+    return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+  });
+}

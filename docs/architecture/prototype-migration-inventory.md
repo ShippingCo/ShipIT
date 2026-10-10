@@ -680,3 +680,13 @@ export bytes, performs no network or storage write, and cannot change money.
 
 | apps/web/src/test/ageing.test.tsx: uses explicit age and status filters, restores saved evidence and exports the saved ID | preserve | reports |
 | apps/web/src/test/ageing.test.tsx: keeps uncertain intent after edits and recovers expired reads without granting export | preserve | reports |
+
+## Issue #64 reviewed delivery-performance additions
+
+Delivery performance uses scoped server snapshots. Its one-second object-URL cleanup
+only releases temporary export bytes and creates no operational side effects.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/performance.test.tsx: keyboard submit saves identity, reloads, displays empty denominator and exports matching selection | preserve | reports |
+| apps/web/src/test/performance.test.tsx: reload errors expose retry, denied export remains disabled and uncertain capture reuses exact intent | preserve | reports |

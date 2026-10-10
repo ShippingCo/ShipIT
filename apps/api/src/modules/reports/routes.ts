@@ -1,10 +1,14 @@
+import type {createPerformanceService} from './performance-service.ts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { createReportService } from './service.ts';
 import type { createSalesService } from './sales-service.ts';
 import type { createAgeingService } from './ageing-service.ts';
 import type { createFinanceService } from './finance-service.ts';
-export function registerReports(app:FastifyInstance,service:ReturnType<typeof createReportService>,secure:boolean,sales:ReturnType<typeof createSalesService>,finance:ReturnType<typeof createFinanceService>,ageing:ReturnType<typeof createAgeingService>) {
+export function registerReports(app:FastifyInstance,service:ReturnType<typeof createReportService>,secure:boolean,sales:ReturnType<typeof createSalesService>,finance:ReturnType<typeof createFinanceService>,ageing:ReturnType<typeof createAgeingService>,performance:ReturnType<typeof createPerformanceService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  app.post('/api/v1/reports/performance',(request,reply)=>{reply.header('Cache-Control','no-store');return performance.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id)});
+  app.get<{Params:{id:string}}>('/api/v1/reports/performance/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return performance.read(session(request),request.params.id,request.query,request.id)});
+  app.get<{Params:{id:string}}>('/api/v1/reports/performance/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return performance.read(session(request),request.params.id,request.query,request.id,true)});
   app.post('/api/v1/reports/ageing',(request,reply)=>{reply.header('Cache-Control','no-store');return ageing.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id)});
   app.get<{Params:{id:string}}>('/api/v1/reports/ageing/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return ageing.read(session(request),request.params.id,request.query,request.id)});
   app.get<{Params:{id:string}}>('/api/v1/reports/ageing/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return ageing.read(session(request),request.params.id,request.query,request.id,true)});
