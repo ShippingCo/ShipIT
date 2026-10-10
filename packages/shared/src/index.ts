@@ -160,3 +160,4 @@ export interface PaymentResult { payment:PaymentProjection; entry:PaymentEntryDt
 
 export type { ReceiptDto, BookingReceiptDto, CollectionReceiptDto, ReversalReceiptDto, ReceiptIssuer, ReceiptBooking, ReceiptTax } from './receipt.ts';
 export * from './attachment.ts';
+export * from './effectiveness.ts';

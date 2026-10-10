@@ -1265,6 +1265,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+        "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+        "name": "retries saved failures and reuses the exact uncertain capture while keeping filters disabled",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/messaging.test.tsx",
         "name": "shows loading, truthful acceptance and immutable automation independently, then read after refresh",
         "cases": null
@@ -3119,6 +3129,22 @@
       "group": "presentation",
       "disposition": "preserve",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+      "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #65: server-authorized aggregate snapshot, explicit unknown delivery and disclosure, current schedule, accessible reload/drill-through and exact uncertain retry; no transcript or browser business authority."
+    },
+    {
+      "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+      "name": "retries saved failures and reuses the exact uncertain capture while keeping filters disabled",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #65: server-authorized aggregate snapshot, explicit unknown delivery and disclosure, current schedule, accessible reload/drill-through and exact uncertain retry; no transcript or browser business authority."
     },
     {
       "file": "apps/web/src/test/messaging.test.tsx",

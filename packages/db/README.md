@@ -822,3 +822,24 @@ access. `prepareReports()` supplies that read grant in disposable fixtures; exis
 rights. Enable compatible report code only after grants are provisioned. Source facts
 remain immutable; rollback can disable the view/API without rewriting them. See the
 [performance definitions](../../docs/architecture/reporting.md#delivery-and-route-performance-64).
+
+## Issue #65 aggregate report runtime privileges
+
+No migration/backfill is added. Retain #61 report snapshot/access-event privileges,
+including narrow UPDATE(metadata,rows) for expired evidence cleanup, and existing
+membership/franchise locks. The report projection needs only SELECT on:
+
+```sql
+GRANT SELECT ON shipit.whatsapp_outbound,shipit.whatsapp_outbound_attempts,
+  shipit.whatsapp_delivery_observations,shipit.customer_conversation_turns,
+  shipit.conversation_inferences,shipit.support_cases,shipit.support_events,
+  shipit.franchises TO runtime_role;
+```
+
+Source producers retain their previously approved rights; this report adds no source
+UPDATE/DELETE, secret/ciphertext read endpoint, provider-send or transcript permission.
+`prepareReports()` and `prepareSupport()` provide the existing rights in disposable
+fixtures. Staffing comes from validated server `support_hours`, never browser input.
+Missing staffing produces unknown age. Provision grants before compatible API/view;
+rollback disables reporting without rewriting immutable source facts. Definitions,
+privacy and current-schedule caveats are in the reporting architecture guide.

@@ -403,3 +403,93 @@ performance, capture a date cohort, compare original/revised timing, choose a de
 or route, export, and reload the saved URL. A new delivery changes a new capture only.
 Local Docker availability and final code-version verification are recorded in the PR;
 this guide itself is not an executed database or live-browser qualification claim.
+
+## Messaging and assistant effectiveness — issue #65
+
+The production report uses `messaging_effectiveness_v1`, selected by a fixed closed
+UTC Monday-to-Monday week within 53 weeks, with the #52 15-minute closing grace.
+`POST /api/v1/reports/effectiveness` captures `{week}`; authenticated organization/
+franchise selection is query scope, never request ownership. `GET /:id` reloads it;
+optional `section` and `category` select saved aggregate cells before returning them.
+Unknown category IDs are 404; unknown filters are rejected. There is no transcript,
+customer list, arbitrary customer/time filter, export or provider-send endpoint.
+R27 allows selected own-franchise org-admin/franchise-admin only. R22 support access
+and financial report access do not grant this report. Current membership is checked
+on capture, replay and drill-through. Another actor's or foreign snapshot is not found.
+
+One SQL statement captures the existing owning sources and a statement cutoff.
+Messages are a creation-week cohort of immutable logical outbound IDs; all normalized
+attempt observations are reduced before joining. Read/delivered evidence wins over
+an earlier failed attempt. Accepted/sent/pending/uncertain are explicitly not proof
+of delivery. Recorded attempt receipts count separately from logical messages.
+Current provider failure, historical provider failure observed, pre-send configuration
+failure, consent suppression and other policy suppression are separate categories.
+Consent unknown/revoked/processing-pending are consent suppression. Overlapping route
+notification decisions are not consent denials. No-outbound automation decisions do
+not become provider messages. Known customer records are distinct saved customer
+UUIDs, independent of retries/contact changes; replies without a saved customer
+identity remain unknown-customer intents, never inferred people or unique phone users.
+
+Assistant cells reuse #52 immutable categories, failure reasons, support events,
+clarification-expiry and interpretation/reply observations. Success means a tool
+result, thanks means the saved gratitude signal, case resolution means a staff event.
+They do not imply receipt, overall resolution, satisfaction, calls saved or ROI.
+Turn denominators include measured primary turn categories once, excluding historical
+unmeasured turns; staff-event denominators use opened/resolved/reopened event IDs.
+Other observational cells have an unavailable denominator rather than an invented
+rate. Receipt-to-record latency is not message transport latency.
+
+Queue cells describe all current open/claimed cases at capture, including older cases,
+separately from the weekly cohorts. Latest immutable opened/reopened event anchors
+age; notes, incoming turns and claims do not reset it. Business minutes project that
+interval through the captured configured weekdays/start/end in its explicit IANA zone,
+using PostgreSQL timezone conversion and elapsed intervals. The captured current
+schedule is not historical staff availability; holidays and schedule changes are
+unmeasured. Missing/unavailable staffing or missing/future anchors make age unknown,
+not zero. Counts and eligible mean-age subsets have their own disclosure checks.
+
+Fixed cells include zero and distinguish suppressed/unknown values. #52 retains its
+five-conversation suppression and hidden failure parent. Messaging uses at least five
+internal recipient subjects (saved customer identity, otherwise scoped installation/
+contact identity); queue uses distinct conversations. Small nonzero cells, complementary
+parents and their denominators/exclusions are hidden. No contact identity leaves the
+query or is copied into snapshots. This is conservative disclosure minimization, not
+differential privacy. `snapshot.count` is the fixed number of stored metric cells,
+not a message, customer or conversation total. Related totals may be unavailable even
+when a large leaf cell is visible. The UI presents counts/denominators/exclusions
+without an unsupported causal resolution or delivery rate.
+
+Snapshots reuse actor/tenant ownership, 24-hour expiry, 20-active-snapshot quota,
+8-MiB bound, atomic saved evidence/access audit, and exact idempotent retry. Saved
+results remain unchanged if later callbacks, staff actions or staffing settings change;
+a new capture produces new freshness evidence. No source schema/backfill is needed.
+Provision existing report snapshot/access-event rights and SELECT on outbound,
+attempts, delivery observations, conversation turns/inferences, support cases/events
+and franchise ownership. Preserve every existing source write restriction. Rollback
+can disable the API/view without changing immutable sources or released migrations.
+
+Research: adapt the [OpenTelemetry distinction between messaging operations and
+messages](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-metrics/)
+(the semantic convention is Development status) without adding an SDK. Use
+[PostgreSQL named-zone date/time operations](https://www.postgresql.org/docs/18/functions-datetime.html)
+and the existing statement snapshot for consistent bounded source aggregation.
+Our courier cohorts, calendar projection and disclosure choices are application
+judgments; these sources do not promise a courier SLA or anonymous data. Reuse
+ADR0037/#52 evidence minimization. Cost is indexed source reads and short snapshot
+transactions; no warehouse, background counter, new broker, provider or LLM change.
+
+Verification: with the documented disposable PostgreSQL environment and pinned
+runtimes, run `pnpm db:local demo:reports` for the fictional report suites. The new
+`apps/api/test/database/messaging-effectiveness.test.ts` exercises source retries,
+callback order, provider rejection vs consent/template policy, owning failed-tool
+then handoff events, populated weekly thanks/failure/staff-event reconciliation,
+NY daylight-saving elapsed hours, Kolkata partial-day/weekend/reopen/note ageing,
+restart/replay, R27 isolation, atomic rollback and concurrent capture. Historical
+fixtures insert copies of real worker outcomes without disabling source constraints.
+Matching integration/web tests cover disclosure and keyboard/reload/drill-through/
+uncertain retry. Required final-head CI and review gate merge; passing focused tests
+alone does not establish completion. Actual checks/environment limitations are in
+the PR. Manual synthetic example: capture a closed Monday week as a franchise admin,
+inspect accepted versus confirmed delivery and thanks versus staff resolution, open
+a category, reload its snapshot URL, and repeat as a foreign franchise/operator to
+confirm denied counts. Use signed fake callbacks and fictional fixtures only.
