@@ -1205,3 +1205,54 @@ data arguments. Raw method calls/extraction remain denied, including the new rou
 and maintained source checks still pass. No query compiler, assertion or deadline
 was weakened. Full UI/browser, remaining direct SQL/lifecycle acceptance and final
 full-issue quality/CI/review/merge remain outstanding.
+
+
+#### Expense and custody web workflows
+
+The production `/business/cashbook` route uses scoped API adapters; its request
+and custody workflows are separate views. Operators and franchise admins select
+actual permitted locations and current responsible employees, record explicit
+expense methods or compatible cash/noncash fund movements, and submit immutable
+requests. Current franchise admins can review another user's request and apply
+its exact approved decision. Finance readers have no mutation forms. Saved detail
+shows private payee/reason only through the scoped request endpoint; list responses
+exclude these fields. Corrections retain the original occurrence and location
+identity, accept zero annulment, and preserve every paise in editable amounts.
+
+The custody view uses the current permitted target directory and captured source
+versions. The named current receiver can accept an actual partial amount or reject
+the remaining reservation; the current sender or franchise admin can cancel the
+remainder. Historical acknowledgement pages show recorded amounts and reasons.
+Server checks remain authoritative for current membership, revisions, capacity,
+reservations and receiver identity. No operator balance is inferred or exposed.
+
+One command lifecycle covers both views. Pending/uncertain commands disable edits,
+view changes, links and franchise navigation; replay retains the original path,
+body and idempotency key. Scope invalidation unmounts private state. Selection of
+a different request immediately hides the preceding detail/actions. Explicit
+selector labels support keyboard and assistive technology. Response projections
+reject inconsistent request/decision/effect links, self approval, monetary control
+totals, handover conservation and paired acceptance legs; they discard unknown
+private fields. Report and location-configuration adapters are prepared, but their
+UI and private expense attachment UI are still outstanding. These adapters do not
+establish full report or configuration acceptance by themselves.
+
+Ten focused web checks cover protocol integrity, lost response and same-key replay,
+blocked navigation, current scope revocation, another-admin review/application,
+partial custody acknowledgement, read-only finance roles, and exact correction
+inputs/zero annulment through actual adapters with controlled fictional transport.
+This is component/transport evidence, not native browser or live-provider evidence.
+The first uncertain-expense case identified a selector accessible-name failure;
+explicit aria labels fixed it, with the failed log retained. Existing messaging and
+demo regression tests emit React act warnings; these are recorded separately from
+cashbook outcomes. Full issue SQL/lifecycle acceptance, remaining UI, browser checks,
+quality/CI/review and merge remain required before #140 can close.
+
+The final web slice passes 228 tests across 21 files, web typecheck, production web
+build, root lint/query AST and whitespace checks. Logs are retained locally under
+`140-cashbook-web-{focused-final,regression-final,final-types,build,final-lint}`.
+The ten cashbook checks are included in the 228, not additional cases. Native
+browser qualification and disabled/inactive custody recovery controls still need
+explicit acceptance; the current UI derives response choices from active permitted
+location selections. Do not infer full recovery acceptance from the partial
+acknowledgement fixture.
