@@ -44,3 +44,13 @@ export interface CashHandoverTargets {source_location_id:string;source_revision_
 
 export interface CashHandoverListItem {id:string;source_location_id:string;target_location_id:string;actor_id:string;amount_paise:number;accepted_paise:number;remaining_paise:number;ended_paise:number;version:number;state:CashHandoverState;occurred_at:string;recorded_at:string}
 export interface CashHandoverList {items:CashHandoverListItem[];next_cursor:string|null;current_source_version:number}
+
+export type CashbookRequestState='requested'|'approved'|'rejected'|'applied';
+export interface CashbookRequestListItem {
+ id:string;kind:CashMovementKind;category:ExpenseCategory|null;amount_paise:number;currency:'INR';
+ source_location_id:string;target_location_id:string|null;responsible_employee_id:string;actor_id:string;
+ occurred_at:string;recorded_at:string;state:CashbookRequestState;version:1|2|3;
+ correction_of:string|null;corrected_by:string|null;
+}
+/** Live bounded request inbox, not a captured monetary report. Private payees remain in scoped detail. */
+export interface CashbookRequestList {as_of:string;items:CashbookRequestListItem[];next_cursor:string|null;current_source_version:number}

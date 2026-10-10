@@ -882,3 +882,35 @@ corrected without weakening constraints, assertions, privacy rules or deadlines.
 services now satisfy their scoped custody/retry contract; full #140 acceptance still needs
 captured cashbook source/filter/export journeys, private expense attachments, HTTP/strict
 feature-flag integration, Material 3 UI/browser qualification and final PR CI/review/merge.
+
+## #140 request inbox acceptance slice
+
+The live request inbox now supports bounded UUID keyset pages (1–100 items) and
+strict movement, category, approval/application state, source custody, responsible
+employee and half-open occurrence-time filters. Operators see only their own
+submitted requests; current finance readers see their permitted franchise. Applied
+correction links retain the original request and expose metadata-only corrections
+that have no money legs. Payee/reason text, account metadata, keys and fingerprints
+remain absent from list rows. Scoped detail retains private request evidence.
+
+One SQL statement captures each page's status, correction head, source generation
+and timestamp. This is a live inbox, not a frozen monetary report or export. Existing
+membership transactions already hold the organization authority lock across detail
+reads, so decisions and effects form a consistent prefix. No extra read lock was
+needed. A native regression pauses a real detail read and observes PostgreSQL's
+concurrent approval lock wait before releasing it and checking before/after prefixes.
+
+Focused native cashbook compatibility passed 14 cases; final inbox and authority-lock
+cases passed two cases (one repeated inbox plus one additional distinct regression),
+with original 30-second case deadlines and no failures/skips/cancellations/todos.
+All disposable clusters were stopped and removed. Workspace types, changed lint,
+tenant-query AST, exact 99-row permission contract and diff checks passed; final
+fixture/API types and query checks passed after the lock-test correction. Evidence
+is in ignored local 140-request-inbox-* and 140-request-detail-lock-native.log logs.
+The first lock regression waited at the wrong boundary (franchise after the already
+exclusive organization lock) and hit the existing timeout; its full failed log is
+retained as 140-request-detail-lock-wrong-boundary-failure.log. The test now observes
+the actual authority boundary and the redundant proposed lock was removed. Assertions
+and deadlines were retained. The matrix validator's initial Windows decoding error
+was corrected by its established PYTHONUTF8 environment setting. Full #140 source
+reports, attachments, HTTP/UI and final delivery acceptance remain pending.

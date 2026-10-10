@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import type {DatabasePool} from '@shippingco/db';
-import type {CashbookRequestInput,CashbookRequestDto,CashbookDecisionInput,CashbookDecisionDto,CashbookEffectDto,CashMovementKind,ExpenseCategory} from '@shippingco/shared';
+import type {CashbookRequestInput,CashbookRequestDto,CashbookDecisionInput,CashbookDecisionDto,CashbookEffectDto,CashMovementKind,ExpenseCategory,CashbookRequestList,CashbookRequestListItem} from '@shippingco/shared';
 import {withCashbookScope} from '../memberships/service.ts';
 import {assertTenantAccess,scopedQuery,type TenantAccess} from '../security/scope.ts';
 import {object,selection,uuid,integer,idempotencyKey,timestamp} from '../pricing/validation.ts';
@@ -92,6 +92,33 @@ export function createCashbookRequestService(database:DatabasePool,writesEnabled
     const decisionId=randomUUID();await scopedQuery(scope,['cashbook.approve'],`INSERT INTO shipit.cashbook_request_decisions(id,organization_id,franchise_id,request_id,decision,reason,actor_id,correlation_id,key_digest,fingerprint)
      SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9 WHERE {{franchise:$10:$2}}`,[decisionId,c.permittedFranchiseIds[0],id,input.decision,input.reason,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);
     return decisionDto((await scopedQuery<DecisionRow>(scope,['cashbook.approve'],`SELECT * FROM shipit.cashbook_request_decisions WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[decisionId])).rows[0]!);
+   });
+  },
+  async list(token:string,query:unknown,correlation:string):Promise<CashbookRequestList> {
+   const b=object(query,['organization_id','franchise_id','cursor','limit','state','kind','category','source_location_id','responsible_employee_id','from','to']),q=selection({organization_id:b.organization_id,franchise_id:b.franchise_id});
+   const cursor=b.cursor==null?null:uuid(b.cursor,'$'),state=b.state??null,kind=b.kind??null,category=b.category??null;
+   if(state!==null&&!['requested','approved','rejected','applied'].includes(state as string)||kind!==null&&!['expense','opening_float','owner_funds','deposit','withdrawal'].includes(kind as string)||category!==null&&!['rent','utilities','supplies','transport','maintenance','other'].includes(category as string))throw new FieldValidationError('$','INVALID_FORMAT');
+   const source=b.source_location_id==null?null:uuid(b.source_location_id,'$'),employee=b.responsible_employee_id==null?null:uuid(b.responsible_employee_id,'$'),from=b.from==null?null:timestamp(b.from,'$'),to=b.to==null?null:timestamp(b.to,'$');
+   if(from&&to&&Date.parse(from)>=Date.parse(to))throw new FieldValidationError('$','OUT_OF_RANGE');
+   if(b.limit!==undefined&&(typeof b.limit!=='string'||! /^(?:[1-9][0-9]?|100)$/.test(b.limit)))throw new FieldValidationError('$','OUT_OF_RANGE');
+   const limit=b.limit===undefined?100:Number(b.limit);
+   return withCashbookScope(database,token,q.organizationId,q.franchiseId,'cashbook.select',correlation,async s=>{
+    const scope=s.access,c=assertTenantAccess(scope,['cashbook.select']);
+    // Single statement: the displayed request status, correction head, generation and cutoff agree.
+    const result=(await scopedQuery<{as_of:Date;source_version:string;items:CashbookRequestListItem[]}>(scope,['cashbook.select'],`SELECT statement_timestamp() as_of,
+     COALESCE((SELECT version::text FROM shipit.cashbook_source_versions v WHERE {{franchise:v.organization_id:v.franchise_id}}),'0') source_version,
+     COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'kind',r.kind,'category',r.category,'amount_paise',r.amount_paise,'currency',r.currency,'source_location_id',r.source_location_id,'target_location_id',r.target_location_id,'responsible_employee_id',r.responsible_employee_id,'actor_id',r.actor_id,
+      'occurred_at',to_char(r.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'recorded_at',to_char(r.recorded_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'state',r.state,'version',r.version,'correction_of',r.correction_of,'corrected_by',r.corrected_by) ORDER BY r.id) FROM (
+       SELECT r.*,CASE WHEN e.id IS NOT NULL THEN 'applied' ELSE COALESCE(d.decision,'requested') END state,CASE WHEN e.id IS NOT NULL THEN 3 WHEN d.id IS NOT NULL THEN 2 ELSE 1 END version,
+       (SELECT x.id FROM shipit.cashbook_requests x JOIN shipit.cashbook_effects a ON a.organization_id=x.organization_id AND a.franchise_id=x.franchise_id AND a.request_id=x.id WHERE x.organization_id=r.organization_id AND x.franchise_id=r.franchise_id AND x.correction_of=r.id) corrected_by
+       FROM shipit.cashbook_requests r LEFT JOIN shipit.cashbook_request_decisions d ON d.organization_id=r.organization_id AND d.franchise_id=r.franchise_id AND d.request_id=r.id
+       LEFT JOIN shipit.cashbook_effects e ON e.organization_id=r.organization_id AND e.franchise_id=r.franchise_id AND e.request_id=r.id
+       WHERE {{franchise:r.organization_id:r.franchise_id}} AND (NOT $1::boolean OR r.actor_id=$2) AND ($3::uuid IS NULL OR r.id>$3::uuid)
+       AND ($4::text IS NULL OR CASE WHEN e.id IS NOT NULL THEN 'applied' ELSE COALESCE(d.decision,'requested') END=$4)
+       AND ($5::text IS NULL OR r.kind=$5) AND ($6::text IS NULL OR r.category=$6) AND ($7::uuid IS NULL OR r.source_location_id=$7) AND ($8::uuid IS NULL OR r.responsible_employee_id=$8)
+       AND ($9::timestamptz IS NULL OR r.occurred_at>=$9) AND ($10::timestamptz IS NULL OR r.occurred_at<$10) ORDER BY r.id LIMIT $11
+      ) r),'[]'::jsonb) items`,[s.ownOnly,c.actor.id,cursor,state,kind,category,source,employee,from,to,limit+1])).rows[0]!;
+    return {as_of:instant(result.as_of),current_source_version:Number(result.source_version),items:result.items.slice(0,limit),next_cursor:result.items.length>limit?result.items[limit-1]!.id:null};
    });
   },
   async read(token:string,idInput:unknown,query:unknown,correlation:string) {

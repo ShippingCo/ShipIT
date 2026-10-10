@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
 import {paymentFault} from '../payment-support.ts';
 import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
-import {withTransaction} from '@shippingco/db';
+import {withTransaction,type DatabasePool} from '@shippingco/db';
 import {paymentSetup} from '../payment-support.ts';
 import {createMoneyReceiptService} from '../../src/modules/payments/receipt-service.ts';
 import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
@@ -366,4 +366,50 @@ await test('cash handover current authority, private paging and inactive-source 
  const recoveryKey=randomUUID(),recovery=await s.handovers.request(s.operator.token,q,recoveryKey,headers(recoveryKey),{...s.body,source_revision_id:currentLocation.revision_id,expected_source_version:source,amount_paise:1000},randomUUID()),accountKey=randomUUID();await s.accounts.configure(s.admin.token,s.account.id,q,accountKey,headers(accountKey),{name:'Synthetic inactive account',methods:['cash'],other_method_name:null,active:false,expected_version:1},randomUUID());
  const inactive=await s.handovers.read(s.other.token,recovery.id,q,randomUUID());await assert.rejects(s.handovers.respond(s.other.token,recovery.id,q,randomUUID(),headers('inactive'),{...input,expected_source_version:inactive.current_source_version},randomUUID()),{code:'VERSION_CONFLICT'});
  const rejectKey=randomUUID(),rejected=await s.handovers.respond(s.other.token,recovery.id,q,rejectKey,headers(rejectKey),{kind:'reject',expected_version:1,expected_source_version:inactive.current_source_version,amount_paise:0,currency:'INR',reason:'Synthetic reject inactive-source remainder'},randomUUID());assert.equal(rejected.ended_paise,1000);assert.equal(rejected.accepted_paise,0);assert.deepEqual(rejected.legs,[]);
+});
+
+await test('cashbook request inbox filters current scoped evidence without payees, observes linked corrections and paginates only owned submissions',{timeout:30000},async t=>{
+ const s=await requestSetup(t),effects=createCashbookEffectService(s.pool,true),accountant=await s.grant('accountant',[A]);
+ const submit=async(actor:typeof s.operator,extra:Record<string,unknown>={})=>{const key=randomUUID(),version=(await effects.position(s.admin.token,q,randomUUID())).source_version;return s.service.submit(actor.token,q,key,headers(key),{...s.body,expected_source_version:version,...extra},randomUUID());};
+ const decide=async(id:string,decision:'approved'|'rejected')=>{const key=randomUUID();return s.service.decide(s.reviewer.token,id,q,key,headers(key),{decision,reason:'Synthetic inbox review',expected_version:1},randomUUID());};
+ const apply=async(id:string,decision:string)=>{const key=randomUUID();return effects.apply(s.admin.token,id,q,key,headers(key),{expected_version:2,decision_id:decision},randomUUID());};
+ const opening=await submit(s.operator,{kind:'opening_float',category:null,payee:null,amount_paise:100000});await apply(opening.id,(await decide(opening.id,'approved')).id);
+ const spent=await submit(s.operator);await apply(spent.id,(await decide(spent.id,'approved')).id);
+ const corrected=await submit(s.operator,{correction_of:spent.id,occurred_at:spent.occurred_at,reason:'Synthetic metadata correction'});await apply(corrected.id,(await decide(corrected.id,'approved')).id);
+ const pending=await submit(s.operator,{category:'rent'}),approved=await submit(s.admin);await decide(approved.id,'approved');
+ const rejected=await submit(s.other,{source_location_id:s.otherLocation.id,source_revision_id:s.otherLocation.revision_id,responsible_employee_id:s.other.id});await decide(rejected.id,'rejected');
+ const finance=await s.service.list(accountant.token,q,randomUUID());assert.equal(finance.items.length,6);assert.equal(finance.current_source_version,(await effects.position(s.admin.token,q,randomUUID())).source_version);assert.ok(Number.isFinite(Date.parse(finance.as_of)));
+ assert.equal(finance.items.find(r=>r.id===spent.id)?.corrected_by,corrected.id);assert.equal(finance.items.find(r=>r.id===corrected.id)?.correction_of,spent.id);assert.equal(finance.items.find(r=>r.id===pending.id)?.state,'requested');assert.equal(finance.items.find(r=>r.id===approved.id)?.version,2);
+ const raw=JSON.stringify(finance);for(const sensitive of ['payee','reason','fingerprint','key_digest','Synthetic private vendor','account_id','approval_ref'])assert.equal(raw.includes(sensitive),false);
+ const own=await s.service.list(s.operator.token,q,randomUUID());assert.deepEqual(new Set(own.items.map(r=>r.id)),new Set([opening.id,spent.id,corrected.id,pending.id]));
+ let cursor:string|null=null;const paged:string[]=[];do{const page=await s.service.list(s.operator.token,{...q,limit:'1',...(cursor?{cursor}:{})},randomUUID());paged.push(...page.items.map(r=>r.id));cursor=page.next_cursor;}while(cursor);assert.equal(paged.length,4);assert.equal(new Set(paged).size,4);assert.deepEqual(new Set(paged),new Set(own.items.map(r=>r.id)));
+ for(const [filter,id] of [[{state:'requested'},pending.id],[{state:'approved'},approved.id],[{state:'rejected'},rejected.id],[{kind:'opening_float'},opening.id],[{category:'rent'},pending.id]] as const)assert.deepEqual((await s.service.list(accountant.token,{...q,...filter},randomUUID())).items.map(r=>r.id),[id]);
+ assert.deepEqual((await s.service.list(accountant.token,{...q,state:'applied'},randomUUID())).items.map(r=>r.id).sort(),[opening.id,spent.id,corrected.id].sort());
+ assert.equal((await s.service.list(s.operator.token,{...q,source_location_id:s.otherLocation.id},randomUUID())).items.length,0);
+ assert.equal((await s.service.list(s.operator.token,{...q,responsible_employee_id:s.other.id},randomUUID())).items.length,0);
+ assert.equal((await s.service.list(s.operator.token,{...q,source_location_id:randomUUID()},randomUUID())).items.length,0);
+ assert.equal((await s.service.list(accountant.token,{...q,from:'2026-01-01T00:00:00Z',to:'2026-01-02T00:00:00Z'},randomUUID())).items.length,6);
+ assert.equal((await s.service.list(accountant.token,{...q,to:'2026-01-01T00:00:00Z'},randomUUID())).items.length,0);
+ assert.equal((await s.service.list(s.orgAdmin.token,q,randomUUID())).items.length,6);
+ for(const role of ['read_only','dispatcher','delivery_agent']){const denied=await s.grant(role,[A]);await assert.rejects(s.service.list(denied.token,q,randomUUID()),{code:'ACTION_FORBIDDEN'});}
+ for(const foreign of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])await assert.rejects(s.service.list(s.operator.token,foreign,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ for(const malformed of [{limit:'101'},{limit:1},{cursor:'bad'},{state:'paid'},{kind:'refund'},{category:'refund'},{actor_id:s.other.id},{from:'2026-01-02T00:00:00Z',to:'2026-01-01T00:00:00Z'}])await assert.rejects(s.service.list(s.operator.token,{...q,...malformed},randomUUID()),{code:'VALIDATION_FAILED'});
+ await s.memberships.revokeMembership(s.orgAdmin.token,s.operator.member.id,{expected_version:s.operator.member.version});await assert.rejects(s.service.list(s.operator.token,q,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ assert.deepEqual((await s.service.list(accountant.token,q,randomUUID())).items,finance.items);
+});
+
+await test('cashbook request detail holds current authority while an approval waits and returns a consistent committed prefix',{timeout:30000},async t=>{
+ const s=await requestSetup(t),key=randomUUID(),request=await s.service.submit(s.operator.token,q,key,headers(key),s.body,randomUUID());
+ let entered!:()=>void,release!:()=>void,writerEntered!:()=>void;const reading=new Promise<void>(resolve=>{entered=resolve;}),held=new Promise<void>(resolve=>{release=resolve;}),writing=new Promise<void>(resolve=>{writerEntered=resolve;});let writerPid=0,completed=false;
+ const readerPool:DatabasePool={...s.pool,async connect(){const c=await s.pool.connect();return {release:discard=>c.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){const result=await c.query<Row>(sql,params);if(sql.includes('SELECT * FROM shipit.cashbook_requests WHERE')){entered();await held;}return result;}};}};
+ const writerPool:DatabasePool={...s.pool,async connect(){const c=await s.pool.connect();writerPid=Number((await c.query<{pid:number}>('SELECT pg_backend_pid() pid')).rows[0]!.pid);return {release:discard=>c.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){if(sql.includes('FROM shipit.organizations')&&sql.includes('FOR UPDATE'))writerEntered();return c.query<Row>(sql,params);}};}};
+ const reader=createCashbookRequestService(readerPool).read(s.operator.token,request.id,q,randomUUID());await reading;
+ const dk=randomUUID(),writer=createCashbookRequestService(writerPool,true).decide(s.reviewer.token,request.id,q,dk,headers(dk),{decision:'approved',reason:'Synthetic concurrent review',expected_version:1},randomUUID()).then(result=>{completed=true;return result;});
+ try {
+  await Promise.race([writing,writer]);let waiting=false;
+  for(let n=0;n<100&&!completed&&!waiting;n++){waiting=(await s.db.adminQuery('SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid=$1 AND wait_event_type=$2) waiting',[writerPid,'Lock'])).rows[0]!.waiting===true;if(!waiting)await new Promise(resolve=>setTimeout(resolve,10));}
+  assert.equal(waiting,true,'real PostgreSQL writer must wait on the held authority lock');assert.equal(completed,false);release();
+  const prefix=await reader;assert.equal(prefix.version,1);assert.equal(prefix.decision,null);assert.equal(prefix.effect,null);assert.equal((await writer).decision,'approved');
+  const after=await s.service.read(s.operator.token,request.id,q,randomUUID());assert.equal(after.version,2);assert.equal(after.decision?.id,(await writer).id);assert.equal(after.effect,null);
+ } finally {release();await Promise.allSettled([reader,writer]);}
 });

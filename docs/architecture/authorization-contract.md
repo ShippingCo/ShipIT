@@ -482,3 +482,10 @@ active recipient location ID, revision, staff label and custodian ID, with no re
 account metadata or other balances. The bounded inbox/history lists are limited to the
 operator's own initiated/source/target handovers; finance readers retain their scoped
 read permission. State filters and cursors never confer write authority.
+
+R33 request inbox uses current scope and immutable requester ownership for operators;
+finance readers use their permitted franchise. Its bounded keyset pages show movement
+kind/category, source custody IDs, responsible employee, amounts, approval/application
+status and applied correction links. They exclude payees, reasons, account metadata,
+idempotency keys and fingerprints. A filter never expands ownership. This live request
+inbox is distinct from R34 captured monetary source reports and their export gate.
