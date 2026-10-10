@@ -442,3 +442,7 @@ rechecks contact/resource generation and consent. See [contract](conversations.m
 ## Issue #58 R19/W26/W09 composition
 
 Carrier reconciliation reads use R19 within the selected installation/franchise. W26 permits franchise-admin review/rejection. Applying a movement report additionally requires a current explicit dispatcher W09 grant in that same franchise, including replay. No admin inheritance, new role, proof or payment permission is introduced. See [carrier reconciliation](carrier-reconciliation.md).
+
+## Issue #137 ratified finance extension boundary
+
+The product owner approved D137-1–D137-5 on 10 October 2026: see the [financial operations role/action contract](financial-operations.md#d137-1-proposed-permission-extensions) and its linked decision evidence. These explicit extensions retain the existing seven roles, F/O/A scope and deny-by-default rules. They authorize the owning #138–#146 designs; current runtime W20/W21/W47/W48 behavior stays unchanged until each implementation adds its explicit action IDs, enforcement and negative tests. No implicit org-admin mutation/export, accountant receipt/refund power, general agent ledger grant or read-only mutation is introduced. Proposed labels in that contract describe the reviewed design origin; D137-1–D137-5 are now product-ratified. Independent PR review and qualified accountant/provider format evidence are separate.

@@ -267,4 +267,4 @@ scoped operational health and recovery. [Verification](issue-60-verification.md)
 [Scoped reports](reporting.md) adds #61's persistent filtered snapshots, exact totals,
 fixed pagination and private matching CSV. [Verification](issue-61-verification.md).
 
-Issue #137: [proposed financial operations contract](financial-operations.md). Product-owner ratification is pending; existing financial permissions remain authoritative.
+Issue #137: [proposed financial operations contract](financial-operations.md). D137-1–D137-5 have product-owner ratification; current runtime financial permissions remain authoritative until owning implementation.

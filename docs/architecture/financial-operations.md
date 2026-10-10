@@ -1,7 +1,7 @@
 # Financial operations contract (#137)
 
-Status: **proposed; business ratification pending**. Prepared 10 October 2026
-against main `7ff46da`. This is a contract proposal, not permission to enable new
+Status: **product policy ratified; PR verification and merge pending**. Prepared 10 October 2026
+against main `7ff46da`. This is a ratified product contract, not runtime activation of new
 financial actions. [Payments](payments.md), [ADR 0045](../adr/0045-sales-and-financial-evidence.md),
 [role matrix](authorization-contract.md) and [module plan](../FINANCIAL_MANAGEMENT_PLAN.md)
 retain authority for their already-approved scope.
@@ -18,16 +18,16 @@ franchise-admin authority. It does not ratify the wider #137–#142 workflows.
 | --- | --- | --- |
 | Statements group existing obligations without booking new revenue; not tax invoices | ADR 0045 and merged PR #162 | Preserve accepted boundary; accountant qualifies any later statutory document in #150 |
 | Exact INR paise, immutable booked tax, separate COD ownership, append-only corrections | Existing domain contracts and approved finance expansion | Preserve; no new approval requested |
-| D137-1 permissions below | Proposal only | Product owner approves precise role/action changes; maintainer independently reviews PR |
-| D137-2 debtor, due dates and credit rules below | Proposal only | Product owner approves; accountant reviews ledger consequences |
-| D137-3 new/returning and financial metrics below | Proposal only | Product owner approves definitions |
-| D137-4 cash close, self-approval and reopening below | Proposal only | Product owner approves responsibility policy |
-| D137-5 cancellation/refund and fee treatment below | Proposal only | Product owner approves operating policy; accountant qualifies tax/document treatment |
+| D137-1 permissions below | Product-owner approved D137-1–D137-5, 10 October 2026 | Product owner approves precise role/action changes; maintainer independently reviews PR |
+| D137-2 debtor, due dates and credit rules below | Product-owner approved D137-1–D137-5, 10 October 2026 | Product owner approves; accountant reviews ledger consequences |
+| D137-3 new/returning and financial metrics below | Product-owner approved D137-1–D137-5, 10 October 2026 | Product owner approves definitions |
+| D137-4 cash close, self-approval and reopening below | Product-owner approved D137-1–D137-5, 10 October 2026 | Product owner approves responsibility policy |
+| D137-5 cancellation/refund and fee treatment below | Product-owner approved D137-1–D137-5, 10 October 2026 | Product owner approves operating policy; accountant qualifies tax/document treatment |
 | Target accounting format, bank/card sample mappings and statutory numbering | Unresolved external inputs | #150 accountant mapping; #146 evidence-format owner; do not claim qualification without reviewed fixtures |
 
 Approval evidence must identify decision IDs, approver, date and immutable review
 or conversation reference. A prepared document, CI pass or agent review is not
-ratification. Issue #137 remains open until all its required decisions are approved
+ratification. Issue #137 remains open until its required decision evidence, checks and review are accepted
 and normal review/CI/merge conditions hold. Later external format qualification
 belongs to #146/#150; this contract names those gates rather than claiming support.
 
@@ -285,3 +285,5 @@ and `pnpm check:migrations`, independently trace each named source in the exampl
 tables, then run `pnpm db:local quality` with an available Docker engine. Contract
 arithmetic and existing runtime regression checks cannot ratify proposed policy or
 qualify the future finance APIs. Required business and independent review remain open.
+
+Product-owner ratification: [issue #137 decision evidence](https://github.com/ShippingCo/ShipIT/issues/137#issuecomment-6094308527), originating human reply on 10 October 2026: D137-1–D137-5 approved as proposed. This approves the policy definitions and permission extensions for their owning implementations. No independent GitHub approving review is claimed. Accountant/software and statement-format qualification stay assigned to #150/#146. Existing runtime grants are unchanged by this documentation commit. Production build also passed locally.
