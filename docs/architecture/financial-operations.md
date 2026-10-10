@@ -758,3 +758,61 @@ a synthetic writer corrupts the custody revision after service validation. Postg
 rejects it, and the previously appended financial change, source-generation increment and
 refund evidence all roll back. The unchanged approved request then succeeds normally.
 The original 60-second case deadline, API types and changed-file lint passed.
+
+
+Linked recording corrections for #140 now reuse the same request, different-admin
+approval and exact-approval apply path. A correction names an applied request's current
+chain head through an owned `correction_of` reference. Movement kind, original source and
+target identity and original occurrence time stay fixed; safe replacement metadata and
+the corrected total amount live in a new immutable request. Requests with no correction
+reference still require positive paise. A zero replacement annuls the prior recorded
+meaning, while an unchanged amount with corrected metadata produces no money legs.
+Both retain the complete approval/effect evidence and advance the source generation once.
+
+Application posts only the difference from the previous applied amount. Expense increases
+produce an outflow difference; reductions produce an inflow correction. Opening/owner fund
+corrections reverse that sign, and deposit/withdrawal corrections produce two equal and
+opposite legs. These are corrections of recorded meaning, not verified new transfers or
+sales. SQL computes the same intended legs for capacity bounds, direct-leg intent and
+deferred completeness. Missing, incorrect or incomplete legs roll back the whole effect
+and generation increment. Original requests, approvals and legs cannot be rewritten.
+
+Current actor/scope, chain head, source generation and current location revision remain
+required. Operators can correct their own applied proposals using their permitted custody
+choices; current franchise admins can submit historical corrections after an account or
+custodian becomes inactive. Historical corrections do not require claiming new receipt by
+that former custodian, and new actual movements still require active accounts/custodians.
+The responsible employee on the new correction must be eligible now. A different current
+admin reviews the exact correction, including when another admin submitted it. Exact-key
+completed retries preserve their prior outcome with writes disabled, but still require the
+caller's current authority. Competing corrections cannot create two applied successors.
+
+A truthful correction may expose a negative recorded balance; it is labelled an exception
+with zero available money. Both positive and negative totals must remain within the exact
+safe paise bound. Original occurrence time and the new server-recorded time remain visible
+for later cutoff/close evidence. #145 owns actual daily-close approval and reopening;
+these tests do not fabricate an already reviewed close or qualify that future workflow.
+
+
+Correction verification: eleven unit/input cases passed. Thirty-one native PostgreSQL
+cases passed across the complete cashbook service set (nine cases), one additional signed-
+bound/paired-completeness case, all four cashbook source/fresh/populated-upgrade cases and
+seventeen existing finance/migration/copied-schema compatibility cases. The three new
+correction journeys cover retained prior-day requests/legs, exact ₹500-to-₹700 differences,
+metadata-only zero-leg effects, full annulment and successive replacement, inactive-account/
+departed-custodian admin recovery, all five original movement kinds, paired owned-money
+conservation, unknown/unapplied/changed/stale targets, operator ownership, sibling/unrelated
+scope denial, self-approval denial, direct SQL forgeries, competing applied successors,
+failed/missing/incomplete/wrong legs, both signed safe-money bounds, source-generation
+rollback, fresh-pool recovery after lost COMMIT acknowledgement and current-role denial on
+replay. Completed native runs had zero failures, skips, cancellations or todos with their
+original 30/60-second case deadlines; disposable clusters were stopped and cleaned.
+
+All five workspace type checks, final API fixture types, changed-file lint, tenant-query
+AST, the exact 99-row authorization contract and diff checks passed. Initial static errors
+were diagnosed as using a field outside the existing validation-field union and missing
+assertions on the fixture's two known race keys; the safe existing `$` validation field
+and non-null fixture index assertions corrected them without changing runtime assertions.
+This is service/schema acceptance for corrections, not full #140 completion. Transfer
+acknowledgements/reservations, expense attachments, captured query/export journeys,
+HTTP/configuration wiring, Material 3 UI and final PR gates remain pending.

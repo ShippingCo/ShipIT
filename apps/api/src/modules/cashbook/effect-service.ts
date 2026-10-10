@@ -7,8 +7,8 @@ import {object,selection,uuid,integer,idempotencyKey} from '../pricing/validatio
 import {keyDigest,digest} from '../pricing/idempotency.ts';
 import {instant} from '../pricing/types.ts';
 import {HttpError} from '../../plugins/errors.ts';
-import {movementLegs,maximumPaise} from './rules.ts';
-import {lock,requestRow,requestDto,validateSources} from './request-service.ts';
+import {movementLegs,correctionLegs,maximumPaise} from './rules.ts';
+import {lock,requestRow,requestDto,validateSources,correctionTarget} from './request-service.ts';
 interface EffectRow {id:string;request_id:string;decision_id:string;actor_id:string;recorded_at:Date;fingerprint:string}
 export function cashbookApplyInput(value:unknown):CashbookApplyInput {
  const b=object(value,['expected_version','decision_id']);integer(b.expected_version,'expected_version',2,2);return {expected_version:2,decision_id:uuid(b.decision_id,'$')};
@@ -49,10 +49,10 @@ export function createCashbookEffectService(database:DatabasePool,writesEnabled=
     if(!decision||decision.id!==input.decision_id||decision.decision!=='approved'||decision.actor_id===request.actor_id)throw new HttpError('CASHBOOK_APPROVAL_REQUIRED');
     if((await scopedQuery(scope,['cashbook.apply'],`SELECT id FROM shipit.cashbook_effects WHERE {{franchise:organization_id:franchise_id}} AND request_id=$1`,[id])).rows[0])throw new HttpError('VERSION_CONFLICT');
     const proposal=requestDto(request);await validateSources(scope,proposal);
-    const positions=await captureCashbookPosition(scope),source=positions.locations.find(p=>p.location_id===request.source_location_id),target=positions.locations.find(p=>p.location_id===request.target_location_id);
+    const positions=await captureCashbookPosition(scope),source=positions.locations.find(p=>p.location_id===request.source_location_id);
     if(!source)throw new HttpError('RESOURCE_NOT_FOUND');
-    const amount=BigInt(request.amount_paise),legs=movementLegs(request.kind,amount,request.source_location_id,request.target_location_id,BigInt(source.available_paise));
-    if(['opening_float','owner_funds'].includes(request.kind)&&BigInt(source.known_recorded_paise)+amount>maximumPaise||target&&BigInt(target.known_recorded_paise)+amount>maximumPaise)throw new HttpError('CASHBOOK_CONFLICT');
+    const amount=BigInt(request.amount_paise),previous=await correctionTarget(scope,proposal),legs=previous?correctionLegs(request.kind,BigInt(previous.amount_paise),amount,request.source_location_id,request.target_location_id):movementLegs(request.kind,amount,request.source_location_id,request.target_location_id,BigInt(source.available_paise));
+    for(const leg of legs){const position=positions.locations.find(p=>p.location_id===leg.location_id);if(!position)throw new HttpError('RESOURCE_NOT_FOUND');const after=BigInt(position.known_recorded_paise)+(leg.direction==='in'?1n:-1n)*leg.amount_paise;if(after>maximumPaise||after< -maximumPaise)throw new HttpError('CASHBOOK_CONFLICT');}
     const effect=randomUUID();await scopedQuery(scope,['cashbook.apply'],`INSERT INTO shipit.cashbook_effects(id,organization_id,franchise_id,request_id,decision_id,actor_id,correlation_id,key_digest,fingerprint)
      SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,[effect,c.permittedFranchiseIds[0],id,decision.id,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);
     for(const leg of legs)await scopedQuery(scope,['cashbook.apply'],`INSERT INTO shipit.cashbook_effect_legs(organization_id,franchise_id,effect_id,location_id,direction,amount_paise)

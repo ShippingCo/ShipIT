@@ -11,21 +11,21 @@ const actions=['cashbook.request','cashbook.approve','cashbook.select','cashbook
 interface RequestRow extends Omit<CashbookRequestDto,'amount_paise'|'expected_source_version'|'occurred_at'|'recorded_at'> {amount_paise:string;expected_source_version:string;occurred_at:Date;recorded_at:Date;fingerprint:string}
 interface DecisionRow extends Omit<CashbookDecisionDto,'version'|'recorded_at'> {recorded_at:Date;fingerprint:string}
 interface Source {id:string;revision_id:string;kind:'cash'|'noncash';custodian_id:string|null;active:boolean;account_active:boolean;account_current:boolean}
-export const requestDto=(r:RequestRow):CashbookRequestDto=>({id:r.id,kind:r.kind,source_location_id:r.source_location_id,source_revision_id:r.source_revision_id,target_location_id:r.target_location_id,target_revision_id:r.target_revision_id,expected_source_version:Number(r.expected_source_version),amount_paise:Number(r.amount_paise),currency:r.currency,category:r.category,payee:r.payee,responsible_employee_id:r.responsible_employee_id,reason:r.reason,occurred_at:instant(r.occurred_at),actor_id:r.actor_id,recorded_at:instant(r.recorded_at)});
+export const requestDto=(r:RequestRow):CashbookRequestDto=>({id:r.id,kind:r.kind,source_location_id:r.source_location_id,source_revision_id:r.source_revision_id,target_location_id:r.target_location_id,target_revision_id:r.target_revision_id,expected_source_version:Number(r.expected_source_version),amount_paise:Number(r.amount_paise),currency:r.currency,category:r.category,payee:r.payee,responsible_employee_id:r.responsible_employee_id,reason:r.reason,occurred_at:instant(r.occurred_at),actor_id:r.actor_id,recorded_at:instant(r.recorded_at),...(r.correction_of?{correction_of:r.correction_of}:{})});
 const decisionDto=(r:DecisionRow):CashbookDecisionDto=>({id:r.id,request_id:r.request_id,decision:r.decision,reason:r.reason,actor_id:r.actor_id,recorded_at:instant(r.recorded_at),version:2});
 function text(value:unknown,max:number):string {
  if(typeof value!=='string'||value.length>max*4||!value.trim()||[...value.trim()].length>max||[...value].some(char=>{const code=char.codePointAt(0)!;return code<32||(code>=127&&code<=159)||(code>=0xd800&&code<=0xdfff);}))throw new FieldValidationError('$','INVALID_FORMAT');return value.trim();
 }
 export function cashbookRequestInput(value:unknown):CashbookRequestInput {
- const b=object(value,['kind','source_location_id','source_revision_id','target_location_id','target_revision_id','expected_source_version','amount_paise','currency','category','payee','responsible_employee_id','reason','occurred_at']);
+ const b=object(value,['kind','source_location_id','source_revision_id','target_location_id','target_revision_id','expected_source_version','amount_paise','currency','category','payee','responsible_employee_id','reason','occurred_at','correction_of']);
  if(!['expense','opening_float','owner_funds','deposit','withdrawal'].includes(b.kind as string)||b.currency!=='INR')throw new FieldValidationError('$','INVALID_FORMAT');
- const kind=b.kind as CashMovementKind,paired=kind==='deposit'||kind==='withdrawal',expense=kind==='expense';
+ const correction=b.correction_of==null?null:uuid(b.correction_of,'$'),kind=b.kind as CashMovementKind,paired=kind==='deposit'||kind==='withdrawal',expense=kind==='expense';
  if(paired?(b.target_location_id===null||b.target_revision_id===null):(b.target_location_id!==null||b.target_revision_id!==null))throw new FieldValidationError('$','INVALID_FORMAT');
  if(expense?!['rent','utilities','supplies','transport','maintenance','other'].includes(b.category as string):(b.category!==null||b.payee!==null))throw new FieldValidationError('$','INVALID_FORMAT');
  const source=uuid(b.source_location_id,'$'),target=paired?uuid(b.target_location_id,'$'):null;if(source===target)throw new FieldValidationError('$','INVALID_FORMAT');
  return {kind,source_location_id:source,source_revision_id:uuid(b.source_revision_id,'$'),target_location_id:target,target_revision_id:paired?uuid(b.target_revision_id,'$'):null,
- expected_source_version:integer(b.expected_source_version,'expected_version'),amount_paise:integer(b.amount_paise,'amount_paise',1),currency:'INR',category:expense?b.category as ExpenseCategory:null,payee:expense?text(b.payee,120):null,
- responsible_employee_id:uuid(b.responsible_employee_id,'$'),reason:text(b.reason,500),occurred_at:timestamp(b.occurred_at,'occurred_at')};
+ expected_source_version:integer(b.expected_source_version,'expected_version'),amount_paise:integer(b.amount_paise,'amount_paise',correction?0:1),currency:'INR',category:expense?b.category as ExpenseCategory:null,payee:expense?text(b.payee,120):null,
+ responsible_employee_id:uuid(b.responsible_employee_id,'$'),reason:text(b.reason,500),occurred_at:timestamp(b.occurred_at,'occurred_at'),...(correction?{correction_of:correction}:{})};
 }
 export function cashbookDecisionInput(value:unknown):CashbookDecisionInput {
  const b=object(value,['decision','reason','expected_version']);if(b.decision!=='approved'&&b.decision!=='rejected')throw new FieldValidationError('$','INVALID_FORMAT');
@@ -39,8 +39,18 @@ export async function requestRow(scope:TenantAccess,id:string,ownOnly=false) {
  const c=assertTenantAccess(scope,[...actions]);
  const r=(await scopedQuery<RequestRow>(scope,[...actions],`SELECT * FROM shipit.cashbook_requests WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND (NOT $2::boolean OR actor_id=$3)`,[id,ownOnly,c.actor.id])).rows[0];if(!r)throw new HttpError('RESOURCE_NOT_FOUND');return r;
 }
+/** A correction names the current applied chain head; its original custody and occurrence stay fixed. */
+export async function correctionTarget(scope:TenantAccess,input:CashbookRequestInput,ownOnly=false) {
+ if(!input.correction_of)return null;
+ const previous=await requestRow(scope,input.correction_of,ownOnly);
+ if(previous.kind!==input.kind||previous.source_location_id!==input.source_location_id||previous.target_location_id!==input.target_location_id||instant(previous.occurred_at)!==input.occurred_at)throw new HttpError('CASHBOOK_CONFLICT');
+ const head=(await scopedQuery<{applied:boolean;superseded:boolean}>(scope,[...actions],`SELECT EXISTS(SELECT 1 FROM shipit.cashbook_effects e WHERE e.organization_id=r.organization_id AND e.franchise_id=r.franchise_id AND e.request_id=r.id) applied,
+ EXISTS(SELECT 1 FROM shipit.cashbook_requests c JOIN shipit.cashbook_effects e ON e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id AND e.request_id=c.id WHERE c.organization_id=r.organization_id AND c.franchise_id=r.franchise_id AND c.correction_of=r.id) superseded
+ FROM shipit.cashbook_requests r WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.id=$1`,[previous.id])).rows[0];
+ if(!head?.applied||head.superseded)throw new HttpError('VERSION_CONFLICT');return previous;
+}
 export async function validateSources(scope:TenantAccess,input:CashbookRequestInput,ownOnly=false) {
- const c=assertTenantAccess(scope,[...actions]);
+ const c=assertTenantAccess(scope,[...actions]);await correctionTarget(scope,input,ownOnly);
  const version=(await scopedQuery<{version:string}>(scope,[...actions],`SELECT version::text FROM shipit.cashbook_source_versions WHERE {{franchise:organization_id:franchise_id}}`)).rows[0];
  if(BigInt(version?.version??'0')!==BigInt(input.expected_source_version))throw new HttpError('VERSION_CONFLICT');
  const sources=(await scopedQuery<Source>(scope,[...actions],`SELECT l.id,r.id revision_id,l.kind,l.custodian_id,r.active,a.active account_active,a.id=r.account_revision_id account_current FROM shipit.cash_locations l
@@ -49,11 +59,11 @@ export async function validateSources(scope:TenantAccess,input:CashbookRequestIn
  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.id IN ($1,$2) AND (NOT $3::boolean OR l.kind='noncash' OR l.custodian_id=$4)`,[input.source_location_id,input.target_location_id,ownOnly,c.actor.id])).rows;
  const source=sources.find(r=>r.id===input.source_location_id),target=input.target_location_id?sources.find(r=>r.id===input.target_location_id):null;
  if(!source||(input.target_location_id&&!target))throw new HttpError('RESOURCE_NOT_FOUND');
- if(!source.active||!source.account_active||!source.account_current||source.revision_id!==input.source_revision_id||target&&(!target.active||!target.account_active||!target.account_current||target.revision_id!==input.target_revision_id))throw new HttpError('VERSION_CONFLICT');
+ if(source.revision_id!==input.source_revision_id||target&&target.revision_id!==input.target_revision_id||!input.correction_of&&(!source.active||!source.account_active||!source.account_current||target&&(!target.active||!target.account_active||!target.account_current)))throw new HttpError('VERSION_CONFLICT');
  if(input.kind==='opening_float'&&source.kind!=='cash'||input.kind==='deposit'&&(source.kind!=='cash'||target?.kind!=='noncash')||input.kind==='withdrawal'&&(source.kind!=='noncash'||target?.kind!=='cash'))throw new FieldValidationError('$','INVALID_FORMAT');
  const members=(await scopedQuery<{user_id:string}>(scope,[...actions],`SELECT DISTINCT m.user_id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
  JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin') AND m.user_id IN ($1,$2,$3)`,[source.custodian_id,target?.custodian_id??null,input.responsible_employee_id])).rows;
- for(const id of [source.custodian_id,target?.custodian_id??null,input.responsible_employee_id])if(id&&!members.some(m=>m.user_id===id))throw new HttpError('RESOURCE_NOT_FOUND');
+ for(const id of input.correction_of?[input.responsible_employee_id]:[source.custodian_id,target?.custodian_id??null,input.responsible_employee_id])if(id&&!members.some(m=>m.user_id===id))throw new HttpError('RESOURCE_NOT_FOUND');
 }
 export function createCashbookRequestService(database:DatabasePool,writesEnabled=false) {
  return {
@@ -65,8 +75,8 @@ export function createCashbookRequestService(database:DatabasePool,writesEnabled
     if(saved){if(saved.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');return requestDto(saved);}if(!writesEnabled)throw new HttpError('CASHBOOK_DISABLED');
     await validateSources(scope,input,s.ownOnly);
     const time=(await scopedQuery<{valid:boolean}>(scope,['cashbook.request'],`SELECT $1::timestamptz<=clock_timestamp() valid WHERE {{franchise:$2:$3}}`,[input.occurred_at,c.organizationId,c.permittedFranchiseIds[0]])).rows[0];if(!time?.valid)throw new FieldValidationError('occurred_at','OUT_OF_RANGE');
-    const id=randomUUID();await scopedQuery(scope,['cashbook.request'],`INSERT INTO shipit.cashbook_requests(id,organization_id,franchise_id,kind,source_location_id,source_revision_id,target_location_id,target_revision_id,expected_source_version,amount_paise,currency,category,payee,responsible_employee_id,reason,occurred_at,actor_id,correlation_id,key_digest,fingerprint)
-     SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,'INR',$10,$11,$12,$13,$14,$15,$16,$17,$18 WHERE {{franchise:$19:$2}}`,[id,c.permittedFranchiseIds[0],input.kind,input.source_location_id,input.source_revision_id,input.target_location_id,input.target_revision_id,input.expected_source_version,input.amount_paise,input.category,input.payee,input.responsible_employee_id,input.reason,input.occurred_at,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);
+    const id=randomUUID();await scopedQuery(scope,['cashbook.request'],`INSERT INTO shipit.cashbook_requests(id,organization_id,franchise_id,kind,source_location_id,source_revision_id,target_location_id,target_revision_id,expected_source_version,amount_paise,currency,category,payee,responsible_employee_id,reason,occurred_at,actor_id,correlation_id,key_digest,fingerprint,correction_of)
+     SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,'INR',$10,$11,$12,$13,$14,$15,$16,$17,$18,$19 WHERE {{franchise:$20:$2}}`,[id,c.permittedFranchiseIds[0],input.kind,input.source_location_id,input.source_revision_id,input.target_location_id,input.target_revision_id,input.expected_source_version,input.amount_paise,input.category,input.payee,input.responsible_employee_id,input.reason,input.occurred_at,c.actor.id,c.correlationId,key,fingerprint,input.correction_of??null,c.organizationId]);
     return requestDto(await requestRow(scope,id));
    });
   },
@@ -88,7 +98,7 @@ export function createCashbookRequestService(database:DatabasePool,writesEnabled
    const q=selection(query),id=uuid(idInput,'$');return withCashbookScope(database,token,q.organizationId,q.franchiseId,'cashbook.select',correlation,async s=>{
     const request=await requestRow(s.access,id,s.ownOnly),decision=(await scopedQuery<DecisionRow>(s.access,['cashbook.select'],`SELECT * FROM shipit.cashbook_request_decisions WHERE {{franchise:organization_id:franchise_id}} AND request_id=$1`,[id])).rows[0];
     const effect=(await scopedQuery<Omit<CashbookEffectDto,'version'|'recorded_at'> & {recorded_at:Date}>(s.access,['cashbook.select'],`SELECT e.id,e.request_id,e.decision_id,e.actor_id,e.recorded_at,
-     (SELECT jsonb_agg(jsonb_build_object('location_id',l.location_id,'direction',l.direction,'amount_paise',l.amount_paise::text) ORDER BY l.location_id) FROM shipit.cashbook_effect_legs l WHERE l.organization_id=e.organization_id AND l.franchise_id=e.franchise_id AND l.effect_id=e.id) legs
+     COALESCE((SELECT jsonb_agg(jsonb_build_object('location_id',l.location_id,'direction',l.direction,'amount_paise',l.amount_paise::text) ORDER BY l.location_id) FROM shipit.cashbook_effect_legs l WHERE l.organization_id=e.organization_id AND l.franchise_id=e.franchise_id AND l.effect_id=e.id),'[]'::jsonb) legs
      FROM shipit.cashbook_effects e WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.request_id=$1`,[id])).rows[0];
     return {request:requestDto(request),decision:decision?decisionDto(decision):null,effect:effect?{...effect,recorded_at:instant(effect.recorded_at),version:3 as const}:null,version:effect?3 as const:decision?2 as const:1 as const};
    });

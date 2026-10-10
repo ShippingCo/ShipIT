@@ -104,3 +104,11 @@ test('refund evidence preserves legacy exact-intent shape while explicit custody
  assert.deepEqual(refundEvidence({...body,cash_location_id:id,cash_location_revision_id:id}),{...body,cash_location_id:id,cash_location_revision_id:id});
  for(const change of [{cash_location_id:id},{cash_location_revision_id:id},{method:'upi',cash_location_id:id,cash_location_revision_id:id},{custodian_id:id},{actor_id:id}])assert.throws(()=>refundEvidence({...body,...change}),{code:'VALIDATION_FAILED'});
 });
+
+
+test('linked corrections permit zero replacement but preserve old non-correction intent and reject invalid targets/money',async()=>{
+ const {cashbookRequestInput}=await import('../../src/modules/cashbook/request-service.ts'),id='11111111-1111-4111-8111-111111111111',body={kind:'expense',source_location_id:id,source_revision_id:id,target_location_id:null,target_revision_id:null,expected_source_version:2,amount_paise:50000,currency:'INR',category:'supplies',payee:'Synthetic vendor',responsible_employee_id:id,reason:'Synthetic evidence',occurred_at:'2026-01-01T00:00:00Z'};
+ assert.deepEqual(cashbookRequestInput(body),body);assert.deepEqual(cashbookRequestInput({...body,correction_of:null}),body);
+ assert.equal(cashbookRequestInput({...body,correction_of:id,amount_paise:0}).amount_paise,0);
+ for(const change of [{correction_of:'bad'},{correction_of:id,amount_paise:-1},{correction_of:id,amount_paise:0.5},{correction_of:id,amount_paise:Number.MAX_SAFE_INTEGER+1},{corrected_balance_paise:1},{previous_amount_paise:1}])assert.throws(()=>cashbookRequestInput({...body,...change}),{code:'VALIDATION_FAILED'});
+});

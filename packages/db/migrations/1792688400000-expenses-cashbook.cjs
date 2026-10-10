@@ -103,7 +103,7 @@ CREATE TABLE shipit.cashbook_requests (
  source_location_id uuid NOT NULL,source_revision_id uuid NOT NULL,
  target_location_id uuid,target_revision_id uuid,
  expected_source_version bigint NOT NULL CHECK(expected_source_version BETWEEN 0 AND 9007199254740991),
- amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 1 AND 9007199254740991),currency text NOT NULL CHECK(currency='INR'),
+ correction_of uuid,amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 0 AND 9007199254740991),currency text NOT NULL CHECK(currency='INR'),
  category text CHECK(category IN ('rent','utilities','supplies','transport','maintenance','other')),
  payee text CHECK(char_length(payee) BETWEEN 1 AND 120 AND payee=btrim(payee) AND payee !~ '[\x01-\x1f\x7f-\x9f]'),
  responsible_employee_id uuid NOT NULL REFERENCES shipit.auth_users(id),
@@ -118,7 +118,9 @@ CREATE TABLE shipit.cashbook_requests (
  CHECK((target_location_id IS NULL)=(target_revision_id IS NULL)),
  CHECK((kind IN ('deposit','withdrawal'))=(target_location_id IS NOT NULL)),
  CHECK(source_location_id IS DISTINCT FROM target_location_id),
- CHECK((kind='expense')=(category IS NOT NULL)),CHECK((kind='expense')=(payee IS NOT NULL))
+ CHECK((kind='expense')=(category IS NOT NULL)),CHECK((kind='expense')=(payee IS NOT NULL)),
+ CHECK(correction_of IS NOT NULL OR amount_paise>0),
+ FOREIGN KEY(organization_id,franchise_id,correction_of) REFERENCES shipit.cashbook_requests(organization_id,franchise_id,id) ON DELETE RESTRICT
 );
 CREATE TABLE shipit.cashbook_request_decisions (
  id uuid PRIMARY KEY,organization_id uuid NOT NULL,franchise_id uuid NOT NULL,request_id uuid NOT NULL,
@@ -131,19 +133,27 @@ CREATE TABLE shipit.cashbook_request_decisions (
  UNIQUE(organization_id,franchise_id,actor_id,key_digest),
  FOREIGN KEY(organization_id,franchise_id,request_id) REFERENCES shipit.cashbook_requests(organization_id,franchise_id,id) ON DELETE RESTRICT
 );
+CREATE INDEX cashbook_correction_predecessor_idx ON shipit.cashbook_requests(organization_id,franchise_id,correction_of) WHERE correction_of IS NOT NULL;
 CREATE INDEX cashbook_request_owner_idx ON shipit.cashbook_requests(organization_id,franchise_id,actor_id,id);
 CREATE FUNCTION shipit.check_cashbook_request_sources(request shipit.cashbook_requests) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 DECLARE source shipit.cash_locations;target shipit.cash_locations;source_revision shipit.cash_location_revisions;
- target_revision shipit.cash_location_revisions;source_account shipit.receiving_account_revisions;target_account shipit.receiving_account_revisions;
+ target_revision shipit.cash_location_revisions;source_account shipit.receiving_account_revisions;target_account shipit.receiving_account_revisions;previous shipit.cashbook_requests;
 BEGIN
+ IF request.correction_of IS NOT NULL THEN
+  SELECT * INTO previous FROM shipit.cashbook_requests WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.correction_of;
+  IF previous.id IS NULL OR previous.kind<>request.kind OR previous.source_location_id<>request.source_location_id OR previous.target_location_id IS DISTINCT FROM request.target_location_id OR previous.occurred_at<>request.occurred_at
+  OR NOT EXISTS(SELECT 1 FROM shipit.cashbook_effects e WHERE e.organization_id=request.organization_id AND e.franchise_id=request.franchise_id AND e.request_id=previous.id)
+  OR EXISTS(SELECT 1 FROM shipit.cashbook_requests c JOIN shipit.cashbook_effects e ON e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id AND e.request_id=c.id WHERE c.organization_id=request.organization_id AND c.franchise_id=request.franchise_id AND c.correction_of=previous.id AND c.id<>request.id)
+  THEN RAISE EXCEPTION 'CASHBOOK_CORRECTION_TARGET_STALE' USING ERRCODE='23514';END IF;
+ END IF;
  SELECT * INTO source FROM shipit.cash_locations WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.source_location_id;
  SELECT * INTO source_revision FROM shipit.cash_location_revisions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND location_id=request.source_location_id ORDER BY version DESC LIMIT 1;
  SELECT * INTO source_account FROM shipit.receiving_account_revisions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND account_id=source.account_id ORDER BY version DESC LIMIT 1;
- IF source.id IS NULL OR source_revision.id IS DISTINCT FROM request.source_revision_id OR NOT source_revision.active OR NOT source_account.active OR source_account.id IS DISTINCT FROM source_revision.account_revision_id
+ IF source.id IS NULL OR source_revision.id IS DISTINCT FROM request.source_revision_id OR (request.correction_of IS NULL AND (NOT source_revision.active OR NOT source_account.active OR source_account.id IS DISTINCT FROM source_revision.account_revision_id))
  OR COALESCE((SELECT version FROM shipit.cashbook_source_versions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id),0)<>request.expected_source_version
  THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_SOURCE_STALE' USING ERRCODE='23514';END IF;
- IF source.kind='cash' AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ IF request.correction_of IS NULL AND source.kind='cash' AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
  WHERE s.organization_id=request.organization_id AND s.franchise_id=request.franchise_id AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin') AND m.user_id=source.custodian_id)
  THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_CUSTODIAN_INVALID' USING ERRCODE='23514';END IF;
  IF request.kind='opening_float' AND source.kind<>'cash' THEN RAISE EXCEPTION 'CASHBOOK_FLOAT_REQUIRES_CASH' USING ERRCODE='23514';END IF;
@@ -151,10 +161,10 @@ BEGIN
   SELECT * INTO target FROM shipit.cash_locations WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.target_location_id;
   SELECT * INTO target_revision FROM shipit.cash_location_revisions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND location_id=request.target_location_id ORDER BY version DESC LIMIT 1;
   SELECT * INTO target_account FROM shipit.receiving_account_revisions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND account_id=target.account_id ORDER BY version DESC LIMIT 1;
-  IF target.id IS NULL OR target_revision.id IS DISTINCT FROM request.target_revision_id OR NOT target_revision.active OR NOT target_account.active OR target_account.id IS DISTINCT FROM target_revision.account_revision_id
+  IF target.id IS NULL OR target_revision.id IS DISTINCT FROM request.target_revision_id OR (request.correction_of IS NULL AND (NOT target_revision.active OR NOT target_account.active OR target_account.id IS DISTINCT FROM target_revision.account_revision_id))
    OR (request.kind='deposit' AND (source.kind<>'cash' OR target.kind<>'noncash')) OR (request.kind='withdrawal' AND (source.kind<>'noncash' OR target.kind<>'cash'))
   THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_TARGET_STALE' USING ERRCODE='23514';END IF;
-  IF target.kind='cash' AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+  IF request.correction_of IS NULL AND target.kind='cash' AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
    WHERE s.organization_id=request.organization_id AND s.franchise_id=request.franchise_id AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin') AND m.user_id=target.custodian_id)
   THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_CUSTODIAN_INVALID' USING ERRCODE='23514';END IF;
  END IF;
@@ -177,6 +187,8 @@ BEGIN
  WHERE s.organization_id=NEW.organization_id AND s.franchise_id=NEW.franchise_id AND m.lifecycle='active' AND m.role='franchise_admin' AND m.user_id=NEW.actor_id)
  AND EXISTS(SELECT 1 FROM shipit.cash_locations l WHERE l.organization_id=NEW.organization_id AND l.franchise_id=NEW.franchise_id AND l.id IN (NEW.source_location_id,NEW.target_location_id) AND l.kind='cash' AND l.custodian_id<>NEW.actor_id)
  THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_CUSTODY_FORBIDDEN' USING ERRCODE='23514';END IF;
+ IF NEW.correction_of IS NOT NULL AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND m.user_id=NEW.actor_id AND m.lifecycle='active' AND m.role='franchise_admin')
+ AND NOT EXISTS(SELECT 1 FROM shipit.cashbook_requests p WHERE p.organization_id=NEW.organization_id AND p.franchise_id=NEW.franchise_id AND p.id=NEW.correction_of AND p.actor_id=NEW.actor_id) THEN RAISE EXCEPTION 'CASHBOOK_CORRECTION_OWNER_FORBIDDEN' USING ERRCODE='23514';END IF;
  PERFORM shipit.check_cashbook_request_sources(NEW);
  IF NEW.occurred_at>clock_timestamp() THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_TIME_INVALID' USING ERRCODE='23514';END IF;
  NEW.recorded_at=date_trunc('milliseconds',clock_timestamp());RETURN NEW;
@@ -224,6 +236,19 @@ CREATE TABLE shipit.cashbook_effect_legs (
 );
 CREATE INDEX cashbook_effect_location_idx ON shipit.cashbook_effect_legs(organization_id,franchise_id,location_id,effect_id);
 
+CREATE FUNCTION shipit.cashbook_intended_legs(request shipit.cashbook_requests)
+RETURNS TABLE(location_id uuid,direction text,amount_paise bigint)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE delta numeric:=request.amount_paise;previous bigint;source_direction text;
+BEGIN
+ IF request.correction_of IS NOT NULL THEN SELECT r.amount_paise INTO previous FROM shipit.cashbook_requests r WHERE r.organization_id=request.organization_id AND r.franchise_id=request.franchise_id AND r.id=request.correction_of;delta:=delta-previous;END IF;
+ IF delta=0 THEN RETURN;END IF;
+ source_direction:=CASE WHEN (request.kind IN ('opening_float','owner_funds'))=(delta>0) THEN 'in' ELSE 'out' END;
+ RETURN QUERY SELECT request.source_location_id,source_direction,abs(delta)::bigint;
+ IF request.target_location_id IS NOT NULL THEN RETURN QUERY SELECT request.target_location_id,CASE WHEN source_direction='in' THEN 'out' ELSE 'in' END,abs(delta)::bigint;END IF;
+END $fn$;
+REVOKE ALL ON FUNCTION shipit.cashbook_intended_legs(shipit.cashbook_requests) FROM PUBLIC;
+
 -- Nullable additive ownership references: existing refunds remain explicitly unattributed.
 ALTER TABLE shipit.financial_refund_evidence ADD COLUMN cash_location_id uuid,ADD COLUMN cash_location_revision_id uuid;
 ALTER TABLE shipit.financial_refund_evidence ADD CONSTRAINT refund_cash_location_pair CHECK((cash_location_id IS NULL)=(cash_location_revision_id IS NULL)),
@@ -266,13 +291,13 @@ CREATE VIEW shipit.cashbook_source_facts AS
  FROM shipit.payment_entries p JOIN shipit.payment_commands cmd ON cmd.organization_id=p.organization_id AND cmd.franchise_id=p.franchise_id AND cmd.id=p.command_id
  WHERE cmd.receipt_command_id IS NULL AND cmd.state='committed'
  UNION ALL
- SELECT leg.organization_id,leg.franchise_id,r.kind,e.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,r.occurred_at,e.recorded_at,e.actor_id,r.id,NULL::uuid,NULL::text
+ SELECT leg.organization_id,leg.franchise_id,CASE WHEN r.correction_of IS NULL THEN r.kind ELSE 'correction' END,e.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,r.occurred_at,e.recorded_at,e.actor_id,r.id,r.correction_of,NULL::text
  FROM shipit.cashbook_effect_legs leg JOIN shipit.cashbook_effects e ON e.organization_id=leg.organization_id AND e.franchise_id=leg.franchise_id AND e.id=leg.effect_id
  JOIN shipit.cashbook_requests r ON r.organization_id=e.organization_id AND r.franchise_id=e.franchise_id AND r.id=e.request_id
  JOIN shipit.cash_locations l ON l.organization_id=leg.organization_id AND l.franchise_id=leg.franchise_id AND l.id=leg.location_id;
 CREATE FUNCTION shipit.guard_cashbook_effect() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
-DECLARE request shipit.cashbook_requests;approval shipit.cashbook_request_decisions;available numeric;target_total numeric;
+DECLARE request shipit.cashbook_requests;approval shipit.cashbook_request_decisions;available numeric;target_total numeric;leg record;
 BEGIN
  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_IMMUTABLE' USING ERRCODE='23514';END IF;
  IF NEW.recorded_at IS NOT NULL OR NEW.creation_xid<>pg_current_xact_id() THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
@@ -287,14 +312,20 @@ BEGIN
  THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_APPROVAL_REQUIRED' USING ERRCODE='23514';END IF;
  PERFORM shipit.check_cashbook_request_sources(request);
  SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO available FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=request.source_location_id;
- IF request.kind IN ('expense','deposit','withdrawal') THEN
+ IF request.correction_of IS NOT NULL THEN
+  FOR leg IN SELECT * FROM shipit.cashbook_intended_legs(request) LOOP
+   SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO target_total FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=leg.location_id;
+   target_total:=target_total+CASE WHEN leg.direction='in' THEN leg.amount_paise ELSE -leg.amount_paise END;
+   IF abs(target_total)>9007199254740991 THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
+  END LOOP;
+ ELSIF request.kind IN ('expense','deposit','withdrawal') THEN
   IF available<request.amount_paise OR (SELECT COALESCE(sum(CASE WHEN f.source_kind='refund' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0) FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=request.source_location_id
    WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND f.location_id IS NULL AND f.source_kind IN ('refund','refund_correction') AND (f.account_id IS NULL OR f.account_id=l.account_id))>0
   THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
  ELSE
   IF available+request.amount_paise>9007199254740991 THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
  END IF;
- IF request.target_location_id IS NOT NULL THEN
+ IF request.correction_of IS NULL AND request.target_location_id IS NOT NULL THEN
   SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO target_total FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=request.target_location_id;
   IF target_total+request.amount_paise>9007199254740991 THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
  END IF;
@@ -309,9 +340,7 @@ BEGIN
  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASHBOOK_LEG_IMMUTABLE' USING ERRCODE='23514';END IF;
  SELECT * INTO effect FROM shipit.cashbook_effects WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.effect_id;
  SELECT * INTO request FROM shipit.cashbook_requests WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=effect.request_id;
- IF effect.id IS NULL OR effect.creation_xid<>pg_current_xact_id() OR NEW.amount_paise<>request.amount_paise
- OR NOT COALESCE((NEW.location_id=request.source_location_id AND NEW.direction=CASE WHEN request.kind IN ('opening_float','owner_funds') THEN 'in' ELSE 'out' END)
- OR (NEW.location_id=request.target_location_id AND NEW.direction='in'),false)
+ IF effect.id IS NULL OR effect.creation_xid<>pg_current_xact_id() OR NOT EXISTS(SELECT 1 FROM shipit.cashbook_intended_legs(request) l WHERE l.location_id=NEW.location_id AND l.direction=NEW.direction AND l.amount_paise=NEW.amount_paise)
  THEN RAISE EXCEPTION 'CASHBOOK_LEG_INTENT_INVALID' USING ERRCODE='23514';END IF;RETURN NEW;
 END $fn$;
 CREATE TRIGGER cashbook_effect_leg_guard BEFORE INSERT OR UPDATE OR DELETE ON shipit.cashbook_effect_legs FOR EACH ROW EXECUTE FUNCTION shipit.guard_cashbook_effect_leg();
@@ -321,7 +350,7 @@ DECLARE request shipit.cashbook_requests;legs integer;
 BEGIN
  SELECT * INTO request FROM shipit.cashbook_requests WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.request_id;
  SELECT count(*) INTO legs FROM shipit.cashbook_effect_legs WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND effect_id=NEW.id;
- IF legs<>(CASE WHEN request.target_location_id IS NULL THEN 1 ELSE 2 END) THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_LEGS_INCOMPLETE' USING ERRCODE='23514';END IF;RETURN NULL;
+ IF legs<>(SELECT count(*) FROM shipit.cashbook_intended_legs(request)) THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_LEGS_INCOMPLETE' USING ERRCODE='23514';END IF;RETURN NULL;
 END $fn$;
 CREATE CONSTRAINT TRIGGER cashbook_effect_complete AFTER INSERT ON shipit.cashbook_effects DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION shipit.check_cashbook_effect_complete();
 REVOKE ALL ON shipit.cashbook_effects,shipit.cashbook_effect_legs,shipit.cashbook_source_facts FROM PUBLIC;
