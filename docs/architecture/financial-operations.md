@@ -684,12 +684,15 @@ unknown legacy collection/correction sources and committed movement legs. Legacy
 entries linked to a receipt are excluded from the legacy union and its source-version
 hook. New unlinked legacy collection/correction writes increment source generation;
 historical migration creates no generation seed. Legacy recording corrections are labelled
-as such, not described as verified new transfers. Explicit cash-refund custody integration
-through the owning refund workflow is still pending; actor identity is never inferred as
-possession. Relevant unresolved refund custody currently blocks new spending from that
-account. Unknown legacy collections remain visible as unknown and never add guessed
-location capacity. Complete refund-record annulment and custody qualification need the
-owning-source integration before full issue acceptance.
+as such, not described as verified new transfers. The owning refund workflow now accepts
+an explicit cash-location/current-revision pair, bound to the original source account and
+an eligible current custodian. Cashbook-enabled new cash refunds require that pair; the
+actor is never inferred as custodian. The additive nullable fields preserve existing
+refund evidence as unknown custody, and immutable guards prohibit later attribution.
+Refund corrections retain the original location/account. Relevant unresolved unknown
+refund amounts block spending; complete approved record annulment releases that block
+while both source facts remain visible. Unknown legacy collections never add guessed
+location capacity. HTTP/configuration wiring of the cashbook flag is still pending.
 
 The scoped position query captures location control totals, unknown source count and source
 generation at one statement MVCC cutoff. All amounts use exact numeric/BigInt arithmetic;
@@ -724,5 +727,27 @@ collection evidence is preserved, all seven new cashbook source tables are empty
 upgrade, the old collection appears as unknown account/custody, and a new legacy recording
 correction advances generation once while both source facts remain unassigned. There
 were no skipped, cancelled or failed cases in these completed runs. This evidence remains
-partial #140 acceptance; explicit cash-refund custody, recording corrections, handovers,
+partial #140 acceptance; recording corrections, handovers,
 private expense attachments, captured cashbook journeys and final PR gates remain pending.
+
+
+Cash-refund custody verification for #140: ten unit/input cases, all five workspace type
+checks, changed-file lint and the tenant-query AST gate passed. All six existing native
+financial workflow cases passed after extending the actual paid-refund journey: explicit
+cash custody differs from the applying admin, missing/unknown/stale locations are denied,
+corrections retain original custody, unknown refunds block spending until fully annulled,
+and a UPI refund affects the recorded noncash account while cash stays unchanged. These
+are real PostgreSQL application services, not qualification of a bank transfer provider.
+
+A separate populated migration-45 refund upgrade passed on native PostgreSQL. The test
+uses the released writer's actual old column list and caller-intent digest before applying
+migration 46. Every old evidence field and all financial/payment/booking rows remain
+unchanged, new custody fields are null, and all seven new cashbook tables remain empty.
+The old apply key returns the exact retained outcome with financial writes disabled and
+new cashbook enforcement enabled; changed intent is rejected and no source generation is
+fabricated. The initial policy fixture omitted its two required approved-policy fields;
+that diagnosed failure log is retained, and the fixture was corrected without changing
+production rules, assertions or the original 60-second deadline. All seven final native
+cases completed with zero failures, skips, cancellations or todos. Expense/fund/movement
+record corrections, handovers, attachments, full cashbook journeys and final PR gates
+remain pending; this slice does not close #140.

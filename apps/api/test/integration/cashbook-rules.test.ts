@@ -97,3 +97,10 @@ test('application accepts only the exact approval identity and rejects caller-su
  assert.deepEqual(cashbookApplyInput(body),body);
  for(const changes of [{expected_version:1},{expected_version:3},{decision_id:'not-an-id'},{amount_paise:1},{source_location_id:body.decision_id},{actor_id:body.decision_id},{approved:true},{status:'applied'}])assert.throws(()=>cashbookApplyInput({...body,...changes}),{code:'VALIDATION_FAILED'});
 });
+
+test('refund evidence preserves legacy exact-intent shape while explicit custody requires a complete cash-only location pair',async()=>{
+ const {refundEvidence}=await import('../../src/modules/reports/finance-workflow-service.ts'),id='11111111-1111-4111-8111-111111111111',body={account_id:id,expected_account_version:1,method:'cash',occurred_at:'2026-01-01T00:00:00Z',returned_to_ref:'Synthetic_customer',transfer_ref:'Synthetic_transfer'};
+ assert.deepEqual(refundEvidence(body),body);assert.deepEqual(refundEvidence({...body,cash_location_id:null,cash_location_revision_id:null}),body);
+ assert.deepEqual(refundEvidence({...body,cash_location_id:id,cash_location_revision_id:id}),{...body,cash_location_id:id,cash_location_revision_id:id});
+ for(const change of [{cash_location_id:id},{cash_location_revision_id:id},{method:'upi',cash_location_id:id,cash_location_revision_id:id},{custodian_id:id},{actor_id:id}])assert.throws(()=>refundEvidence({...body,...change}),{code:'VALIDATION_FAILED'});
+});

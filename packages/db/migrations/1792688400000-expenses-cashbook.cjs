@@ -223,6 +223,29 @@ CREATE TABLE shipit.cashbook_effect_legs (
  FOREIGN KEY(organization_id,franchise_id,location_id) REFERENCES shipit.cash_locations(organization_id,franchise_id,id) ON DELETE RESTRICT
 );
 CREATE INDEX cashbook_effect_location_idx ON shipit.cashbook_effect_legs(organization_id,franchise_id,location_id,effect_id);
+
+-- Nullable additive ownership references: existing refunds remain explicitly unattributed.
+ALTER TABLE shipit.financial_refund_evidence ADD COLUMN cash_location_id uuid,ADD COLUMN cash_location_revision_id uuid;
+ALTER TABLE shipit.financial_refund_evidence ADD CONSTRAINT refund_cash_location_pair CHECK((cash_location_id IS NULL)=(cash_location_revision_id IS NULL)),
+ ADD CONSTRAINT refund_cash_location_method CHECK(cash_location_id IS NULL OR method='cash'),
+ ADD CONSTRAINT refund_cash_location_account FOREIGN KEY(organization_id,franchise_id,source_account_id,cash_location_id) REFERENCES shipit.cash_locations(organization_id,franchise_id,account_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT refund_cash_location_revision FOREIGN KEY(organization_id,franchise_id,cash_location_id,cash_location_revision_id) REFERENCES shipit.cash_location_revisions(organization_id,franchise_id,location_id,id) ON DELETE RESTRICT;
+CREATE FUNCTION shipit.guard_refund_cash_location() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE location shipit.cash_locations;revision shipit.cash_location_revisions;
+BEGIN
+ IF NEW.cash_location_id IS NULL THEN RETURN NEW;END IF;
+ PERFORM id FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id FOR UPDATE;
+ SELECT * INTO location FROM shipit.cash_locations WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.cash_location_id;
+ SELECT * INTO revision FROM shipit.cash_location_revisions WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=NEW.cash_location_id ORDER BY version DESC LIMIT 1;
+ IF NEW.method<>'cash' OR location.id IS NULL OR location.kind<>'cash' OR location.account_id<>NEW.source_account_id OR revision.id IS DISTINCT FROM NEW.cash_location_revision_id OR NOT revision.active OR revision.account_revision_id IS DISTINCT FROM NEW.source_revision_id
+ OR NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin') AND m.user_id=location.custodian_id)
+ THEN RAISE EXCEPTION 'REFUND_CASH_LOCATION_INVALID' USING ERRCODE='23514';END IF;RETURN NEW;
+END $fn$;
+CREATE TRIGGER refund_cash_location_guard BEFORE INSERT ON shipit.financial_refund_evidence FOR EACH ROW EXECUTE FUNCTION shipit.guard_refund_cash_location();
+REVOKE ALL ON FUNCTION shipit.guard_refund_cash_location() FROM PUBLIC;
+
 -- One actual receipt, not one inflow per booking allocation. No private beneficiary/reference fields.
 CREATE VIEW shipit.cashbook_source_facts AS
  SELECT r.organization_id,r.franchise_id,'receipt'::text source_kind,r.id source_id,l.id location_id,r.account_id,
@@ -233,9 +256,9 @@ CREATE VIEW shipit.cashbook_source_facts AS
  UNION ALL
  SELECT c.organization_id,c.franchise_id,c.kind,c.id,l.id,e.source_account_id,
  CASE WHEN c.kind='refund' THEN 'out' ELSE 'in' END,c.refund,COALESCE(e.occurred_at,c.occurred_at),c.occurred_at,c.actor_id,NULL::uuid,c.refund_correction_of,
- CASE WHEN e.id IS NULL THEN 'legacy_refund_account_unknown' WHEN e.method='cash' THEN 'cash_refund_custody_unknown' WHEN l.id IS NULL THEN 'unassigned_refund_account' ELSE NULL END
+ CASE WHEN e.id IS NULL THEN 'legacy_refund_account_unknown' WHEN e.method='cash' AND e.cash_location_id IS NULL THEN 'cash_refund_custody_unknown' WHEN l.id IS NULL THEN 'unassigned_refund_account' ELSE NULL END
  FROM shipit.financial_changes c LEFT JOIN shipit.financial_refund_evidence e ON e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id AND e.id=CASE WHEN c.kind='refund' THEN c.id ELSE c.refund_correction_of END
- LEFT JOIN shipit.cash_locations l ON l.organization_id=e.organization_id AND l.franchise_id=e.franchise_id AND l.account_id=e.source_account_id AND l.kind='noncash' AND e.method<>'cash'
+ LEFT JOIN shipit.cash_locations l ON l.organization_id=e.organization_id AND l.franchise_id=e.franchise_id AND l.account_id=e.source_account_id AND ((l.kind='noncash' AND e.method<>'cash') OR (l.kind='cash' AND e.method='cash' AND l.id=e.cash_location_id))
  WHERE c.kind IN ('refund','refund_correction')
  UNION ALL
  SELECT p.organization_id,p.franchise_id,CASE WHEN p.kind='collection' THEN 'legacy_collection' ELSE 'legacy_collection_correction' END,p.id,NULL::uuid,NULL::uuid,
@@ -265,8 +288,8 @@ BEGIN
  PERFORM shipit.check_cashbook_request_sources(request);
  SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO available FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=request.source_location_id;
  IF request.kind IN ('expense','deposit','withdrawal') THEN
-  IF available<request.amount_paise OR EXISTS(SELECT 1 FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=request.source_location_id
-   WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND f.location_id IS NULL AND f.source_kind IN ('refund','refund_correction') AND (f.account_id IS NULL OR f.account_id=l.account_id))
+  IF available<request.amount_paise OR (SELECT COALESCE(sum(CASE WHEN f.source_kind='refund' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0) FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=request.source_location_id
+   WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND f.location_id IS NULL AND f.source_kind IN ('refund','refund_correction') AND (f.account_id IS NULL OR f.account_id=l.account_id))>0
   THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
  ELSE
   IF available+request.amount_paise>9007199254740991 THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;

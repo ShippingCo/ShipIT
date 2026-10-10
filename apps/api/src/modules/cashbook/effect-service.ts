@@ -19,19 +19,19 @@ async function effectDto(scope:TenantAccess,r:EffectRow):Promise<CashbookEffectD
 }
 /** Each row and control total is read at the same statement MVCC cutoff. Private payees/references are absent. */
 export async function captureCashbookPosition(scope:TenantAccess):Promise<CashbookPositionSnapshot> {
- const result=(await scopedQuery<{as_of:Date;source_version:string;unknown_sources:number;locations:{location_id:string;inflows:string;outflows:string;recorded:string;unknown_sources:number;unresolved_refunds:number}[]}>(scope,['cashbook.read','cashbook.apply'],`SELECT result.* FROM LATERAL (WITH locations AS (
+ const result=(await scopedQuery<{as_of:Date;source_version:string;unknown_sources:number;locations:{location_id:string;inflows:string;outflows:string;recorded:string;unknown_sources:number;unresolved_refunds:string}[]}>(scope,['cashbook.read','cashbook.apply'],`SELECT result.* FROM LATERAL (WITH locations AS (
  SELECT l.* FROM shipit.cash_locations l WHERE {{franchise:l.organization_id:l.franchise_id}}
  ),facts AS (SELECT f.* FROM shipit.cashbook_source_facts f WHERE {{franchise:f.organization_id:f.franchise_id}}),positions AS (
  SELECT l.id location_id,COALESCE(sum(f.amount_paise::numeric) FILTER(WHERE f.direction='in'),0)::text inflows,COALESCE(sum(f.amount_paise::numeric) FILTER(WHERE f.direction='out'),0)::text outflows,
  COALESCE(sum(CASE WHEN f.direction='in' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0)::text recorded,
  (SELECT count(*)::int FROM facts u WHERE u.location_id IS NULL AND (u.account_id IS NULL OR u.account_id=l.account_id)) unknown_sources,
- (SELECT count(*)::int FROM facts u WHERE u.location_id IS NULL AND u.source_kind IN ('refund','refund_correction') AND (u.account_id IS NULL OR u.account_id=l.account_id)) unresolved_refunds
+ (SELECT COALESCE(sum(CASE WHEN u.source_kind='refund' THEN u.amount_paise::numeric ELSE -u.amount_paise::numeric END),0)::text FROM facts u WHERE u.location_id IS NULL AND u.source_kind IN ('refund','refund_correction') AND (u.account_id IS NULL OR u.account_id=l.account_id)) unresolved_refunds
  FROM locations l LEFT JOIN facts f ON f.organization_id=l.organization_id AND f.franchise_id=l.franchise_id AND f.location_id=l.id GROUP BY l.id,l.account_id)
  SELECT statement_timestamp() as_of,COALESCE((SELECT version::text FROM shipit.cashbook_source_versions v WHERE {{franchise:v.organization_id:v.franchise_id}}),'0') source_version,
  (SELECT count(*)::int FROM facts WHERE location_id IS NULL) unknown_sources,COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.location_id) FROM positions p),'[]'::jsonb) locations) result`)).rows[0]!;
  return {as_of:instant(result.as_of),source_version:Number(result.source_version),unknown_sources:result.unknown_sources,locations:result.locations.map(p=>{
   const recorded=BigInt(p.recorded);if(recorded>maximumPaise||recorded< -maximumPaise)throw new HttpError('CASHBOOK_CONFLICT');
-  return {location_id:p.location_id,known_inflows_paise:p.inflows,known_outflows_paise:p.outflows,known_recorded_paise:p.recorded,available_paise:recorded>0n&&p.unresolved_refunds===0?p.recorded:'0',unknown_sources:p.unknown_sources,state:recorded<0n?'exception':p.unknown_sources?'incomplete':'recorded'};
+  return {location_id:p.location_id,known_inflows_paise:p.inflows,known_outflows_paise:p.outflows,known_recorded_paise:p.recorded,available_paise:recorded>0n&&BigInt(p.unresolved_refunds)===0n?p.recorded:'0',unknown_sources:p.unknown_sources,state:recorded<0n?'exception':p.unknown_sources?'incomplete':'recorded'};
  })};
 }
 export function createCashbookEffectService(database:DatabasePool,writesEnabled=false) {

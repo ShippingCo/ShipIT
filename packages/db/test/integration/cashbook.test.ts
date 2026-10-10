@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomUUID,randomBytes} from 'node:crypto';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {withTransaction,type TransactionExecutor} from '../../src/index.ts';
 import {provisionDatabase} from '../support.ts';
 import {auditSetup,org,A,B} from '../../../../apps/api/test/audit-support.ts';
@@ -8,6 +8,12 @@ import {paymentSetup,collectionInput} from '../../../../apps/api/test/payment-su
 import {createPaymentService} from '../../../../apps/api/src/modules/payments/service.ts';
 import {createReceivingAccountService} from '../../../../apps/api/src/modules/payments/account-service.ts';
 import {createMoneyReceiptService} from '../../../../apps/api/src/modules/payments/receipt-service.ts';
+import {createFinancialWorkflowService} from '../../../../apps/api/src/modules/reports/finance-workflow-service.ts';
+import {createFinanceService} from '../../../../apps/api/src/modules/reports/finance-service.ts';
+import {withFinancialScope} from '../../../../apps/api/src/modules/memberships/service.ts';
+import {assertTenantAccess,scopedQuery} from '../../../../apps/api/src/modules/security/scope.ts';
+import * as finance from '../../../../apps/api/src/modules/reports/finance-repository.ts';
+import * as workflow from '../../../../apps/api/src/modules/reports/finance-workflow-repository.ts';
 const hash=()=>randomBytes(32).toString('hex'),headers=(key:string)=>['idempotency-key',key],q={organization_id:org,franchise_id:A};
 async function account(tx:TransactionExecutor,actor:string,methods:string[]=['cash']) {
  const id=randomUUID(),revision=randomUUID();await tx.query('INSERT INTO shipit.receiving_accounts(id,organization_id,franchise_id) VALUES($1,$2,$3)',[id,org,A]);
@@ -72,4 +78,45 @@ await test('populated pre-140 upgrade retains all collection evidence and create
  const after=await sources();assert.equal(after.length,2);assert.ok(after.every(row=>row.location_id===null&&row.account_id===null));assert.equal(after.reduce((sum,row)=>sum+(row.direction==='in'?1n:-1n)*BigInt(row.amount as string),0n),15000n);
  assert.equal(after.find(row=>row.source_kind==='legacy_collection_correction')!.direction,'out');
 
+});
+
+await test('pre-140 refund upgrade preserves original evidence and exact retained apply retry without inventing custody',{timeout:60000},async t=>{
+ const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:45}),{applied:45});const migrate=db.migrate;db.migrate=async()=>({applied:0});
+ const s=await paymentSetup(t,50000,db);await db.prepareReceivingAccounts();const owner=db.ownerPool();
+ await owner.query(`GRANT SELECT,INSERT ON shipit.financial_adjustment_requests,shipit.financial_request_decisions,shipit.financial_refund_evidence,shipit.financial_document_links TO "${db.runtimeRole}"`);
+ const service=createFinancialWorkflowService(s.pool,true),policyKey=randomUUID();
+ await service.configurePolicy(s.local.token,q,policyKey,headers(policyKey),{expected_version:0,enabled:true,discount_review_threshold_paise:null,allow_self_approval:false},randomUUID());
+ const collectionKey=randomUUID();await createPaymentService(s.pool).execute(s.local.token,s.bookingId,null,q,collectionKey,headers(collectionKey),collectionInput(50000),'payments.collect',randomUUID());
+ const proposal=async(body:unknown)=>{const key=randomUUID(),r=await service.request(s.operator.token,q,key,headers(key),body,randomUUID()),decisionKey=randomUUID();
+  await service.decide(s.local.token,q,r.id,decisionKey,headers(decisionKey),{expected_version:0,outcome:'approved'},randomUUID());return r.id;};
+ const current=await createFinanceService(s.pool).read(s.local.token,q,s.bookingId,randomUUID());
+ const cancellation=await proposal({booking_id:s.bookingId,expected_version:0,payment_version:1,kind:'cancellation',reason:'booking_cancelled',pre_tax:Number(current.pre_tax),taxable:Number(current.taxable),cgst:Number(current.cgst),sgst:Number(current.sgst),igst:Number(current.igst),rounding:Number(current.rounding)}),cancelKey=randomUUID();
+ await service.apply(s.local.token,q,cancellation,cancelKey,headers(cancelKey),{expected_version:1},randomUUID());
+ const accountKey=randomUUID(),a=await createReceivingAccountService(s.pool).configure(s.local.token,null,q,accountKey,headers(accountKey),{name:'Synthetic old refund source',methods:['cash'],other_method_name:null,active:true,expected_version:0},randomUUID());
+ const request=await proposal({booking_id:s.bookingId,expected_version:1,payment_version:1,kind:'refund',reason:'customer_refund',refund:5000});
+ // Reproduce the released #139 writer's column list and caller-intent digest on actual migration 45.
+ // The current writer includes the new columns, so invoking it here would not test an old populated source.
+ const evidence={account_id:a.id,expected_account_version:1,method:'cash',occurred_at:'2026-01-01T00:00:00Z',returned_to_ref:'SYN_OLD_BENEFICIARY',transfer_ref:'SYN_PRE140_REFUND'},key=randomUUID();
+ const digest=(value:string)=>createHash('sha256').update(value).digest('hex'),keyDigest=digest('financial.apply:'+key),fingerprint=digest(JSON.stringify({id:request,expected:1,evidence})),change=randomUUID();
+ const applied=await withFinancialScope(s.pool,s.local.token,org,A,'finance.apply',randomUUID(),async scope=>{
+  await finance.lock(scope);await finance.append(scope,change,keyDigest,fingerprint,{booking_id:s.bookingId,expected_version:1,payment_version:1,kind:'refund',reason:'customer_refund',pre_tax:0,taxable:0,cgst:0,sgst:0,igst:0,rounding:0,refund:5000,approval_ref:request,returned_to_ref:evidence.returned_to_ref});
+  const c=assertTenantAccess(scope,['finance.apply']);await scopedQuery(scope,['finance.apply'],`INSERT INTO shipit.financial_refund_evidence
+  (id,organization_id,franchise_id,request_id,actor_id,source_account_id,source_revision_id,method,occurred_at,returned_to_ref,transfer_ref)
+  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`,[change,A,request,c.actor.id,a.id,a.revision_id,evidence.method,evidence.occurred_at,evidence.returned_to_ref,evidence.transfer_ref,org]);
+  return workflow.appendApplied(scope,keyDigest,fingerprint,request,change);
+ });
+ const oldEvidence=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE id=$1',[change])).rows[0]!;
+ const snapshot=async()=>Object.fromEntries(await Promise.all(['financial_changes','financial_adjustment_requests','financial_request_decisions','payment_entries','bookings'].map(async table=>[table,(await owner.query(`SELECT * FROM shipit.${table} ORDER BY 1`)).rows])));
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+ const after=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE id=$1',[change])).rows[0]!;
+ assert.deepEqual(Object.fromEntries(Object.keys(oldEvidence).map(field=>[field,after[field]])),oldEvidence);assert.equal(after.cash_location_id,null);assert.equal(after.cash_location_revision_id,null);assert.deepEqual(await snapshot(),before);
+ for(const table of ['cash_locations','cash_location_revisions','cashbook_source_versions','cashbook_requests','cashbook_request_decisions','cashbook_effects','cashbook_effect_legs'])assert.equal((await owner.query(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
+ assert.deepEqual((await owner.query("SELECT location_id,account_id,direction,amount_paise::text amount,unknown_reason FROM shipit.cashbook_source_facts WHERE source_kind='refund' AND source_id=$1",[change])).rows,[{location_id:null,account_id:a.id,direction:'out',amount:'5000',unknown_reason:'cash_refund_custody_unknown'}]);
+ // Current cashbook enforcement is enabled, while financial writes are disabled: retained retries must still return the old result.
+ const upgraded=createFinancialWorkflowService(s.pool,false,true);
+ assert.deepEqual(await upgraded.apply(s.local.token,q,request,key,headers(key),{expected_version:1,refund_evidence:evidence},randomUUID()),applied);
+ await assert.rejects(upgraded.apply(s.local.token,q,request,key,headers(key),{expected_version:1,refund_evidence:{...evidence,transfer_ref:'SYN_CHANGED'}},randomUUID()),{code:'IDEMPOTENCY_CONFLICT'});
+ assert.deepEqual(await snapshot(),before);assert.deepEqual((await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE id=$1',[change])).rows[0],after);
+ await assert.rejects(owner.query('UPDATE shipit.financial_refund_evidence SET cash_location_id=cash_location_id WHERE id=$1',[change]));
+ assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.cashbook_source_versions')).rows[0]!.n,0);
 });
