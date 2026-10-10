@@ -116,3 +116,13 @@ and lists extra prerequisites separately. The planning validator checks all 96 u
 issue IDs, missing/circular dependencies, every new issue's path into #76 and exclusion
 of M8 from pilot prerequisites. No runtime feature, customer data or production setting
 is changed by this planning update.
+
+## Dependency maintenance — 10 October 2026
+
+The publication details above describe the 3 October expansion. M6 now has one
+combined prerequisite list per issue, mirrored in the [issue index](ISSUE_INDEX.md).
+The locally archived planning pack's issue map is refreshed too. All original and additive scope is
+retained. #61 is closed, #64/#65/#137 are ready, and #62/#63 stay open for remaining
+finance integration after their partial merged implementations. Follow the dependency
+stages in the index rather than ascending issue numbers. M7's additive completion
+gates are unchanged and remain indexed below the milestone tables.
