@@ -76,7 +76,7 @@ await test('handoff migration preserves populated conversation state and adds no
  await db.adminQuery(`INSERT INTO shipit.customer_conversations(id,organization_id,franchise_id,installation_id,contact_key,selected_docket,pending_intent,state,expires_at)
  SELECT $1,organization_id,franchise_id,id,$2,'OLD50','tracking','human_requested',clock_timestamp()+interval '15 minutes' FROM shipit.whatsapp_installations`,[randomUUID(),'a'.repeat(64)]);
  const snapshot=async()=>(await db.adminQuery('SELECT * FROM shipit.customer_conversations')).rows;
- const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:12});assert.deepEqual(await db.migrate(),{applied:0});
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual(await snapshot(),before.map(row=>({...row,locale:'en',locale_explicit:false})));assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.support_cases')).rows[0]!.n,0);
 });
 await test('concurrent claims have one winner; command replay, private notes, assignment and reopen keep history',{timeout:60000},async t=>{

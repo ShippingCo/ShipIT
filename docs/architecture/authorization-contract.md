@@ -78,6 +78,8 @@ The rows cover every private concept in #2's module/data ownership table.
 | R30 | Adoption plan / conflict summary | P | F | - | - | - | - | - |
 | R31 | Receipt-workspace minimum balances, linked allocation history, owned bills, named receiving choices and eligible receiver IDs | O | F | F | - | - | F | - |
 | R32 | Actual receipt private finance evidence: source, account revision, receiver, initial custody, times and external reference | O | F | - | - | - | F | - |
+| R33 | Cashbook minimum location selection (`cashbook.select`): own cash custody IDs/names/current revisions for operators, noncash choices without balances | O | F | F | - | - | F | - |
+| R34 | Cashbook scoped financial source/detail/captured totals (`cashbook.read`); current authority applies to private expense evidence and downloads | O | F | - | - | - | F | - |
 
 R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
 
@@ -183,6 +185,11 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W54 | Approve/reject an owned financial request (`finance.approve`), under current explicit policy | - | F | - | - | - | - | - |
 | W55 | Apply an approved request and record actual refund evidence (`finance.apply`); server computes capacity | - | F | - | - | - | - | - |
 | W56 | Read/configure an immutable franchise financial policy revision (`finance.policy.configure`); current approved baseline forbids self-approval and presets no monetary threshold | - | F | - | - | - | - | - |
+| W57 | Configure immutable current-account cash/noncash locations (`cashbook.configure`) | - | F | - | - | - | - | - |
+| W58 | Submit own expense, float/fund, transfer/movement or correction request (`cashbook.request`); no requester-provided approval | - | F | F | - | - | - | - |
+| W59 | Approve/reject the exact owned expense/movement request (`cashbook.approve`), with different-admin approval under D140-1 | - | F | - | - | - | - | - |
+| W60 | Apply the exact approved expense/movement/correction (`cashbook.apply`); no new refund producer | - | F | - | - | - | - | - |
+| W61 | Named active receiving custodian partially accept or reject an owned handover (`cashbook.acknowledge`); one linked out/in identity | - | F | F | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -458,3 +465,5 @@ Carrier reconciliation reads use R19 within the selected installation/franchise.
 ## Issue #137 ratified finance extension boundary
 
 The product owner approved D137-1–D137-5 on 10 October 2026: see the [financial operations role/action contract](financial-operations.md#d137-1-proposed-permission-extensions) and its linked decision evidence. These explicit extensions retain the existing seven roles, F/O/A scope and deny-by-default rules. They authorize the owning #138–#146 designs; current runtime W20/W21/W47/W48 behavior stays unchanged until each implementation adds its explicit action IDs, enforcement and negative tests. No implicit org-admin mutation/export, accountant receipt/refund power, general agent ledger grant or read-only mutation is introduced. Proposed labels in that contract describe the reviewed design origin; D137-1–D137-5 are now product-ratified. Independent PR review and qualified accountant/provider format evidence are separate.
+
+#140 maps ratified D137 permissions under product-owner approved D140-1 (10 October 2026). R33 is purpose-limited location metadata, not a general ledger grant; operators see their own cash locations and noncash selectors without other custody balances/private evidence. R34 permits the finance roles only. W59 requires a different admin from the submitted requester; W61 requires the authenticated receiving custodian. No inherited accountant/org-admin mutation or delivery-agent ledger access is granted. Private expense attachment paths must recheck these exact owning permissions on every upload/retry/download.

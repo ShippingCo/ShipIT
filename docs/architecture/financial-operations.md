@@ -546,3 +546,88 @@ counts were corrected without changing historical-row, old-writer or no-op
 assertions. All eight affected API cases then passed against disposable PostgreSQL
 with their original case deadlines; no skipped, cancelled or failed cases. This
 focused result does not replace the full final-commit CI integration gate.
+
+## #140 expense and cashbook implementation plan
+
+The shop needs an explainable recorded drawer balance, private expense evidence and
+acknowledged custody transfers. Reuse receiving-account identities and immutable
+receipt/refund sources; keep revenue, customer allocations and actual custody distinct.
+No bank API or daily-close workflow is introduced.
+
+Approval rule D140-1 (product-owner approved in this Goal on 10 October 2026): operators and franchise
+admins submit expense, opening-float/owner-fund and correction requests; a different
+franchise admin approves or rejects, and an admin applies the exact approved proposal.
+Corrections retain the original, reason, prior version and linked replacement effects.
+An administrator cannot approve their own submitted request. This extends the explicit
+#139 review rule to #140; D137-4's labelled sole-admin cash-close exception stays specific
+to #145. Transfer acknowledgement is performed by the named active receiving custodian,
+not by an initiator setting an approval flag. Existing D137 permissions do not grant
+accountants, organization admins, agents or read_only financial mutations.
+
+Implementation:
+- Add migration 46 with scoped immutable cash locations, request/decision/effect and
+  transfer/acknowledgement sources, bounded exact-intent command results, composite
+  ownership constraints and indexed source joins. No historical balance/expense seed.
+- A location combines a receiving account with an authorized cash custodian; noncash
+  accounts retain account-level recorded funds. New opening float is an explicitly
+  additive amount introduced into custody, not a replacement for a historical total.
+  Owner funds are external inflows. Cash receipts contribute once; allocating or releasing
+  an allocation cannot change that receipt's drawer inflow. Unknown legacy custody is
+  displayed separately, never assigned to the current actor or silently treated as zero.
+- Approved cash expense is an outflow from its owned location; noncash expense affects
+  its noncash source only. Deposit/withdrawal commits equal linked cash/noncash legs,
+  preserving owned money and creating no sales/expense. Manual evidence is recorded,
+  with bank clearance explicitly unverified. Actual refunds drill through to the owning
+  refund source; expense input cannot create a second refund. Custodian attribution for
+  new cash refunds is explicit; unresolved old refund custody remains unknown.
+- Requested handover retains sender possession and separately reserves its remainder.
+  Partial acceptance atomically commits paired legs and leaves the rest outstanding;
+  rejection releases the unaccepted remainder. Scoped expected versions, current account
+  revisions and receiver membership are checked before effects and exact replay.
+- Use short existing PostgreSQL transactions, deterministic lock order, actor-scoped
+  idempotency keys/fingerprints and retained outcomes. Preserve exact intent after an
+  uncertain response; commit source, audit and effects together. No new asynchronous
+  consumer is needed: committed sources and audit remain the authority.
+- Add expense-parent attachment authorization while reusing existing storage, scanner,
+  size/media limits, upload leases and private grant primitives. Preserve booking/proof
+  parent checks and recheck expense authority after storage delays before bytes release.
+- Deliver Material 3 cashbook list/detail/filter/export, expense request/approve/correct
+  and transfer request/accept/reject flows with keyboard/mobile/error/loading/pending/
+  uncertain states. Capture one cutoff for every exposed aggregate and drill-through;
+  private payee/bank references are excluded from audit/export. Feature writes default off.
+- Append recorded/occurred timestamps and correction/source versions for #145's future
+  reviewed-close snapshots and late-evidence reconciliation. No existing closed source is
+  edited, and no synthetic daily-close record is created by migration.
+
+Research and complexity: adapt [AWS caller request identity and atomic effects](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)
+for acknowledgements/lost responses, and [PostgreSQL row locks with consistent ordering](https://www.postgresql.org/docs/18/explicit-locking.html)
+for balance capacity. ShippingCo's application is an inference from those practices:
+reuse current transaction/command patterns with immutable paired legs and no new queue.
+Cost is additive tables/indexes and brief franchise-level money serialization at shop
+scale; verify scoped plans and races rather than adding speculative infrastructure.
+
+Verification maps to #140's full live acceptance: ₹1,000 float + ₹4,000 cash receipt −
+₹500 cash expense = ₹4,500, UPI expense leaves cash unchanged, allocation release leaves
+cash unchanged, ₹2,000 deposit preserves total owned funds, raced/partial/retried
+acknowledgements post one receiving side, prior-day correction retains original evidence,
+unknown/revoked/sibling/unrelated scope cannot leak source totals or private evidence,
+source/capacity/date/amount/version errors preserve balances, and pre/post-COMMIT faults
+recover by exact identity. Real PostgreSQL constraints/services/upgrades and browser
+keyboard/mobile flows complement pure arithmetic tests. All final-commit CI/review/merge,
+issue closure and main/branch cleanup remain required; provider/accountant qualification
+is not claimed.
+
+Foundation verification for #140 (not full issue acceptance): seven pure equation/input
+cases and five real PostgreSQL location/source-version/service cases passed. The revised
+single-query location selector additionally passed a real scoped keyset-pagination case.
+Seventeen native compatibility cases passed: six migration/lock recovery cases, two
+financial-workflow schema cases, six existing cancellation/refund/audit service cases and
+three copied-schema/forward-repair cases. Source assertions preserve old rows and issued
+financial evidence. Workspace types, scoped query AST, changed-file lint and exact
+R33/R34/W57–W61 matrix assertions passed. Initial failures were diagnosed as an incomplete
+test-only direct membership revocation (replaced with the real service), stale explicit
+migration inventory/ledger expectations and strict missing-row typing (now asserted).
+Migration 46 remains unreleased and will be extended with expense/transfer/evidence
+sources before full verification. Expense application, transfer commands, private expense
+attachments, cashbook projections/UI, broader native/browser gates and final PR CI/review/
+merge are still pending; these foundation results do not close #140.

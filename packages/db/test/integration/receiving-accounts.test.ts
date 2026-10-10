@@ -53,7 +53,7 @@ await test('pre-138 populated upgrade preserves legacy collections, replay resul
   obligations:(await db.adminQuery('SELECT * FROM shipit.booking_obligations')).rows,bookings:(await db.adminQuery('SELECT * FROM shipit.bookings')).rows,
   issued:(await db.adminQuery('SELECT * FROM shipit.issued_receipts ORDER BY id')).rows,
   events:(await db.adminQuery('SELECT * FROM shipit.domain_events ORDER BY event_id')).rows.map(({money_receipt_id:_r,money_receipt_command_id:_c,...row})=>row)});
- const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:3});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
  assert.equal((await db.adminQuery('SELECT bool_and(receipt_command_id IS NULL) unknown FROM shipit.payment_commands')).rows[0]!.unknown,true);
  assert.deepEqual(await payment.execute(s.local.token,booking,null,{organization_id:org,franchise_id:A},key,['idempotency-key',key],input,'payments.collect',randomUUID()),paid);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.receiving_accounts')).rows[0]!.n,0);

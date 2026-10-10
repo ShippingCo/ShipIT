@@ -846,3 +846,26 @@ export async function withMoneyReceiptScope<T>(database:DatabasePool,token:strin
   } catch(error) {if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
  });
 }
+
+/** #140: explicit admin decisions/configuration, operator own context, no agent ledger grant. */
+export async function withCashbookScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../cashbook/types.ts').CashbookAction,correlationId:string,
+ work:(scope:import('../cashbook/types.ts').CashbookScope)=>Promise<T>):Promise<T> {
+ const reading=action==='cashbook.read'||action==='cashbook.select';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   const allowed=action==='cashbook.read'?(orgAdmin||admin||accountant):action==='cashbook.select'?(orgAdmin||admin||accountant||operator):
+    action==='cashbook.request'||action==='cashbook.acknowledge'?(admin||operator):admin;
+   if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   return await work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),ownOnly:operator&&!admin&&!accountant&&!orgAdmin});
+  }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
+ });
+}

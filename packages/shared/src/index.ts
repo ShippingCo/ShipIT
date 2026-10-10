@@ -166,3 +166,5 @@ export * from './money-receipt.ts';
 export * from './financial-audit.ts';
 
 export * from './financial-workflow.ts';
+
+export * from './cashbook.ts';
