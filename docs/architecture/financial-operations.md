@@ -1087,3 +1087,63 @@ deadlines remained unchanged; final scoped runs had zero failures, skips, cancel
 or todos, and all disposable clusters/data/leases were cleaned. This verifies the
 schema foundation and existing synthetic-provider booking paths, not live expense
 storage/scanner qualification or full #140 delivery.
+
+
+### #140 private expense attachment service
+
+A server-selected expense factory now reuses the existing upload lease, bounded
+stream, MIME/digest validation, scanning, immutable command replay and signed-byte
+lifecycle. Expense DTOs expose an expense-request ID with a fixed expense purpose;
+they cannot carry a booking or parcel parent. The booking factory retains its
+original DTOs, canonical intent fingerprints and seven-field signed-grant payload.
+An expense parent is domain-separated as `expense:<request UUID>` in fingerprints
+and signed grants, so an otherwise valid booking-domain token cannot release its bytes.
+
+The expense factory issues the existing W58 cashbook.request capability for writes
+and R33 cashbook.select capability for scoped evidence reads/downloads, using the
+existing current-membership transaction. Finance roles read scoped expenses, while
+an operator must be the immutable submitting requester. Dispatcher, delivery-agent,
+read-only and unrelated/sibling owners gain no access. Every private lookup proves
+an owned expense proposal before looking up its attachment. A held franchise lock
+serializes review and evidence changes; the immutable proposal itself requires no
+UPDATE privilege. Upload and finalization require an undecided proposal and enabled
+new writes. Exact command retries are checked before the new-write gate, preserving
+retained outcomes after review or disabled writes while rechecking live authority.
+Rejected unsettled evidence can still be canceled and cleaned. No permission-matrix
+row or production provider configuration is broadened.
+
+Downloaded bytes remain bounded and digest-checked, and authority is rechecked after
+provider delay before release. Grant commands retain the exact expense parent in
+private metadata and audit events. The existing cleanup worker handles rejected or
+orphaned expense evidence; ready files remain immutable. The new service is not yet
+registered in HTTP and its factory defaults to writes disabled. The cashbook HTTP/
+environment integration, expense UI, final migration/runtime-grant and full issue
+acceptance gates remain required.
+
+Three native service cases verify actual PNG bytes through synthetic storage/scanner
+adapters, role/private-parent denials, immutable approval snapshots, disabled/reviewed
+exact retries, uncertain provider writes, the final-ready lost-COMMIT outcome and
+fresh-pool recovery, parent-domain/session grant isolation, membership revocation
+during download and scanning, scanner error/infection and rejected-evidence cleanup.
+This establishes application/SQL integration with controlled adapters, not live S3
+or antivirus qualification. The initial service failure exposed an unnecessary
+FOR UPDATE on immutable proposals: native SQL confirms runtime lacks that privilege
+(42501); the existing franchise lock supplies serialization without broadening grants.
+The initial COMMIT fault targeted the preparatory transaction, not final ready commit;
+the corrected fixture follows the existing booking test by interrupting the second
+commit. Original failed logs are retained in ignored service-lock/fault-phase logs.
+The tenant-query gate initially rejected identifier-only action allowlists; explicit
+closed allowlists fixed that without changing the gate.
+
+
+Service verification: 19 distinct native cases passed (expense lifecycle3 in
+`140-expense-attachment-service-native.log`, existing booking lifecycle16 in
+`140-expense-attachment-lifecycle-booking-compatibility.log`). The first expense
+case was then strengthened and passed again in `140-expense-attachment-service-parent-boundaries.log`
+with an authorized sibling-franchise reader and a non-expense fund proposal; that
+repeat is not counted twice. Original deadlines were retained, all final runs have
+zero failed/skipped/canceled/todo cases, and all disposable clusters/data/leases
+were cleaned. Stream/scanner/grant and tenant-capability unit checks17 passed in
+`140-expense-attachment-service-unit.log`. All five workspace types, final API types,
+root lint/query AST and diff checks passed in service-final logs. No HTTP route,
+browser journey or live expense provider qualification is claimed by this slice.

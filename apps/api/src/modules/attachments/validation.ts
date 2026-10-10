@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { attachmentLimits, attachmentMedia, type AttachmentIntent } from '@shippingco/shared';
+import { attachmentLimits, attachmentMedia, type AttachmentIntent, type ExpenseAttachmentIntent } from '@shippingco/shared';
 import { HttpError } from '../../plugins/errors.ts';
 export function object(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !keys.includes(k))) throw new HttpError('VALIDATION_FAILED');
@@ -32,3 +32,9 @@ export function key(value: unknown) {
   return hash(value);
 }
 export const fingerprint = (operation: string, booking: string, id: string | null, body: unknown) => hash(JSON.stringify([operation, booking, id, body]));
+
+export function expenseIntent(value:unknown):ExpenseAttachmentIntent {
+ const b=object(value,['purpose','kind','media_type','size_bytes','sha256']);if(b.purpose!=='expense_evidence')throw new HttpError('VALIDATION_FAILED');
+ const parsed=intent({...b,purpose:'shipment_evidence'});
+ return {purpose:'expense_evidence',kind:parsed.kind,media_type:parsed.media_type,size_bytes:parsed.size_bytes,sha256:parsed.sha256};
+}

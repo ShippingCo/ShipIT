@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Readable} from 'node:stream';
+import {createAttachmentCleanup} from '../../src/modules/attachments/cleanup.ts';
+import {grantToken} from '../../src/modules/attachments/grants.ts';
+import {createExpenseAttachmentService} from '../../src/modules/attachments/expense-service.ts';
+import {memoryStore,photo,intent} from '../attachment-support.ts';
 import {randomUUID} from 'node:crypto';
 import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
 import {paymentFault} from '../payment-support.ts';
 import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
-import {withTransaction,type DatabasePool} from '@shippingco/db';
+import {DatabaseError,withTransaction,type DatabasePool} from '@shippingco/db';
 import {paymentSetup} from '../payment-support.ts';
 import {createMoneyReceiptService} from '../../src/modules/payments/receipt-service.ts';
 import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
@@ -499,4 +504,60 @@ await test('cashbook expense attachment metadata freezes exact reviewed evidence
  const raceRequest=await s.service.submit(s.operator.token,q,randomUUID(),headers('review-race'),s.body,randomUUID()),reviewRace=await Promise.allSettled([review(raceRequest.id),attach(raceRequest.id)]);assert.equal(reviewRace.filter(x=>x.status==='fulfilled').length,1);assert.equal(reviewRace.filter(x=>x.status==='rejected').length,1);
  const deniedKey=randomUUID();await s.service.decide(s.reviewer.token,second.id,q,deniedKey,headers(deniedKey),{decision:'rejected',reason:'Synthetic pending evidence rejection',expected_version:1},randomUUID());
  await owner.query("UPDATE shipit.attachments SET state='cleanup_pending',actor_type='service',actor_id='cleanup',version=version+1 WHERE expense_request_id=$1",[second.id]);assert.equal((await owner.query("SELECT count(*)::int n FROM shipit.attachments WHERE expense_request_id=$1 AND state='cleanup_pending'",[second.id])).rows[0]!.n,3);
+});
+
+await test('expense attachment service uploads scanned private bytes, freezes review evidence and retains exact scoped retries',{timeout:30000},async t=>{
+ const s=await requestSetup(t);await s.db.prepareAttachments();const memory=memoryStore(),deps={store:memory.store,scanner:{scan:async()=>'clean' as const},signingKey:'SYN_EXPENSE_SIGNING_KEY_012345678901234567890'},service=createExpenseAttachmentService(s.pool,deps,true),disabled=createExpenseAttachmentService(s.pool,deps),k=randomUUID(),request=await s.service.submit(s.operator.token,q,k,headers(k),s.body,randomUUID());
+ await assert.rejects(s.pool.query('SELECT id FROM shipit.cashbook_requests WHERE id=$1 FOR UPDATE',[request.id]),{code:'DB_QUERY_FAILED',sqlState:'42501'});
+ const body={...intent(),purpose:'expense_evidence'},ik=randomUUID(),file=await service.initiate(s.operator.token,request.id,ik,body,q,randomUUID());assert.equal(file.expense_request_id,request.id);assert.equal('booking_id' in file,false);assert.equal(file.state,'pending_upload');
+ await assert.rejects(service.initiate(s.operator.token,request.id,randomUUID(),{...body,parcel_id:randomUUID()},q,randomUUID()),{code:'VALIDATION_FAILED'});
+ const dk=randomUUID();await assert.rejects(s.service.decide(s.reviewer.token,request.id,q,dk,headers(dk),{expected_version:1,decision:'approved',reason:'Synthetic evidence review'},randomUUID()),{code:'ATTACHMENT_NOT_READY'});
+ await service.upload(s.operator.token,request.id,file.id,Readable.from(photo),q,randomUUID());const fk=randomUUID(),ready=await service.finalize(s.operator.token,request.id,file.id,fk,{},q,randomUUID());assert.equal(ready.state,'ready');
+ const reviewKey=randomUUID(),decision=await s.service.decide(s.reviewer.token,request.id,q,reviewKey,headers(reviewKey),{expected_version:1,decision:'approved',reason:'Synthetic evidence review'},randomUUID());assert.deepEqual(decision.attachments,[{id:file.id,version:ready.version,sha256:body.sha256}]);
+ assert.deepEqual(await disabled.initiate(s.operator.token,request.id,ik,body,q,randomUUID()),file);assert.deepEqual(await disabled.finalize(s.operator.token,request.id,file.id,fk,{},q,randomUUID()),ready);
+ for(const action of [()=>service.initiate(s.operator.token,request.id,randomUUID(),body,q,randomUUID()),()=>service.finalize(s.operator.token,request.id,file.id,randomUUID(),{},q,randomUUID())])await assert.rejects(action(),{code:'VERSION_CONFLICT'});
+ for(const actor of [s.operator,s.admin,s.orgAdmin,await s.grant('accountant',[A])]){
+  assert.deepEqual((await service.list(actor.token,request.id,q,randomUUID())).items,[ready]);const grant=await service.grant(actor.token,request.id,file.id,randomUUID(),{},q,randomUUID());assert.ok(grant.url.startsWith('/api/v1/cashbook/requests/'));const query=Object.fromEntries(new URL(grant.url,'http://synthetic').searchParams);assert.deepEqual((await service.download(actor.token,request.id,file.id,query,randomUUID())).bytes,photo);
+  if(actor!==s.operator&&actor!==s.admin)await assert.rejects(service.initiate(actor.token,request.id,randomUUID(),body,q,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ }
+ for(const actor of [s.other,...await Promise.all(['dispatcher','delivery_agent','read_only'].map(role=>s.grant(role,[A])))]){
+  for(const action of [()=>service.list(actor.token,request.id,q,randomUUID()),()=>service.grant(actor.token,request.id,file.id,randomUUID(),{},q,randomUUID()),()=>service.initiate(actor.token,request.id,randomUUID(),body,q,randomUUID())])await assert.rejects(action());
+ }
+ for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}]){await assert.rejects(service.list(s.operator.token,request.id,query,randomUUID()),{code:'RESOURCE_NOT_FOUND'});await assert.rejects(service.initiate(s.operator.token,request.id,ik,body,query,randomUUID()),{code:'RESOURCE_NOT_FOUND'});}
+ await assert.rejects(service.list(s.orgAdmin.token,request.id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ const fundKey=randomUUID(),fund=await s.service.submit(s.operator.token,q,fundKey,headers(fundKey),{...s.body,kind:'owner_funds',payment_method:null,category:null,payee:null},randomUUID());await assert.rejects(service.list(s.operator.token,fund.id,q,randomUUID()),{code:'RESOURCE_NOT_FOUND'});await assert.rejects(service.initiate(s.operator.token,fund.id,randomUUID(),body,q,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ const text=JSON.stringify([file,ready,decision]);assert.ok(!text.includes('evidence/'));assert.ok(!text.includes('object_key'));assert.equal(memory.objects.size,1);
+ const commands=(await s.db.adminQuery('SELECT booking_id,expense_request_id FROM shipit.attachment_commands')).rows;assert.ok(commands.every(row=>row.booking_id===null&&row.expense_request_id===request.id));
+ await s.memberships.revokeMembership(s.orgAdmin.token,s.operator.member.id,{expected_version:s.operator.member.version});await assert.rejects(disabled.initiate(s.operator.token,request.id,ik,body,q,randomUUID()));
+});
+
+await test('expense attachment service recovers uncertain provider and commit outcomes and rechecks download authority after provider delay',{timeout:30000},async t=>{
+ const s=await requestSetup(t);await s.db.prepareAttachments();const memory=memoryStore(),deps={store:memory.store,scanner:{scan:async()=>'clean' as const},signingKey:'SYN_EXPENSE_SIGNING_KEY_012345678901234567890'},service=createExpenseAttachmentService(s.pool,deps,true),k=randomUUID(),request=await s.service.submit(s.operator.token,q,k,headers(k),s.body,randomUUID()),ik=randomUUID(),file=await service.initiate(s.operator.token,request.id,ik,{...intent(),purpose:'expense_evidence'},q,randomUUID());
+ memory.setFault('put-after');await assert.rejects(service.upload(s.operator.token,request.id,file.id,Readable.from(photo),q,randomUUID()),{code:'ATTACHMENT_UPLOAD_FAILED'});assert.equal(memory.objects.size,1);memory.setFault('none');await service.upload(s.operator.token,request.id,file.id,Readable.from(photo),q,randomUUID());
+ let commits=0;const lostFinalCommit={...s.pool,async connect(){const c=await s.pool.connect();return {release:c.release,async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){const result=await c.query<Row>(sql,params);if(sql==='COMMIT'&&++commits===2)throw new DatabaseError('DB_CONNECTION_FAILED');return result;}};}};
+ const fk=randomUUID(),interrupted=createExpenseAttachmentService(lostFinalCommit,deps,true);await assert.rejects(interrupted.finalize(s.operator.token,request.id,file.id,fk,{},q,randomUUID()));
+ const recovered=await createExpenseAttachmentService(s.db.runtimePool(),deps).finalize(s.operator.token,request.id,file.id,fk,{},q,randomUUID());assert.equal(recovered.state,'ready');assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.attachment_audit_events WHERE action='attachments.ready'")).rows[0]!.n,1);
+ const accountant=await s.grant('accountant',[A]),grant=await service.grant(accountant.token,request.id,file.id,randomUUID(),{},q,randomUUID()),query=Object.fromEntries(new URL(grant.url,'http://synthetic').searchParams);
+ const wrongDomain=grantToken(deps.signingKey,{id:file.id,version:recovered.version,expires_at:grant.expires_at},org,A,request.id,accountant.token);await assert.rejects(service.download(accountant.token,request.id,file.id,{...query,grant:wrongDomain},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ await assert.rejects(service.download(s.operator.token,request.id,file.id,query,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ let entered!:()=>void,release!:()=>void;const entry=new Promise<void>(resolve=>{entered=resolve;}),delay=new Promise<void>(resolve=>{release=resolve;});
+ const delayed=createExpenseAttachmentService(s.pool,{...deps,store:{...memory.store,get:async(key,signal)=>{entered();await delay;return memory.store.get(key,signal);}}},true);
+ const download=delayed.download(accountant.token,request.id,file.id,query,randomUUID()).then(()=>null,error=>error as {code:string});await entry;await s.memberships.revokeMembership(s.orgAdmin.token,accountant.member.id,{expected_version:accountant.member.version});release();assert.ok(await download);
+ await assert.rejects(service.grant(accountant.token,request.id,file.id,randomUUID(),{},q,randomUUID()));
+ // A rejected unsettled expense remains eligible for existing durable object cleanup.
+ const secondKey=randomUUID(),second=await s.service.submit(s.operator.token,q,secondKey,headers(secondKey),s.body,randomUUID()),pending=await service.initiate(s.operator.token,second.id,randomUUID(),{...intent(),purpose:'expense_evidence'},q,randomUUID());
+ const rejectKey=randomUUID();await s.service.decide(s.reviewer.token,second.id,q,rejectKey,headers(rejectKey),{expected_version:1,decision:'rejected',reason:'Synthetic pending evidence rejection'},randomUUID());await service.cancel(s.operator.token,second.id,pending.id,randomUUID(),{},q,randomUUID());
+ const cleanup=createAttachmentCleanup(s.pool,memory.store,()=>new Date(Date.now()+3600000));assert.deepEqual(await cleanup.tick(),{deleted:1,retry:0});assert.equal((await s.db.adminQuery('SELECT state FROM shipit.attachments WHERE id=$1',[pending.id])).rows[0]!.state,'deleted');assert.equal(memory.objects.size,1);
+});
+
+await test('expense attachment service scan failures stay unsettled and current grant loss prevents linking bytes',{timeout:30000},async t=>{
+ const s=await requestSetup(t);await s.db.prepareAttachments();const memory=memoryStore();let scan:'clean'|'infected'|'error'='error';
+ const deps={store:memory.store,scanner:{scan:async()=>scan},signingKey:'SYN_EXPENSE_SIGNING_KEY_012345678901234567890'},service=createExpenseAttachmentService(s.pool,deps,true),k=randomUUID(),request=await s.service.submit(s.operator.token,q,k,headers(k),s.body,randomUUID()),file=await service.initiate(s.operator.token,request.id,randomUUID(),{...intent(),purpose:'expense_evidence'},q,randomUUID());
+ await service.upload(s.operator.token,request.id,file.id,Readable.from(photo),q,randomUUID());await assert.rejects(service.finalize(s.operator.token,request.id,file.id,randomUUID(),{},q,randomUUID()),{code:'ATTACHMENT_SCAN_FAILED'});
+ const dk=randomUUID();await assert.rejects(s.service.decide(s.reviewer.token,request.id,q,dk,headers(dk),{expected_version:1,decision:'approved',reason:'Synthetic failed scan review'},randomUUID()),{code:'ATTACHMENT_NOT_READY'});
+ scan='infected';await assert.rejects(service.finalize(s.operator.token,request.id,file.id,randomUUID(),{},q,randomUUID()),{code:'ATTACHMENT_REJECTED'});assert.equal((await service.list(s.operator.token,request.id,q,randomUUID())).items[0]!.state,'rejected');
+ const pending=await service.initiate(s.operator.token,request.id,randomUUID(),{...intent(),purpose:'expense_evidence'},q,randomUUID());await service.upload(s.operator.token,request.id,pending.id,Readable.from(photo),q,randomUUID());
+ let entered!:()=>void,release!:()=>void;const entry=new Promise<void>(resolve=>{entered=resolve;}),delay=new Promise<void>(resolve=>{release=resolve;});const delayed=createExpenseAttachmentService(s.pool,{...deps,scanner:{scan:async()=>{entered();await delay;return 'clean' as const;}}},true);
+ const outcome=delayed.finalize(s.operator.token,request.id,pending.id,randomUUID(),{},q,randomUUID()).then(()=>null,error=>error as {code:string});await entry;await s.memberships.revokeMembership(s.orgAdmin.token,s.operator.member.id,{expected_version:s.operator.member.version});release();assert.ok(await outcome);
+ assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.attachments WHERE state='ready'")).rows[0]!.n,0);assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.attachment_commands WHERE operation='finalize'")).rows[0]!.n,0);
 });

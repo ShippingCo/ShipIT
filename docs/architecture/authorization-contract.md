@@ -496,3 +496,11 @@ uses existing finance report scope; retained read/detail/export stays bound to t
 capturing principal and current franchise grants. CSV uses the existing report-export
 franchise-admin/accountant gate. An operator's R33 inbox cannot capture or download
 this ledger evidence, and opaque source IDs do not grant access to another parent.
+
+The #140 expense attachment service uses W58 cashbook.request for writes and R33
+cashbook.select for scoped evidence lookup: finance readers prove the selected
+franchise and operators additionally prove the immutable requester. Its server-selected
+expense parent/purpose cannot inherit R14/W22 booking or assigned-agent permissions.
+Exact retries recheck current grants; signed download parent domains are distinct
+from bookings and byte release rechecks authority after provider delay. The service
+factory defaults to writes disabled; HTTP registration and UI acceptance are pending.
