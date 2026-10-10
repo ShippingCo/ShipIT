@@ -54,3 +54,10 @@ export interface CashbookRequestListItem {
 }
 /** Live bounded request inbox, not a captured monetary report. Private payees remain in scoped detail. */
 export interface CashbookRequestList {as_of:string;items:CashbookRequestListItem[];next_cursor:string|null;current_source_version:number}
+
+export type CashbookSourceKind='receipt'|'refund'|'refund_correction'|'legacy_collection'|'legacy_collection_correction'|'expense'|'opening_float'|'owner_funds'|'deposit'|'withdrawal'|'correction'|'handover';
+export interface CashbookReportFilter {from_day:string;to_day:string;sort:'occurred_asc'|'occurred_desc';kind:CashbookSourceKind|null;location_id:string|null}
+export interface CashbookSourceRow {id:string;source_kind:CashbookSourceKind;source_id:string;location_id:string|null;account_id:string|null;direction:'in'|'out';amount_paise:string;occurred_at:string;recorded_at:string;actor_id:string;request_id:string|null;correction_of:string|null;unknown_reason:string|null}
+export interface CashbookSourceTotals {count:number;known_inflows_paise:string;known_outflows_paise:string;known_net_paise:string;unknown_inflows_paise:string;unknown_outflows_paise:string;unknown_sources:number}
+export interface CashbookReportSnapshot {id:string;schema_version:1;definition:'cashbook_sources_v1';organization_id:string;franchise_id:string;timezone:'Asia/Kolkata';filter:CashbookReportFilter;as_of:string;expires_at:string;count:number;totals:CashbookSourceTotals;position:CashbookPositionSnapshot}
+export interface CashbookReportPage {snapshot:CashbookReportSnapshot;rows:CashbookSourceRow[];next_offset:number|null}

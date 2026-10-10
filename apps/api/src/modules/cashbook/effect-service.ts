@@ -30,6 +30,11 @@ export async function captureCashbookPosition(scope:TenantAccess):Promise<Cashbo
  FROM locations l LEFT JOIN facts f ON f.organization_id=l.organization_id AND f.franchise_id=l.franchise_id AND f.location_id=l.id GROUP BY l.id,l.account_id,l.organization_id,l.franchise_id)
  SELECT statement_timestamp() as_of,COALESCE((SELECT version::text FROM shipit.cashbook_source_versions v WHERE {{franchise:v.organization_id:v.franchise_id}}),'0') source_version,
  (SELECT count(*)::int FROM facts WHERE location_id IS NULL) unknown_sources,COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.location_id) FROM positions p),'[]'::jsonb) locations) result`)).rows[0]!;
+ return cashbookPositionDto(result);
+}
+export interface CashbookPositionCapture {as_of:Date;source_version:string;unknown_sources:number;locations:{location_id:string;inflows:string;outflows:string;recorded:string;reserved:string;unknown_sources:number;unresolved_refunds:string}[]}
+/** Exact position mapping shared by current reads and captured source reports. */
+export function cashbookPositionDto(result:CashbookPositionCapture):CashbookPositionSnapshot {
  return {as_of:instant(result.as_of),source_version:Number(result.source_version),unknown_sources:result.unknown_sources,locations:result.locations.map(p=>{
   const recorded=BigInt(p.recorded),reserved=BigInt(p.reserved),available=recorded-reserved,shortfall=reserved>recorded?reserved-recorded:0n;if(recorded>maximumPaise||recorded< -maximumPaise)throw new HttpError('CASHBOOK_CONFLICT');
   return {location_id:p.location_id,known_inflows_paise:p.inflows,known_outflows_paise:p.outflows,known_recorded_paise:p.recorded,available_paise:available>0n&&BigInt(p.unresolved_refunds)===0n?available.toString():'0',pending_reserved_paise:p.reserved,shortfall_paise:shortfall.toString(),unknown_sources:p.unknown_sources,state:shortfall>0n?'exception':p.unknown_sources?'incomplete':'recorded'};

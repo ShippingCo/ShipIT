@@ -914,3 +914,65 @@ the actual authority boundary and the redundant proposed lock was removed. Asser
 and deadlines were retained. The matrix validator's initial Windows decoding error
 was corrected by its established PYTHONUTF8 environment setting. Full #140 source
 reports, attachments, HTTP/UI and final delivery acceptance remain pending.
+## #140 captured cashbook sources
+
+Cashbook source capture reuses report snapshots, their per-actor retained keys,
+24-hour lifetime, 20-live-snapshot quota, 5,000-row/8-MiB bounds, access audit and
+current read/export authority. New capture needs no table, job or provider. Each
+captured row has a kind/source/location identity so the two custody legs of an
+accepted handover or bank movement remain distinct while sharing the owning source.
+Capture, read, pagination, drill-through and export are private to the capturing
+principal and current permitted franchise. Finance readers can capture/read;
+exports retain the existing franchise-admin/accountant gate. Operators retain the
+separate own-request/participating-handover inbox, without a ledger report grant.
+
+Rows filter by Kolkata occurrence-day range (maximum 31 days), source kind and
+owned location, with deterministic occurrence/source ordering. Independently
+aggregated selected-row controls distinguish known and unassigned inflows/outflows.
+The complete current custody position and pending reservations are captured at the
+same statement cutoff; they are explicitly current positions, not balances for a
+filtered date/category cohort. Rows, controls and complete positions are read from
+the canonical source view in one SQL statement. Amounts/control totals remain exact
+decimal paise strings. CSV repeats the retained cutoff, generation, selected-source
+controls and each row's current recorded/reserved/available/shortfall state; private
+payees, reasons, customer details and bank/transfer references are absent. Opaque
+owned source/account IDs support authorized drill-through. Empty captures keep their
+metadata and zero controls. A zero-leg recording correction remains in the request
+history without inventing a monetary source row.
+
+This adapts PostgreSQL 18's documented statement snapshot behavior under Read
+Committed: successive statements can see different committed data, while one read
+statement sees a consistent committed snapshot. Source:
+https://www.postgresql.org/docs/18/transaction-iso.html (verified 10 October 2026).
+The ShippingCo choice is to retain that single capture through the existing bounded
+report service rather than change the application's isolation level. Its cost is
+one scoped aggregation plus the existing snapshot/audit storage, with no speculative
+queue or reconciliation service. Native checks compare independently aggregated
+controls with source rows and the existing position API, then change sources and
+confirm the old capture and CSV remain byte-for-byte stable. Recorded positions do
+not qualify bank clearance, physical cash count or #145's reviewed daily close.
+Captured-source acceptance evidence: final four affected native cases passed in
+140-source-report-final-native.log with original 30/60-second case deadlines and
+zero failures/skips/cancellations/todos. Actual receipt allocation/release remains
+one inflow; ₹1,000 float + ₹4,000 cash − ₹500 expense reconciles, UPI stays in its
+noncash source, and paired deposits/withdrawals conserve ₹4,700 total recorded funds.
+Independent report controls equal the sum of all nine retained source rows. The
+existing 101-ack journey now checks all frozen pages without omission/duplication
+and an identical export row count. Partial acknowledgement exposes reserved remainder,
+filtered transfer legs reconcile separately from complete current custody, and
+source changes leave the earlier snapshot/CSV unchanged. Pre-audit failure rolls
+back capture; lost COMMIT acknowledgement recovers the exact retained capture from
+a fresh pool. Role/foreign-scope/foreign-principal/revocation/export denials and
+legacy collection's unknown account/custody remain real PostgreSQL evidence. Expiry
+rejects reads/retries and later capture removes expired payload while retaining the
+original key tombstone. All disposable clusters were stopped and removed.
+
+All five workspace types, changed lint, tenant-query AST, exact permission contract
+and diff checks passed. Logs remain in ignored 140-source-report-* files. Earlier
+two-case runs cover the same cases and are not counted again. An inferred non-null
+pagination cursor fixture variable was explicitly typed number|null; the initial
+failed type logs are retained as *-types-offset-failure.log. Unnecessary escaping
+in the CSV assertion was removed without changing its expected string or behavior.
+The shared current-position mapping was extracted without changing its calculation.
+No schema or released migration changed in this slice. Full #140 HTTP/UI, attachment,
+explicit expense-method and final delivery acceptance remain pending.

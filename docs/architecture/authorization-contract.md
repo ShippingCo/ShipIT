@@ -489,3 +489,10 @@ kind/category, source custody IDs, responsible employee, amounts, approval/appli
 status and applied correction links. They exclude payees, reasons, account metadata,
 idempotency keys and fingerprints. A filter never expands ownership. This live request
 inbox is distinct from R34 captured monetary source reports and their export gate.
+
+R34 captured cashbook source reports retain exact kind/source/location identities,
+selected-source controls and complete current custody at one cutoff. Read/capture
+uses existing finance report scope; retained read/detail/export stays bound to the
+capturing principal and current franchise grants. CSV uses the existing report-export
+franchise-admin/accountant gate. An operator's R33 inbox cannot capture or download
+this ledger evidence, and opaque source IDs do not grant access to another parent.
