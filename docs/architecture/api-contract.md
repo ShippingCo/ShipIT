@@ -433,3 +433,30 @@ Stable safe codes are `DELIVERY_PROOF_INVALID` (422),
 `DELIVERY_EXCEPTION_INVALID` (409), and `DELIVERY_RESEND_COOLDOWN`/
 `DELIVERY_RESEND_LIMIT` (429). Tenant/assignment visibility still takes precedence and uses
 the ordinary indistinguishable `RESOURCE_NOT_FOUND` boundary.
+
+
+## #140 expense and cashbook HTTP
+
+Authenticated cashbook endpoints require explicit organization/franchise query IDs,
+current owning permission and no-store responses. POST commands require CSRF/origin
+and Idempotency-Key; cashbook JSON uses exact-integer parsing before schema validation.
+Services, not routes or callers, own approval, amounts, source versions and custody.
+
+| Route under `/api/v1/cashbook` | Methods and behavior |
+| --- | --- |
+| `/locations`, `/locations/:id`, `/locations/:id/revisions` | GET minimum owned selections/detail; POST initial location and append-only revisions |
+| `/position` | GET current finance-only custody controls, unknown sources and reservations |
+| `/requests`, `/requests/:id`, `/requests/:id/decisions`, `/requests/:id/apply` | GET scoped inbox/detail; POST immutable proposals, different-admin decision and exact approved application; corrections use linked proposals |
+| `/locations/:id/handover-targets`, `/handovers`, `/handovers/:id`, `/handovers/:id/commands` | GET owned recipient choices/inbox/detail; POST sender reservation and receiving-custodian accept/reject or permitted cancellation |
+| `/snapshots`, `/snapshots/:id`, `/snapshots/:id/export`, `/snapshots/:id/rows/:row` | POST finance snapshot capture; GET retained pages, principal-bound CSV result and owned captured source detail |
+| `/requests/:request_id/attachments` | Existing seven private attachment operations, with a server-selected expense parent: GET list/content, POST uploads/finalize/cancel/download-grants, PUT upload content |
+
+New financial writes require literal `CASHBOOK_ENABLED=true`; the default is false
+and demo activation is rejected. Historical reads, authorized snapshot capture and
+exact completed-command replay remain available with new writes disabled. Attachment
+routes require the existing configured storage/scanner dependencies; absent dependencies
+leave those optional routes unavailable. Only their exact PUT content route accepts
+`application/octet-stream` with the existing 8 MiB cap; other requests retain strict
+JSON/256 KiB limits. Expense signed grants use a distinct parent domain and repeat
+current authority after provider delay before bytes are released. Existing booking
+attachment paths, purposes, fingerprint and signed-grant formats are unchanged.

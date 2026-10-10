@@ -1115,10 +1115,9 @@ row or production provider configuration is broadened.
 Downloaded bytes remain bounded and digest-checked, and authority is rechecked after
 provider delay before release. Grant commands retain the exact expense parent in
 private metadata and audit events. The existing cleanup worker handles rejected or
-orphaned expense evidence; ready files remain immutable. The new service is not yet
-registered in HTTP and its factory defaults to writes disabled. The cashbook HTTP/
-environment integration, expense UI, final migration/runtime-grant and full issue
-acceptance gates remain required.
+orphaned expense evidence; ready files remain immutable. At this service-only slice the new service was not yet registered in HTTP and its
+factory defaulted to writes disabled. The subsequent HTTP integration/rollout section
+below supersedes that status; expense UI and full issue acceptance remain required.
 
 Three native service cases verify actual PNG bytes through synthetic storage/scanner
 adapters, role/private-parent denials, immutable approval snapshots, disabled/reviewed
@@ -1147,3 +1146,62 @@ were cleaned. Stream/scanner/grant and tenant-capability unit checks17 passed in
 `140-expense-attachment-service-unit.log`. All five workspace types, final API types,
 root lint/query AST and diff checks passed in service-final logs. No HTTP route,
 browser journey or live expense provider qualification is claimed by this slice.
+
+
+### #140 HTTP integration and rollout
+
+The authenticated server now registers the complete cashbook location, proposal,
+review/application, position, custody and retained-source endpoint families described
+in the API contract. It also reuses the existing seven private attachment routes
+with a server-selected expense-request parent when storage/scanner dependencies exist.
+Current membership, owning parent proof, browser CSRF/origin and idempotency checks
+remain in force. Every cashbook response is no-store. Exact numeric JSON validation
+now includes this financial namespace, and the binary media exception names only
+its PUT upload-content path alongside the existing booking path.
+
+CASHBOOK_ENABLED defaults false, accepts only literal true/false and cannot be enabled
+in demo. New mutations are disabled without it; reads, authorized financial snapshot
+capture and exact completed-command recovery remain available. The owning financial
+workflow receives the cashbook flag independently of FINANCIAL_WORKFLOW_ENABLED so
+new refund evidence uses explicit approved custody when cashbook writes are enabled;
+legacy NULL custody and retained original fingerprints are not backfilled or rewritten.
+No production configuration or data has been changed.
+
+Development/staging rollout requires migration46 and existing money receipt, receiving
+account, membership, report-snapshot and audit grants. Grant SELECT/INSERT to the managed
+API runtime on cash_locations, cash_location_revisions, cashbook_requests,
+cashbook_request_decisions, cashbook_effects, cashbook_effect_legs, cash_handovers,
+cash_handover_commands and cash_handover_legs. Grant SELECT only on
+cashbook_source_versions, cashbook_source_facts and cash_handover_positions. Preserve
+existing narrow franchise locking grants; do not grant UPDATE/DELETE on the immutable
+cashbook evidence tables or direct source-version writes. Expense approval also needs
+SELECT on attachments. Uploads use the existing attachment SELECT/INSERT and exact
+lifecycle/lease/audit-actor UPDATE column grants; do not permit changing their parent,
+identity or ready evidence. Existing cleanup discovery EXECUTE grants stay unchanged.
+Enable the flag only after a different-admin proposal/apply and custody acknowledgement
+have been verified against the actual staged schema, then verify the same retained
+command with the flag disabled. Production activation remains separately authorized.
+
+Native HTTP acceptance passed a real float/expense/scanned-byte review/application,
+partial paired custody acknowledgement/cancellation and retained-source CSV chain.
+A separate native case proves disabled new intent versus exact old replay, CSRF denial,
+fractional/duplicate JSON and unsupported binary rejection, anonymous/finance-write
+denial and revoked replay. Controlled storage/scanner adapters are labelled synthetic.
+Five native booking attachment cases preserve upload/list/content/grant/cancel,
+current role/assignment and real sibling-owner boundary behavior with shared routes.
+These seven distinct native cases passed in cashbook-http-final-native and
+cashbook-http-booking-compatibility logs, with original deadlines, zero bad statuses
+and all disposable clusters/data/leases cleaned. Earlier focused runs are the same
+cases and are not counted twice. Config/HTTP parser/attachment unit checks88 passed;
+all five workspace types, root lint/query AST, 25 query-gate cases and diff checks passed.
+
+Failures were diagnosed and retained: the initial expense PUT hit the old booking-only
+binary media check; the exact new route was added. The malformed fractional fixture
+expected 400 but the established field-validation contract is 422; rejection stayed
+intact. An omitted optional webhook field in the server test fixture was supplied.
+The new route was added to the existing Fastify request.query data exception; its
+negative extraction test exposed an overbroad prior exception, now narrowed to direct
+data arguments. Raw method calls/extraction remain denied, including the new route,
+and maintained source checks still pass. No query compiler, assertion or deadline
+was weakened. Full UI/browser, remaining direct SQL/lifecycle acceptance and final
+full-issue quality/CI/review/merge remain outstanding.

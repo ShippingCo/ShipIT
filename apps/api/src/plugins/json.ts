@@ -51,7 +51,7 @@ export function parseStrictJson(source: string, exactIntegers = false): unknown 
 export function registerJson(app: FastifyInstance) {
   app.removeAllContentTypeParsers();
   app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: JSON_BODY_LIMIT }, (request, body, done) => {
-    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), /\/(?:pricing|payments|finance|eway|outbox|whatsapp|carriers)(?:\/|$)/.test(request.routeOptions.url??''))); }
+    try { done(null, parseStrictJson(new TextDecoder('utf-8', { fatal: true }).decode(body as Buffer), /\/(?:pricing|payments|finance|cashbook|eway|outbox|whatsapp|carriers)(?:\/|$)/.test(request.routeOptions.url??''))); }
     catch(error) { done(error instanceof FieldValidationError?error:new HttpError('MALFORMED_REQUEST')); }
   });
   app.addHook('onRequest', async (request) => {
@@ -59,7 +59,7 @@ export function registerJson(app: FastifyInstance) {
     catch { throw new HttpError('MALFORMED_REQUEST'); }
     if (request.method === 'OPTIONS' && (!request.headers.origin || !request.headers['access-control-request-method'])) throw new HttpError('MALFORMED_REQUEST');
     const contentType = request.headers['content-type'];
-    const attachmentBinary = request.method === 'PUT' && request.routeOptions.url === '/api/v1/bookings/:booking_id/attachments/uploads/:upload_id/content';
+    const attachmentBinary = request.method === 'PUT' && ['/api/v1/bookings/:booking_id/attachments/uploads/:upload_id/content','/api/v1/cashbook/requests/:request_id/attachments/uploads/:upload_id/content'].includes(request.routeOptions.url??'');
     if (attachmentBinary) { if (contentType !== 'application/octet-stream') throw new HttpError('UNSUPPORTED_MEDIA_TYPE'); return; }
     if (contentType && !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(contentType)) throw new HttpError('UNSUPPORTED_MEDIA_TYPE');
   });

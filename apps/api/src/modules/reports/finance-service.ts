@@ -19,9 +19,9 @@ export function changeInput(value:unknown) {
  return {booking_id:uuid(b.booking_id,'booking_id'),expected_version:integer(b.expected_version,'expected_version'),payment_version:integer(b.payment_version,'expected_version'),kind:String(b.kind),reason:String(b.reason),approval_ref:reference(b.approval_ref),
  pre_tax:integer(b.pre_tax??0,'$'),taxable:integer(b.taxable??0,'$'),cgst:integer(b.cgst??0,'$'),sgst:integer(b.sgst??0,'$'),igst:integer(b.igst??0,'$'),rounding:integer(b.rounding??0,'$',-99,99),refund:integer(b.refund??0,'$'),returned_to_ref:b.kind==='refund'?reference(b.returned_to_ref):null};
 }
-export function createFinanceService(database:DatabasePool,workflowWritesEnabled=false) {
+export function createFinanceService(database:DatabasePool,workflowWritesEnabled=false,cashbookWritesEnabled=false) {
  return {
-  ...createFinancialWorkflowService(database,workflowWritesEnabled),
+  ...createFinancialWorkflowService(database,workflowWritesEnabled,cashbookWritesEnabled),
   ...createFinancialAuditService(database),
   async change(session:string,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string) {
    const q=selection(query),input=changeInput(body),key=hash('change:'+idempotencyKey(keyInput,headers)),fingerprint=hash(JSON.stringify(input));

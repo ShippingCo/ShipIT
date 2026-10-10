@@ -28,6 +28,8 @@ import { createOutboxService } from './modules/outbox/service.ts';
 import { registerOutbox } from './modules/outbox/routes.ts';
 import { createEwayService } from './modules/eway/service.ts';
 import { registerEway } from './modules/eway/routes.ts';
+import {registerCashbook} from './modules/cashbook/routes.ts';
+import {createExpenseAttachmentService} from './modules/attachments/expense-service.ts';
 import { createAttachmentService } from './modules/attachments/service.ts';
 import { registerAttachments } from './modules/attachments/routes.ts';
 import type { AttachmentDependencies } from './modules/attachments/types.ts';
@@ -143,7 +145,9 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
-      if(attachments)registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');
+      const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';
+      registerCashbook(instance,database,config.environment!=='developer',cashbookWrites);
+      if(attachments){registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');registerAttachments(instance,createExpenseAttachmentService(database,attachments,cashbookWrites),config.environment!=='developer','request_id');}
       registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock),createCarrierRateService(database,pricingClock));
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       if(whatsapp?.configuration.customer_access_enabled&&whatsapp.configuration.webhook)registerCustomerAccess(instance,createCustomerAccessService(database,whatsapp.configuration.webhook,auth.keys.browser),config.environment!=='developer');
@@ -152,7 +156,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
-      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
+      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
