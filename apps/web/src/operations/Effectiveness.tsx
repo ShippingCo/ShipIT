@@ -45,4 +45,3 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
     </>}
   </section>;
 }
-

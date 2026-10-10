@@ -37,4 +37,3 @@ describe('production effectiveness snapshot UI',()=>{
     await waitFor(()=>expect(source.execute).toHaveBeenCalledTimes(2));const calls=vi.mocked(source.execute).mock.calls;expect(calls[0]![0]).toBe(calls[1]![0]);
   });
 });
-

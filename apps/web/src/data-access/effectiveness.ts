@@ -20,4 +20,3 @@ export function effectiveness(api:ScopedApi) {
   };
 }
 export type EffectivenessSource=ReturnType<typeof effectiveness>;
-

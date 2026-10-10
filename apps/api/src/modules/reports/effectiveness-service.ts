@@ -39,4 +39,3 @@ export function createEffectivenessService(database:DatabasePool,hours:readonly 
     },
   };
 }
-

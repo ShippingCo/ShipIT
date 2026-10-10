@@ -12,4 +12,3 @@ export interface EffectivenessSnapshot {
   staffing:{state:'configured'|'unavailable';timezone:string|null;weekdays:number[];start_minute:number|null;end_minute:number|null;policy:'captured_current_schedule'};
 }
 export interface EffectivenessPage {snapshot:EffectivenessSnapshot;items:EffectivenessCell[];selection:{section:EffectivenessSection|null;category:string|null}}
-
