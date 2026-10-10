@@ -126,3 +126,49 @@ See [Issue #11 verification](architecture/issue-11-verification.md) and
 [API operating guide](../apps/api/README.md) for exact policy and acceptance evidence.
 Issue #11 delivery stops with the PR open for independent external review; merge,
 issue closure, downstream unblocking and branch cleanup require later authorization.
+
+## Persistent backlog Goal — authorized 10 October 2026
+
+The persistent Goal covers the finite remaining approved issue set recorded once
+in ignored `.codex/goal-checkpoint.md`; newly discovered necessary work belongs to
+its owning issue, while unrelated expansion needs a new decision. This section
+consolidates continuation rules for that Goal and supplements the issue lifecycle
+above. Original operating instructions are retained once in the ignored local
+`.codex/goal-operating-instructions.txt`; do not copy them into every prompt/report.
+
+For each issue follow nine steps: (1) inspect relevant repository/history and merged
+prerequisites; (2) inspect affected database/access paths; (3) read complete live
+acceptance criteria and identify approval evidence; (4) research concrete uncertainties
+using current primary sources; (5) validate correctness, failure modes and complexity;
+(6) finalize one concise acceptance-to-component/check plan; (7) implement the owning
+scope using established stack/design and server authority; (8) run meaningful focused
+then required broader checks on stable final code; (9) publish, address review/CI,
+merge only with satisfied gates, close accurately, sync main and clean completed branches.
+
+Use compact metadata for the initial reconciliation; thereafter refresh changed
+state. Default to one issue implementation at a time. Do not absorb unfinished
+prerequisites into a dependent PR or reopen completed foundations merely because
+new scope extends them. #137–#150 remain M6; pilot and commercial work stay separate.
+If one issue needs a policy, credential, provider capability or approval, prepare
+the concrete proposal, ask only for missing input and continue independent eligible
+work. Never fabricate approvals or externally qualified behavior.
+
+Record research problem/source/applicability/cost/adopt-adapt-defer/verification,
+distinguishing published practice from inference. Reuse approved contracts and
+research; no speculative infrastructure, unnecessary ADRs or duplicate reports.
+Read targeted files and source sections; save full logs locally. Run expensive DB
+suites serially unless safe capacity is established. Diagnose intermittent failures;
+a passing retry alone is not resolution. Never weaken checks to obtain green.
+
+Authorization includes development/test infrastructure, branches, scoped commits,
+pushes, PR corrections, gated merges, accurate issue/status updates and cleanup.
+Production deployment/data, purchases/paid services, legal/account agreements and
+external messages require separate explicit authorization after a reviewable plan.
+Preserve unrelated work and never bypass branch protection or independent approval.
+
+Maintain one checkpoint with scope/dependencies, merged evidence, active branch,
+decisions, remaining criteria, final-code checks, blockers and next eligible action.
+Continue after each merge without routine confirmation. Completion requires every
+in-scope issue plus milestone exits, a focused combined integration audit where
+needed, reviewed merged PRs and local cleanup. Budget stops and unavailable external
+requirements are incomplete work. Follow the Goal lifecycle; no repeated no-op turns.
