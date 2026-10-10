@@ -631,3 +631,38 @@ Migration 46 remains unreleased and will be extended with expense/transfer/evide
 sources before full verification. Expense application, transfer commands, private expense
 attachments, cashbook projections/UI, broader native/browser gates and final PR CI/review/
 merge are still pending; these foundation results do not close #140.
+
+Request/decision implementation for #140 (still partial): `cashbook_requests` retains
+an expense, additive opening float, owner-fund introduction, deposit or withdrawal
+proposal with its exact amount, currency, current location revisions, source generation,
+responsible employee, private payee/category where applicable, reason and occurred time.
+`cashbook_request_decisions` appends one different-admin approval or rejection; both
+sources are immutable and server timestamped. Neither submission nor approval creates
+money effects, reservations, receipts or a source-generation increment. Application and
+corrections remain pending. A deposit must propose cash to noncash, a withdrawal noncash
+to cash, and opening float requires cash. These are manual recorded-funds proposals;
+no bank settlement is verified.
+
+The request service rechecks current scoped memberships and source/account revisions
+under the franchise money lock. Operators submit against their own cash location or a
+noncash source and read only their own proposals; authorized finance readers can read
+franchise proposals. Private payees remain in the scoped request detail. Approval rejects
+stale source generations, deactivated accounts/locations or departed custodians; a
+different admin can reject a stale proposal while retaining its original evidence.
+Submitting an unchanged new-key proposal is a separate request; actor-scoped exact-key
+replay returns the original submission or decision, including after writes are disabled
+or a source changes. Current caller authority remains required for replay. New writes
+stay disabled by default, and HTTP/configuration/UI integration is pending.
+
+Verification for this request slice: eight unit/input cases passed and twelve native
+PostgreSQL cases passed (three request/movement service cases, six migration cases and
+three existing location/receipt/populated-upgrade cases). Native evidence covers all
+five proposal kinds, different-admin enforcement at both service and database boundaries,
+private own-request reads, denied roles and cross-franchise/organization access, stale
+sources, paired-source validation, competing decisions, immutable evidence, failed
+inserts and recovery from post-COMMIT lost acknowledgement using a fresh pool. Requests
+and decisions leave receipt counts and source generations unchanged. A unit timestamp
+expectation initially used fixed milliseconds; it was corrected to the existing canonical
+`instant` representation after diagnosis. The original failed log remains local. Scoped
+query AST, API types and changed-file lint passed. These checks do not qualify money
+application, handover acknowledgement, attachment authorization or the cashbook UI.
