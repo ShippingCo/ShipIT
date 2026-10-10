@@ -8,6 +8,9 @@ describe('fail-closed runtime configuration', () => {
   it('validates and freezes one mode mapping with synthetic input', () => {
     const config = parseEnvironment(syntheticEnv);
     expect(config.environment).toBe('developer'); expect(Object.isFrozen(config)).toBe(true);
+    expect(config.moneyReceiptWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:'true'}).moneyReceiptWritesEnabled).toBe(true);
+    for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:value})).toThrow(ConfigurationError);
+    expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',MONEY_RECEIPTS_ENABLED:'true'})).toThrow(ConfigurationError);
     expect(Object.isFrozen(config.allowedOrigins)).toBe(true);
     for (const mode of ['demo', 'staging', 'production']) {
       expect(parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/db/version-1',

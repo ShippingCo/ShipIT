@@ -30,7 +30,7 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const exported=await source.export(result.snapshot.id),url=URL.createObjectURL(new Blob([exported.csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=`ageing-${exported.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">To-Pay ageing</h1>
-    <p>Tax-inclusive debt after approved changes, collections, reversals and refunds. Delivery does not settle payment.</p>
+    <p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Customer advances stay in Money receipts. Delivery does not settle payment.</p>
     <p>Booking age is not days overdue. Due dates, monthly terms, advances and combined allocations are not yet available; missing dates remain unknown.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}>
       <SelectField aria-label="Age from" label="Age from" value={anchor} onChange={v=>setAnchor(v as AgeingFilter['anchor'])} options={[{value:'booking',label:'Booking date'},{value:'due',label:'Due date (unknown without terms)'}]}/>

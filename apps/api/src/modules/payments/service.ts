@@ -19,6 +19,7 @@ export function createPaymentService(database:DatabasePool) {
       const o=await repository.obligation(s.command,booking,true);
       const target=targetId?await repository.entry(s.command,o,targetId):null;
       if(target&&target.kind!=='collection')throw new HttpError('RESOURCE_NOT_FOUND');
+      if(target&&await repository.linkedAllocation(s.command,o,target.id))throw new HttpError('PAYMENT_ALLOCATION_CORRECTION_REQUIRED');
       const intent=fingerprint(operation,booking,o.id,targetId,input),previous=await repository.replay(s.command,key);
       if(previous){
         if(previous.fingerprint!==intent)throw new HttpError('IDEMPOTENCY_CONFLICT');

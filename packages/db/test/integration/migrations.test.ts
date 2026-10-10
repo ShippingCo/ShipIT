@@ -60,9 +60,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 43 });
+  assert.deepEqual(await database.migrate(), { applied: 44 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 43);
+  assert.equal(initial.length, 44);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -73,11 +73,10 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
      WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename`);
     assert.deepEqual(tables.rows, [...['account_statement_lines','account_statements','attachment_audit_events','attachment_commands','attachments','audit_records','auth_challenges','auth_delivery_jobs','auth_identifiers','auth_rate_limits','auth_security_events','auth_sessions','auth_users'].map(name=>({schema:'shipit',name})),...['booking_audit_events','booking_commands','booking_obligations','bookings','carrier_commands','carrier_dockets','carrier_import_commits','carrier_import_outcomes','carrier_import_runs','carrier_installations','carrier_mappings','carrier_observations','carrier_rate_approvals','carrier_rate_commands','carrier_rate_imports','carrier_references','carrier_tracking_checkpoints','carrier_tracking_decisions','carrier_tracking_records','conversation_inference_budgets','conversation_inferences','customer_access_bindings','customer_access_commands','customer_audit_events','customer_commands','customer_conversation_turns','customer_conversations','customer_quote_policies','customer_quote_policy_commands','customer_quotes','customer_tracking_grants','customers','delivery_attempts','delivery_audit_events','delivery_challenge_sends','delivery_challenges','delivery_commands','delivery_exception_approvals','delivery_exception_requests','delivery_proofs','delivery_recipients','domain_events','eway_commands','eway_policies','eway_record_revisions','eway_records','financial_access_events','financial_changes','franchises'].map(name=>({schema:'shipit',name})),
     ...['invitation_franchise_scopes','issued_receipts','lot_audit_events','lot_code_counters','lot_commands','lot_memberships','lots','membership_audit_events','membership_franchise_scopes','membership_invitations','memberships'].map(name=>({schema:'shipit',name})),
-    { schema: 'shipit', name: 'notification_automation_decisions' }, { schema: 'shipit', name: 'notification_policy_activations' },
-    { schema: 'shipit', name: 'onboarding_commands' }, { schema: 'shipit', name: 'organizations' },
+    { schema: 'shipit', name: 'money_receipt_allocations' }, { schema: 'shipit', name: 'money_receipt_audit_events' }, { schema: 'shipit', name: 'money_receipt_commands' }, { schema: 'shipit', name: 'money_receipts' }, { schema: 'shipit', name: 'notification_automation_decisions' }, { schema: 'shipit', name: 'notification_policy_activations' }, { schema: 'shipit', name: 'onboarding_commands' }, { schema: 'shipit', name: 'organizations' },
     ...['outbox_attempts','outbox_jobs','outbox_receipts','outbox_redrives','outbox_schedule','outbox_streams'].map(name=>({schema:'shipit',name})),
     ...['parcel_bulk_requests','parcel_commands','parcel_dispatch_manifests','parcel_failed_attempts','parcel_rto_approvals','parcel_transitions','parcels'].map(name=>({schema:'shipit',name})),
-    ...['payment_audit_events','payment_commands','payment_entries','pickup_commands','pickup_events','pickup_requests','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','report_access_events','report_snapshots','route_audit_events','route_commands','route_delay_fanout_items','route_delay_fanouts','route_delay_reminder_commands','route_delay_reminder_events','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','support_cases','support_commands','support_events','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_consent_disclosures','whatsapp_consent_receipts','whatsapp_consent_state','whatsapp_delivery_observations','whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_installations','whatsapp_outbound','whatsapp_outbound_attempts','whatsapp_outbound_redrives','whatsapp_templates','whatsapp_webhook_quarantine'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
+    ...['payment_audit_events','payment_commands','payment_entries','pickup_commands','pickup_events','pickup_requests','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','receiving_account_audit_events','receiving_account_revisions','receiving_accounts','report_access_events','report_snapshots','route_audit_events','route_commands','route_delay_fanout_items','route_delay_fanouts','route_delay_reminder_commands','route_delay_reminder_events','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','support_cases','support_commands','support_events','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_consent_disclosures','whatsapp_consent_receipts','whatsapp_consent_state','whatsapp_delivery_observations','whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_installations','whatsapp_outbound','whatsapp_outbound_attempts','whatsapp_outbound_redrives','whatsapp_templates','whatsapp_webhook_quarantine'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
 });
 
 await test('released Issue 10 infrastructure upgrades to tenancy and repeated migration preserves roots', { timeout: 20000 }, async (t) => {
@@ -87,7 +86,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 42 });
+  assert.deepEqual(await database.migrate(), { applied: 43 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -103,7 +102,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1790960400000-notification-automation',
     '1791046800000-route-delay-fanout',
     '1791133200000-secure-delivery-proof',
-    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers','1791997200000-carrier-csv-imports','1792083600000-carrier-reconciliation','1792170000000-carrier-rates','1792256400000-manual-carrier-qualification', '1792342800000-report-snapshots','1792429200000-sales-financial-evidence',
+    '1791306000000-private-customer-tracking','1791392400000-trusted-conversation-tools','1791478800000-customer-shipment-quotes','1791565200000-pickup-requests','1791651600000-human-handoff','1791738000000-multilingual-intents','1791824400000-assistant-outcomes','1791910800000-manual-carriers','1791997200000-carrier-csv-imports','1792083600000-carrier-reconciliation','1792170000000-carrier-rates','1792256400000-manual-carrier-qualification', '1792342800000-report-snapshots','1792429200000-sales-financial-evidence','1792515600000-receiving-accounts',
   ]);
 });
 
@@ -193,5 +192,5 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 43 });
+  assert.deepEqual(await database.migrate(), { applied: 44 });
 });

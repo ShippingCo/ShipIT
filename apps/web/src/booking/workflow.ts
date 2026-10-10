@@ -1,10 +1,9 @@
-import type { CustomerDto, PaymentProjection, PaymentResult, TaxCalculationDto, TaxIntentInput } from '@shippingco/shared';
+import type { CustomerDto, TaxCalculationDto, TaxIntentInput } from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { customers } from '../data-access/customers';
 import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
-import { payments } from '../data-access/payments';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
 import { emptyDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
@@ -14,16 +13,16 @@ export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 's
 interface State {
   draft: Draft; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
-  payment?: PaymentResult; balance?: PaymentProjection; paymentPhase: Phase; message: string; recoveryBlocked: boolean; busy: boolean;
+  message: string; recoveryBlocked: boolean; busy: boolean;
 }
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api);
   let state: State = { draft: emptyDraft(), errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing',
-    bookingPhase: 'editing', paymentPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false };
+    bookingPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false };
   const listeners = new Set<() => void>();
   let live = true, customerIntent: CommandIntent | undefined, quoteIntent: CommandIntent | undefined,
     prepareIntent: CommandIntent | undefined, calculateIntent: CommandIntent | undefined, bookingIntent: CommandIntent | undefined,
-    paymentIntent: CommandIntent | undefined, taxInput: TaxIntentInput | undefined;
+    taxInput: TaxIntentInput | undefined;
   const current = () => live && controller.runtime.isCurrent(api.scope);
   const set = (patch: Partial<State>) => { if (!current()) return; state = { ...state, ...patch }; listeners.forEach(l => l()); };
   const invalidateCommercial = () => { quoteIntent = prepareIntent = calculateIntent = undefined; taxInput = undefined;
@@ -33,7 +32,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     const errors = validate(state.draft, section); set({ errors, message: Object.keys(errors).length ? 'Review the highlighted fields.' : '' });
     return Object.keys(errors).length === 0;
   }
-  function failed(error: unknown, phase: 'customerPhase' | 'pricingPhase' | 'taxPhase' | 'bookingPhase' | 'paymentPhase') {
+  function failed(error: unknown, phase: 'customerPhase' | 'pricingPhase' | 'taxPhase' | 'bookingPhase') {
     const pending = uncertain(error) || error instanceof ApiFailure && ['IDEMPOTENCY_CONFLICT', 'PAYMENT_REFERENCE_CONFLICT'].includes(error.code);
     const errors: Errors = {};
     if (error instanceof ApiFailure) {
@@ -49,31 +48,10 @@ export function createBookingWorkflow(controller: ScopeController) {
   }
   let unsubscribe = () => {};
   const purge = () => {
-    live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = paymentIntent = undefined; taxInput = undefined;
-    state = { draft: emptyDraft(), errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', paymentPhase: 'editing', message: '', recoveryBlocked: false, busy: false };
+    live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = undefined; taxInput = undefined;
+    state = { draft: emptyDraft(), errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false };
     listeners.forEach(l => l());
   };
-  async function collect() {
-    if (!current() || !state.booking || state.busy || state.paymentPhase === 'ready') return;
-    const b = state.booking, pay = payments(api, b.id);
-    if (b.payment_obligation.total_paise === 0) { set({ paymentPhase: 'ready', message: 'Booking saved. No collection is required for a zero total.' }); return; }
-    paymentIntent ??= pay.collect({ amount_paise: b.payment_obligation.outstanding_paise, currency: 'INR', context: 'paid_counter',
-      method: state.draft.method as 'cash' | 'upi', collection_reference: crypto.randomUUID() });
-    set({ busy: true, paymentPhase: 'loading', message: 'Booking saved. Recording payment…' });
-    try {
-      retainRecovery(paymentIntent, b.id);
-      const result = await pay.execute(paymentIntent);
-      if (!current()) return;
-      clearRecovery(api.scope); set({ payment: result, balance: result.payment, paymentPhase: 'ready', message: 'Booking saved. Payment recorded.' });
-      // Replay returns its historical projection. Obtain the current authorized ledger separately.
-      try { const balance = await pay.read(); set({ balance }); }
-      catch (error) { set({ message: 'Booking saved. Payment recorded; current balance could not be refreshed. ' + failureMessage(error) }); }
-    } catch (error) {
-      if (!current()) return;
-      if (!failed(error, 'paymentPhase')) clearRecovery(api.scope);
-      set({ message: 'Booking saved. Payment not confirmed. ' + failureMessage(error) });
-    } finally { set({ busy: false }); }
-  }
   return {
     api, customerApi,
     snapshot: () => state,
@@ -157,12 +135,7 @@ export function createBookingWorkflow(controller: ScopeController) {
         clearRecovery(api.scope); set({ booking, bookingPhase: 'ready', message: 'Booking saved.' });
       } catch (error) { if (!current()) return; if (!failed(error, 'bookingPhase')) { clearRecovery(api.scope); bookingIntent = undefined; } }
       finally { set({ busy: false }); }
-      if (current() && state.booking && state.draft.paymentMode === 'paid_counter') await collect();
     },
-    collect,
-    async refreshPayment() { if (!state.booking || state.busy) return; set({ busy: true });
-      try { const balance = await payments(api, state.booking.id).read(); set({ balance, message: 'Current server payment balance loaded. Reconcile any uncertain collection using its original request.' }); }
-      catch (error) { set({ message: 'Booking saved. ' + failureMessage(error) }); } finally { set({ busy: false }); } },
     locked,
   };
 }

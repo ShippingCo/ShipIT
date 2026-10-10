@@ -12,20 +12,23 @@ export type ReceiptTax = Pick<TaxCalculationDto,
   'policy_id'|'policy_version'|'rule_id'|'classification'|'treatment'|'supplier_state'|'place_of_supply'|'jurisdiction'|
   'pre_tax_paise'|'taxable_basis_paise'|'cgst_paise'|'sgst_paise'|'igst_paise'|'tax_total_paise'|
   'unrounded_payable_paise'|'rounding_adjustment_paise'|'final_payable_paise'|'components'|'allocation'>;
+export interface ReceiptAllocationSource {
+  receipt_id:string; allocation_id:string; kind:'allocation'|'release'; receipt_occurred_at:string; receipt_recorded_at:string;
+}
 interface ReceiptBase {
-  id: string; number: string; schema_version: 1; version: number; booking_id: string; issued_at: string;
+  id: string; number: string; schema_version: 1|2; version: number; booking_id: string; issued_at: string;
   issuer: ReceiptIssuer; booking: ReceiptBooking; currency: 'INR';
 }
 export interface BookingReceiptDto extends ReceiptBase {
-  kind: 'booking_charge'; version: 1; booking_receipt_id: null; correction_of: null;
+  kind: 'booking_charge'; schema_version:1; version: 1; booking_receipt_id: null; correction_of: null;
   charges: { freight_paise: number; packing_paise: number; tax: ReceiptTax };
 }
 export interface CollectionReceiptDto extends ReceiptBase {
   kind: 'collection_acknowledgement'; booking_receipt_id: string; correction_of: null;
-  entry: PaymentEntryDto & { kind: 'collection' };
+  entry: PaymentEntryDto & { kind: 'collection' }; allocation_source?:ReceiptAllocationSource;
 }
 export interface ReversalReceiptDto extends ReceiptBase {
   kind: 'collection_reversal'; booking_receipt_id: string; correction_of: string;
-  entry: PaymentEntryDto & { kind: 'reversal' };
+  entry: PaymentEntryDto & { kind: 'reversal' }; allocation_source?:ReceiptAllocationSource;
 }
 export type ReceiptDto = BookingReceiptDto | CollectionReceiptDto | ReversalReceiptDto;

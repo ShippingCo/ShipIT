@@ -34,6 +34,10 @@ export function receiptView(dto:ReceiptDto):ReceiptView {
   if(dto.correction_of)rows.push(['Corrects acknowledgement',dto.correction_of]);
   if(e.reversal_of)rows.push(['Reverses entry',e.reversal_of]);
   if(e.reason_code)rows.push(['Reason',e.reason_code]);
+  if(dto.allocation_source){
+    const source=dto.allocation_source;rows.push(['Source receipt',source.receipt_id],['Allocation',source.allocation_id],['Money received at',source.receipt_occurred_at],['Receipt recorded at',source.receipt_recorded_at]);
+    return {heading:source.kind==='allocation'?'Receipt allocation acknowledgement':'Allocation correction',number:dto.number,issuer:dto.issuer.organization_name,customer:dto.booking.customer_name,rows,total:receiptMoney(e.amount_paise),totalLabel:source.kind==='allocation'?'Applied amount':'Released allocation',note:'Applies or releases funds from an existing recorded receipt. This entry does not record new money received or a refund.'};
+  }
   return {heading:dto.kind==='collection_acknowledgement'?'Collection acknowledgement':'Collection reversal',number:dto.number,
     issuer:dto.issuer.organization_name,customer:dto.booking.customer_name,rows,total:receiptMoney(e.amount_paise),
     totalLabel:dto.kind==='collection_acknowledgement'?'Collected amount':'Reversed amount',

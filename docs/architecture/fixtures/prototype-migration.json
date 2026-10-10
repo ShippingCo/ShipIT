@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
-      "apps/web/src/test/counter.test.tsx": "9b6afdd01a85574d610d53087c4ca1604d333d681f6f5578c9645df1107aca83",
+      "apps/web/src/test/counter.test.tsx": "45c70f04300acc02299fbe312d858e6d0ddab91a8162b484afc61a99a916ba27",
       "apps/web/src/test/operator.test.tsx": "6cef3119ea956062aaa286fd72541e6b9ef4bc303ea70f8171131c2385adccd3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1116,7 +1116,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "Paid Now uses server obligation and stable reference; failed payment never undoes saved booking",
+        "name": "Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write",
         "cases": null
       },
       {
@@ -1340,6 +1340,31 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "records one receipt across two current bill versions and displays the residual advance",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "applies an existing advance without recording another inflow",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "uses the original allocation history for an admin release and keeps private finance evidence role-scoped",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "configures a named other receiving method through an append-only administrator account revision",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
         "cases": null
@@ -1381,7 +1406,7 @@
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
-        "name": "uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read",
+        "name": "uses guarded package actions and directs new money recording to receipt evidence without OTP or delivery bypasses",
         "cases": null
       },
       {
@@ -1621,6 +1646,11 @@
       },
       {
         "file": "apps/web/src/test/receipt.test.tsx",
+        "name": "renders frozen receipt allocation evidence without a second cash inflow or private external reference",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipt.test.tsx",
         "name": "escapes every layout text context and ignores foreign download and executable logo URLs",
         "cases": null
       },
@@ -1791,6 +1821,14 @@
       {
         "file": "apps/web/src/operations/Ageing.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/MoneyReceipts.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/MoneyReceipts.tsx",
+        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/operations/Packages.tsx",
@@ -2094,7 +2132,8 @@
       "owners": [
         13,
         17,
-        18
+        18,
+        138
       ],
       "rules": [
         "docs/architecture/frontend-migration-contract.md",
@@ -2175,7 +2214,8 @@
         23,
         24,
         25,
-        34
+        34,
+        138
       ],
       "rules": [
         "docs/architecture/parcel-lifecycle.md",
@@ -2366,7 +2406,8 @@
       "disposition": "replace",
       "owners": [
         30,
-        33
+        33,
+        138
       ],
       "rules": [
         "docs/architecture/domain-contract.md",
@@ -2892,11 +2933,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "Paid Now uses server obligation and stable reference; failed payment never undoes saved booking",
+      "name": "Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write",
       "cases": null,
       "group": "seam",
       "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+      "reason": "Issue #138: replace legacy UI collection with the receipt-backed source workflow; retain booking and parcel safeguards. Exact receipt failure/retry coverage is in money-receipts.test.tsx."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -3251,6 +3292,46 @@
       "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
     },
     {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
+    },
+    {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "records one receipt across two current bill versions and displays the residual advance",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
+    },
+    {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "applies an existing advance without recording another inflow",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
+    },
+    {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "uses the original allocation history for an admin release and keeps private finance evidence role-scoped",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
+    },
+    {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "configures a named other receiving method through an append-only administrator account revision",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
+    },
+    {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
       "cases": null,
@@ -3316,11 +3397,11 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
-      "name": "uses guarded package actions, omits OTP/delivered bypasses and refreshes To-Pay from a fresh ledger read",
+      "name": "uses guarded package actions and directs new money recording to receipt evidence without OTP or delivery bypasses",
       "cases": null,
       "disposition": "preserve",
       "group": "parcels",
-      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+      "reason": "Issue #138: replace legacy UI collection with the receipt-backed source workflow; retain booking and parcel safeguards. Exact receipt failure/retry coverage is in money-receipts.test.tsx."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
@@ -3697,6 +3778,14 @@
       "group": "receipts",
       "disposition": "preserve",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/receipt.test.tsx",
+      "name": "renders frozen receipt allocation evidence without a second cash inflow or private external reference",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Issue #138: decode frozen receipt allocation provenance and new recorded methods, require matching source kind, omit private references, and label applied/released funds without a second cash inflow."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",

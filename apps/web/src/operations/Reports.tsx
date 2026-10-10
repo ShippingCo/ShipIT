@@ -65,7 +65,7 @@ export function ReportView({source,canExport}:{source:ReportSource;canExport:boo
   }catch(e){failure(e);}finally{setBusy(false);}}
   const pending=busy||command.phase==='pending';
   return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">Reports</h1>
-    <p>Original booking amounts and recorded collections. Use Sales and GST for financial corrections, actual refunds and adjusted balances.</p>
+    <p>Original booking amounts and net funds applied to these bills, including legacy collections and linked receipt allocations. Customer advances stay in Money receipts. Use Sales and GST for financial corrections, actual refunds and adjusted balances.</p>
     <p>Booking snapshot · Asia/Kolkata. Collections include payments received up to capture for these bookings, including later days.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}>
       <TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>

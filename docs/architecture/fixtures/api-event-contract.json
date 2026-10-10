@@ -396,6 +396,60 @@
       "forbidden_authority": "No parcel delivery, automatic receipt reissue or invented refund/partial-allocation policy",
       "ordering": "P/R",
       "privacy": "References resolved under current consumer scope; safe codes/UTC only; no private content"
+    },
+    {
+      "event_type": "money_receipt.recorded",
+      "producer": "payments",
+      "aggregate": "money_receipt",
+      "transitions": [
+        "receipt"
+      ],
+      "committed_state": "One manually recorded inflow with pinned receiving account, receiver, initial custody and actual occurrence time; optional allocations committed atomically",
+      "schema_version": 1,
+      "payload": {
+        "receipt_id": "reference"
+      },
+      "consumers": [],
+      "consumer_effect": "Durable scoped source fact; no automatic consumer enabled by #138",
+      "forbidden_authority": "No bank verification, second inflow, automatic refund, delivery change or private reference export",
+      "ordering": "H/P",
+      "privacy": "Receipt reference only; resolve under current owner scope; no account, customer, amount or private proof in payload"
+    },
+    {
+      "event_type": "money_receipt.allocated",
+      "producer": "payments",
+      "aggregate": "money_receipt",
+      "transitions": [
+        "receipt"
+      ],
+      "committed_state": "Existing receipt funds applied to same-customer obligations without another inflow",
+      "schema_version": 1,
+      "payload": {
+        "receipt_id": "reference"
+      },
+      "consumers": [],
+      "consumer_effect": "Durable scoped source fact; no automatic consumer enabled by #138",
+      "forbidden_authority": "No bank verification, second inflow, automatic refund, delivery change or private reference export",
+      "ordering": "H/P",
+      "privacy": "Receipt reference only; resolve under current owner scope; no account, customer, amount or private proof in payload"
+    },
+    {
+      "event_type": "money_receipt.allocation_released",
+      "producer": "payments",
+      "aggregate": "money_receipt",
+      "transitions": [
+        "receipt"
+      ],
+      "committed_state": "Authorized admin release appended with a linked payment reversal; original source and application retained",
+      "schema_version": 1,
+      "payload": {
+        "receipt_id": "reference"
+      },
+      "consumers": [],
+      "consumer_effect": "Durable scoped source fact; no automatic consumer enabled by #138",
+      "forbidden_authority": "No bank verification, second inflow, automatic refund, delivery change or private reference export",
+      "ordering": "H/P",
+      "privacy": "Receipt reference only; resolve under current owner scope; no account, customer, amount or private proof in payload"
     }
   ],
   "command": {

@@ -843,3 +843,48 @@ fixtures. Staffing comes from validated server `support_hours`, never browser in
 Missing staffing produces unknown age. Provision grants before compatible API/view;
 rollback disables reporting without rewriting immutable source facts. Definitions,
 privacy and current-schedule caveats are in the reporting architecture guide.
+
+## Issue #138 runtime privileges
+
+Apply additive migration 44 (`1792515600000-receiving-accounts.cjs`) before deploying
+compatible API, receipt readers and workers. Retain existing membership, booking,
+payment-ledger, receipt and outbox privileges. Use `prepareMoneyReceipts()` and
+`prepareReceivingAccounts()` as executable disposable-test references. Replace
+`runtime_role` with the existing restricted application role:
+
+```sql
+GRANT SELECT ON shipit.receiving_accounts,shipit.receiving_account_revisions,
+  shipit.money_receipts,shipit.money_receipt_commands,shipit.money_receipt_allocations TO runtime_role;
+GRANT INSERT(id,organization_id,franchise_id) ON shipit.receiving_accounts TO runtime_role;
+GRANT INSERT(id,organization_id,franchise_id,account_id,version,name,methods,
+  other_method_name,active,actor_id,correlation_id,key_digest,fingerprint)
+  ON shipit.receiving_account_revisions TO runtime_role;
+GRANT INSERT(id,organization_id,franchise_id,receipt_id,principal_id,operation_id,
+  version,key_digest,fingerprint,input,correlation_id)
+  ON shipit.money_receipt_commands TO runtime_role;
+GRANT INSERT(id,organization_id,franchise_id,command_id,customer_id,account_id,
+  account_revision_id,amount_paise,currency,method,receiver_id,initial_custodian_id,
+  occurred_at,external_reference) ON shipit.money_receipts TO runtime_role;
+GRANT INSERT ON shipit.money_receipt_allocations TO runtime_role;
+GRANT UPDATE(state,result,committed_at) ON shipit.money_receipt_commands TO runtime_role;
+GRANT UPDATE(id) ON shipit.money_receipts TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.valid_receiving_methods(text[]),
+  shipit.money_receipt_result(uuid,uuid,uuid) TO runtime_role;
+```
+
+The narrow receipt `UPDATE(id)` privilege permits PostgreSQL `FOR UPDATE`; the
+immutable-source trigger still rejects changing the ID or any source field. Generated
+`recorded_at` columns and trigger-owned audits/events are excluded from direct writes.
+Do not grant source UPDATE/DELETE, audit INSERT, ownership, DDL, TRUNCATE or PUBLIC
+access. Parent command completion publishes the exact source event in the same
+transaction; it does not enable a messaging consumer or assert bank settlement.
+
+Keep `MONEY_RECEIPTS_ENABLED=false` while migrating/provisioning and validating the
+restricted role. Migration creates no receiving accounts or synthetic legacy receipt
+sources. An authorized local admin must configure named accounts/drawers before use.
+Then deploy compatible readers and explicitly enable the flag after rollout approval.
+For rollback disable the flag: current authorized reads and completed exact-key replays
+continue; new receipt/allocation/correction/account-revision commands stop. Preserve
+compatible ledger and schema-v2 issued-receipt readers; repair the schema forward.
+Do not rewrite historical receipts or invent missing legacy receiving evidence. See
+[receipt setup and recovery](../../docs/architecture/payments.md#receipt-rollout-and-rollback).

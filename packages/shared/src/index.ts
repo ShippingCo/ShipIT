@@ -153,11 +153,12 @@ export interface PaymentProjection {
 }
 export interface PaymentEntryDto {
   id:string; kind:'collection'|'reversal'; amount_paise:number; currency:'INR';
-  context:'paid_counter'|'to_pay'; method:'cash'|'upi'; collection_reference:string|null;
+  context:'paid_counter'|'to_pay'; method:import('./money-receipt.ts').ReceiptMethod; collection_reference:string|null;
   reversal_of:string|null; reason_code:PaymentReversalInput['reason_code']|null; version:number; occurred_at:string;
 }
 export interface PaymentResult { payment:PaymentProjection; entry:PaymentEntryDto }
 
-export type { ReceiptDto, BookingReceiptDto, CollectionReceiptDto, ReversalReceiptDto, ReceiptIssuer, ReceiptBooking, ReceiptTax } from './receipt.ts';
+export type { ReceiptDto, BookingReceiptDto, CollectionReceiptDto, ReversalReceiptDto, ReceiptIssuer, ReceiptBooking, ReceiptTax, ReceiptAllocationSource } from './receipt.ts';
 export * from './attachment.ts';
 export * from './effectiveness.ts';
+export * from './money-receipt.ts';

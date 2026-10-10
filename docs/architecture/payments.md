@@ -192,3 +192,160 @@ retains compatible Booking writers and all financial history, and repairs schema
 
 No payment frontend, gateway, refunds, receipt document, reporting UI, remittance, subscriptions,
 WhatsApp or other provider execution is enabled. No new dependency or browser fallback.
+
+## Receiving-account configuration — #138 implementation in progress
+
+Receiving choices have a stable franchise-owned `receiving_accounts` identity and
+append-only `receiving_account_revisions`. Each revision freezes its name, methods,
+explicit other-method label, active state, actor, correlation and server-recorded
+time. A cash drawer accepts only cash; a non-cash account can explicitly enable
+UPI, card, bank transfer or a named other method. Configuration is evidence of the
+operator's chosen destination, never confirmation by a bank or gateway.
+
+The internal account service checks current membership before every read/write/replay.
+Only an explicit local franchise-admin grant configures accounts. Org admins may
+read a selected own-org franchise; local admins/accountants may read their selected
+franchise. Operators receive only the named choices needed to record a receipt,
+without bank credentials or ledger history. Read-only/dispatcher/agent membership
+does not grant this selection action. R31/R32 and W49–W52 in the
+[authorization contract](authorization-contract.md) declare the exact API/UI grants.
+
+Configuration uses a principal/franchise request-key digest and canonical intent.
+A repeated key returns the original immutable revision, even after a newer revision
+is saved; a different intent conflicts. Expected version, franchise/account locks
+and a database revision guard serialize updates. Identity, revision and reference-only
+audit commit together; unconfigured orphan identities cannot commit. Receipt source
+links pin the exact account revision rather than a mutable account label.
+
+Apply forward migration `1792515600000-receiving-accounts.cjs`; it creates no accounts
+or synthetic receiving evidence for legacy payments. Runtime configuration needs
+SELECT on the two source tables, INSERT on receiving-account identity columns and
+revision input columns, plus EXECUTE on `valid_receiving_methods(text[])`. Exclude
+revision `recorded_at` from INSERT grants. Audit insertion is trigger-owned; grant
+no runtime audit INSERT or source UPDATE/DELETE. The test provisioner demonstrates
+these grants. The public API and production receipt workspace use these services;
+new writes remain disabled by default until the documented rollout is qualified.
+
+
+### Receipt source and allocation compatibility
+
+`money_receipts` holds each actual manually recorded inflow once. It freezes the
+customer, receiving-account revision, method, receiver, initial custody evidence,
+actual occurred-at time, server-recorded time and private external transaction
+reference. The reference is neither the legacy collection UUID nor proof of bank
+settlement. Initial custody identifies the receiver at receipt; later handovers
+require their owning recorded transfer source and never overwrite this row.
+
+`money_receipt_commands` retains scoped principal/operation request identity,
+expected receipt version, canonical intent and the original result.
+`money_receipt_allocations` links each application or release to an existing
+single-obligation payment entry and child command in the same transaction.
+The owning receipt lock and original obligation lock serialize competing writes.
+Existing adjusted-debt, payment-version, reversal-ceiling, audit and settlement
+checks still apply. Same-customer booking ownership and exact parent/child intent
+are checked independently by the database; arbitrary cross-customer application
+has no permission here.
+
+```text
+receipt availability = original received paise - net linked allocation paise
+net linked allocation = sum(allocation paise) - sum(linked release paise)
+0 <= net linked allocation <= original received paise
+```
+
+The residual is an advance, never another sale. Allocation or release creates no
+new inflow. There is no mutable stored receipt balance. Deferred checks require
+matching committed parent/child commands, complete allocation intent, exact
+as-of-version result and atomic audit. An unpaired ledger reversal cannot bypass
+a receipt allocation: the old route returns `PAYMENT_ALLOCATION_CORRECTION_REQUIRED`
+and a database constraint independently rejects incomplete pairing. Provision
+SELECT on `money_receipt_allocations` for that legacy reversal guard.
+
+Newly issued acknowledgements for linked entries use schema version 2, freezing
+only receipt/allocation IDs, source kind and occurred/recorded times. They show
+**Applied amount** or **Released allocation**. They expose no bank reference,
+receiver/custodian or other-bill amounts. Existing issued schema-1 documents remain
+unchanged, including their numbers and snapshots. New-method read DTOs include
+card/bank-transfer/configured-other; the old cash/UPI collection command stays
+compatible. Existing booking-cohort ledger totals measure funds applied to those
+obligations. Actual inflow and residual advance use receipt sources, not allocation
+dates or totals. Saved historical reports are never rewritten.
+
+The receipt coordinator, source event publication and authenticated commands are
+implemented through one root transaction. Operators record and apply receipts;
+franchise admins additionally release mistaken allocations; accountants and scoped
+organization admins can read finance evidence without gaining write permission.
+A duplicate command returns its original result even after later applications,
+corrections or receiving-account changes; current membership is still rechecked.
+
+`POST /api/v1/money-receipts` records a source; `POST /:receipt_id/allocations` applies
+its advance and `POST /:receipt_id/allocation-corrections` appends an admin release.
+`GET /:receipt_id` is the finance evidence read; `GET /:receipt_id/balance` is the
+operator-safe result. Customer-filtered receipt and bill selectors require an
+explicit owned customer. Receiving-account creation/revisions are admin-only;
+account reads provide method/name choices. List routes accept UUID `cursor` and
+string `limit` (default 50, maximum 100); cursors only advance the ID keyset and
+never change current owner/customer filters. Browser adapters retain one immutable
+scope-bound command/key through uncertainty and check response money conservation,
+intent matching and public evidence projection.
+
+Each receipt command publishes its own durable aggregate event atomically, including
+an unallocated advance without a Booking. Missing publication fails deferred commit.
+Only source IDs enter event payloads; actual occurrence remains on the receipt,
+while event time describes server recording/application. These events enable no new
+automatic consumer. See [the event contract](event-contract.md).
+
+Real PostgreSQL service tests cover the 20000 cash + 30000 UPI split against a 50000
+bill, 100000 receipt applied to 40000 + 50000 debt with 10000 advance, competing last
+funds, administrator release, exact retries, uncertain commit and atomic rollback.
+Authenticated HTTP recording and bounded selector tests verify persistence,
+conservation, pagination, privacy and cross-franchise customer denial. Allocation
+history retains original application IDs, later releases and remaining releasable
+amounts; receiver selection lists only currently eligible own-franchise staff.
+
+### Production receipt workspace
+
+`/business/money-receipts` uses real scoped APIs for explicit customer selection,
+active receiving destinations, actual occurrence time, receiver/initial custodian,
+private reference and optional per-bill amounts. Recording 100000 paise and applying
+40000 + 50000 leaves 10000 advance. Split tender is two actual receipts, each with
+its own method/account and allocations. Applying an existing advance creates no
+second inflow. Admin corrections select an original history entry and append a
+paired release; the source amount is unchanged and no cash refund is implied.
+Finance-only detail displays private evidence, while the operator sees minimum
+balances/history. Read-only and delivery/dispatcher roles gain no receipt access.
+
+The booking counter saves commercial evidence first and links its owned customer,
+Booking and planned payment context to this workspace. It cannot record a legacy
+collection without account/source evidence. Package detail keeps its read-only
+ledger and links new recording to the same workspace. Historical server collection
+APIs remain compatible; old evidence is not rewritten. A new UI collection uses the
+receipt service. Controls and workspace links lock during pending/uncertain saves;
+retry retains the exact body, scope and key. A scope change invalidates old private
+lifetime. Forced reload during uncertainty requires source reconciliation before a
+replacement; no private request or bank reference is stored in browser storage.
+
+Five controlled-transport React cases verify exact lost-response reconciliation,
+100000/40000/50000/10000 accounting and owned counter context, advance application,
+admin historical release/finance-only evidence and a named-other account revision.
+Separate real PostgreSQL tests establish persistence and transaction authority. Finance-only accountant/org-admin users open a known owned receipt reference through R32, then receive its R31 customer bills/balances/history. They do not call the R05 customer directory or fetch phone/address data. Operators and local admins retain their explicitly permitted scoped customer selection.
+Browser inspection of the production component with controlled fictional transport
+verified keyboard customer selection, uncertain-save locking and exact retry, advance
+application, finance-only receipt entry and admin account/correction forms. At a
+375-pixel viewport the form has no horizontal overflow; bill labels expose their
+distinguishing ID suffix and retain the complete accessible ID. Invalid money,
+amounts above bill debt and applications above received funds disable confirmation
+with associated errors. This browser evidence does not establish backend persistence;
+real PostgreSQL tests separately verify that authority, including legacy collection
+races, adjusted debt, cross-customer refusal and refund/correction interaction.
+Broader final acceptance, CI and review remain required before #138 completion.
+
+### Receipt rollout and rollback
+
+The server defaults `MONEY_RECEIPTS_ENABLED=false`. Apply the forward schema and
+least-privilege runtime grants, deploy compatible readers, then explicitly enable
+new receipt/account writes. Demo rejects enablement. Disabled mode refuses new
+commands with `MONEY_RECEIPTS_DISABLED` after membership checks, while allowing
+saved reads and an exact completed-command replay. It does not turn an uncertain
+old save into a new receipt. Rollback disables new writes and retains financial
+history; repair applied schema only with a forward migration. Production deployment
+and grant changes require separate authorization under the active Goal.

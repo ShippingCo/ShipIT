@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import React,{useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type { BulkParcelAction,BulkParcelItem,LotDto,LotMembershipResult,OperatorRole,ParcelTransitionDto,PaymentProjection } from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
@@ -10,7 +11,7 @@ import { createParcelBulkController } from '../data-access/parcel-bulk-controlle
 import { BulkParcelPanel } from '../parcels/BulkParcelPanel';
 import { useCommand,usePagedResource,useResource } from './hooks';
 import { CommandNotice,Empty,Failure,Loading } from './AsyncState';
-import { formatKolkata,formatMoney,rupeesToPaise } from './format';
+import { formatKolkata,formatMoney } from './format';
 import { TextField,SelectField } from '../components/m3/Input';
 import { Msym } from '../components/m3/Icon';
 
@@ -82,7 +83,7 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
   {has(roles,'dispatcher')&&(parcel.status==='in_transit'||parcel.status==='failed_attempt')&&<DeliveryStartForm parcel={parcel} source={deliverySource} retry={parcel.status==='failed_attempt'} confirmed={refresh}/>}
   <section><h3>Timeline</h3>{timeline.phase==='loading'?<p role="status">Loading timeline…</p>:timeline.phase==='error'?<button className="btn btn-outlined" onClick={timeline.reload}>Retry timeline</button>:<ol className="ops-list">{timeline.value!.items.map(item=><li className="ops-row" key={item.event_id}><span className="ops-row-main"><b>{item.label}</b><span className="ops-note">{formatKolkata(item.occurred_at)} · sequence {item.sequence}</span></span></li>)}</ol>}</section>
   <section><h3>Lot membership</h3>{membership.phase==='loading'||memberLot.phase==='loading'?<p role="status">Loading membership…</p>:membership.phase==='error'||memberLot.phase==='error'?<button className="btn btn-outlined" onClick={()=>{membership.reload();memberLot.reload();}}>Retry membership</button>:!membership.value?<p role="status" className="ops-success">Server confirms this parcel is ungrouped.</p>:<div className="ops-row"><span className="ops-row-main"><b>{memberLot.value?.code??membership.value.lot_id}</b><span>{memberLot.value?.name}</span><span className="ops-note">Membership {membership.value.id}</span></span><button className="btn btn-outlined" disabled={remove.phase==='pending'} onClick={()=>{void removeMembership();}}>Remove from lot</button></div>}<CommandNotice phase={remove.phase} code={remove.error?.code} retry={remove.canRetry?()=>{void remove.retry().then(()=>{membership.reload();memberLot.reload();refreshed();}).catch(()=>{});}:undefined}/></section>
-  <PaymentPanel roles={roles} source={paymentSource} resource={payment}/>
+  <PaymentPanel roles={roles} resource={payment}/>
  </section>;
 }
 
@@ -116,11 +117,10 @@ function ParcelActionForm({parcel,roles,command,source,confirmed}:{parcel:Parcel
  return <section><h3>Guarded lifecycle action</h3><form className="ops-form" onSubmit={event=>{void submit(event);}}><div className="ops-form-grid"><TextField label="Evidence reference (UUID)" value={evidence} onChange={setEvidence} required/><TextField label={`${referenceLabel} (UUID)`} value={reference} onChange={setReference} required/>{kind==='rto'&&<TextField label="Return plan reference (UUID)" value={extra} onChange={setExtra} required/>}{kind==='failed_attempt'&&<SelectField label="Failure reason" value={reason} onChange={value=>setReason(value as typeof reason)} options={['customer_unavailable','customer_requests_pickup','address_issue','recipient_refusal','payment_not_collected','operational_issue'].map(value=>({value,label:value.replaceAll('_',' ')}))}/>}</div><button className="btn btn-filled" disabled={command.phase==='pending'||!uuid.test(evidence)||!uuid.test(reference)||(kind==='rto'&&!uuid.test(extra))}>{kind.replaceAll('_',' ')}</button></form><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/></section>;
 }
 
-function PaymentPanel({roles,source,resource}:{roles:readonly OperatorRole[];source:ReturnType<typeof payments>|null;resource:ReturnType<typeof useResource<PaymentProjection|null>>}){
- const [amount,setAmount]=useState(''),[method,setMethod]=useState('cash');const collect=useCommand(value=>source!.execute(value));
- if(!has(roles,'org_admin','franchise_admin','accountant'))return <section><h3>To-Pay ledger</h3><p className="ops-note">Financial projection is not available to this role.</p></section>;
- if(resource.phase==='loading')return <p role="status">Loading payment ledger…</p>;if(resource.phase==='error')return <button className="btn btn-outlined" onClick={resource.reload}>Retry payment ledger</button>;
- const payment=resource.value;if(!payment)return null;const paise=rupeesToPaise(amount);
- async function submit(event:React.FormEvent){event.preventDefault();if(!source||!paise)return;try{await collect.run(source.collect({amount_paise:paise,currency:'INR',context:'to_pay',method:method as 'cash'|'upi',collection_reference:crypto.randomUUID()}));resource.reload();setAmount('');}catch{/* safe notice */}}
- return <section><h3>To-Pay ledger</h3><div className="ops-facts"><Fact label="Gross" value={formatMoney(payment.gross_paise)}/><Fact label="Collected" value={formatMoney(payment.collected_paise)}/><Fact label="Outstanding" value={formatMoney(payment.outstanding_paise)}/><Fact label="Ledger state" value={payment.state.replaceAll('_',' ')}/></div>{has(roles,'franchise_admin')&&payment.outstanding_paise>0&&<form className="ops-form" onSubmit={event=>{void submit(event);}}><p><b>Record actual money received.</b> This app does not move funds or infer collection from delivery.</p><div className="ops-form-grid"><TextField label="Amount received (₹)" value={amount} onChange={setAmount} inputMode="decimal" helper={`Outstanding ${formatMoney(payment.outstanding_paise)}`}/><SelectField label="Method" value={method} onChange={setMethod} options={[{value:'cash',label:'Cash'},{value:'upi',label:'UPI (manually recorded)'}]}/></div><button className="btn btn-filled" disabled={!paise||paise>payment.outstanding_paise||collect.phase==='pending'}>Confirm money received</button></form>}<CommandNotice phase={collect.phase} code={collect.error?.code} retry={collect.canRetry?()=>{void collect.retry().then(()=>resource.reload()).catch(()=>{});}:undefined}/></section>;
+function PaymentPanel({roles,resource}:{roles:readonly OperatorRole[];resource:ReturnType<typeof useResource<PaymentProjection|null>>}){
+ const link=has(roles,'operator','franchise_admin','org_admin','accountant')?<Link className="btn btn-outlined" to="/business/money-receipts">Open money receipts</Link>:null;
+ if(!has(roles,'org_admin','franchise_admin','accountant'))return <section><h3>To-Pay ledger</h3><p className="ops-note">Financial projection is not available to this role. Receipt recording uses its scoped customer bill selector.</p>{link}</section>;
+ if(resource.phase==='loading')return <section><p role="status">Loading payment ledger…</p>{link}</section>;if(resource.phase==='error')return <section><button className="btn btn-outlined" onClick={resource.reload}>Retry payment ledger</button>{link}</section>;
+ const payment=resource.value;if(!payment)return null;
+ return <section><h3>To-Pay ledger</h3><div className="ops-facts"><Fact label="Gross" value={formatMoney(payment.gross_paise)}/><Fact label="Applied funds" value={formatMoney(payment.collected_paise)}/><Fact label="Outstanding" value={formatMoney(payment.outstanding_paise)}/><Fact label="Ledger state" value={payment.state.replaceAll('_',' ')}/></div><p>Record new money and apply existing advances through named receipt evidence. Legacy single-booking records retain their original amounts and unknown source details.</p>{link}</section>;
 }

@@ -34,6 +34,9 @@ import type { AttachmentDependencies } from './modules/attachments/types.ts';
 import { createReceiptService } from './modules/receipts/service.ts';
 import { registerReceipts } from './modules/receipts/routes.ts';
 import { createPaymentService } from './modules/payments/service.ts';
+import {createMoneyReceiptService} from './modules/payments/receipt-service.ts';
+import {createReceivingAccountService} from './modules/payments/account-service.ts';
+import {registerMoneyReceipts} from './modules/payments/routes.ts';
 import { createReportService } from './modules/reports/service.ts';
 import { createAgeingService } from './modules/reports/ageing-service.ts';
 import { createSalesService } from './modules/reports/sales-service.ts';
@@ -148,6 +151,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
+      registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
       registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');

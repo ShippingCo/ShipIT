@@ -3,6 +3,8 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  MONEY_RECEIPTS_DISABLED:[409,'New receipt and receiving-account writes are disabled. Saved evidence and exact completed-command replay remain available.'],
+  ALLOCATION_CONFLICT:[409,'Allocation exceeds available receipt funds or outstanding debt. Refresh the saved evidence.'],
   FINANCIAL_CONFLICT:[409,'Correction or refund exceeds the available balance. Refresh the saved evidence.'],
   STATEMENT_EMPTY:[409,'No unissued shipments in this customer period. Existing statements remain available.'],
   REPORT_LIMIT_EXCEEDED:[413,'Report is too large. Choose a shorter date range.'],
@@ -29,6 +31,7 @@ const errors = {
   ATTACHMENT_UPLOAD_FAILED: [503, 'Upload could not be confirmed. Retry the same upload.'],
   ATTACHMENT_SCAN_FAILED: [503, 'File remains quarantined. Retry validation later.'],
   ATTACHMENT_REJECTED: [422, 'File did not pass safety validation.'],
+  PAYMENT_ALLOCATION_CORRECTION_REQUIRED:[409,'This payment applies a recorded receipt. Correct its linked allocation.'],
   PAYMENT_OVER_COLLECTION:[409,'Collection exceeds the outstanding amount.'],
   PAYMENT_REVERSAL_EXCEEDED:[409,'Reversal exceeds the unreversed collection amount.'],
   PAYMENT_REFERENCE_CONFLICT:[409,'Collection reference was already used for a different intent.'],
@@ -77,7 +80,7 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
-export type ValidationField = 'amount_paise'|'currency'|'context'|'method'|'collection_reference'|'receipt_id'|'payment_id'| 'event_id'|'kind'|'manifest_version'|'effective_at'|'base_eta_at'|'total_delay_minutes'| 'origin'|'destination'|'mode'|'carrier_code'|'scheduled_departure_at'| 'lot_id'|'target_lot_id'|'membership_id'|'expected_target_version'|'state'| 'action'|'items'| 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | 'failure_subreason_code' | 'override_reason_code' | 'evidence_ref' | 'location_ref' | 'manifest_id' | 'route_id' | 'attempt_id' | 'return_plan_ref' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
+export type ValidationField = 'methods'|'other_method_name'|'active'|'account_id'|'expected_account_version'|'receiver_id'|'custodian_id'|'occurred_at'|'external_reference'|'allocations'|'expected_payment_version'|'allocation_id'|'amount_paise'|'currency'|'context'|'method'|'collection_reference'|'receipt_id'|'payment_id'| 'event_id'|'kind'|'manifest_version'|'effective_at'|'base_eta_at'|'total_delay_minutes'| 'origin'|'destination'|'mode'|'carrier_code'|'scheduled_departure_at'| 'lot_id'|'target_lot_id'|'membership_id'|'expected_target_version'|'state'| 'action'|'items'| 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | 'failure_subreason_code' | 'override_reason_code' | 'evidence_ref' | 'location_ref' | 'manifest_id' | 'route_id' | 'attempt_id' | 'return_plan_ref' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
 export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
 export class FieldValidationError extends HttpError {
   readonly details: { field: ValidationField; code: ValidationCode }[];

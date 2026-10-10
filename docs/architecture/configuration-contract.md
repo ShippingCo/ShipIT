@@ -181,3 +181,9 @@ HTTP, JSON, rate and shutdown limits are documented in the [API operating guide]
 ## Attachment storage/scanner composition (#31)
 
 `STORAGE_CREDENTIAL_REF` is required in staging/production; developer may omit it to disable attachment routes. `local:storage` and `LOCAL_STORAGE_CREDENTIAL` are developer-only. A managed resolver returns strict JSON with `storage` (`endpoint`, `region`, `bucket`, `accessKeyId`, `secretAccessKey`), `scanner` (`host`, `port`, `tls`) and a high-entropy base64url `signingKey` (at least 32 random bytes). No values are public configuration. Hosted storage uses canonical HTTPS origins and buckets prefixed `shipit-<environment>-`; hosted scanners require verified TLS. Plain HTTP/scanner sockets are permitted only on explicit developer loopback. Unknown fields fail. Missing/malformed hosted settings stop startup; there is no fake adapter fallback. #68 supplies workload identity, managed resolver, bucket encryption/private policy, scanner TLS proxy/signatures and health monitoring.
+
+Issue #138 adds server-only `MONEY_RECEIPTS_ENABLED` (strict `true`/`false`, default
+false; true rejected in demo). It enables new receipt/account writes only after
+schema and scoped runtime grants are ready. Disabling it preserves saved reads and
+exact completed-command replay under current membership; it creates no new money
+effect and does not turn the browser into authority.

@@ -797,3 +797,52 @@ export async function withMessagingReportScope<T>(database:DatabasePool,token:st
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
   });
 }
+
+/** #138 named receiving choices; configuration requires an explicit local admin grant. */
+export async function withReceivingAccountScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:'receiving_accounts.read'|'receiving_accounts.configure',correlationId:string,
+ work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+ const reading=action==='receiving_accounts.read';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);
+   if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const permitted=reading?(orgAdmin||local.some(m=>['franchise_admin','operator','accountant'].includes(m.role))):local.some(m=>m.role==='franchise_admin');
+   if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
+   if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   return await work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+  } catch(error) {
+   if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;
+  }
+ });
+}
+
+/** #138: operator record/apply, explicit admin corrections, purpose-bound minimum selection. */
+export async function withMoneyReceiptScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../payments/receipt-types.ts').MoneyReceiptAction,correlationId:string,
+ work:(scopes:import('../payments/receipt-types.ts').MoneyReceiptScopes)=>Promise<T>):Promise<T> {
+ const reading=action==='money_receipts.read'||action==='money_receipts.select';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   const allowed=action==='money_receipts.read'?(orgAdmin||admin||accountant):action==='money_receipts.select'?(orgAdmin||admin||accountant||operator):action==='money_receipts.correct'?admin:(admin||operator);
+   if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
+   return await work({command:issueTenantAccess(tx,{...context,action}),payment:issueTenantAccess(tx,{...context,action:reading?'payments.read':action==='money_receipts.correct'?'payments.reverse':'payments.collect'}),
+    audit:reading?null:issueTenantAccess(tx,{...context,action:'payments.audit'}),events:reading?null:issueTenantAccess(tx,{...context,action:'payments.events'})});
+  } catch(error) {if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
+ });
+}

@@ -2,7 +2,7 @@ import { assertTenantAccess, scopedQuery, type TenantAccess } from '../security/
 import { HttpError } from '../../plugins/errors.ts';
 import { instant } from '../pricing/types.ts';
 import { balance } from './rules.ts';
-import type { LedgerRow, ObligationRow, PaymentProjection, PaymentEntryDto, PaymentResult, PaymentCollectionInput, PaymentReversalInput } from './types.ts';
+import type { LedgerRow, ObligationRow, PaymentProjection, PaymentEntryDto, PaymentResult, LinkedPaymentCollectionInput, PaymentReversalInput } from './types.ts';
 function context(scope:TenantAccess) {return assertTenantAccess(scope,['payments.collect','payments.reverse','payments.read','payments.receipt.read']);}
 export async function active(scope:TenantAccess) {
   const c=assertTenantAccess(scope,['payments.collect','payments.reverse']);
@@ -35,6 +35,10 @@ export async function entry(scope:TenantAccess,o:ObligationRow,id:string) {
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.booking_id=$1 AND e.obligation_id=$2 AND e.id=$3`,[o.booking_id,o.id,id])).rows[0];
   if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
+export async function linkedAllocation(scope:TenantAccess,o:ObligationRow,id:string) {
+  return (await scopedQuery<{id:string}>(scope,['payments.reverse'],`SELECT id FROM shipit.money_receipt_allocations
+    WHERE {{franchise:organization_id:franchise_id}} AND booking_id=$1 AND obligation_id=$2 AND payment_entry_id=$3 AND kind='allocation'`,[o.booking_id,o.id,id])).rows[0];
+}
 export async function reversed(scope:TenantAccess,o:ObligationRow,id:string) {
   const row=(await scopedQuery<{amount:string}>(scope,['payments.reverse'],`SELECT COALESCE(sum(amount_paise::numeric),0)::text AS amount
     FROM shipit.payment_entries WHERE {{franchise:organization_id:franchise_id}} AND booking_id=$1 AND obligation_id=$2 AND reversal_of=$3`,[o.booking_id,o.id,id])).rows[0]!;
@@ -51,14 +55,23 @@ export async function reference(scope:TenantAccess,reference:string) {
     FROM shipit.payment_entries e JOIN shipit.payment_commands c ON c.organization_id=e.organization_id AND c.franchise_id=e.franchise_id AND c.id=e.command_id
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.collection_reference=$1 AND e.kind='collection'`,[reference])).rows[0];
 }
-export async function reserve(scope:TenantAccess,id:string,o:ObligationRow,key:string,fingerprint:string,input:PaymentCollectionInput|PaymentReversalInput,target:string|null,time:string) {
+export async function reserve(scope:TenantAccess,id:string,o:ObligationRow,key:string,fingerprint:string,input:LinkedPaymentCollectionInput|PaymentReversalInput,target:string|null,time:string,receiptCommand:string|null=null) {
   const c=assertTenantAccess(scope,['payments.collect','payments.reverse']);
+    // Keep the historical writer SQL compatible with the pre-138 schema. Only a
+    // linked receipt command needs the new provenance column; its default is NULL.
+    if(receiptCommand===null){
+    await scopedQuery(scope,[c.action],`INSERT INTO shipit.payment_commands
+        (id,organization_id,franchise_id,principal_id,booking_id,obligation_id,operation_id,key_digest,fingerprint,input,reversal_of,correlation_id,occurred_at)
+        SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12 WHERE {{franchise:$13:$2}}`,
+        [id,c.permittedFranchiseIds[0],c.actor.id,o.booking_id,o.id,'api.v1.'+c.action,key,fingerprint,input,target,c.correlationId,time,c.organizationId]);
+      return;
+    }
   await scopedQuery(scope,[c.action],`INSERT INTO shipit.payment_commands
-    (id,organization_id,franchise_id,principal_id,booking_id,obligation_id,operation_id,key_digest,fingerprint,input,reversal_of,correlation_id,occurred_at)
-    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12 WHERE {{franchise:$13:$2}}`,
-    [id,c.permittedFranchiseIds[0],c.actor.id,o.booking_id,o.id,'api.v1.'+c.action,key,fingerprint,input,target,c.correlationId,time,c.organizationId]);
+    (id,organization_id,franchise_id,principal_id,booking_id,obligation_id,operation_id,key_digest,fingerprint,input,reversal_of,correlation_id,occurred_at,receipt_command_id)
+    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$14 WHERE {{franchise:$13:$2}}`,
+    [id,c.permittedFranchiseIds[0],c.actor.id,o.booking_id,o.id,'api.v1.'+c.action,key,fingerprint,input,target,c.correlationId,time,c.organizationId,receiptCommand]);
 }
-export async function append(scope:TenantAccess,command:string,id:string,o:ObligationRow,sequence:number,input:PaymentCollectionInput|PaymentReversalInput,target:LedgerRow|null,time:string) {
+export async function append(scope:TenantAccess,command:string,id:string,o:ObligationRow,sequence:number,input:LinkedPaymentCollectionInput|PaymentReversalInput,target:LedgerRow|null,time:string) {
   const c=assertTenantAccess(scope,['payments.collect','payments.reverse']);
   const collection='method' in input?input:null;
   const inserted=await scopedQuery(scope,[c.action],`INSERT INTO shipit.payment_entries

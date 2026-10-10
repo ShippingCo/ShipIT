@@ -2,7 +2,7 @@ import type { PaymentCollectionInput, PaymentEntryDto } from '@shippingco/shared
 import { object, uuid, integer, instant, choice, nullable, optional, protocol } from './dto';
 import type { ScopedApi } from './scoped-api';
 export const paymentEntry: (value: unknown) => PaymentEntryDto = object({ id: uuid, kind: choice('collection', 'reversal'), amount_paise: integer(1), currency: choice('INR'),
-  context: choice('paid_counter', 'to_pay'), method: choice('cash', 'upi'), collection_reference: nullable(uuid), reversal_of: nullable(uuid),
+  context: choice('paid_counter', 'to_pay'), method: choice('cash', 'upi', 'card', 'bank_transfer', 'other'), collection_reference: nullable(uuid), reversal_of: nullable(uuid),
   reason_code: nullable(choice('duplicate_recording', 'incorrect_amount', 'collection_not_received')), version: integer(1), occurred_at: instant });
 const projection = object({ booking_id: uuid, obligation_id: uuid, currency: choice('INR'), gross_paise: integer(), collected_paise: integer(),
   outstanding_paise: integer(), state: choice('uncollected', 'partially_collected', 'settled'), version: integer(),refundable_credit_paise:optional(integer()) });

@@ -3,7 +3,7 @@ import { object, uuid, text, integer, instant, choice, array, protocol } from '.
 import { service, taxEvidence } from './commercial';
 import { paymentEntry } from './payments';
 import type { ScopedApi } from './scoped-api';
-const base = object({ id: uuid, number: text, schema_version: choice(1), version: integer(1), booking_id: uuid, issued_at: instant, currency: choice('INR'),
+const base = object({ id: uuid, number: text, schema_version: choice(1,2), version: integer(1), booking_id: uuid, issued_at: instant, currency: choice('INR'),
   issuer: object({ organization_name: text, franchise_name: text, franchise_code: text, supplier_gstin: text, supplier_state: text }),
   booking: object({ customer_name: text, confirmed_at: instant, service, parcels: array(object({ docket: text, weight_grams: integer(1) }), 50) }),
 });
@@ -13,14 +13,17 @@ export function receiptDto(value: unknown): ReceiptDto {
   if (kind === 'booking_charge') {
     const rest = object({ charges: object({ freight_paise: integer(), packing_paise: integer(), tax: object(taxEvidence) }),
       booking_receipt_id: v => v === null ? null : protocol(), correction_of: v => v === null ? null : protocol() })(value);
-    if (b.version !== 1) return protocol(); return { ...b, ...rest, kind, version: 1 };
+    if (b.version !== 1 || b.schema_version !== 1) return protocol(); return { ...b, ...rest, kind, schema_version:1, version: 1 };
   }
   const rest = object({ entry: paymentEntry, booking_receipt_id: uuid })(value);
+  const allocationSource=b.schema_version===2?object({allocation_source:object({receipt_id:uuid,allocation_id:uuid,kind:choice('allocation','release'),receipt_occurred_at:instant,receipt_recorded_at:instant})})(value).allocation_source:undefined;
+  if(allocationSource&&allocationSource.kind!==(rest.entry.kind==='collection'?'allocation':'release'))return protocol();
+  const source=allocationSource?{allocation_source:allocationSource}:{};
   if (kind === 'collection_acknowledgement' && rest.entry.kind === 'collection') {
     object({ correction_of: v => v === null ? null : protocol() })(value);
-    return { ...b, ...rest, kind, correction_of: null, entry: { ...rest.entry, kind: 'collection' } };
+    return { ...b, ...rest, ...source, kind, correction_of: null, entry: { ...rest.entry, kind: 'collection' } };
   }
-  if (kind === 'collection_reversal' && rest.entry.kind === 'reversal') return { ...b, ...rest, kind,
+  if (kind === 'collection_reversal' && rest.entry.kind === 'reversal') return { ...b, ...rest, ...source, kind,
     correction_of: object({ correction_of: uuid })(value).correction_of, entry: { ...rest.entry, kind: 'reversal' } };
   return protocol();
 }

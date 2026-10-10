@@ -106,6 +106,10 @@ All consumers are **planned**, and references do not imply their services alread
 | route.arrived | routes | route / route | Authorized typed route arrival and physical observation committed; affected membership validated | 1 | manifest_id, affected_set_ref | messaging, reports | Safe route arrival update intents and projection | No recipient delivery/proof or sibling custody grant | M/P | Reference-only; current scoped resolution |
 | payment.settled | payments | payment_obligation / payment | Authoritative append-only collection evidence satisfies the Booking obligation under approved finance policy; no delivery inferred | 1 | booking_id, settlement_ref | reports, receipts | Scoped finance projection/receipt reconciliation under owning policy | No parcel delivery, automatic receipt reissue or invented refund/partial-allocation policy | P/R | Reference-only; current scoped resolution |
 
+| money_receipt.recorded | payments | money_receipt / receipt | One manually recorded inflow with pinned receiving account, receiver, initial custody and actual occurrence time; optional allocations committed atomically | 1 | receipt_id |  | Durable scoped source fact; no automatic consumer enabled by #138 | No bank verification, second inflow, automatic refund, delivery change or private reference export | H/P | Reference-only; current scoped resolution |
+| money_receipt.allocated | payments | money_receipt / receipt | Existing receipt funds applied to same-customer obligations without another inflow | 1 | receipt_id |  | Durable scoped source fact; no automatic consumer enabled by #138 | No bank verification, second inflow, automatic refund, delivery change or private reference export | H/P | Reference-only; current scoped resolution |
+| money_receipt.allocation_released | payments | money_receipt / receipt | Authorized admin release appended with a linked payment reversal; original source and application retained | 1 | receipt_id |  | Durable scoped source fact; no automatic consumer enabled by #138 | No bank verification, second inflow, automatic refund, delivery change or private reference export | H/P | Reference-only; current scoped resolution |
+
 `payment.settled` is the already-justified settlement fact owned by Payments, versioning
 the Booking's payment obligation, not the physical Parcel. Its emission is activated by #29 under [ADR 0019](../adr/0019-payment-ledger.md). Mere obligation creation,
 partial delivery, provider receipt or a To-Pay flag cannot emit it. Receipts consumes only
@@ -296,3 +300,16 @@ transition: `delivery.attempt_started` and `delivery.retry_started` payloads are
 method enters the envelope. T06 deliberately has no redundant `parcel.delivered` event.
 Existing T07 `delivery.attempt_failed` remains the Parcel command fact and now requires the
 attempt/challenge to be atomically closed.
+
+### Receipt aggregate source (#138)
+
+Receipt command versions produce one immutable event each, including an advance with
+no Booking. The parent command ID is its event ID; publication, source, applications,
+linked payment commands and audit either commit together or roll back. A deferred
+constraint rejects a command with missing or mismatched publication. Event time is
+the server recording time of that command; actual receipt occurrence remains on the
+immutable source and is not replaced by a later application date. Only the receipt
+reference crosses the durable stream. Finance reads resolve private evidence under
+current grants; the operator balance response excludes it. These events enable no
+new automatic consumer or provider call. Existing payment.settled leaf contracts
+remain unchanged and express satisfied debt, independently of when money arrived.

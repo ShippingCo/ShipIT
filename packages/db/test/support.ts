@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { appendFile, readFile } from 'node:fs/promises';
 import type { TestContext } from 'node:test';
@@ -5,6 +6,14 @@ import pg, { type QueryResultRow } from 'pg';
 import { validateTestDatabaseConfig, type TestDatabasePolicy } from '@shippingco/testkit';
 import { createDatabaseConfig, createPool, pgOptions, runMigrations, type DatabasePool } from '../src/index.ts';
 import { closeClient } from '../src/shutdown.ts';
+
+/** Compare pre-138 event facts while independently rejecting fabricated receipt provenance. */
+export function preReceiptEvent(row:Record<string,unknown>):Record<string,unknown> {
+  assert.equal(row.money_receipt_id??null,null,'Historical event gained receipt provenance');
+  assert.equal(row.money_receipt_command_id??null,null,'Historical event gained receipt command provenance');
+  const historical={...row};delete historical.money_receipt_id;delete historical.money_receipt_command_id;
+  return historical;
+}
 
 // This policy is trusted code, never derived from a submitted connection URL.
 const policy: TestDatabasePolicy = {
@@ -156,6 +165,8 @@ export interface DisposableDatabase {
   prepareLots(): Promise<void>;
   prepareRoutes(): Promise<void>;
   preparePayments(): Promise<void>;
+  prepareReceivingAccounts(): Promise<void>;
+  prepareMoneyReceipts(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
@@ -343,6 +354,32 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
     },
+    async prepareMoneyReceipts() {
+      await handle.preparePayments();await handle.prepareReceivingAccounts();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.money_receipts,shipit.money_receipt_commands,shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT(id,organization_id,franchise_id,receipt_id,principal_id,operation_id,version,key_digest,fingerprint,input,correlation_id)
+          ON shipit.money_receipt_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT(id,organization_id,franchise_id,command_id,customer_id,account_id,account_revision_id,amount_paise,currency,method,receiver_id,initial_custodian_id,occurred_at,external_reference)
+          ON shipit.money_receipts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT ON shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(state,result,committed_at) ON shipit.money_receipt_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(id) ON shipit.money_receipts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.money_receipt_result(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareReceivingAccounts() {
+      await handle.prepareMemberships();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.receiving_accounts,shipit.receiving_account_revisions TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT(id,organization_id,franchise_id) ON shipit.receiving_accounts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT INSERT(id,organization_id,franchise_id,account_id,version,name,methods,other_method_name,active,actor_id,correlation_id,key_digest,fingerprint)
+          ON shipit.receiving_account_revisions TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.valid_receiving_methods(text[]) TO ${identifier(resource.runtimeRole)}`);
+      } finally {await owner.close();pools.delete(owner);}
+    },
     async preparePayments() {
       await handle.prepareBookings();
       const owner=handle.ownerPool();
@@ -350,6 +387,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.payment_commands,shipit.payment_entries TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.financial_changes') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT,INSERT ON shipit.financial_changes,shipit.account_statements,shipit.account_statement_lines,shipit.financial_access_events TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.money_receipt_allocations') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT ON shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,entry_id,http_status,result,committed_at,retain_until) ON shipit.payment_commands TO ${identifier(resource.runtimeRole)}`);
         // PostgreSQL requires a column UPDATE privilege for FOR UPDATE. The immutable
         // obligation trigger still rejects every actual UPDATE, including id=id.

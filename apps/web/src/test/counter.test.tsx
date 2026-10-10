@@ -87,11 +87,11 @@ describe('production counter API composition',()=>{
   await start();fill('Customer name','Synthetic deliberate edit');fill('Find repeat customer','Syn');fireEvent.click(screen.getByRole('button',{name:'Search customers'}));fireEvent.click(await screen.findByRole('button',{name:/Synthetic Sender ·/}));
   expect(screen.getByLabelText('Customer name')).toHaveValue('Synthetic deliberate edit');expect(screen.getByLabelText('Customer phone')).toHaveValue(f.customer.phone_display);expect(screen.getByRole('button',{name:'Save customer changes'})).toBeEnabled();
  });
- it('Paid Now uses server obligation and stable reference; failed payment never undoes saved booking',async()=>{
-  await entered(true);let fail=true;override=c=>c.path.includes('/payments')&&c.options.method==='POST'&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;save();await screen.findByRole('button',{name:'Retry payment'});await waitFor(()=>expect(screen.getByRole('button',{name:'Retry payment'})).toBeEnabled());
-  expect(screen.getByRole('heading',{name:'Booking saved'})).toBeVisible();expect(screen.getByText('Payment: not confirmed')).toBeVisible();const request=posts(`/api/v1/bookings/${f.bookingId}/payments`)[0];expect(body(request)).toMatchObject({amount_paise:13400,currency:'INR',context:'paid_counter',method:'upi'});
-  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry payment'}));await screen.findByText('Payment: recorded');await screen.findByText('Outstanding ₹0.00');
-  const retry=posts(`/api/v1/bookings/${f.bookingId}/payments`)[1];expect([request.options.body,key(request)]).toEqual([retry.options.body,key(retry)]);expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ it('Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write',async()=>{
+  await entered(true);save();await screen.findByRole('heading',{name:'Booking saved'});
+  const link=screen.getByRole('link',{name:'Record received money / apply advance'}),href=new URL(link.getAttribute('href')!,'https://synthetic.example.test');expect(href.hash.startsWith('#/business/money-receipts?')).toBe(true);const url=new URL(href.hash.slice(1),'https://synthetic.example.test');
+  expect(url.pathname).toBe('/business/money-receipts');expect(url.searchParams.get('customer_id')).toBe(f.customer.id);expect(url.searchParams.get('booking_id')).toBe(f.bookingId);expect(url.searchParams.get('context')).toBe('paid_counter');
+  expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(screen.queryByRole('button',{name:'Retry payment'})).not.toBeInTheDocument();
  });
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;

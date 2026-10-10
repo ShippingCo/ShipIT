@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
+import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
+import {paymentFault} from '../payment-support.ts';
+const input={name:'Synthetic front counter',methods:['cash'],other_method_name:null,active:true,expected_version:0};
+await test('receiving account configuration replays exact historical results, checks current grants and isolates selectors',{timeout:30000},async t=>{
+ const s=await auditSetup(t);await s.db.prepareReceivingAccounts();
+ const admin=await s.grant('franchise_admin',[A]),operator=await s.grant('operator',[A]),accountant=await s.grant('accountant',[A]),readonly=await s.grant('read_only',[A]);
+ const service=createReceivingAccountService(s.pool),key=randomUUID(),q={organization_id:org,franchise_id:A};
+ const configure=(body:unknown=input,id:string|null=null,requestKey=key,token=admin.token,query=q)=>service.configure(token,id,query,requestKey,['idempotency-key',requestKey],body,randomUUID());
+ const created=await configure();assert.equal(created.version,1);assert.deepEqual(created.methods,['cash']);
+ const updated=await configure({...input,name:'Synthetic closed counter',active:false,expected_version:1},created.id,randomUUID());assert.equal(updated.version,2);assert.equal(updated.active,false);
+ assert.deepEqual(await configure(),created);assert.deepEqual(await service.read(admin.token,created.id,q,randomUUID()),updated);
+ await assert.rejects(configure({...input,name:'Different intent'}),{code:'IDEMPOTENCY_CONFLICT'});
+ await assert.rejects(configure({...input,expected_version:1},created.id,randomUUID()),{code:'VERSION_CONFLICT'});
+ for(const actor of [s.admin,operator,accountant,readonly])await assert.rejects(configure(input,null,randomUUID(),actor.token),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [s.admin,operator,accountant])assert.deepEqual(await service.read(actor.token,created.id,q,randomUUID()),updated);
+ await assert.rejects(service.read(readonly.token,created.id,q,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.read(admin.token,created.id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ await assert.rejects(service.read(s.admin.token,created.id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ await assert.rejects(service.read(admin.token,created.id,{organization_id:otherOrg,franchise_id:C},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ await s.memberships.revokeMembership(s.admin.token,admin.member.id,{expected_version:admin.member.version});
+ await assert.rejects(configure(),{code:'RESOURCE_NOT_FOUND'});
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.receiving_accounts')).rows[0]!.n,1);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.receiving_account_revisions')).rows[0]!.n,2);
+ assert.ok(!/key_digest|fingerprint|actor_id|correlation_id|token|phone|address/.test(JSON.stringify(updated)));
+});
+await test('receiving account failure rolls back identity, revision and audit; uncertain commit retries original intent',{timeout:30000},async t=>{
+ const s=await auditSetup(t);await s.db.prepareReceivingAccounts();const admin=await s.grant('franchise_admin',[A]),q={organization_id:org,franchise_id:A};
+ const counts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.receiving_accounts) accounts,
+ (SELECT count(*)::int FROM shipit.receiving_account_revisions) revisions,(SELECT count(*)::int FROM shipit.receiving_account_audit_events) audits`)).rows[0];
+ const key=randomUUID(),invoke=(service:ReturnType<typeof createReceivingAccountService>)=>service.configure(admin.token,null,q,key,['idempotency-key',key],input,randomUUID());
+ await assert.rejects(invoke(createReceivingAccountService(paymentFault(s.pool,'INSERT INTO shipit.receiving_account_revisions','before'))),{code:'TEMPORARILY_UNAVAILABLE'});
+ assert.deepEqual(await counts(),{accounts:0,revisions:0,audits:0});
+ await assert.rejects(invoke(createReceivingAccountService(paymentFault(s.pool,'COMMIT','after'))),{code:'TEMPORARILY_UNAVAILABLE'});
+ assert.deepEqual(await counts(),{accounts:1,revisions:1,audits:1});const result=await invoke(createReceivingAccountService(s.pool));assert.equal(result.version,1);
+ assert.deepEqual(await invoke(createReceivingAccountService(s.pool)),result);assert.deepEqual(await counts(),{accounts:1,revisions:1,audits:1});
+ await assert.rejects(s.pool.query('UPDATE shipit.receiving_account_revisions SET name=name'));
+ await assert.rejects(s.pool.query('INSERT INTO shipit.receiving_account_audit_events(id) VALUES($1)',[randomUUID()]));
+});

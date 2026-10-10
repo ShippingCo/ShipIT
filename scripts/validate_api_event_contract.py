@@ -91,7 +91,14 @@ def validate_catalog(f):
     text = (DOCS / 'event-contract.md').read_text()
     lifecycle = (DOCS / 'parcel-lifecycle.md').read_text()
     catalog = {e['event_type']: e for e in f['events']}
-    check(len(catalog) == len(f['events']) == 17, '17 distinct initial facts')
+    receipt_facts = {'money_receipt.recorded', 'money_receipt.allocated', 'money_receipt.allocation_released'}
+    check(len(catalog) == len(f['events']) == 20 and receipt_facts <= catalog.keys(),
+          '17 initial facts plus exactly 3 approved receipt facts')
+    for name in receipt_facts:
+        e = catalog[name]
+        check(e['producer'] == 'payments' and e['aggregate'] == 'money_receipt' and
+              e['transitions'] == ['receipt'] and e['payload'] == {'receipt_id': 'reference'} and
+              e['consumers'] == [] and e['ordering'] == 'H/P', 'Closed receipt source contract')
     expected = ['parcel.booked', 'parcel.checked_in', 'parcel.dispatched', 'parcel.in_transit',
                 'delivery.attempt_started', 'delivery.completed', 'delivery.attempt_failed',
                 'delivery.retry_started', 'parcel.held_at_office', 'delivery.collected',
@@ -101,9 +108,9 @@ def validate_catalog(f):
         row = next(line for line in lifecycle.splitlines() if line.startswith(f'| {transition} |'))
         check(name in row and transition in catalog[name]['transitions'], transition)
     for e in catalog.values():
-        check(re.fullmatch(r'[a-z]+\.[a-z]+(?:_[a-z]+)*', e['event_type']), 'Fact name')
+        check(e['event_type'] in receipt_facts or re.fullmatch(r'[a-z]+\.[a-z]+(?:_[a-z]+)*', e['event_type']), 'Fact name')
         check(e['schema_version'] == 1 and type(e['schema_version']) is int, 'Schema version')
-        check(e['producer'] and e['consumers'] and e['committed_state'] and e['payload'], 'Catalog ownership')
+        check(e['producer'] and (e['consumers'] or e['event_type'] in receipt_facts) and e['committed_state'] and e['payload'], 'Catalog ownership')
         check(e['consumer_effect'] and e['forbidden_authority'] and e['privacy'], 'Consumer limits')
         check(set(e['ordering'].split('/')) <= set('MPHR'), 'Ordering policy')
         row = next(line for line in text.splitlines() if line.startswith('| '+e['event_type']+' |'))
@@ -381,7 +388,7 @@ def validate():
     rejected(lambda: send(False,'unknown'))
     check(send(True,'unknown') == 'uncertain_reconcile', 'Never blind resend on timeout')
     check(tuple(map(len,[model.business,model.audit,model.records,model.outbox])) == counts, 'Provider failure preserves facts')
-    print('API/event contract synthetic validation PASS: 17 catalog facts, T01–T13 mapping, envelope/privacy negative controls, canonical intent/scope/replay, 10 authorization cases, cursor compatibility, 24-hour fake-clock boundary/longer retention, 8 consumer streams, rollback/commit/timeout/crash and provider ambiguity. No production behavior tested.')
+    print('API/event contract synthetic validation PASS: 20 catalog facts (17 initial + 3 receipt), T01–T13 mapping, envelope/privacy negative controls, canonical intent/scope/replay, 10 authorization cases, cursor compatibility, 24-hour fake-clock boundary/longer retention, 8 consumer streams, rollback/commit/timeout/crash and provider ambiguity. No production behavior tested.')
 
 
 if __name__ == '__main__':
