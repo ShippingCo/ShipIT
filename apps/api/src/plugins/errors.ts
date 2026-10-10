@@ -3,6 +3,9 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  FINANCIAL_REFUND_REFERENCE_CONFLICT:[409,'This refund transfer reference already has recorded evidence. Reconcile that record before submitting another refund.'],
+  FINANCIAL_WORKFLOW_DISABLED:[409,'New financial requests and decisions are disabled. Saved command outcomes remain available.'],
+  FINANCIAL_APPROVAL_REQUIRED:[409,'The current financial policy requires a valid approval. Refresh the request and policy.'],
   MONEY_RECEIPTS_DISABLED:[409,'New receipt and receiving-account writes are disabled. Saved evidence and exact completed-command replay remain available.'],
   ALLOCATION_CONFLICT:[409,'Allocation exceeds available receipt funds or outstanding debt. Refresh the saved evidence.'],
   FINANCIAL_CONFLICT:[409,'Correction or refund exceeds the available balance. Refresh the saved evidence.'],

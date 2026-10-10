@@ -27,7 +27,7 @@ await test('e-way migration upgrades populated attachment-era main, rolls back f
   // A released schema is repaired by a NEW migration; the installed file is never edited.
   const repair=await mkdtemp(join(tmpdir(),'shipit-eway-forward-'));t.after(()=>rm(repair,{recursive:true,force:true}));
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),repair,{recursive:true});
-  await writeFile(join(repair,'1792515600001-synthetic-forward-repair.cjs'),"exports.up=p=>p.sql('CREATE INDEX synthetic_eway_repair ON shipit.eway_records(organization_id,franchise_id,version)');exports.down=()=>{throw new Error('Forward only');};");
+  await writeFile(join(repair,'1792602000001-synthetic-forward-repair.cjs'),"exports.up=p=>p.sql('CREATE INDEX synthetic_eway_repair ON shipit.eway_records(organization_id,franchise_id,version)');exports.down=()=>{throw new Error('Forward only');};");
   assert.deepEqual(await db.migrate({dir:repair}),{applied:1});assert.deepEqual(await snapshot(),before);
 });
 

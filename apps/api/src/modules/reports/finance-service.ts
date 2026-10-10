@@ -7,6 +7,10 @@ import { reportFilter } from './rules.ts';
 import { captureSales } from './sales-repository.ts';
 import { salesTotals } from './sales-rules.ts';
 import * as finance from './finance-repository.ts';
+import {previewFinancialChange} from './finance-rules.ts';
+import {createFinancialAuditService} from './financial-audit-service.ts';
+import {createFinancialWorkflowService} from './finance-workflow-service.ts';
+import {policy as financialPolicy} from './finance-workflow-repository.ts';
 const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
 function reference(v:unknown):string {if(typeof v!=='string'||!/^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/.test(v))throw new FieldValidationError('$','INVALID_FORMAT');return v;}
 export function changeInput(value:unknown) {
@@ -15,26 +19,20 @@ export function changeInput(value:unknown) {
  return {booking_id:uuid(b.booking_id,'booking_id'),expected_version:integer(b.expected_version,'expected_version'),payment_version:integer(b.payment_version,'expected_version'),kind:String(b.kind),reason:String(b.reason),approval_ref:reference(b.approval_ref),
  pre_tax:integer(b.pre_tax??0,'$'),taxable:integer(b.taxable??0,'$'),cgst:integer(b.cgst??0,'$'),sgst:integer(b.sgst??0,'$'),igst:integer(b.igst??0,'$'),rounding:integer(b.rounding??0,'$',-99,99),refund:integer(b.refund??0,'$'),returned_to_ref:b.kind==='refund'?reference(b.returned_to_ref):null};
 }
-export function createFinanceService(database:DatabasePool) {
+export function createFinanceService(database:DatabasePool,workflowWritesEnabled=false) {
  return {
+  ...createFinancialWorkflowService(database,workflowWritesEnabled),
+  ...createFinancialAuditService(database),
   async change(session:string,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string) {
    const q=selection(query),input=changeInput(body),key=hash('change:'+idempotencyKey(keyInput,headers)),fingerprint=hash(JSON.stringify(input));
    return withFinancialScope(database,session,q.organizationId,q.franchiseId,'finance.adjust',correlation,async scope=>{
     await finance.lock(scope);const existing=await finance.replay(scope,key,false);
     if(existing){if(existing.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');return {id:existing.id};}
+    if(await financialPolicy(scope))throw new HttpError('FINANCIAL_APPROVAL_REQUIRED');
     const current=await finance.current(scope,input.booking_id,true);
     if(current.version!==input.expected_version||current.payment_version!==input.payment_version)throw new HttpError('VERSION_CONFLICT');
     if(current.version>=100)throw new HttpError('FINANCIAL_CONFLICT');
-    const gross=BigInt(current.gross),net=BigInt(current.collections)-BigInt(current.refunds);
-    if(input.kind==='refund'){
-     if(input.refund<=0||BigInt(input.refund)>net-gross||input.pre_tax+input.taxable+input.cgst+input.sgst+input.igst+Math.abs(input.rounding)!==0)throw new HttpError('FINANCIAL_CONFLICT');
-    }else{
-     const reduction=BigInt(input.pre_tax)+BigInt(input.cgst)+BigInt(input.sgst)+BigInt(input.igst)+BigInt(input.rounding);
-     if(input.refund!==0||reduction<=0n||reduction>gross||input.taxable>input.pre_tax||(input.kind==='cancellation'&&reduction!==gross))throw new HttpError('FINANCIAL_CONFLICT');
-     for(const field of ['pre_tax','taxable','cgst','sgst','igst'] as const)if(BigInt(input[field])>BigInt(current[field]))throw new HttpError('FINANCIAL_CONFLICT');
-     if(input.kind==='cancellation'&&(['pre_tax','taxable','cgst','sgst','igst','rounding'] as const).some(k=>BigInt(input[k])!==BigInt(current[k])))throw new HttpError('FINANCIAL_CONFLICT');
-     if(BigInt(input.pre_tax-input.taxable)>BigInt(current.pre_tax)-BigInt(current.taxable)||Math.abs(Number(current.rounding)-input.rounding)>99)throw new HttpError('FINANCIAL_CONFLICT');
-    }
+    previewFinancialChange(current,input);
     const id=randomUUID();await finance.append(scope,id,key,fingerprint,input);return {id};
    });
   },

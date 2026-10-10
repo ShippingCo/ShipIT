@@ -1260,6 +1260,66 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/financial-audit.test.ts",
+        "name": "preserves exact uncertain capture intent and stops replay after scope changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-audit.test.ts",
+        "name": "projects only safe fields and rejects foreign scope, false control counts and broken source lineage",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-audit.test.ts",
+        "name": "binds saved detail and export to the requested snapshot and source row",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-audit.test.ts",
+        "name": "retains capture uncertainty and uses the saved snapshot for focused detail and matching CSV",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-audit.test.ts",
+        "name": "refuses a capture response for filters other than the retained command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "validates component reductions and retains an uncertain request across blocked navigation and same-key retry",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "reviews server preview and reloads the original request after decision and application IDs",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "records private actual refund evidence only for the approved refund and current source account revision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "keeps org admins and accountants read-only and treats disabled writes as controlled conflicts",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "amends only the creator pending request with freshly loaded versions and retained source document links",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "saves the explicit approved policy with exact uncertain replay without replacing the open financial request",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/financial-workflow.test.tsx",
+        "name": "rejects foreign booking context and another creators own request instead of painting their fields",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/lint-regressions.test.tsx",
         "name": "can change between empty and populated series without changing hook order",
         "cases": null
@@ -1823,6 +1883,26 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/FinancialAudit.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/Financials.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/Financials.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Financials.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Financials.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
         "file": "apps/web/src/operations/MoneyReceipts.tsx",
         "kind": "window.addEventListener"
       },
@@ -2375,7 +2455,8 @@
         63,
         64,
         65,
-        67
+        67,
+        139
       ],
       "rules": [
         "docs/architecture/domain-contract.md",
@@ -3162,6 +3243,102 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/financial-audit.test.ts",
+      "name": "preserves exact uncertain capture intent and stops replay after scope changes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-audit.test.ts",
+      "name": "projects only safe fields and rejects foreign scope, false control counts and broken source lineage",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-audit.test.ts",
+      "name": "binds saved detail and export to the requested snapshot and source row",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-audit.test.ts",
+      "name": "retains capture uncertainty and uses the saved snapshot for focused detail and matching CSV",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-audit.test.ts",
+      "name": "refuses a capture response for filters other than the retained command",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "validates component reductions and retains an uncertain request across blocked navigation and same-key retry",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "reviews server preview and reloads the original request after decision and application IDs",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "records private actual refund evidence only for the approved refund and current source account revision",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "keeps org admins and accountants read-only and treats disabled writes as controlled conflicts",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "amends only the creator pending request with freshly loaded versions and retained source document links",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "saves the explicit approved policy with exact uncertain replay without replacing the open financial request",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
+    },
+    {
+      "file": "apps/web/src/test/financial-workflow.test.tsx",
+      "name": "rejects foreign booking context and another creators own request instead of painting their fields",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
     },
     {
       "file": "apps/web/src/test/lint-regressions.test.tsx",

@@ -620,9 +620,9 @@ export async function withPaymentScope<T>(database:DatabasePool,sessionToken:str
   });
 }
 
-/** Financial evidence commands: explicit local franchise-admin authority, never report-read inheritance. */
+/** Financial requests allow local operators; decisions/effects require local admins, never report-read inheritance. */
 export async function withFinancialScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
- action:'finance.adjust'|'finance.statement',correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T>{
+ action:'finance.policy.configure'|'finance.request'|'finance.approve'|'finance.apply'|'finance.adjust'|'finance.statement',correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T>{
  return membershipTransaction(database,async tx=>{
   const session=await authenticated(tx,token);
   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -630,7 +630,7 @@ export async function withFinancialScope<T>(database:DatabasePool,token:string,o
   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
   const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
   if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
-  if(!memberships.some(m=>m.role==='franchise_admin'&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
+  if(!memberships.some(m=>(m.role==='franchise_admin'||(action==='finance.request'&&m.role==='operator'))&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
   if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
   return work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
  });

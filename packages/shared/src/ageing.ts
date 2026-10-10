@@ -9,7 +9,7 @@ export interface AgeingFilter {
 export const ageingMeasures = ['original_gross','reductions','gross','collections','reversals','refunds','net_collections','outstanding','refundable_credit'] as const;
 export type AgeingAmounts = Record<typeof ageingMeasures[number],string>;
 export interface AgeingEntry { id:string; kind:'collection'|'reversal'; amount:string; version:number; occurred_at:string; reversal_of:string|null }
-export interface AgeingChange { id:string; kind:'discount'|'cancellation'|'correction'|'refund'; version:number; reduction:string; refund:string; occurred_at:string }
+export interface AgeingChange { id:string; kind:'discount'|'cancellation'|'correction'|'refund'|'refund_correction'; version:number; reduction:string; refund:string; occurred_at:string }
 export interface AgeingRow extends AgeingAmounts {
   id:string; customer_id:string; confirmed_at:string; booking_version:number; obligation_id:string;
   payment_version:number; financial_version:number; due_at:string|null;

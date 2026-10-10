@@ -162,3 +162,7 @@ export type { ReceiptDto, BookingReceiptDto, CollectionReceiptDto, ReversalRecei
 export * from './attachment.ts';
 export * from './effectiveness.ts';
 export * from './money-receipt.ts';
+
+export * from './financial-audit.ts';
+
+export * from './financial-workflow.ts';

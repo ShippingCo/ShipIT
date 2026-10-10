@@ -287,3 +287,248 @@ arithmetic and existing runtime regression checks cannot ratify proposed policy 
 qualify the future finance APIs. Required business and independent review remain open.
 
 Product-owner ratification: [issue #137 decision evidence](https://github.com/ShippingCo/ShipIT/issues/137#issuecomment-6094308527), originating human reply on 10 October 2026: D137-1–D137-5 approved as proposed. This approves the policy definitions and permission extensions for their owning implementations. No independent GitHub approving review is claimed. Accountant/software and statement-format qualification stay assigned to #150/#146. Existing runtime grants are unchanged by this documentation commit. Production build also passed locally.
+
+### Reviewed request and actual refund application (#139)
+
+The request (`finance.request`, W53), review (`finance.approve`, W54) and apply
+(`finance.apply`, W55) capabilities are separate. Operators and local franchise
+admins may request; only an active local franchise admin may review or apply.
+Accountant, org-admin and read-only membership do not grant these write actions.
+The API rechecks current membership, ownership, policy and financial/payment versions
+on each call, including retries. Completed command identities retain their original
+outcomes when new writes are disabled; conflicting reuse fails.
+
+Policy revisions have no seeded threshold or self-approval default. Approval requires
+the request's explicit current enabled policy; where that policy requires separation,
+the requester cannot approve. Changing policy or source invalidates an unapplied
+approval. A new legacy direct-change command cannot bypass an enabled request policy.
+New workflow writes remain disabled by the service/server default; completing the
+remaining workflow, rollout configuration and acceptance gates precedes activation.
+
+Applying a reviewed reduction appends `financial_changes` and an immutable applied
+decision together. An enabled-policy effect without its applied decision fails at
+commit. Cancellation removes reviewed charge components and leaves actual collected
+money as refundable credit; it neither creates a transfer nor undoes delivery proof.
+A refund consumes remaining credit without adding/reversing a collection entry.
+
+Actual manual refunds additionally append private `financial_refund_evidence` linked
+to the effect/request, actor and current owned source account revision. Evidence
+records occurrence time, beneficiary reference and transfer/acknowledgment reference;
+it is recorded evidence, not bank/provider verification. Source account, method and
+transfer reference identify one recorded outflow within its franchise. Future times,
+stale/inactive accounts, foreign IDs and duplicate transfer references are rejected.
+The deferred completeness guard rejects refunds lacking this private evidence.
+Original booked tax snapshots and payment entries remain intact. Cash custody and
+unallocated advance refunds retain their own #145/#142 contracts.
+
+Workflow audit history projects the immutable request, decision, policy and refund
+source records in the same committed state. Safe facts contain actor, server time,
+reason, source reference, correlation and version; no transfer/beneficiary reference,
+account name, key digest or fingerprint appears in the audit projection. Financial
+accountant audit grants cover owned request/change facts, not policy configuration or
+unrelated administrative history. Owner/admin scope remains explicit.
+
+Request drill-through reconstructs its original components and net collections using
+the request's financial version and payment-ledger sequence. The before/proposed
+balances therefore remain tied to that observation after later refunds or collections.
+Request and decision actor/time lineage is explicit. Detail reads enforce current
+financial-read membership/scope and record financial access; they expose no private
+refund evidence. The live request status is distinct from the original amount preview.
+
+Correction requests may include at most ten canonical source-document links. Issued
+receipt links must resolve within the same organization, franchise and booking;
+external invoice/credit-note references are explicitly labelled unverified. Links
+append in the original request transaction and cannot be added later, updated or
+deleted. The issued receipt snapshot is never rewritten or represented as a qualified
+statutory credit note. Accountant/tax document qualification remains with #150.
+
+The financial request DELETE endpoint always denies deletion. For a verified owned
+request and a permitted financial reader, the service commits a minimal immutable
+denial fact before returning forbidden, so throwing the response does not roll back
+the only evidence. Unknown/foreign IDs do not create owned denial facts. Other
+permission failures retain the existing safe security-audit hook. Denial recording
+works when new financial writes are disabled and grants no charge/payment authority.
+
+A requester can amend their own pending proposal by appending a replacement request;
+this never updates the original rows or financial entries. The replacement links back
+to the same owned booking/request, refreshes source and policy versions, and starts
+pending with fresh immutable document links. The original gains a superseded decision
+in that same transaction. Both database guards and a deferred completeness check enforce
+this pair. Only one concurrent amendment can succeed. Reviewed/applied/superseded
+requests cannot be edited through this path. Exact completed amendment replay returns
+the same replacement even while new writes are disabled; different content conflicts.
+
+A limited `GET /api/v1/finance/my-requests/:id` read rechecks `finance.request`
+authority and returns only the current actor's original proposal, status/version and
+immutable document links. Other actors' and foreign requests return not found. It
+records booking financial access, works while new writes are disabled, and exposes
+no booking balance, customer directory, other actors' decisions or private transfer
+evidence. The financial-reader detail remains separately authorized.
+
+An erroneous refund record is corrected through an approved `refund_correction`
+request with reason `incorrect_refund_recording` and `refund_correction_of` linking
+the original refund in the same owned booking. Its positive amount cannot exceed
+the original refund's uncorrected remainder or current net recorded refunds. The
+appended effect reduces recorded refunds and restores eligible held credit; it
+records no new transfer or receiving-account evidence. Charge components, original
+refund/evidence, tax snapshots, issued documents and payment entries remain intact.
+A later actual refund requires its own approval and private outflow evidence.
+Payment, sales, ageing and customer payment projections include the signed effect;
+request previews retain their original financial/payment prefixes and saved report
+snapshots retain their captured totals. These records do not establish bank or
+provider verification. Accountant document qualification remains with #150.
+
+The scoped financial audit capture combines financial requests and their recorded
+approval/amendment/source-document lineage, earlier manual adjustments, original
+quote overrides, direct erroneous-collection reversals, receipt allocation releases
+and committed deletion denials. Each row labels its source and monetary basis;
+manual legacy approval references remain unqualified, quote tolerances retain their
+own policy, and a collection correction is never labelled an actual customer refund.
+Private receiving-account names, bank/beneficiary/transfer references, customer
+contact details and command fingerprints are excluded from this audit projection.
+
+`POST /api/v1/finance/audit` captures a single franchise under current R11 authority,
+with recorded-date range (inclusive Asia/Kolkata calendar days, at most 31), kind,
+status, actor and booking filters. The ordered rows, nested lineage and counts are
+captured in one SELECT. This applies PostgreSQL's statement snapshot guarantee
+([PostgreSQL 18 transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html));
+separate live detail queries would risk different committed states. ShippingCo adapts
+that guarantee by retaining the existing private report snapshot for subsequent
+100-row pages, row detail and export, rather than adding a reporting worker/store.
+Storage and synchronous capture costs remain bounded by the existing 5,000-row,
+8-MiB, 20-active-snapshots-per-actor/franchise and 24-hour limits. Control counts are
+audit facts; before/proposed amounts across different bases are not additive totals.
+
+`GET /api/v1/finance/audit/:id`, `/rows/:row` and `/export` read the same captured
+rows. Every request rechecks current membership/franchise authority and snapshot
+ownership/expiry; export separately enforces E03. Capture/read/export access is
+recorded. Saved queue statuses are labelled captured; approval/apply commands still
+revalidate live policy and source versions. Exact capture retries return the same
+snapshot, while changed filters conflict and expired retries require a new capture.
+CSV quotes/escapes every cell and neutralizes spreadsheet formula prefixes. It
+contains safe source IDs and labelled amounts, not private transfer evidence.
+
+Once a franchise has an explicit financial policy history, disabling that policy
+retains approval governance: it cannot reopen direct legacy adjustment writes.
+Completed legacy command replay remains available, while new changes still require
+a matching approved request under an enabled current policy. The service and the
+database's deferred effect-completeness guard enforce this boundary independently.
+Booked price overrides retain an explicit owned quote/booking link for booking
+filters; an unfiltered quote gets a booking ID only when exactly one linked booking
+exists, so reused proposals do not imply an arbitrarily chosen transaction.
+
+
+`GET /api/v1/finance/bookings/:id/proposal` gives an authorized proposal creator
+only the selected booking's current component amounts, financial/payment versions,
+financial position and same-booking refund correction targets. The franchise and
+booking locks use the write path's order so the amounts and versions agree. The
+read works during disabled rollout and records financial access. It exposes no
+customer directory, other actors' decisions or private beneficiary/transfer evidence.
+A submitted proposal still rechecks source versions and current policy server-side.
+
+The production `/business/financials` workspace uses these scoped APIs. Operators
+can submit or amend their own pending proposals and read their own saved status.
+Franchise administrators can review the server preview from the original source
+versions, approve/reject and apply an approved change. Actual refund application
+requires an active source-account revision, permitted return method, actual Kolkata
+time and private beneficiary/transfer references; erroneous refund corrections
+record no new transfer. Organization administrators and accountants receive the
+financial reader/audit view without proposal or decision controls. Source receipt
+links retain issued-source qualification; external invoice/credit-note references
+remain explicitly unverified. Amendments retain editable source links and require
+fresh source versions and approval.
+
+Pending or uncertain commands lock replacement actions, workspace navigation and
+franchise selection. Reconciliation reuses the retained path, body and idempotency
+key. Decision/application response IDs never replace the selected request ID.
+Scope invalidation removes private state and prevents replay under another scope.
+Audit captures retain their filter identity, counts, rows, focused captured detail
+and matching CSV. Captured statuses are distinct from a subsequently opened live
+request. These controls do not activate the server feature flag. Policy configuration
+uses the separately approved baseline below.
+
+
+On 10 October 2026, the product owner authorized the recommended #139 baseline:
+no preset monetary threshold and a different administrator approving a submitted
+request. Every financial request still needs an administrator decision; this does
+not relax quote-price tolerances or infer financial self-approval from sole-admin
+cash-close approval. The current configuration API accepts an explicit null discount
+review threshold and `allow_self_approval: false`; other values are rejected.
+
+W56 `finance.policy.configure` allows only an active selected-franchise administrator
+to read the latest policy and append an immutable revision through
+`GET /api/v1/finance/policy` and `POST /api/v1/finance/policy/revisions`. Configuration
+requires the current revision number (zero when absent), an explicit enabled state,
+`discount_review_threshold_paise: null`, `allow_self_approval: false`, and an
+idempotency key. Exact completed retries return their original revision after later
+policy changes; different content conflicts. Policy preparation works while workflow
+writes are disabled. Changing a policy invalidates requests against older policy
+revisions: their creators can amend pending requests; an already approved request
+needs a new proposal with fresh source versions. No revision changes an existing
+financial effect or grants the requester approval authority.
+
+Rollout requires forward migration 45 and the existing managed runtime role's
+SELECT/INSERT access to `financial_policy_revisions`,
+`financial_adjustment_requests`, `financial_request_decisions`,
+`financial_document_links`, `financial_refund_evidence` and
+`financial_deletion_denials`, in addition to the existing payment/report/receiving
+account grants. Do not grant UPDATE/DELETE on these immutable evidence tables.
+Configure the franchise policy and verify an operator proposal and different-admin
+decision in development/staging before enabling `FINANCIAL_WORKFLOW_ENABLED=true`.
+The flag defaults to false, accepts only literal true/false, and cannot be enabled
+in demo mode. A disabled flag prevents new request, amendment, decision and effect
+commands while retaining reads, policy preparation and exact completed-command
+replay. A disabled franchise policy prevents new approvals/applications and never
+reopens legacy adjustments. Deployment and production policy writes remain separate
+authorized actions; no environment flag or production data was changed by this work.
+
+
+Acceptance verification for #139 uses the real financial services and PostgreSQL
+constraints in `apps/api/test/database/financial-workflow.test.ts`. In addition to
+paid/unpaid cancellations, partial refunds, immutable correction lineage, scoped
+audit capture and policy governance, two distinct approved ₹300 refund requests
+against ₹500 credit run concurrently: only one applies and the stale request
+conflicts. Injected failures before refund-evidence insertion, applied-decision
+insertion and COMMIT leave no partial effect. A lost response after COMMIT is
+reconciled through a fresh pool with the retained intent; no second financial
+effect, applied decision or private refund evidence appears. Collection entries
+remain unchanged.
+
+Browser acceptance used production Financials components and scoped adapters with
+explicitly fictional controlled transport. Keyboard submission, excess-charge
+validation, uncertain-response navigation locking/exact retry, approval/application,
+frozen audit versus live status, and a 375-pixel layout were checked. The datetime
+control did not retain an automated fill, so successful browser refund entry and
+browser future-time rejection are not qualified by that run; the real database
+cases verify refund application and server-authoritative future-time rejection.
+The controlled CSV download verifies browser download binding, while real database
+audit/export cases verify the production captured schema and privacy.
+
+Fully corrected refund sources remain immutable history but are excluded from new
+correction choices. The selected-booking read still works after a correction is
+exhausted; another attempt against that original source is rejected server-side.
+No new asynchronous consumer subscribes to #139 financial adjustments: readers
+capture committed source tables, and safe audit facts derive from those immutable
+rows in the same transaction. Existing payment/outbox producers remain responsible
+for collection events. This issue initiates no provider transfer or notification.
+
+Reproduce #139 verification with the pinned toolchain and an owned disposable
+PostgreSQL database configured as described in [testing](testing-contract.md):
+
+```sh
+pnpm --filter @shippingco/api test test/integration/financial-changes.test.ts
+pnpm --filter @shippingco/web test src/test/financial-workflow.test.tsx src/test/financial-audit.test.ts
+pnpm test:db
+pnpm quality
+pnpm build
+```
+
+The database runner includes the financial workflow service, constraint and populated
+upgrade cases. UI tests use fictional controlled responses; they do not qualify a
+bank, accountant format or external transfer. In development/staging, configure the
+approved policy, load the booking's source amounts as an operator, submit a charge
+reduction, then open the reference as a different franchise admin and approve/apply.
+Capture the audit before applying and compare its retained status with live evidence.
+For actual refunds, cancel a paid fictional charge, approve a partial refund, then
+record its source-account revision, actual Kolkata time and private return references.
+Disable new writes to stop entry while preserving source reads and exact replay.
