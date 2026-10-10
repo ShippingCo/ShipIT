@@ -117,7 +117,7 @@ await test('#52 populated migration preserves historical turns as unmeasured and
  await db.adminQuery(`INSERT INTO shipit.customer_conversation_turns(inbox_id,organization_id,franchise_id,installation_id,intent,outcome,correlation_id)
   SELECT id,organization_id,franchise_id,installation_id,'tracking','answered',correlation_id FROM shipit.whatsapp_inbox WHERE id=$1`,[id]);
  const before=(await db.adminQuery('SELECT inbox_id,intent,outcome,recorded_at FROM shipit.customer_conversation_turns')).rows;
- db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:9});assert.deepEqual(await db.migrate(),{applied:0});
+ db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:10});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual((await db.adminQuery('SELECT inbox_id,intent,outcome,recorded_at FROM shipit.customer_conversation_turns')).rows,before);
  assert.deepEqual((await db.adminQuery('SELECT metric_category,metric_reason,metric_latency_ms,metric_locale FROM shipit.customer_conversation_turns')).rows[0],{metric_category:'unmeasured',metric_reason:'none',metric_latency_ms:null,metric_locale:null});
 });

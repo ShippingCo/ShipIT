@@ -19,6 +19,7 @@ export interface RuntimeConfig {
   readonly whatsappConfigRef?: string;
   readonly deliveryProofSecretRef?: string;
   readonly moneyReceiptWritesEnabled?: boolean;
+  readonly financialWorkflowWritesEnabled?: boolean;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
@@ -111,6 +112,9 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   if(deliveryProofSecretRef!==undefined&&(!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(deliveryProofSecretRef)||deliveryProofSecretRef.includes('://')))issue('DELIVERY_PROOF_SECRET_REF','INVALID_FORMAT');
   if(deliveryProofSecretRef?.startsWith('local:')&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('DELIVERY_PROOF_SECRET_REF','INCONSISTENT');
   if(env.LOCAL_DELIVERY_PROOF_JSON!==undefined&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('LOCAL_DELIVERY_PROOF_JSON','INCONSISTENT');
+  const financialWorkflowWritesEnabled=env.FINANCIAL_WORKFLOW_ENABLED==='true';
+  if(env.FINANCIAL_WORKFLOW_ENABLED!==undefined&&!['true','false'].includes(env.FINANCIAL_WORKFLOW_ENABLED))issue('FINANCIAL_WORKFLOW_ENABLED','INVALID_FORMAT');
+  if(financialWorkflowWritesEnabled&&environment==='demo')issue('FINANCIAL_WORKFLOW_ENABLED','INCONSISTENT');
   const moneyReceiptWritesEnabled=env.MONEY_RECEIPTS_ENABLED==='true';
   if(env.MONEY_RECEIPTS_ENABLED!==undefined&&!['true','false'].includes(env.MONEY_RECEIPTS_ENABLED))issue('MONEY_RECEIPTS_ENABLED','INVALID_FORMAT');
   if(moneyReceiptWritesEnabled&&environment==='demo')issue('MONEY_RECEIPTS_ENABLED','INCONSISTENT');
@@ -132,6 +136,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     ...(deliveryProofSecretRef ? {deliveryProofSecretRef} : {}),
     // A closure prevents accidental config serialization from exposing the credential.
     moneyReceiptWritesEnabled,
+    financialWorkflowWritesEnabled,
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
   });
 }

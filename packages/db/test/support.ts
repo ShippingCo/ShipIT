@@ -387,6 +387,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.payment_commands,shipit.payment_entries TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.financial_changes') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT,INSERT ON shipit.financial_changes,shipit.account_statements,shipit.account_statement_lines,shipit.financial_access_events TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.financial_policy_revisions') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT,INSERT ON shipit.financial_policy_revisions TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.money_receipt_allocations') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT ON shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,entry_id,http_status,result,committed_at,retain_until) ON shipit.payment_commands TO ${identifier(resource.runtimeRole)}`);
@@ -402,6 +404,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.report_snapshots,shipit.report_access_events TO ${identifier(resource.runtimeRole)}`);
+      await owner.query(`GRANT SELECT ON shipit.pricing_audit_events TO ${identifier(resource.runtimeRole)}`);
+      if((await owner.query("SELECT to_regclass('shipit.financial_adjustment_requests') AS relation")).rows[0]?.relation)await owner.query(`GRANT SELECT ON shipit.financial_adjustment_requests,shipit.financial_request_decisions,shipit.financial_document_links,shipit.financial_deletion_denials TO ${identifier(resource.runtimeRole)}`);
           // #64 reads immutable dispatch provenance; its producer trigger owns INSERT.
           await owner.query(`GRANT SELECT ON shipit.parcel_dispatch_manifests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(metadata,rows) ON shipit.report_snapshots TO ${identifier(resource.runtimeRole)}`);

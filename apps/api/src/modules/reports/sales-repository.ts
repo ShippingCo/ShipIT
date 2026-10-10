@@ -35,7 +35,7 @@ export async function captureSales(scope:TenantAccess,filter:SalesFilter,custome
  LEFT JOIN shipit.issued_receipts receipt ON receipt.organization_id=b.organization_id AND receipt.franchise_id=b.franchise_id AND receipt.booking_id=b.id AND receipt.kind='booking_charge'
  CROSS JOIN LATERAL (SELECT COALESCE(sum(CASE WHEN kind='collection' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) collected,COALESCE(max(sequence),0) version
  FROM shipit.payment_entries e WHERE e.organization_id=b.organization_id AND e.franchise_id=b.franchise_id AND e.booking_id=b.id) p
- CROSS JOIN LATERAL (SELECT COALESCE(sum(refund),0) refunds,COALESCE(jsonb_agg(jsonb_build_object('id',c.id,'kind',c.kind,'occurred_at',to_char(c.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'reason',c.reason,'approval_ref',c.approval_ref,
+ CROSS JOIN LATERAL (SELECT COALESCE(sum(CASE WHEN kind='refund_correction' THEN -refund::numeric ELSE refund::numeric END),0) refunds,COALESCE(jsonb_agg(jsonb_build_object('id',c.id,'kind',c.kind,'occurred_at',to_char(c.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'reason',c.reason,'approval_ref',c.approval_ref,
  'refund',c.refund::text,'pre_tax',c.pre_tax::text,'taxable',c.taxable::text,'cgst',c.cgst::text,'sgst',c.sgst::text,'igst',c.igst::text,'rounding',c.rounding::text) ORDER BY c.version),'[]'::jsonb) corrections
  FROM shipit.financial_changes c WHERE c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.booking_id=b.id) a
  WHERE {{franchise:b.organization_id:b.franchise_id}} AND b.confirmed_at >= $1 AND b.confirmed_at < $2 AND ($4::uuid IS NULL OR b.customer_id=$4)

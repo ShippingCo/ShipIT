@@ -4,7 +4,7 @@ export const salesMeasures = ['pre_tax','taxable','non_taxable','cgst','sgst','i
 export type SalesAmounts = Record<typeof salesMeasures[number], string>;
 export interface SalesFilter extends ReportFilter { rate: string | null; franchise_ids: string[] }
 export interface SalesEvidence {
-  id: string; kind: 'discount'|'cancellation'|'correction'|'refund'; occurred_at: string;
+  id: string; kind: 'discount'|'cancellation'|'correction'|'refund'|'refund_correction'; occurred_at: string;
   refund: string; taxable: string; reason: string; approval_ref: string; pre_tax: string; cgst: string; sgst: string; igst: string; rounding: string;
 }
 export interface SalesRow {

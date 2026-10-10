@@ -179,6 +179,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W50 | Apply existing unallocated receipt funds (`money_receipts.allocate`) | - | F | F | - | - | - | - |
 | W51 | Release a linked allocation with recorded reason (`money_receipts.correct`); no refund | - | F | - | - | - | - | - |
 | W52 | Configure a named receiving account/drawer revision (`receiving_accounts.configure`) | - | F | - | - | - | - | - |
+| W53 | Request/amend a reviewed post-booking financial change and read only own proposals (`finance.request`); no charge/payment effect | - | F | F | - | - | - | - |
+| W54 | Approve/reject an owned financial request (`finance.approve`), under current explicit policy | - | F | - | - | - | - | - |
+| W55 | Apply an approved request and record actual refund evidence (`finance.apply`); server computes capacity | - | F | - | - | - | - | - |
+| W56 | Read/configure an immutable franchise financial policy revision (`finance.policy.configure`); current approved baseline forbids self-approval and presets no monetary threshold | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement

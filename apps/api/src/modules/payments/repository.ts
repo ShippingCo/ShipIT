@@ -24,7 +24,7 @@ export async function projection(scope:TenantAccess,o:ObligationRow):Promise<Pay
     COALESCE(sum(CASE WHEN kind='collection' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0)::text AS collected,
     COALESCE(max(sequence),0)::integer AS version FROM shipit.payment_entries
     WHERE {{franchise:organization_id:franchise_id}} AND booking_id=$1 AND obligation_id=$2`,[o.booking_id,o.id])).rows[0]!;
-  const changes=(await scopedQuery<{reduction:string;refund:string}>(scope,[c.action],`SELECT COALESCE(sum(pre_tax+cgst+sgst+igst+rounding),0)::text reduction,COALESCE(sum(refund),0)::text refund
+  const changes=(await scopedQuery<{reduction:string;refund:string}>(scope,[c.action],`SELECT COALESCE(sum(pre_tax+cgst+sgst+igst+rounding),0)::text reduction,COALESCE(sum(CASE WHEN kind='refund_correction' THEN -refund::numeric ELSE refund::numeric END),0)::text refund
     FROM shipit.financial_changes WHERE {{franchise:organization_id:franchise_id}} AND booking_id=$1`,[o.booking_id])).rows[0]!;
   const gross=BigInt(o.total_paise)-BigInt(changes.reduction),net=BigInt(row.collected)-BigInt(changes.refund);
   const amounts=net>gross?{gross_paise:Number(gross),collected_paise:Number(net),outstanding_paise:0,state:'settled' as const}:balance(gross,net);

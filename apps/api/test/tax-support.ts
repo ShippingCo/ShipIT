@@ -1,6 +1,6 @@
 import type { TestContext } from 'node:test';
 import { randomUUID } from 'node:crypto';
-import type { TaxFacts, TaxPolicyInput, TaxIntentInput } from '@shippingco/shared';
+import type { TaxFacts, TaxPolicyInput, TaxIntentInput, PricingDraftInput } from '@shippingco/shared';
 import { pricingSetup, input, start } from './pricing-support.ts';
 import { org, A } from './audit-support.ts';
 import { createTaxService } from '../src/modules/tax/service.ts';
@@ -18,8 +18,8 @@ export async function taxSetup(t: TestContext,database?:import('../../../package
   const post = (path: string,body: unknown,token = s.operator.token,key = randomUUID(),franchise = A,organization = org) => s.app.inject({ method: 'POST',
     url: '/api/v1/tax/'+path+'?'+new URLSearchParams({ organization_id: organization,franchise_id: franchise }),
     headers: { ...s.headers,'idempotency-key': key },cookies: s.cookies(token),payload: JSON.stringify(body) });
-  async function published() {
-    await s.published();
+  async function published(pricingDraft?:PricingDraftInput) {
+    await s.published(pricingDraft);
     const p = await tax.create(s.local.token,org,A,randomUUID(),taxPolicy,randomUUID());
     const result = await tax.publish(s.local.token,org,A,p.id,randomUUID(),{ expected_version: 1 },randomUUID());
     s.setNow(start); return result;

@@ -716,3 +716,25 @@ use controlled transport fixtures; separate native tests prove financial persist
 | apps/web/src/test/money-receipts.test.tsx: applies an existing advance without recording another inflow | preserve | receipts |
 | apps/web/src/test/money-receipts.test.tsx: uses the original allocation history for an admin release and keeps private finance evidence role-scoped | preserve | receipts |
 | apps/web/src/test/money-receipts.test.tsx: configures a named other receiving method through an append-only administrator account revision | preserve | receipts |
+
+## Issue #139 reviewed financial workflow additions
+
+Production components use scoped server financial requests, current policy/source
+versions and retained uncertain intent. Navigation guards and the audit download
+cleanup timer hold UI state only; no local financial persistence is introduced.
+Controlled transport UI tests complement real PostgreSQL service verification.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/financial-audit.test.ts: preserves exact uncertain capture intent and stops replay after scope changes | preserve | reports |
+| apps/web/src/test/financial-audit.test.ts: projects only safe fields and rejects foreign scope, false control counts and broken source lineage | preserve | reports |
+| apps/web/src/test/financial-audit.test.ts: binds saved detail and export to the requested snapshot and source row | preserve | reports |
+| apps/web/src/test/financial-audit.test.ts: retains capture uncertainty and uses the saved snapshot for focused detail and matching CSV | preserve | reports |
+| apps/web/src/test/financial-audit.test.ts: refuses a capture response for filters other than the retained command | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: validates component reductions and retains an uncertain request across blocked navigation and same-key retry | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: reviews server preview and reloads the original request after decision and application IDs | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: records private actual refund evidence only for the approved refund and current source account revision | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: keeps org admins and accountants read-only and treats disabled writes as controlled conflicts | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: amends only the creator pending request with freshly loaded versions and retained source document links | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: saves the explicit approved policy with exact uncertain replay without replacing the open financial request | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: rejects foreign booking context and another creators own request instead of painting their fields | preserve | reports |

@@ -29,7 +29,7 @@ export async function captureAgeing(scope:TenantAccess,filter:AgeingFilter) {
           'occurred_at',to_char(e.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'reversal_of',e.reversal_of) ORDER BY e.sequence),'[]'::jsonb) entries
         FROM shipit.payment_entries e WHERE e.organization_id=b.organization_id AND e.franchise_id=b.franchise_id AND e.booking_id=b.id AND e.obligation_id=o.id) p
       CROSS JOIN LATERAL (SELECT COALESCE(sum(c.pre_tax::numeric+c.cgst+c.sgst+c.igst+c.rounding),0) reduction,
-        COALESCE(sum(c.refund::numeric),0) refunds,COALESCE(max(c.version),0) version,
+        COALESCE(sum(CASE WHEN c.kind='refund_correction' THEN -c.refund::numeric ELSE c.refund::numeric END),0) refunds,COALESCE(max(c.version),0) version,
         COALESCE(jsonb_agg(jsonb_build_object('id',c.id,'kind',c.kind,'version',c.version,
           'reduction',(c.pre_tax::numeric+c.cgst+c.sgst+c.igst+c.rounding)::text,'refund',c.refund::text,
           'occurred_at',to_char(c.occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ORDER BY c.version),'[]'::jsonb) changes

@@ -169,7 +169,7 @@ await test('additive quote migration preserves earlier conversation state and cr
   SELECT $1,organization_id,franchise_id,id,$2,'OLD48','tracking','human_requested',clock_timestamp()+interval '15 minutes' FROM shipit.whatsapp_installations`,[randomUUID(),'a'.repeat(64)]);
  const snapshot=async()=>(await db.adminQuery('SELECT id,selected_docket,pending_intent,state,version,expires_at FROM shipit.customer_conversations')).rows;
  const before=await snapshot();assert.equal(before.length,1);db.migrate=migrate;
- assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});
+ assert.deepEqual(await db.migrate(),{applied:14});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual(await snapshot(),before);assert.equal((await db.adminQuery('SELECT quote_draft FROM shipit.customer_conversations')).rows[0]!.quote_draft,null);
  assert.equal((await db.adminQuery('SELECT count(*)::integer n FROM shipit.customer_quote_policies')).rows[0]!.n,0);
 });

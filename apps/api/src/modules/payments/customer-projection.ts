@@ -10,7 +10,7 @@ export async function customerCharges(scope:TenantAccess,parcel:string) {
    LEFT JOIN shipit.payment_entries e ON e.organization_id=o.organization_id AND e.franchise_id=o.franchise_id AND e.booking_id=o.booking_id AND e.obligation_id=o.id
    WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=$1 GROUP BY o.id,o.total_paise`,[parcel])).rows[0];
  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');
- const changes=(await scopedQuery<{reduction:string;refund:string}>(scope,['whatsapp.inbox.work'],`SELECT COALESCE(sum(c.pre_tax+c.cgst+c.sgst+c.igst+c.rounding),0)::text reduction,COALESCE(sum(c.refund),0)::text refund
+ const changes=(await scopedQuery<{reduction:string;refund:string}>(scope,['whatsapp.inbox.work'],`SELECT COALESCE(sum(c.pre_tax+c.cgst+c.sgst+c.igst+c.rounding),0)::text reduction,COALESCE(sum(CASE WHEN c.kind='refund_correction' THEN -c.refund::numeric ELSE c.refund::numeric END),0)::text refund
  FROM shipit.parcels p LEFT JOIN shipit.financial_changes c ON c.organization_id=p.organization_id AND c.franchise_id=p.franchise_id AND c.booking_id=p.booking_id
  WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=$1`,[parcel])).rows[0]!;
  const adjusted=BigInt(row.booked_paise)-BigInt(changes.reduction),net=BigInt(row.collected_paise)-BigInt(changes.refund),remaining=adjusted-net;

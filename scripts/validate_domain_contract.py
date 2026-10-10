@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 32), ("E", 4), ("W", 52)]:
+    for prefix, count in [("R", 32), ("E", 4), ("W", 56)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -99,6 +99,15 @@ def validate():
         # S/P are outside this object interpreter; adoption predicates are checked below.
         cells = set(rules[rule][2 + ROLES.index(case["role"])].split(","))
         return available & cells
+
+    financial_permissions = {
+        "W53": ["-", "F", "F", "-", "-", "-", "-"],
+        "W54": ["-", "F", "-", "-", "-", "-", "-"],
+        "W55": ["-", "F", "-", "-", "-", "-", "-"],
+        "W56": ["-", "F", "-", "-", "-", "-", "-"],
+    }
+    for rule, permissions in financial_permissions.items():
+        assert rules[rule][2:] == permissions, f"Financial grant drift: {rule}"
 
     receipt_permissions = {
         "R31": ["O", "F", "F", "-", "-", "F", "-"],
@@ -226,7 +235,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 88 matrix rows including exact R31/R32 and W49-W52 receipt permissions and six receipt scope cases, exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 92 matrix rows including exact W53-W56 financial permissions, R31/R32 and W49-W52 receipt permissions and six receipt scope cases, exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":
