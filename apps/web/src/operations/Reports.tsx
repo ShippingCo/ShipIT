@@ -1,3 +1,5 @@
+import {effectiveness} from '../data-access/effectiveness';
+import {EffectivenessView} from './Effectiveness';
 import {performance} from '../data-access/performance';
 import {PerformanceView} from './Performance';
 import React,{useMemo,useState,useEffect} from 'react';
@@ -20,15 +22,17 @@ export default function Reports({controller,roles}:{controller:ScopeController;r
   const salesSource=useMemo(()=>sales(scopedApi(controller)),[controller]);
   const ageingSource=useMemo(()=>ageing(scopedApi(controller)),[controller]);
   const performanceSource=useMemo(()=>performance(scopedApi(controller)),[controller]);
+  const effectivenessSource=useMemo(()=>effectiveness(scopedApi(controller)),[controller]);
+  const canEffectiveness=roles.some(r=>['org_admin','franchise_admin'].includes(r));
   const canFinance=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
   const canPerformance=roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only','delivery_agent'].includes(r));
   const [reportParams]=useSearchParams();
-  const [view,setView]=useState<'sales'|'bookings'|'ageing'|'performance'>(reportParams.has('performance_snapshot')||!canFinance?'performance':reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
+  const [view,setView]=useState<'sales'|'bookings'|'ageing'|'performance'|'effectiveness'>(reportParams.has('effectiveness_snapshot')?'effectiveness':reportParams.has('performance_snapshot')||!canFinance?'performance':reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
   if(!canFinance&&!canPerformance)return <p role="alert">Reports are unavailable for this role.</p>;
   const canExport=roles.some(r=>['franchise_admin','accountant'].includes(r));
   const context=controller.snapshot().context;
   const franchises=(context?.franchises??[]).filter(f=>f.organization.id===salesSourceOrganization(controller)).map(f=>({id:f.id,name:f.display_name}));
-  return <><nav aria-label="Report type">{canPerformance&&<button className="btn btn-outlined" aria-pressed={view==='performance'} onClick={()=>setView('performance')}>Delivery performance</button>}{canFinance&&<><button className="btn btn-outlined" aria-pressed={view==='ageing'} onClick={()=>setView('ageing')}>To-Pay ageing</button><button className="btn btn-outlined" aria-pressed={view==='sales'} onClick={()=>setView('sales')}>Sales and GST</button><button className="btn btn-outlined" aria-pressed={view==='bookings'} onClick={()=>setView('bookings')}>Booking snapshots</button></>}</nav>{view==='performance'?(canPerformance?<PerformanceView source={performanceSource} canExport={roles.includes('franchise_admin')}/>:<p role="alert">Performance unavailable for this role.</p>):!canFinance?<p role="alert">Financial reports unavailable for this role.</p>:view==='ageing'?<AgeingView source={ageingSource} canExport={canExport}/>:view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={roles.includes('franchise_admin')} franchises={franchises}/>:<ReportView source={source} canExport={canExport}/>}</>;
+  return <><nav aria-label="Report type">{canEffectiveness&&<button className="btn btn-outlined" aria-pressed={view==='effectiveness'} onClick={()=>setView('effectiveness')}>Messaging and assistant</button>}{canPerformance&&<button className="btn btn-outlined" aria-pressed={view==='performance'} onClick={()=>setView('performance')}>Delivery performance</button>}{canFinance&&<><button className="btn btn-outlined" aria-pressed={view==='ageing'} onClick={()=>setView('ageing')}>To-Pay ageing</button><button className="btn btn-outlined" aria-pressed={view==='sales'} onClick={()=>setView('sales')}>Sales and GST</button><button className="btn btn-outlined" aria-pressed={view==='bookings'} onClick={()=>setView('bookings')}>Booking snapshots</button></>}</nav>{view==='effectiveness'?(canEffectiveness?<EffectivenessView source={effectivenessSource}/>:<p role="alert">Messaging reports unavailable for this role.</p>):view==='performance'?(canPerformance?<PerformanceView source={performanceSource} canExport={roles.includes('franchise_admin')}/>:<p role="alert">Performance unavailable for this role.</p>):!canFinance?<p role="alert">Financial reports unavailable for this role.</p>:view==='ageing'?<AgeingView source={ageingSource} canExport={canExport}/>:view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={roles.includes('franchise_admin')} franchises={franchises}/>:<ReportView source={source} canExport={canExport}/>}</>;
 }
 function salesSourceOrganization(controller:ScopeController){return controller.runtime.ticket().authority?.organizationId;}
 export function ReportView({source,canExport}:{source:ReportSource;canExport:boolean}) {

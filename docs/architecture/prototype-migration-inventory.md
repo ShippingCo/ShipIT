@@ -690,3 +690,14 @@ only releases temporary export bytes and creates no operational side effects.
 | --- | --- | --- |
 | apps/web/src/test/performance.test.tsx: keyboard submit saves identity, reloads, displays empty denominator and exports matching selection | preserve | reports |
 | apps/web/src/test/performance.test.tsx: reload errors expose retry, denied export remains disabled and uncertain capture reuses exact intent | preserve | reports |
+
+## Issue #65 reviewed messaging/assistant additions
+
+Production reporting captures bounded server aggregates, preserves unknown delivery
+and suppression, and reloads saved identity with exact uncertain retries. No browser
+counter or transcript becomes operational evidence.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/messaging-effectiveness.test.tsx: keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy | preserve | reports |
+| apps/web/src/test/messaging-effectiveness.test.tsx: retries saved failures and reuses the exact uncertain capture while keeping filters disabled | preserve | reports |

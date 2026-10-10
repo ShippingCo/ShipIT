@@ -1,3 +1,4 @@
+import {createEffectivenessService} from './modules/reports/effectiveness-service.ts';
 import {createPerformanceService} from './modules/reports/performance-service.ts';
 import { createCarrierService } from './modules/carriers/service.ts';
 import { createCarrierReconciliationService } from './modules/carriers/reconciliation-service.ts';
@@ -147,7 +148,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
-      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database),createAgeingService(database),createPerformanceService(database));
+      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');

@@ -14,12 +14,8 @@ export function metricWindow(value:unknown,now=new Date()) {
  if(!Number.isFinite(from.getTime())||from.toISOString().slice(0,10)!==value||from.getUTCDay()!==1||to.getTime()+900000>now.getTime()||now.getTime()-from.getTime()>371*86400000)throw new HttpError('VALIDATION_FAILED');
  return {from,to};
 }
-/** One source ID per stream: turn inbox, support event or expired clarification anchor.
- * These are projections of durable events, never increment-on-retry counters.
- * No payload, phone, docket, contact digest or free-form reason leaves the database.
- */
-export async function metricRows(scope:TenantAccess,from:Date,to:Date) {
- return (await scopedQuery<MetricRow>(scope,['support.read'],`SELECT * FROM (WITH turns AS (
+/** Internal aggregate SQL reused in one-statement report capture; no transcript projection. */
+export const assistantMetricsSql=`SELECT * FROM (WITH turns AS (
   SELECT t.inbox_id,t.conversation_id,t.intent,t.metric_category,t.metric_reason,t.metric_latency_ms,t.recorded_at
   FROM shipit.customer_conversation_turns t WHERE {{franchise:t.organization_id:t.franchise_id}}
    AND t.recorded_at >= $1::timestamptz-interval '15 minutes' AND t.recorded_at < $2::timestamptz+interval '15 minutes'
@@ -45,7 +41,14 @@ export async function metricRows(scope:TenantAccess,from:Date,to:Date) {
    FROM shipit.conversation_inferences a JOIN shipit.customer_conversation_turns t ON t.organization_id=a.organization_id AND t.franchise_id=a.franchise_id AND t.inbox_id=a.inbox_id
    WHERE {{franchise:a.organization_id:a.franchise_id}} AND t.recorded_at >= $1 AND t.recorded_at < $2 AND a.state<>'interpreted'
  ) SELECT category,count(*)::text AS events,count(DISTINCT conversation_id)::text AS conversations,
-  round(avg(latency_ms))::integer AS latency_ms FROM events GROUP BY category) metrics ORDER BY category`,[from,to])).rows;
+  round(avg(latency_ms))::integer AS latency_ms FROM events GROUP BY category) metrics ORDER BY category`;
+/** One source ID per stream: turn inbox, support event or expired clarification anchor.
+ * These are projections of durable events, never increment-on-retry counters.
+ * No payload, phone, docket, contact digest or free-form reason leaves the database.
+ */
+export async function metricRows(scope:TenantAccess,from:Date,to:Date) {
+ return (await scopedQuery<MetricRow>(scope,['support.read'],`SELECT metrics.* FROM shipit.franchises f
+  CROSS JOIN LATERAL (${assistantMetricsSql}) metrics WHERE {{franchise:f.organization_id:f.id}} ORDER BY metrics.category`,[from,to])).rows;
 }
 export function publicMetrics(rows:MetricRow[]) {
  // No total or complementary subtotal can reconstruct a suppressed cell.
