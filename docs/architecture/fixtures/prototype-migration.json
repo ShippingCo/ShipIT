@@ -1565,6 +1565,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/performance.test.tsx",
+        "name": "keyboard submit saves identity, reloads, displays empty denominator and exports matching selection",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/performance.test.tsx",
+        "name": "reload errors expose retry, denied export remains disabled and uncertain capture reuses exact intent",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/pickups.test.tsx",
         "name": "loads private details only after selection; keyboard-accessible dialog restores focus",
         "cases": null
@@ -1775,6 +1785,10 @@
       {
         "file": "apps/web/src/operations/Packages.tsx",
         "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/Performance.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/operations/Reports.tsx",
@@ -3585,6 +3599,22 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
+    },
+    {
+      "file": "apps/web/src/test/performance.test.tsx",
+      "name": "keyboard submit saves identity, reloads, displays empty denominator and exports matching selection",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #64: saved operational cohort, accessible keyboard/reload states, exact uncertain retry and matching scoped export; no browser delivery or financial authority."
+    },
+    {
+      "file": "apps/web/src/test/performance.test.tsx",
+      "name": "reload errors expose retry, denied export remains disabled and uncertain capture reuses exact intent",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #64: saved operational cohort, accessible keyboard/reload states, exact uncertain retry and matching scoped export; no browser delivery or financial authority."
     },
     {
       "file": "apps/web/src/test/pickups.test.tsx",

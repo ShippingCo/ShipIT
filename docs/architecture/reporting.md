@@ -325,3 +325,81 @@ The original implementation is reviewable, but aggregate DB verification and
 expanded producer-dependent acceptance remain incomplete; do not close #63 or
 claim merge readiness from these results. Current-change remote CI is not run
 because publication is outside authorization.
+
+## Delivery and route performance (#64)
+
+`POST /api/v1/reports/performance` captures `delivery_performance_v1` for inclusive
+Kolkata `from_day`/`to_day`, `sort` and `eta` (`original` default, or `revised`).
+Saved reads and private CSV use `/api/v1/reports/performance/:id` and `/export`.
+They retain #61 limits, lifetime, actor ownership, current authorization, exact
+idempotent retry, audit and safe errors. A new snapshot never modifies source state.
+
+Each row is one owning-franchise parcel from a booking-date cohort. `booked` is the
+whole cohort, `dispatched` is the subset with immutable dispatch history, delivered
+and final RTO are separate outcomes, and open means neither delivered nor RTO.
+Failed parcels/attempt counts consume immutable failed-attempt records; a parcel
+may have failed attempts and later deliver. These measures overlap deliberately;
+they are not statuses whose sum should equal the cohort.
+
+Actual delivery uses the saved delivery-proof completion timestamp, not a status
+edit or ETA. Duration is dispatch-to-delivery, excluding missing/backwards timing.
+Original ETA is the first non-null applied base ETA of that dispatch manifest;
+revised ETA is the last applied version effective no later than delivery. Each row
+retains both timestamps and route versions. On-time is actual <= selected ETA, only
+for delivered parcels with both timestamps. Numerator, eligible denominator and
+excluded-delivered count are explicit; zero denominator is unavailable. Open parcels
+are not failures. Future planned times never become actual route departure/arrival.
+
+Frozen booking pricing supplies destination/service and opaque customer relationship
+ID; actual dispatch-manifest route supplies courier/route provenance. Missing
+courier/destination/timing remains unknown. No current customer directory, proof
+method/detail, OTP, phone/address or financial amount is exposed. #147 owns financial
+cost/contribution; #149 may consume these saved operational exceptions and freshness.
+
+Destination and route groups reconcile to the same complete snapshot. Optional
+`destination` and `route_id` on reads/exports select saved rows before pagination;
+`$unknown` selects a missing dimension. Returned `selection.count/summary` describes
+that exact subset while snapshot metadata retains the full cohort. A route ID absent
+from the saved scope is 404. Matching CSV exports the entire selected subset, including
+pages not loaded yet, with spreadsheet-safe cells and source IDs. No lot/direct-membership
+join multiplies a parcel: the query starts at parcels and reduces each source relation.
+
+Read permissions use R26 full-franchise org-admin/franchise-admin/operator/dispatcher/
+read-only grants, separately from financial R25. E04 exports require explicit
+franchise-admin membership. Accountant-only grants cannot browse this report. An
+assignment-only delivery agent can capture only parcels whose latest persisted
+attempt belongs to that agent, including completed deliveries after the current
+assignment field clears. Metadata and CSV label the audience as assignment or
+franchise. Agent results contain no franchise totals and cannot be exported. A
+full operational grant takes precedence when an actor holds both grants.
+Capture is derived read evidence, not a new business mutation privilege. Current
+membership is checked on replay, pagination, drill-through and download. For agent
+reads/replays, the entire saved selection must still belong to that agent before
+any metadata/counts/pages return; reassignment or loss of the full-franchise grant
+makes an incompatible saved snapshot unavailable (404). Create a new snapshot to
+see the current assignment selection.
+
+Research: adapt [Google SRE's numerator/eligible-event approach](https://sre.google/workbook/implementing-slos/)
+for honest denominators/exclusions; using it for courier cohorts is our application
+inference, not a claim that Google uses this courier policy. Adopt the existing
+[PostgreSQL statement snapshot](https://www.postgresql.org/docs/18/transaction-iso.html)
+for a consistent source view. Cost: bounded indexed reads and short snapshot transactions;
+no warehouse, new queue, dependency, provider or LLM. Verify denominator boundaries
+in rule tests, owning-source joins/authorization/replay in real PostgreSQL, and
+reload/filter/export/retry behavior in production UI tests.
+
+No new schema or historical backfill is needed. Existing runtime reads of bookings,
+parcels, transitions, failures, dispatch manifests/routes/effects and delivery proofs
+must be provisioned alongside #61 snapshot/access-event grants. Grant only needed
+SELECT access, preserving existing write restrictions. Unknown legacy evidence stays
+unknown. Rollback disables the new route/view without changing saved source facts.
+
+Development verification: use the pinned toolchain and `pnpm db:local quality`.
+Focused rules: `pnpm --filter @shippingco/api exec vitest run test/integration/performance.test.ts`.
+Focused UI: `pnpm --filter @shippingco/web exec vitest run src/test/performance.test.tsx`.
+Real DB coverage lives in `apps/api/test/database/performance.test.ts`, discovered
+by the required database runner. With fictional bookings, open Reports → Delivery
+performance, capture a date cohort, compare original/revised timing, choose a destination
+or route, export, and reload the saved URL. A new delivery changes a new capture only.
+Local Docker availability and final code-version verification are recorded in the PR;
+this guide itself is not an executed database or live-browser qualification claim.

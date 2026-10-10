@@ -1,3 +1,4 @@
+export * from './performance.ts';
 export type * from './tax.ts';
 export * from './report.ts';
 export * from './sales.ts';
