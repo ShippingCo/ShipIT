@@ -751,3 +751,10 @@ production rules, assertions or the original 60-second deadline. All seven final
 cases completed with zero failures, skips, cancellations or todos. Expense/fund/movement
 record corrections, handovers, attachments, full cashbook journeys and final PR gates
 remain pending; this slice does not close #140.
+
+
+The extended paid-refund native case also verifies the independent database boundary:
+a synthetic writer corrupts the custody revision after service validation. PostgreSQL
+rejects it, and the previously appended financial change, source-generation increment and
+refund evidence all roll back. The unchanged approved request then succeeds normally.
+The original 60-second case deadline, API types and changed-file lint passed.

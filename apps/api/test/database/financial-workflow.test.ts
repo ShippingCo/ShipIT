@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {withTransaction} from '@shippingco/db';
+import {withTransaction,type DatabasePool} from '@shippingco/db';
 import {draft,input as pricingInput} from '../pricing-support.ts';
 import {taxFacts} from '../tax-support.ts';
 import {createPaymentService} from '../../src/modules/payments/service.ts';
@@ -186,6 +186,16 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
     await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_id:null,cash_location_revision_id:null}},randomUUID(),s.local.token,custodyService),{code:'VALIDATION_FAILED'});
     await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_id:randomUUID()}},randomUUID(),s.local.token,custodyService),{code:'RESOURCE_NOT_FOUND'});
     await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_revision_id:randomUUID()}},randomUUID(),s.local.token,custodyService),{code:'VERSION_CONFLICT'});
+    // Corrupt the writer's bound revision after service validation: PostgreSQL must deny it
+    // and roll back the already-appended financial change and its source-generation bump.
+    const beforeBoundary=await current(),beforePosition=await cashbook.position(s.local.token,q,randomUUID()),beforeEvidence=(await owner.query('SELECT * FROM shipit.financial_refund_evidence ORDER BY id')).rows;
+    const forged:DatabasePool={...s.pool,async connect(){const client=await s.pool.connect();return {release:discard=>client.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){
+     if(sql.includes('INSERT INTO shipit.financial_refund_evidence')){const tampered=[...params!];tampered[11]=randomUUID();return client.query<Row>(sql,tampered);}return client.query<Row>(sql,params);
+    }};}};
+    await assert.rejects(apply(id,{expected_version:1,refund_evidence:evidence},randomUUID(),s.local.token,createFinancialWorkflowService(forged,true,true)));
+    assert.deepEqual(await current(),beforeBoundary);const boundaryPosition=await cashbook.position(s.local.token,q,randomUUID());assert.equal(boundaryPosition.source_version,beforePosition.source_version);assert.deepEqual(boundaryPosition.locations,beforePosition.locations);
+    assert.deepEqual((await owner.query('SELECT * FROM shipit.financial_refund_evidence ORDER BY id')).rows,beforeEvidence);
+
    }
    const keys=[randomUUID(),randomUUID()],results=await Promise.allSettled(keys.map(key=>apply(id,{expected_version:1,refund_evidence:evidence},key,s.local.token,index===0?custodyService:service)));
    assert.equal(results.filter(r=>r.status==='fulfilled').length,1,JSON.stringify(results.map(r=>r.status==='rejected'?{status:r.status,code:(r.reason as {code?:string}).code}:{status:r.status})));assert.equal(results.filter(r=>r.status==='rejected').length,1);
