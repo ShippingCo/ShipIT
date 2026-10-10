@@ -1455,3 +1455,19 @@ typechecks, root lint/tenant-query AST checks and production web build passed. L
 140-browser-final-build. No additional mirror test was added for this style change.
 Browser failure/uncertain/empty/configuration checks and final whole-issue gates
 remain; #140 stays open.
+
+
+The next native browser pass also confirmed empty request/handover states, the
+controlled read-outage message and Retry action, uncertain review navigation locks
+and recovery through Retry same request. Configuration showed fixed account/custodian
+identity with current account revision 5, then rename/deactivation advanced location
+revision 1 to 2. Empty fixture responses initially omitted cutoff/source generation;
+these were corrected to the real DTO without decoder changes. An export-mismatch
+browser attempt was inconclusive and is not recorded as passing. The temporary tab
+and Vite process were closed and the viewport override reset.
+
+The first whole-quality run stopped at the strict prototype source inventory:
+thirty new cashbook/expense proof test declarations and five UI effects had no
+reviewed dispositions. Their reports/proof ownership and preservation rationale
+are now recorded in the existing inventory and document; callers, routes, exports,
+storage operations and fingerprints did not drift. The validator was unchanged.

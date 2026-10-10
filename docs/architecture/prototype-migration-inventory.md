@@ -738,3 +738,47 @@ Controlled transport UI tests complement real PostgreSQL service verification.
 | apps/web/src/test/financial-workflow.test.tsx: amends only the creator pending request with freshly loaded versions and retained source document links | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: saves the explicit approved policy with exact uncertain replay without replacing the open financial request | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: rejects foreign booking context and another creators own request instead of painting their fields | preserve | reports |
+
+
+## Issue #140 reviewed cashbook and expense evidence additions
+
+Cashbook uses current scoped services for requests, exact different-admin review,
+application, corrections, custody and captured reports. Its external-store hook
+and navigation listeners retain pending/uncertain intent; the source download
+timer releases a private browser URL. These effects hold UI state only and do
+not persist financial authority or silently import browser records. Thirty new
+test declarations preserve these boundaries and private expense lifecycle recovery.
+Existing callers, routes, exports, storage operations and fingerprints are unchanged.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: rejects mismatched approvals, self approval and application linked to rejected evidence | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: checks integer position conservation, reservations and uncertainty without converting totals to floats | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: requires paired acceptance legs and conserves the whole handover even when history is paged | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: rejects source totals and cutoff mismatches and strips private extra report fields | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: rejects wrong returned request intent and clears stale scope before transport | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: retains the exact uncertain expense and blocks navigation until same-key replay | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: requires another admin to review and applies the original request instead of the returned decision id | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: allows the current receiving custodian to accept part of the reservation with captured versions | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: keeps every paise in a recording correction and retains the original occurrence evidence | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: submits category/method/employee filters with an exclusive Kolkata time boundary and current scope | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: uses real expense proof adapters and retains byte upload identity across an uncertain acknowledgement with navigation blocked | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: keeps receiver rejection available without active custody selectors or cross-custodian reads | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: gives finance readers permitted custody history without acknowledgement or reservation forms | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: keeps finance readers free of expense and custody mutation forms | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: uses the server default occurrence order when a capture omits optional filters | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: captures filtered evidence, pages and opens original source detail while retaining complete cutoff controls | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: retains capture identity after an uncertain response and rejects a mismatching CSV snapshot | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: downloads matching captured CSV in StrictMode and discards a late export after scope invalidation | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: shows current export permission and never gives an operator access to captured financial sources | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: uses the current actual receiving account revision and freezes the account/custodian of existing cash locations | preserve | reports |
+| apps/web/src/test/expense-attachments.test.tsx: rejects booking evidence and parent fields while projecting only expense metadata | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: uses only the expense parent route and rejects mismatched parent/command identities as uncertain | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: rejects booking grant URLs and wrong-parent/foreign URLs before sending credentials | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: uses exact expense binary content path, current CSRF and parent-projected upload result | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: aborts expense transport on scope change and refuses a new franchise rebind | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: bounds bytes and rejects an empty response or a late response after current scope loss | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: retains uncertain initiation and cancellation identities until durable cleanup is confirmed | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: reconciles ready evidence after an uncertain cancellation without replacing the original cancellation key | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: allows finance proof read without upload, retry or cancel and never locks review on another creator’s unsettled metadata | preserve | proof |
+| apps/web/src/test/expense-attachments.test.tsx: freezes new evidence after review and purges previews on scope loss | preserve | proof |
