@@ -104,6 +104,7 @@ CREATE TABLE shipit.cashbook_requests (
  target_location_id uuid,target_revision_id uuid,
  expected_source_version bigint NOT NULL CHECK(expected_source_version BETWEEN 0 AND 9007199254740991),
  correction_of uuid,amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 0 AND 9007199254740991),currency text NOT NULL CHECK(currency='INR'),
+ payment_method text CHECK(payment_method IN ('cash','upi','card','bank_transfer','other')),
  category text CHECK(category IN ('rent','utilities','supplies','transport','maintenance','other')),
  payee text CHECK(char_length(payee) BETWEEN 1 AND 120 AND payee=btrim(payee) AND payee !~ '[\x01-\x1f\x7f-\x9f]'),
  responsible_employee_id uuid NOT NULL REFERENCES shipit.auth_users(id),
@@ -118,7 +119,7 @@ CREATE TABLE shipit.cashbook_requests (
  CHECK((target_location_id IS NULL)=(target_revision_id IS NULL)),
  CHECK((kind IN ('deposit','withdrawal'))=(target_location_id IS NOT NULL)),
  CHECK(source_location_id IS DISTINCT FROM target_location_id),
- CHECK((kind='expense')=(category IS NOT NULL)),CHECK((kind='expense')=(payee IS NOT NULL)),
+ CHECK((kind='expense')=(payment_method IS NOT NULL)),CHECK((kind='expense')=(category IS NOT NULL)),CHECK((kind='expense')=(payee IS NOT NULL)),
  CHECK(correction_of IS NOT NULL OR amount_paise>0),
  FOREIGN KEY(organization_id,franchise_id,correction_of) REFERENCES shipit.cashbook_requests(organization_id,franchise_id,id) ON DELETE RESTRICT
 );
@@ -138,7 +139,7 @@ CREATE INDEX cashbook_request_owner_idx ON shipit.cashbook_requests(organization
 CREATE FUNCTION shipit.check_cashbook_request_sources(request shipit.cashbook_requests) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 DECLARE source shipit.cash_locations;target shipit.cash_locations;source_revision shipit.cash_location_revisions;
- target_revision shipit.cash_location_revisions;source_account shipit.receiving_account_revisions;target_account shipit.receiving_account_revisions;previous shipit.cashbook_requests;
+ target_revision shipit.cash_location_revisions;source_account shipit.receiving_account_revisions;target_account shipit.receiving_account_revisions;method_account shipit.receiving_account_revisions;previous shipit.cashbook_requests;
 BEGIN
  IF request.correction_of IS NOT NULL THEN
   SELECT * INTO previous FROM shipit.cashbook_requests WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.correction_of;
@@ -156,6 +157,9 @@ BEGIN
  IF request.correction_of IS NULL AND source.kind='cash' AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
  WHERE s.organization_id=request.organization_id AND s.franchise_id=request.franchise_id AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin') AND m.user_id=source.custodian_id)
  THEN RAISE EXCEPTION 'CASHBOOK_REQUEST_CUSTODIAN_INVALID' USING ERRCODE='23514';END IF;
+ SELECT * INTO method_account FROM shipit.receiving_account_revisions WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND account_id=source.account_id AND id=source_revision.account_revision_id;
+ IF request.kind='expense' AND ((source.kind='cash') IS DISTINCT FROM (request.payment_method='cash') OR (request.correction_of IS NULL OR previous.payment_method IS DISTINCT FROM request.payment_method) AND NOT COALESCE(request.payment_method=ANY(method_account.methods),false))
+ THEN RAISE EXCEPTION 'CASHBOOK_EXPENSE_METHOD_INVALID' USING ERRCODE='23514';END IF;
  IF request.kind='opening_float' AND source.kind<>'cash' THEN RAISE EXCEPTION 'CASHBOOK_FLOAT_REQUIRES_CASH' USING ERRCODE='23514';END IF;
  IF request.target_location_id IS NOT NULL THEN
   SELECT * INTO target FROM shipit.cash_locations WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.target_location_id;
@@ -393,28 +397,28 @@ REVOKE ALL ON FUNCTION shipit.guard_refund_cash_location() FROM PUBLIC;
 CREATE VIEW shipit.cashbook_source_facts AS
  SELECT r.organization_id,r.franchise_id,'receipt'::text source_kind,r.id source_id,l.id location_id,r.account_id,
  'in'::text direction,r.amount_paise,r.occurred_at,r.recorded_at,r.receiver_id actor_id,NULL::uuid request_id,NULL::uuid correction_of,
- CASE WHEN l.id IS NULL THEN 'unassigned_receipt_location'::text ELSE NULL::text END unknown_reason
+ CASE WHEN l.id IS NULL THEN 'unassigned_receipt_location'::text ELSE NULL::text END unknown_reason,r.method payment_method
  FROM shipit.money_receipts r LEFT JOIN shipit.cash_locations l ON l.organization_id=r.organization_id AND l.franchise_id=r.franchise_id AND l.account_id=r.account_id
  AND ((r.method='cash' AND l.kind='cash' AND l.custodian_id=r.initial_custodian_id) OR (r.method<>'cash' AND l.kind='noncash'))
  UNION ALL
  SELECT c.organization_id,c.franchise_id,c.kind,c.id,l.id,e.source_account_id,
  CASE WHEN c.kind='refund' THEN 'out' ELSE 'in' END,c.refund,COALESCE(e.occurred_at,c.occurred_at),c.occurred_at,c.actor_id,NULL::uuid,c.refund_correction_of,
- CASE WHEN e.id IS NULL THEN 'legacy_refund_account_unknown' WHEN e.method='cash' AND e.cash_location_id IS NULL THEN 'cash_refund_custody_unknown' WHEN l.id IS NULL THEN 'unassigned_refund_account' ELSE NULL END
+ CASE WHEN e.id IS NULL THEN 'legacy_refund_account_unknown' WHEN e.method='cash' AND e.cash_location_id IS NULL THEN 'cash_refund_custody_unknown' WHEN l.id IS NULL THEN 'unassigned_refund_account' ELSE NULL END,e.method
  FROM shipit.financial_changes c LEFT JOIN shipit.financial_refund_evidence e ON e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id AND e.id=CASE WHEN c.kind='refund' THEN c.id ELSE c.refund_correction_of END
  LEFT JOIN shipit.cash_locations l ON l.organization_id=e.organization_id AND l.franchise_id=e.franchise_id AND l.account_id=e.source_account_id AND ((l.kind='noncash' AND e.method<>'cash') OR (l.kind='cash' AND e.method='cash' AND l.id=e.cash_location_id))
  WHERE c.kind IN ('refund','refund_correction')
  UNION ALL
  SELECT p.organization_id,p.franchise_id,CASE WHEN p.kind='collection' THEN 'legacy_collection' ELSE 'legacy_collection_correction' END,p.id,NULL::uuid,NULL::uuid,
- CASE WHEN p.kind='collection' THEN 'in' ELSE 'out' END,p.amount_paise,p.occurred_at,cmd.committed_at,p.actor_id,NULL::uuid,p.reversal_of,'legacy_collection_custody_unknown'
+ CASE WHEN p.kind='collection' THEN 'in' ELSE 'out' END,p.amount_paise,p.occurred_at,cmd.committed_at,p.actor_id,NULL::uuid,p.reversal_of,'legacy_collection_custody_unknown',p.method
  FROM shipit.payment_entries p JOIN shipit.payment_commands cmd ON cmd.organization_id=p.organization_id AND cmd.franchise_id=p.franchise_id AND cmd.id=p.command_id
  WHERE cmd.receipt_command_id IS NULL AND cmd.state='committed'
  UNION ALL
- SELECT leg.organization_id,leg.franchise_id,CASE WHEN r.correction_of IS NULL THEN r.kind ELSE 'correction' END,e.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,r.occurred_at,e.recorded_at,e.actor_id,r.id,r.correction_of,NULL::text
+ SELECT leg.organization_id,leg.franchise_id,CASE WHEN r.correction_of IS NULL THEN r.kind ELSE 'correction' END,e.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,r.occurred_at,e.recorded_at,e.actor_id,r.id,r.correction_of,NULL::text,r.payment_method
  FROM shipit.cashbook_effect_legs leg JOIN shipit.cashbook_effects e ON e.organization_id=leg.organization_id AND e.franchise_id=leg.franchise_id AND e.id=leg.effect_id
  JOIN shipit.cashbook_requests r ON r.organization_id=e.organization_id AND r.franchise_id=e.franchise_id AND r.id=e.request_id
  JOIN shipit.cash_locations l ON l.organization_id=leg.organization_id AND l.franchise_id=leg.franchise_id AND l.id=leg.location_id
  UNION ALL
- SELECT leg.organization_id,leg.franchise_id,'handover',c.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,c.recorded_at,c.recorded_at,c.actor_id,h.id,NULL::uuid,NULL::text
+ SELECT leg.organization_id,leg.franchise_id,'handover',c.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,c.recorded_at,c.recorded_at,c.actor_id,h.id,NULL::uuid,NULL::text,'cash'::text
  FROM shipit.cash_handover_legs leg JOIN shipit.cash_handover_commands c ON c.organization_id=leg.organization_id AND c.franchise_id=leg.franchise_id AND c.id=leg.command_id
  JOIN shipit.cash_handovers h ON h.organization_id=c.organization_id AND h.franchise_id=c.franchise_id AND h.id=c.handover_id
  JOIN shipit.cash_locations l ON l.organization_id=leg.organization_id AND l.franchise_id=leg.franchise_id AND l.id=leg.location_id;

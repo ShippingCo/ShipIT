@@ -976,3 +976,54 @@ in the CSV assertion was removed without changing its expected string or behavio
 The shared current-position mapping was extracted without changing its calculation.
 No schema or released migration changed in this slice. Full #140 HTTP/UI, attachment,
 explicit expense-method and final delivery acceptance remain pending.
+## #140 explicit expense payment methods
+
+Every expense proposal now records cash, UPI, card, bank transfer or the receiving
+account's configured other method. The chosen method is immutable proposal evidence;
+review/apply never accepts a caller-supplied substitute. Cash requires a cash custody
+location and noncash methods require a noncash location. The chosen method must be
+allowed by that location's recorded account revision. Current account/revision checks
+still reject a new expense or approval when the account changes. Location selectors
+return the recorded method choices without exposing balances. Non-expense requests
+keep their previous normalized intent shape and have no invented expense method.
+
+A linked recording correction can retain its predecessor's recorded method even
+after the current account drops it. A changed method must be permitted by the current
+recorded revision and remain consistent with the unchanged custody location. This
+changes recorded meaning under different-admin approval; it does not create an actual
+transfer. A metadata-only correction has no money leg and remains visible in request
+history. Original money source rows retain the method recorded at their own occurrence;
+zero-leg annotations do not rebucket historical physical money. A new expense cannot
+use this correction exception. The migration is still the same unreleased #140 forward
+migration; no historical expense exists in released migration 45 to populate or infer.
+
+Request lists can filter by explicit method. Captured source rows and CSV expose the
+original recorded receipt/refund/payment/expense method, and acknowledged handover legs
+are cash. A fund/deposit/withdrawal source without a separately recorded expense method
+is labelled not_recorded rather than guessed. Method filtering changes selected-source
+controls; complete current custody remains separately labelled and shares the cutoff.
+Legacy payment method can be known while its account/custody remains unknown. Private
+payee, reason and bank reference exclusions are unchanged. These extend the approved
+immutable-approval, idempotency and one-statement report practices already researched
+for #140; they add no provider, queue, new table or paid dependency.
+Explicit-method acceptance evidence: 39 distinct scoped native cases passed on this
+slice: complete cashbook API file18 (140-expense-method-cashbook-compatibility.log),
+source/populated-upgrade4 (140-expense-method-source-upgrades.log), and existing
+finance/migration/copied-repair17 (140-expense-method-finance-migration-compatibility.log).
+Original 30/60-second cases and 300-second file deadlines were retained; zero failures,
+skips, cancellations or todos; all clusters/data/leases were cleaned. Focused method/
+movement2 passed earlier and cover the same cases, so are not counted again.
+Mixed UPI/card choices remain distinct approved evidence; forged/missing/unsupported
+methods fail API and real SQL; stale account review fails; original-method exact retries
+survive writes disabled and changed account methods. Same-method historical annotation
+and an allowed changed-method annotation each retain the original and apply zero money
+legs. Current list/source filters, frozen CSV evidence and recorded/cash-control totals
+agree. Released45 populated collections/refunds and exact old apply fingerprints remain
+unchanged, with no invented custody or expense backfill.
+
+Unit12, all five workspace types, changed lint, tenant-query AST, exact99-row permission
+contract and diff checks passed (ignored 140-expense-method-* logs). No failed native or
+static check occurred in this slice. Expense DTOs now require an explicit method at the
+runtime expense boundary; the new feature has not yet been wired into HTTP or enabled.
+Private attachment parent/snapshot authorization, API/UI journeys, broader final gates
+and reviewed PR delivery remain required for full #140 completion.

@@ -1,6 +1,7 @@
+import type {ReceiptMethod} from './money-receipt.ts';
 export interface CashLocationDto {
  id:string;revision_id:string;version:number;name:string;active:boolean;kind:'cash'|'noncash';
- account_id:string;account_revision_id:string;account_version:number;custodian_id:string|null;recorded_at:string;
+ account_id:string;account_revision_id:string;account_version:number;methods:ReceiptMethod[];custodian_id:string|null;recorded_at:string;
 }
 export interface CashLocationInput {
  account_id:string;expected_account_version:number;custodian_id:string|null;name:string;active:boolean;expected_version:number;
@@ -9,7 +10,7 @@ export interface CashLocationInput {
 export type CashMovementKind='expense'|'opening_float'|'owner_funds'|'deposit'|'withdrawal';
 export type ExpenseCategory='rent'|'utilities'|'supplies'|'transport'|'maintenance'|'other';
 export interface CashbookRequestInput {
- correction_of?:string|null;kind:CashMovementKind;source_location_id:string;source_revision_id:string;target_location_id:string|null;target_revision_id:string|null;
+ payment_method?:ReceiptMethod|null;correction_of?:string|null;kind:CashMovementKind;source_location_id:string;source_revision_id:string;target_location_id:string|null;target_revision_id:string|null;
  expected_source_version:number;amount_paise:number;currency:'INR';category:ExpenseCategory|null;payee:string|null;
  responsible_employee_id:string;reason:string;occurred_at:string;
 }
@@ -47,7 +48,7 @@ export interface CashHandoverList {items:CashHandoverListItem[];next_cursor:stri
 
 export type CashbookRequestState='requested'|'approved'|'rejected'|'applied';
 export interface CashbookRequestListItem {
- id:string;kind:CashMovementKind;category:ExpenseCategory|null;amount_paise:number;currency:'INR';
+ id:string;payment_method:ReceiptMethod|null;kind:CashMovementKind;category:ExpenseCategory|null;amount_paise:number;currency:'INR';
  source_location_id:string;target_location_id:string|null;responsible_employee_id:string;actor_id:string;
  occurred_at:string;recorded_at:string;state:CashbookRequestState;version:1|2|3;
  correction_of:string|null;corrected_by:string|null;
@@ -56,8 +57,8 @@ export interface CashbookRequestListItem {
 export interface CashbookRequestList {as_of:string;items:CashbookRequestListItem[];next_cursor:string|null;current_source_version:number}
 
 export type CashbookSourceKind='receipt'|'refund'|'refund_correction'|'legacy_collection'|'legacy_collection_correction'|'expense'|'opening_float'|'owner_funds'|'deposit'|'withdrawal'|'correction'|'handover';
-export interface CashbookReportFilter {from_day:string;to_day:string;sort:'occurred_asc'|'occurred_desc';kind:CashbookSourceKind|null;location_id:string|null}
-export interface CashbookSourceRow {id:string;source_kind:CashbookSourceKind;source_id:string;location_id:string|null;account_id:string|null;direction:'in'|'out';amount_paise:string;occurred_at:string;recorded_at:string;actor_id:string;request_id:string|null;correction_of:string|null;unknown_reason:string|null}
+export interface CashbookReportFilter {from_day:string;to_day:string;sort:'occurred_asc'|'occurred_desc';payment_method:ReceiptMethod|null;kind:CashbookSourceKind|null;location_id:string|null}
+export interface CashbookSourceRow {payment_method:ReceiptMethod|null;id:string;source_kind:CashbookSourceKind;source_id:string;location_id:string|null;account_id:string|null;direction:'in'|'out';amount_paise:string;occurred_at:string;recorded_at:string;actor_id:string;request_id:string|null;correction_of:string|null;unknown_reason:string|null}
 export interface CashbookSourceTotals {count:number;known_inflows_paise:string;known_outflows_paise:string;known_net_paise:string;unknown_inflows_paise:string;unknown_outflows_paise:string;unknown_sources:number}
 export interface CashbookReportSnapshot {id:string;schema_version:1;definition:'cashbook_sources_v1';organization_id:string;franchise_id:string;timezone:'Asia/Kolkata';filter:CashbookReportFilter;as_of:string;expires_at:string;count:number;totals:CashbookSourceTotals;position:CashbookPositionSnapshot}
 export interface CashbookReportPage {snapshot:CashbookReportSnapshot;rows:CashbookSourceRow[];next_offset:number|null}

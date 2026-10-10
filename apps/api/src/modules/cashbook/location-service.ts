@@ -8,8 +8,8 @@ import {keyDigest,digest} from '../pricing/idempotency.ts';
 import {instant} from '../pricing/types.ts';
 import {HttpError,FieldValidationError} from '../../plugins/errors.ts';
 const actions=['cashbook.configure','cashbook.read','cashbook.select'] as const;
-interface Row {id:string;location_id:string;version:number;name:string;active:boolean;kind:'cash'|'noncash';account_id:string;account_revision_id:string;account_version:number;custodian_id:string|null;recorded_at:Date;fingerprint:string}
-function dto(r:Row):CashLocationDto {return {id:r.location_id,revision_id:r.id,version:r.version,name:r.name,active:r.active,kind:r.kind,account_id:r.account_id,account_revision_id:r.account_revision_id,account_version:r.account_version,custodian_id:r.custodian_id,recorded_at:instant(r.recorded_at)};}
+interface Row {id:string;location_id:string;version:number;name:string;active:boolean;kind:'cash'|'noncash';account_id:string;account_revision_id:string;account_version:number;methods:CashLocationDto['methods'];custodian_id:string|null;recorded_at:Date;fingerprint:string}
+function dto(r:Row):CashLocationDto {return {id:r.location_id,revision_id:r.id,version:r.version,name:r.name,active:r.active,kind:r.kind,account_id:r.account_id,account_revision_id:r.account_revision_id,account_version:r.account_version,methods:r.methods,custodian_id:r.custodian_id,recorded_at:instant(r.recorded_at)};}
 export function locationInput(value:unknown):CashLocationInput {
  const b=object(value,['account_id','expected_account_version','custodian_id','name','active','expected_version']);
  if(typeof b.name!=='string'||b.name.length>480||!b.name.trim()||[...b.name.trim()].length>120||[...b.name].some(char=>{const code=char.codePointAt(0)!;return code<32||(code>=127&&code<=159)||(code>=0xd800&&code<=0xdfff);}))throw new FieldValidationError('name','INVALID_FORMAT');
@@ -18,7 +18,7 @@ export function locationInput(value:unknown):CashLocationInput {
 }
 async function readRow(scope:TenantAccess,id:string,ownOnly=false) {
  const c=assertTenantAccess(scope,[...actions]);
- const row=(await scopedQuery<Row>(scope,[...actions],`SELECT r.*,l.kind,l.custodian_id,a.version account_version FROM shipit.cash_locations l
+ const row=(await scopedQuery<Row>(scope,[...actions],`SELECT r.*,l.kind,l.custodian_id,a.version account_version,a.methods FROM shipit.cash_locations l
  JOIN LATERAL(SELECT * FROM shipit.cash_location_revisions x WHERE x.organization_id=l.organization_id AND x.franchise_id=l.franchise_id AND x.location_id=l.id ORDER BY version DESC LIMIT 1) r ON true
  JOIN shipit.receiving_account_revisions a ON a.organization_id=r.organization_id AND a.franchise_id=r.franchise_id AND a.account_id=r.account_id AND a.id=r.account_revision_id
  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.id=$1 AND (NOT $2::boolean OR l.kind='noncash' OR l.custodian_id=$3)`,[id,ownOnly,c.actor.id])).rows[0];
@@ -34,7 +34,7 @@ export function createCashLocationService(database:DatabasePool,writesEnabled=fa
     const f=(await scopedQuery<{lifecycle:string}>(scope,['cashbook.configure'],`SELECT lifecycle FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`)).rows[0];
     if(!f)throw new HttpError('RESOURCE_NOT_FOUND');if(f.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
     const before=id?await readRow(scope,id):null;
-    const previous=(await scopedQuery<Row>(scope,['cashbook.configure'],`SELECT r.*,l.kind,l.custodian_id,a.version account_version FROM shipit.cash_location_revisions r
+    const previous=(await scopedQuery<Row>(scope,['cashbook.configure'],`SELECT r.*,l.kind,l.custodian_id,a.version account_version,a.methods FROM shipit.cash_location_revisions r
      JOIN shipit.cash_locations l ON l.organization_id=r.organization_id AND l.franchise_id=r.franchise_id AND l.id=r.location_id
      JOIN shipit.receiving_account_revisions a ON a.organization_id=r.organization_id AND a.franchise_id=r.franchise_id AND a.account_id=r.account_id AND a.id=r.account_revision_id
      WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.actor_id=$1 AND r.key_digest=$2`,[c.actor.id,key])).rows[0];
@@ -66,7 +66,7 @@ export function createCashLocationService(database:DatabasePool,writesEnabled=fa
    const b=object(query,['organization_id','franchise_id','cursor','limit']),q=selection({organization_id:b.organization_id,franchise_id:b.franchise_id}),cursor=b.cursor===undefined?null:uuid(b.cursor,'cursor');
    if(b.limit!==undefined&&(typeof b.limit!=='string'||!/^([1-9][0-9]?|100)$/.test(b.limit)))throw new FieldValidationError('limit','OUT_OF_RANGE');const limit=b.limit===undefined?50:Number(b.limit);
    return withCashbookScope(database,token,q.organizationId,q.franchiseId,'cashbook.select',correlation,async s=>{
-    const c=assertTenantAccess(s.access,['cashbook.select']),rows=(await scopedQuery<Row>(s.access,['cashbook.select'],`SELECT r.*,l.kind,l.custodian_id,a.version account_version FROM shipit.cash_locations l
+    const c=assertTenantAccess(s.access,['cashbook.select']),rows=(await scopedQuery<Row>(s.access,['cashbook.select'],`SELECT r.*,l.kind,l.custodian_id,a.version account_version,a.methods FROM shipit.cash_locations l
      JOIN LATERAL(SELECT * FROM shipit.cash_location_revisions x WHERE x.organization_id=l.organization_id AND x.franchise_id=l.franchise_id AND x.location_id=l.id ORDER BY version DESC LIMIT 1) r ON true
      JOIN shipit.receiving_account_revisions a ON a.organization_id=r.organization_id AND a.franchise_id=r.franchise_id AND a.account_id=r.account_id AND a.id=r.account_revision_id
      WHERE {{franchise:l.organization_id:l.franchise_id}} AND ($1::uuid IS NULL OR l.id>$1) AND (NOT $2::boolean OR l.kind='noncash' OR l.custodian_id=$3)
