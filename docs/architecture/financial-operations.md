@@ -539,3 +539,10 @@ stale latest-schema upgrade-count assertions in 25 older fixtures; their expecte
 counts were increased exactly for migration 45. Initial-version, no-op, failed
 migration/rollback and source-preservation assertions were retained. The full schema
 run then passed with zero failed, skipped or cancelled cases.
+
+The subsequent CI run passed all 79 schema cases and identified eight API
+populated-upgrade fixtures with the same stale total. Their exact latest-schema
+counts were corrected without changing historical-row, old-writer or no-op
+assertions. All eight affected API cases then passed against disposable PostgreSQL
+with their original case deadlines; no skipped, cancelled or failed cases. This
+focused result does not replace the full final-commit CI integration gate.
