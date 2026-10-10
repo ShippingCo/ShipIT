@@ -519,11 +519,19 @@ ALTER TABLE shipit.attachment_audit_events ALTER COLUMN booking_id DROP NOT NULL
  ADD CONSTRAINT attachment_audit_expense_owner FOREIGN KEY(organization_id,franchise_id,expense_request_id,attachment_id) REFERENCES shipit.attachments(organization_id,franchise_id,expense_request_id,id) ON DELETE RESTRICT;
 CREATE FUNCTION shipit.guard_expense_attachment_parent() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
-DECLARE request shipit.cashbook_requests;n integer;bytes bigint;pending integer;
+DECLARE request shipit.cashbook_requests;n integer;bytes bigint;pending integer;organization_state text;franchise_state text;cleanup boolean;
 BEGIN
  IF TG_OP='UPDATE' AND NEW.expense_request_id IS DISTINCT FROM OLD.expense_request_id THEN RAISE EXCEPTION 'ATTACHMENT_IDENTITY_IMMUTABLE' USING ERRCODE='23514';END IF;
  IF NEW.expense_request_id IS NULL THEN RETURN NEW;END IF;
- PERFORM id FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id FOR UPDATE;
+ -- User authority and disable operations share organization-before-franchise order.
+ -- Cleanup deliberately remains possible after parent disable or grant revocation.
+ cleanup=TG_OP='UPDATE' AND OLD.state NOT IN ('ready','deleted') AND NEW.state IN ('canceled','cleanup_pending','deleted');
+ IF NEW.actor_type<>'service' THEN
+  SELECT lifecycle INTO organization_state FROM shipit.organizations WHERE id=NEW.organization_id FOR UPDATE;
+ END IF;
+ SELECT lifecycle INTO franchise_state FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id FOR UPDATE;
+ IF NEW.actor_type<>'service' AND NOT cleanup AND (organization_state IS DISTINCT FROM 'active' OR franchise_state IS DISTINCT FROM 'active')
+ THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_PARENT_DISABLED' USING ERRCODE='23514';END IF;
  SELECT * INTO request FROM shipit.cashbook_requests WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.expense_request_id FOR UPDATE;
  IF request.id IS NULL OR request.kind<>'expense' THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_PARENT_INVALID' USING ERRCODE='23514';END IF;
  IF NEW.actor_type='service' THEN
@@ -535,7 +543,7 @@ BEGIN
   IF TG_OP='INSERT' AND NEW.initiated_actor::text<>NEW.actor_id THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_ACTOR_INVALID' USING ERRCODE='23514';END IF;
  END IF;
  IF EXISTS(SELECT 1 FROM shipit.cashbook_request_decisions d WHERE d.organization_id=request.organization_id AND d.franchise_id=request.franchise_id AND d.request_id=request.id)
- AND NOT (TG_OP='UPDATE' AND OLD.state NOT IN ('ready','deleted') AND NEW.state IN ('canceled','cleanup_pending','deleted'))
+ AND NOT cleanup
  THEN RAISE EXCEPTION 'ATTACHMENT_EXPENSE_REVIEWED' USING ERRCODE='23514';END IF;
  IF TG_OP='INSERT' THEN
   SELECT count(*),COALESCE(sum(declared_size),0),count(*) FILTER(WHERE state<>'ready') INTO n,bytes,pending FROM shipit.attachments WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND expense_request_id=NEW.expense_request_id AND state<>'deleted';

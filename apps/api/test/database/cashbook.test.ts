@@ -12,7 +12,7 @@ import {randomUUID} from 'node:crypto';
 import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
 import {paymentFault} from '../payment-support.ts';
 import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
-import {DatabaseError,withTransaction,type DatabasePool} from '@shippingco/db';
+import {DatabaseError,withTransaction,type DatabasePool,type QueryExecutor} from '@shippingco/db';
 import {paymentSetup} from '../payment-support.ts';
 import {createMoneyReceiptService} from '../../src/modules/payments/receipt-service.ts';
 import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
@@ -597,4 +597,48 @@ await test('cashbook HTTP rejects disabled new intent, forged JSON, missing CSRF
  assert.equal((await app.inject({url:'/api/v1/cashbook/requests/'+saved.id+'?'+new URLSearchParams(q)})).statusCode,401);
  const accountant=await s.grant('accountant',[A]);assert.equal((await app.inject({method:'POST',url,cookies:{...cookie,shipit_session:accountant.token},headers:baseHeaders,payload:JSON.stringify(s.body)})).statusCode,403);
  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.cashbook_requests')).rows[0]!.n,1);await s.memberships.revokeMembership(s.orgAdmin.token,s.operator.member.id,{expected_version:s.operator.member.version});assert.notEqual((await app.inject({method:'POST',url,cookies:cookie,headers:baseHeaders,payload:JSON.stringify(s.body)})).statusCode,201);
+});
+
+// Direct metadata fixtures qualify SQL boundaries, not provider/scanner behavior.
+async function expenseSqlSetup(t:Parameters<typeof auditSetup>[0]) {
+ const s=await requestSetup(t);await s.db.prepareAttachments();const owner=s.db.ownerPool();
+ const submit=async()=>{const k=randomUUID();return s.service.submit(s.operator.token,q,k,headers(k),s.body,randomUUID());};
+ const request=await submit();
+ const attach=async(parent=request.id,size=10,db:QueryExecutor=owner)=>{const id=randomUUID(),now=new Date().toISOString();await db.query(`INSERT INTO shipit.attachments(id,organization_id,franchise_id,expense_request_id,purpose,kind,object_key,declared_size,declared_type,expected_digest,retention_class,initiated_actor,actor_type,actor_id,correlation_id,created_at,upload_expires_at,cleanup_due_at)
+ VALUES($1,$2,$3,$4,'expense_evidence','image',$5,$6,'image/png',$7,'operational_evidence',$8::uuid,'user',$8::text,$9,$10,$10::timestamptz+interval '15 minutes',$10::timestamptz+interval '30 minutes')`,[id,org,A,parent,'evidence/'+id,size,'a'.repeat(64),s.operator.id,randomUUID(),now]);return id;};
+ const ready=async(id:string)=>{await owner.query("UPDATE shipit.attachments SET state='quarantined',uploaded_at=clock_timestamp(),version=version+1 WHERE id=$1",[id]);await owner.query("UPDATE shipit.attachments SET state='ready',scan_state='clean',actual_size=declared_size,detected_type=declared_type,digest=expected_digest,validated_at=clock_timestamp(),linked_at=clock_timestamp(),cleanup_due_at=NULL,version=version+1 WHERE id=$1",[id]);};
+ return {...s,owner,request,submit,attach,ready};
+}
+await test('expense attachment SQL blocks disabled parents and revoked actors while service cleanup retains its narrow lifecycle',{timeout:30000},async t=>{
+ const s=await expenseSqlSetup(t),id=await s.attach(),before=(await s.owner.query('SELECT * FROM shipit.attachments WHERE id=$1',[id])).rows[0];
+ const disable=async(table:'organizations'|'franchises',state:string)=>s.owner.query(`UPDATE shipit.${table} SET lifecycle=$1 WHERE id=$2`,[state,table==='organizations'?org:A]);
+ for(const table of ['organizations','franchises'] as const){await disable(table,'disabled');await assert.rejects(s.attach(),{sqlState:'23514'});await assert.rejects(s.owner.query("UPDATE shipit.attachments SET state='quarantined',uploaded_at=clock_timestamp(),version=version+1 WHERE id=$1",[id]),{sqlState:'23514'});assert.deepEqual((await s.owner.query('SELECT * FROM shipit.attachments WHERE id=$1',[id])).rows[0],before);await disable(table,'active');}
+ await s.memberships.revokeMembership(s.orgAdmin.token,s.operator.member.id,{expected_version:s.operator.member.version});await assert.rejects(s.attach(),{sqlState:'23514'});await assert.rejects(s.owner.query("UPDATE shipit.attachments SET state='canceled',version=version+1 WHERE id=$1",[id]),{sqlState:'23514'});
+ await disable('organizations','disabled');await disable('franchises','disabled');
+ await assert.rejects(s.owner.query("UPDATE shipit.attachments SET state='quarantined',uploaded_at=clock_timestamp(),actor_type='service',actor_id='attachment-cleanup',version=version+1 WHERE id=$1",[id]),{sqlState:'23514'});
+ const memory=memoryStore(),cleanup=createAttachmentCleanup(s.pool,memory.store,()=>new Date(Date.now()+3600000));assert.deepEqual(await cleanup.tick(),{deleted:1,retry:0});assert.equal((await s.owner.query('SELECT state FROM shipit.attachments WHERE id=$1',[id])).rows[0]!.state,'deleted');
+ const audit=(await s.owner.query('SELECT actor_type,actor_id,action,expense_request_id,booking_id FROM shipit.attachment_audit_events WHERE attachment_id=$1 ORDER BY version',[id])).rows;assert.deepEqual(audit.map(x=>x.action),['attachments.initiated','attachments.cleanup_pending','attachments.deleted']);assert.ok(audit.slice(1).every(x=>x.actor_type==='service'&&x.actor_id==='attachment-cleanup'));assert.ok(audit.every(x=>x.expense_request_id===s.request.id&&x.booking_id===null));
+});
+await test('expense attachment SQL waits for parent disable before accepting a new write',{timeout:30000},async t=>{
+ const s=await expenseSqlSetup(t);
+ for(const table of ['organizations','franchises'] as const){const blocker=await s.owner.connect(),writer=await s.owner.connect(),parent=table==='organizations'?org:A;let outcome:Promise<PromiseSettledResult<string>>|undefined;
+  try {await blocker.query('BEGIN');await blocker.query(`UPDATE shipit.${table} SET lifecycle='disabled' WHERE id=$1`,[parent]);const pid=Number((await writer.query<{pid:number}>('SELECT pg_backend_pid() pid')).rows[0]!.pid);let done=false;
+   outcome=s.attach(s.request.id,10,writer).then(value=>{done=true;return {status:'fulfilled' as const,value};},reason=>{done=true;return {status:'rejected' as const,reason};});let waiting=false;
+   for(let n=0;n<100&&!done&&!waiting;n++){waiting=(await s.db.adminQuery('SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid=$1 AND wait_event_type=$2) waiting',[pid,'Lock'])).rows[0]!.waiting===true;if(!waiting)await new Promise(resolve=>setTimeout(resolve,10));}
+   assert.equal(waiting,true,`new expense evidence must wait for the held ${table} authority row`);assert.equal(done,false);await blocker.query('COMMIT');const result=await outcome;assert.equal(result.status,'rejected');if(result.status==='rejected')assert.equal(result.reason.sqlState,'23514');assert.equal((await s.owner.query('SELECT count(*)::int n FROM shipit.attachments')).rows[0]!.n,0);
+  }finally{await blocker.query('ROLLBACK');if(outcome)await outcome;blocker.release();writer.release();}
+  await s.owner.query(`UPDATE shipit.${table} SET lifecycle='active' WHERE id=$1`,[parent]);
+ }
+});
+await test('expense attachment SQL enforces parent byte and count quotas and exact command/audit ownership',{timeout:30000},async t=>{
+ const s=await expenseSqlSetup(t);for(let i=0;i<4;i++)await s.ready(await s.attach(s.request.id,8388608));await assert.rejects(s.attach(s.request.id,1),{sqlState:'23514'});
+ const second=await s.submit(),ids:string[]=[];for(let i=0;i<10;i++){const id=await s.attach(second.id,1);ids.push(id);await s.ready(id);}await assert.rejects(s.attach(second.id,1),{sqlState:'23514'});assert.equal((await s.owner.query('SELECT count(*)::int n FROM shipit.attachments WHERE expense_request_id=$1',[second.id])).rows[0]!.n,10);
+ const id=ids[0]!,command={id:randomUUID(),organization_id:org,franchise_id:A,booking_id:null,expense_request_id:second.id,attachment_id:id,principal_id:s.operator.id,operation:'grant',key_digest:'b'.repeat(64),fingerprint:'c'.repeat(64),result:{url:'/synthetic-private-grant',expires_at:new Date().toISOString()},created_at:new Date().toISOString()};
+ const insert=(row:unknown)=>s.owner.query('INSERT INTO shipit.attachment_commands SELECT * FROM jsonb_populate_record(NULL::shipit.attachment_commands,$1::jsonb)',[JSON.stringify(row)]);await insert(command);
+ for(const change of [{expense_request_id:s.request.id},{expense_request_id:null},{booking_id:s.request.id},{franchise_id:B},{organization_id:otherOrg,franchise_id:C}])await assert.rejects(insert({...command,...change,id:randomUUID(),key_digest:randomUUID().replaceAll('-','').repeat(2)}));
+ const audit=(await s.owner.query("SELECT * FROM shipit.attachment_audit_events WHERE attachment_id=$1 AND action='attachments.grant'",[id])).rows[0]!;assert.equal(audit.expense_request_id,second.id);assert.equal(audit.booking_id,null);assert.equal(audit.actor_id,s.operator.id);
+ await assert.rejects(s.owner.query('INSERT INTO shipit.attachment_audit_events SELECT * FROM jsonb_populate_record(NULL::shipit.attachment_audit_events,$1::jsonb)',[JSON.stringify({...audit,id:randomUUID(),expense_request_id:s.request.id})]));
+ for(const sql of ['SELECT * FROM shipit.attachment_audit_events','INSERT INTO shipit.attachment_audit_events(id) VALUES(gen_random_uuid())','DELETE FROM shipit.attachments','TRUNCATE shipit.attachment_commands','ALTER TABLE shipit.attachments DISABLE TRIGGER ALL'])await assert.rejects(s.pool.query(sql),{sqlState:'42501'});
+ await assert.rejects(s.owner.query('UPDATE shipit.attachments SET expense_request_id=$1,version=version+1 WHERE id=$2',[s.request.id,id]),{sqlState:'23514'});
+ assert.equal((await s.owner.query('SELECT count(*)::int n FROM shipit.attachment_commands')).rows[0]!.n,1);assert.equal((await s.owner.query("SELECT count(*)::int n FROM shipit.attachment_audit_events WHERE action='attachments.grant'")).rows[0]!.n,1);
 });

@@ -1349,3 +1349,45 @@ browser qualification. Logs are ignored local 140-expense-proof-final-* files. T
 hook-dependency/unused projection lint failure is retained and corrected without relaxing
 the gate. Direct SQL lifecycle acceptance, native browser journeys and final full-issue
 quality/CI/review/merge remain required before #140 closes.
+
+### #140 direct expense proof lifecycle acceptance
+
+The unreleased migration 46 now locks and reads current organization then franchise
+lifecycle for user expense evidence writes. New metadata/upload/finalization transitions
+cannot proceed after parent disable; current membership and user lifecycle still gate
+the actor. Cancellation/temporary-byte cleanup remains bounded by the existing state
+machine. The trusted cleanup worker can delete abandoned unsettled evidence after
+organization/franchise disable and submitter revocation, but cannot upload, link or
+rewrite ready evidence. Booking parents return through their existing guard unchanged.
+
+This adapts PostgreSQL's [row-lock behavior](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
+to ShippingCo's existing organization-before-franchise API authority boundary. The
+locking read waits for a concurrent lifecycle change and checks the committed row;
+this is verified by observing an actual blocked PostgreSQL writer, then committing
+organization and franchise disables separately. It adds no worker, table or new API
+permission. Arbitrary direct updates may acquire their target row before a trigger
+runs; this does not promise deadlock-free client SQL. Owning APIs keep the documented
+authority/parent lock order and transactional retry contract.
+
+Nine distinct real PostgreSQL checks pass for expense metadata/review, service recovery,
+HTTP integration and the new direct SQL lifecycle/quotas/ownership cases. The disable
+race case was strengthened to check both parents and passed again with its original
+30-second deadline. A revoked submitter cannot cancel by forging user metadata, while
+actual trusted cleanup deletes its abandoned temporary evidence on disabled parents.
+Four ready 8 MiB records exhaust the 32 MiB parent limit; ten small ready records exhaust
+the count limit. Existing pending quota/review races remain covered. Wrong expense,
+missing parent, mixed booking/expense, sibling franchise and unrelated organization
+command references fail; grant audits retain exact parent and actor. Runtime roles
+cannot read/write audit history, delete/truncate evidence or disable triggers.
+
+Sixteen existing native booking attachment lifecycle/authority checks pass unchanged
+against the final migration (140-expense-sql-booking-compatibility). Together these
+are 29 distinct native checks; the strengthened parent race rerun is included, not
+an extra distinct case. The four native cashbook source/upgrade cases also pass, preserving populated pre-140
+collections, released booking attachment tuples and original refund exact retry without
+fabricated custody. Final API types, root lint/query AST and migration history pass
+(all 45 released migrations unchanged). Logs: 140-expense-sql-native,
+140-expense-sql-parent-races, 140-expense-sql-upgrades, 140-expense-sql-final-types,
+140-expense-sql-final-lint and 140-expense-sql-migrations. Native test resources and
+loopback cluster are cleaned after each run. These controlled metadata/storage fixtures
+do not qualify a live provider or finish native browser and full-issue release gates.
