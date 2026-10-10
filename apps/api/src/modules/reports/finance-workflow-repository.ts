@@ -50,12 +50,12 @@ export async function refundAccount(scope:TenantAccess,id:string) {
  WHERE {{franchise:organization_id:franchise_id}} AND account_id=$1 ORDER BY version DESC LIMIT 1`,[id])).rows[0];
  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
-export async function appendRefundEvidence(scope:TenantAccess,changeId:string,requestId:string,revisionId:string,evidence:{account_id:string;method:string;occurred_at:string;returned_to_ref:string;transfer_ref:string}) {
+export async function appendRefundEvidence(scope:TenantAccess,changeId:string,requestId:string,revisionId:string,evidence:{account_id:string;method:string;occurred_at:string;returned_to_ref:string;transfer_ref:string;cash_location_id?:string;cash_location_revision_id?:string}) {
  const c=assertTenantAccess(scope,['finance.apply']);
  await scopedQuery(scope,['finance.apply'],`INSERT INTO shipit.financial_refund_evidence
- (id,organization_id,franchise_id,request_id,actor_id,source_account_id,source_revision_id,method,occurred_at,returned_to_ref,transfer_ref)
- SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`,
- [changeId,c.permittedFranchiseIds[0],requestId,c.actor.id,evidence.account_id,revisionId,evidence.method,evidence.occurred_at,evidence.returned_to_ref,evidence.transfer_ref,c.organizationId]);
+ (id,organization_id,franchise_id,request_id,actor_id,source_account_id,source_revision_id,method,occurred_at,returned_to_ref,transfer_ref,cash_location_id,cash_location_revision_id)
+ SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12 WHERE {{franchise:$13:$2}}`,
+ [changeId,c.permittedFranchiseIds[0],requestId,c.actor.id,evidence.account_id,revisionId,evidence.method,evidence.occurred_at,evidence.returned_to_ref,evidence.transfer_ref,evidence.cash_location_id??null,evidence.cash_location_revision_id??null,c.organizationId]);
 }
 export async function appendApplied(scope:TenantAccess,key:string,fingerprint:string,requestId:string,changeId:string) {
  const c=assertTenantAccess(scope,['finance.apply']),id=randomUUID();
@@ -154,4 +154,14 @@ export async function appendPolicy(scope:TenantAccess,key:string,fingerprint:str
  SELECT $1,{{organization}},$2,$3,NULL,false,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,
  [id,c.permittedFranchiseIds[0],expected+1,enabled,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);
  return {id,version:expected+1,discount_review_threshold_paise:null,allow_self_approval:false,enabled};
+}
+
+export async function refundCashLocation(scope:TenantAccess,id:string,revision:string,account:string,accountRevision:string) {
+ const location=(await scopedQuery<{kind:string;active:boolean;revision_id:string;account_revision_id:string;custodian_id:string|null;account_id:string}>(scope,['finance.apply'],`SELECT l.kind,l.account_id,l.custodian_id,r.active,r.id revision_id,r.account_revision_id FROM shipit.cash_locations l
+ JOIN LATERAL(SELECT * FROM shipit.cash_location_revisions x WHERE x.organization_id=l.organization_id AND x.franchise_id=l.franchise_id AND x.location_id=l.id ORDER BY version DESC LIMIT 1) r ON true
+ WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.id=$1`,[id])).rows[0];
+ if(!location||location.kind!=='cash'||location.account_id!==account)throw new HttpError('RESOURCE_NOT_FOUND');
+ if(!location.active||location.revision_id!==revision||location.account_revision_id!==accountRevision)throw new HttpError('VERSION_CONFLICT');
+ if(!(await scopedQuery(scope,['finance.apply'],`SELECT m.user_id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE {{franchise:f.organization_id:f.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin')`,[location.custodian_id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }

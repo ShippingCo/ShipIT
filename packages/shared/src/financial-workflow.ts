@@ -22,7 +22,7 @@ export interface FinancialRequestDetail extends FinancialOwnRequest {
  decisions:FinancialAuditDecision[];source:{booking_id:string;financial_version:number;payment_version:number;components:FinancialComponentsDto&{gross:string;collections:string;refunds:string}};
  before:FinancialPositionDto;proposed:FinancialPositionDto;
 }
-export interface FinancialRefundEvidenceInput {account_id:string;expected_account_version:number;method:ReceiptMethod;occurred_at:string;returned_to_ref:string;transfer_ref:string}
+export interface FinancialRefundEvidenceInput {account_id:string;expected_account_version:number;method:ReceiptMethod;occurred_at:string;returned_to_ref:string;transfer_ref:string;cash_location_id?:string|null;cash_location_revision_id?:string|null}
 export interface FinancialApplyInput {expected_version:1;refund_evidence?:FinancialRefundEvidenceInput}
 
 export interface FinancialPolicyDto {id:string;version:number;discount_review_threshold_paise:string|null;allow_self_approval:boolean;enabled:boolean}

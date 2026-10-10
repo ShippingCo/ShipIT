@@ -167,6 +167,7 @@ export interface DisposableDatabase {
   preparePayments(): Promise<void>;
   prepareReceivingAccounts(): Promise<void>;
   prepareMoneyReceipts(): Promise<void>;
+  prepareCashbook(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
@@ -353,6 +354,13 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.route_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCashbook() {
+      await handle.prepareMoneyReceipts();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.cash_locations,shipit.cash_location_revisions,shipit.cashbook_requests,shipit.cashbook_request_decisions,shipit.cashbook_effects,shipit.cashbook_effect_legs,shipit.cash_handovers,shipit.cash_handover_commands,shipit.cash_handover_legs TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.attachments,shipit.cashbook_source_versions,shipit.cashbook_source_facts,shipit.cash_handover_positions TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
     },
     async prepareMoneyReceipts() {
       await handle.preparePayments();await handle.prepareReceivingAccounts();

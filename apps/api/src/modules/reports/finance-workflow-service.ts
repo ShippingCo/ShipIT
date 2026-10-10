@@ -34,12 +34,14 @@ export function proposalInput(value:unknown) {
 function reference(value:unknown):string {
  if(typeof value!=='string'||!/^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/.test(value))throw new FieldValidationError('$','INVALID_FORMAT');return value;
 }
-function refundEvidence(value:unknown) {
+export function refundEvidence(value:unknown) {
  if(value===null||value===undefined)return null;
- const b=object(value,['account_id','expected_account_version','method','occurred_at','returned_to_ref','transfer_ref']);
+ const b=object(value,['account_id','expected_account_version','method','occurred_at','returned_to_ref','transfer_ref','cash_location_id','cash_location_revision_id']);
  if(typeof b.method!=='string'||!['cash','upi','bank_transfer','card','other'].includes(b.method))throw new FieldValidationError('$','INVALID_FORMAT');
+ const hasLocation=b.cash_location_id!==undefined&&b.cash_location_id!==null,hasRevision=b.cash_location_revision_id!==undefined&&b.cash_location_revision_id!==null;
+ if(hasLocation!==hasRevision||(hasLocation&&b.method!=='cash'))throw new FieldValidationError('$','INVALID_FORMAT');
  return {account_id:uuid(b.account_id,'account_id'),expected_account_version:integer(b.expected_account_version,'expected_account_version',1,2147483647),method:b.method,
- occurred_at:timestamp(b.occurred_at,'occurred_at'),returned_to_ref:reference(b.returned_to_ref),transfer_ref:reference(b.transfer_ref)};
+ occurred_at:timestamp(b.occurred_at,'occurred_at'),returned_to_ref:reference(b.returned_to_ref),transfer_ref:reference(b.transfer_ref),...(hasLocation?{cash_location_id:uuid(b.cash_location_id,'$'),cash_location_revision_id:uuid(b.cash_location_revision_id,'$')}:{})};
 }
 async function previewChange(scope:TenantAccess,source:FinancialSource,input:FinancialChangeAmounts&{booking_id:string;refund_correction_of?:string|null},prefix:number|null=null) {
  if(input.kind!=='refund_correction')return previewFinancialChange(source,input);
@@ -47,7 +49,7 @@ async function previewChange(scope:TenantAccess,source:FinancialSource,input:Fin
  const target=await workflow.refundTarget(scope,input.booking_id,input.refund_correction_of,prefix);
  return previewRefundCorrection(source,BigInt(target.refund),BigInt(target.corrected),input.refund);
 }
-export function createFinancialWorkflowService(database:DatabasePool,writesEnabled=false) {
+export function createFinancialWorkflowService(database:DatabasePool,writesEnabled=false,cashbookWritesEnabled=false) {
  return {
   async readPolicy(session:string,query:unknown,correlation:string) {
    const q=selection(query);return withFinancialScope(database,session,q.organizationId,q.franchiseId,'finance.policy.configure',correlation,async scope=>{
@@ -150,6 +152,8 @@ export function createFinancialWorkflowService(database:DatabasePool,writesEnabl
     await previewChange(scope,current,input);
     const account=evidence?await workflow.refundAccount(scope,evidence.account_id):null;
     if(evidence&&account){
+     if(evidence.method==='cash'&&cashbookWritesEnabled&&!evidence.cash_location_id)throw new FieldValidationError('$','REQUIRED');
+     if(evidence.cash_location_id)await workflow.refundCashLocation(scope,evidence.cash_location_id,evidence.cash_location_revision_id!,evidence.account_id,account.id);
      if(!account.active||account.version!==evidence.expected_account_version)throw new HttpError('VERSION_CONFLICT');
      if(await workflow.refundReferenceExists(scope,evidence.account_id,evidence.method,evidence.transfer_ref))throw new HttpError('FINANCIAL_REFUND_REFERENCE_CONFLICT');
      if(!account.methods.includes(evidence.method)||new Date(evidence.occurred_at)>(await workflow.serverTime(scope)))throw new FieldValidationError('$','INVALID_FORMAT');

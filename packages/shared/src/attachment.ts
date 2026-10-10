@@ -17,3 +17,8 @@ export interface AttachmentIntent {
   media_type: AttachmentMedia; size_bytes: number; sha256: string;
 }
 export interface AttachmentDownloadGrant { url: string; expires_at: string }
+
+export interface ExpenseAttachmentDto extends Omit<AttachmentDto,'booking_id'|'parcel_id'|'purpose'|'retention_class'> {
+ expense_request_id:string;purpose:'expense_evidence';retention_class:'operational_evidence';
+}
+export interface ExpenseAttachmentIntent extends Omit<AttachmentIntent,'purpose'|'parcel_id'> {purpose:'expense_evidence'}

@@ -3,6 +3,9 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  CASHBOOK_CONFLICT:[409,'Cash movement exceeds available custody or conflicts with its saved source. Refresh the cashbook evidence.'],
+  CASHBOOK_DISABLED:[409,'New expense and cashbook writes are disabled. Saved evidence and exact completed-command replay remain available.'],
+  CASHBOOK_APPROVAL_REQUIRED:[409,'A different franchise administrator must approve this exact expense or cash movement request.'],
   FINANCIAL_REFUND_REFERENCE_CONFLICT:[409,'This refund transfer reference already has recorded evidence. Reconcile that record before submitting another refund.'],
   FINANCIAL_WORKFLOW_DISABLED:[409,'New financial requests and decisions are disabled. Saved command outcomes remain available.'],
   FINANCIAL_APPROVAL_REQUIRED:[409,'The current financial policy requires a valid approval. Refresh the request and policy.'],

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {withTransaction} from '@shippingco/db';
+import {withTransaction,type DatabasePool} from '@shippingco/db';
 import {draft,input as pricingInput} from '../pricing-support.ts';
 import {taxFacts} from '../tax-support.ts';
 import {createPaymentService} from '../../src/modules/payments/service.ts';
@@ -15,6 +15,10 @@ import {org,A,B,otherOrg,C} from '../audit-support.ts';
 import {createMoneyReceiptService} from '../../src/modules/payments/receipt-service.ts';
 import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
 import type {FinancialAuditPage,FinancialAuditExport} from '@shippingco/shared';
+import {createCashLocationService} from '../../src/modules/cashbook/location-service.ts';
+import {createCashbookRequestService} from '../../src/modules/cashbook/request-service.ts';
+import {createCashHandoverService} from '../../src/modules/cashbook/handover-service.ts';
+import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
 import {createFinancialWorkflowService} from '../../src/modules/reports/finance-workflow-service.ts';
 import {createFinanceService} from '../../src/modules/reports/finance-service.ts';
 import {withFinancialScope} from '../../src/modules/memberships/service.ts';
@@ -166,19 +170,52 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
    await tx.query(`INSERT INTO shipit.receiving_account_revisions(id,organization_id,franchise_id,account_id,version,name,methods,other_method_name,active,actor_id,correlation_id,key_digest,fingerprint)
    VALUES($1,$2,$3,$4,1,'Synthetic refund drawer',ARRAY['cash'],NULL,true,$5,$6,$7,$8)`,[randomUUID(),org,A,account,s.local.id,randomUUID(),digest(),digest()]);
   });
+  await s.db.prepareCashbook();
+  const locations=createCashLocationService(s.pool,true),locationKey=randomUUID(),cashLocation=await locations.configure(s.local.token,null,q,locationKey,['idempotency-key',locationKey],{account_id:account,expected_account_version:1,custodian_id:s.operator.id,name:'Synthetic operator custody',active:true,expected_version:0},randomUUID());
+  const cashbook=createCashbookEffectService(s.pool,true),cashRequests=createCashbookRequestService(s.pool,true),custodyService=createFinancialWorkflowService(s.pool,true,true),floatKey=randomUUID(),sourceVersion=(await cashbook.position(s.local.token,q,randomUUID())).source_version;
+  const float=await cashRequests.submit(s.operator.token,q,floatKey,['idempotency-key',floatKey],{kind:'opening_float',source_location_id:cashLocation.id,source_revision_id:cashLocation.revision_id,target_location_id:null,target_revision_id:null,expected_source_version:sourceVersion,amount_paise:100000,currency:'INR',category:null,payee:null,responsible_employee_id:s.operator.id,reason:'Synthetic new cash introduced',occurred_at:'2026-01-01T00:00:00Z'},randomUUID());
+  const floatReviewKey=randomUUID(),floatDecision=await cashRequests.decide(s.local.token,float.id,q,floatReviewKey,['idempotency-key',floatReviewKey],{expected_version:1,decision:'approved',reason:'Synthetic float review'},randomUUID()),floatApplyKey=randomUUID();
+  await cashbook.apply(s.local.token,float.id,q,floatApplyKey,['idempotency-key',floatApplyKey],{expected_version:2,decision_id:floatDecision.id},randomUUID());
   for(const [index,amount] of [20000,30000].entries()){
    const id=await request({booking_id:booking,expected_version:index+1,payment_version:1,kind:'refund',reason:'customer_refund',refund:amount});
-   const evidence={account_id:account,expected_account_version:1,method:'cash',occurred_at:(await owner.query<{instant:Date}>('SELECT clock_timestamp() instant')).rows[0]!.instant.toISOString(),returned_to_ref:'SYN_BENEFICIARY',transfer_ref:'SYN_RETURN_'+index};
+   const evidence={account_id:account,expected_account_version:1,method:'cash',occurred_at:(await owner.query<{instant:Date}>('SELECT clock_timestamp() instant')).rows[0]!.instant.toISOString(),returned_to_ref:'SYN_BENEFICIARY',transfer_ref:'SYN_RETURN_'+index,...(index===0?{cash_location_id:cashLocation.id,cash_location_revision_id:cashLocation.revision_id}:{})};
    await assert.rejects(apply(id,{expected_version:1}),{code:'VALIDATION_FAILED'});
    await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,account_id:randomUUID()}}),{code:'RESOURCE_NOT_FOUND'});
    await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,occurred_at:'2099-01-01T00:00:00Z'}}),{code:'VALIDATION_FAILED'});
    if(index===1)await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,transfer_ref:'SYN_RETURN_0'}}),{code:'FINANCIAL_REFUND_REFERENCE_CONFLICT'});
-   const keys=[randomUUID(),randomUUID()],results=await Promise.allSettled(keys.map(key=>apply(id,{expected_version:1,refund_evidence:evidence},key)));
+   if(index===0){
+    await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_id:null,cash_location_revision_id:null}},randomUUID(),s.local.token,custodyService),{code:'VALIDATION_FAILED'});
+    await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_id:randomUUID()}},randomUUID(),s.local.token,custodyService),{code:'RESOURCE_NOT_FOUND'});
+    await assert.rejects(apply(id,{expected_version:1,refund_evidence:{...evidence,cash_location_revision_id:randomUUID()}},randomUUID(),s.local.token,custodyService),{code:'VERSION_CONFLICT'});
+    // Corrupt the writer's bound revision after service validation: PostgreSQL must deny it
+    // and roll back the already-appended financial change and its source-generation bump.
+    const beforeBoundary=await current(),beforePosition=await cashbook.position(s.local.token,q,randomUUID()),beforeEvidence=(await owner.query('SELECT * FROM shipit.financial_refund_evidence ORDER BY id')).rows;
+    const forged:DatabasePool={...s.pool,async connect(){const client=await s.pool.connect();return {release:discard=>client.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){
+     if(sql.includes('INSERT INTO shipit.financial_refund_evidence')){const tampered=[...params!];tampered[11]=randomUUID();return client.query<Row>(sql,tampered);}return client.query<Row>(sql,params);
+    }};}};
+    await assert.rejects(apply(id,{expected_version:1,refund_evidence:evidence},randomUUID(),s.local.token,createFinancialWorkflowService(forged,true,true)));
+    assert.deepEqual(await current(),beforeBoundary);const boundaryPosition=await cashbook.position(s.local.token,q,randomUUID());assert.equal(boundaryPosition.source_version,beforePosition.source_version);assert.deepEqual(boundaryPosition.locations,beforePosition.locations);
+    assert.deepEqual((await owner.query('SELECT * FROM shipit.financial_refund_evidence ORDER BY id')).rows,beforeEvidence);
+
+   }
+   const keys=[randomUUID(),randomUUID()],results=await Promise.allSettled(keys.map(key=>apply(id,{expected_version:1,refund_evidence:evidence},key,s.local.token,index===0?custodyService:service)));
    assert.equal(results.filter(r=>r.status==='fulfilled').length,1,JSON.stringify(results.map(r=>r.status==='rejected'?{status:r.status,code:(r.reason as {code?:string}).code}:{status:r.status})));assert.equal(results.filter(r=>r.status==='rejected').length,1);
    const winner=results.findIndex(r=>r.status==='fulfilled'),result=results[winner]!;assert.equal(result.status,'fulfilled');
    if(result.status!=='fulfilled')throw new Error('Synthetic refund race had no winner');
    assert.deepEqual(await apply(id,{expected_version:1,refund_evidence:evidence},keys[winner]!,s.local.token,disabled),result.value);
    assert.equal((await current()).refunds,String(index===0?20000:50000));
+   const position=(await cashbook.position(s.local.token,q,randomUUID())).locations.find(p=>p.location_id===cashLocation.id)!;
+   assert.equal(position.known_recorded_paise,'80000');assert.equal(position.available_paise,index===0?'80000':'0');
+   if(index===1){
+    const targetKey=randomUUID(),target=await locations.configure(s.local.token,null,q,targetKey,['idempotency-key',targetKey],{account_id:account,expected_account_version:1,custodian_id:s.local.id,name:'Synthetic receiving admin drawer',active:true,expected_version:0},randomUUID()),handoverKey=randomUUID();
+    const sourceVersion=(await cashbook.position(s.local.token,q,randomUUID())).source_version;
+    await assert.rejects(createCashHandoverService(s.pool,true).request(s.operator.token,q,handoverKey,['idempotency-key',handoverKey],{source_location_id:cashLocation.id,source_revision_id:cashLocation.revision_id,target_location_id:target.id,target_revision_id:target.revision_id,expected_source_version:sourceVersion,amount_paise:1,currency:'INR',reason:'Synthetic unknown-refund denial',occurred_at:'2026-01-01T00:00:00Z'},randomUUID()),{code:'CASHBOOK_CONFLICT'});
+    assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.cash_handovers')).rows[0]!.n,0);assert.equal((await cashbook.position(s.local.token,q,randomUUID())).source_version,sourceVersion);
+   }
+
+   const recorded=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE transfer_ref=$1',[evidence.transfer_ref])).rows[0]!;
+   assert.equal(recorded.cash_location_id,index===0?cashLocation.id:null);assert.equal(recorded.actor_id,s.local.id);assert.notEqual(recorded.actor_id,s.operator.id);
+   const fact=(await owner.query("SELECT location_id,unknown_reason FROM shipit.cashbook_source_facts WHERE source_kind='refund' AND source_id=$1",[recorded.id])).rows[0]!;assert.equal(fact.location_id,index===0?cashLocation.id:null);assert.equal(fact.unknown_reason,index===0?null:'cash_refund_custody_unknown');
   }
   const extra=randomUUID();await assert.rejects(service.request(s.operator.token,q,extra,['idempotency-key',extra],{booking_id:booking,expected_version:3,payment_version:1,kind:'refund',reason:'customer_refund',refund:1},randomUUID()),{code:'FINANCIAL_CONFLICT'});
   // Subsequent refunds do not rewrite the cancellation request's original paid observation.
@@ -237,6 +274,21 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
   await assert.rejects(propose({...correctionBody,expected_version:6,refund:1}),{code:'FINANCIAL_CONFLICT'});
   assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.financial_refund_evidence')).rows[0]!.n,3);
   assert.deepEqual((await owner.query('SELECT * FROM shipit.financial_changes WHERE id=$1',[originalRefund.id])).rows[0],originalRefund);
+  const oldEvidence=(await owner.query("SELECT * FROM shipit.financial_refund_evidence WHERE cash_location_id IS NULL ORDER BY recorded_at,id")).rows;
+  assert.equal(oldEvidence.length,2);
+  for(const [index,e] of oldEvidence.entries()){
+   const original=(await owner.query('SELECT refund FROM shipit.financial_changes WHERE id=$1',[e.id])).rows[0]!,id=await request({booking_id:booking,expected_version:6+index,payment_version:1,kind:'refund_correction',reason:'incorrect_refund_recording',refund:Number(original.refund),refund_correction_of:e.id});
+   await apply(id,{expected_version:1});
+  }
+  const released=(await cashbook.position(s.local.token,q,randomUUID())).locations.find(p=>p.location_id===cashLocation.id)!;assert.equal(released.known_recorded_paise,'100000');assert.equal(released.available_paise,'100000');assert.equal(released.state,'incomplete');
+  assert.deepEqual((await owner.query("SELECT * FROM shipit.financial_refund_evidence WHERE cash_location_id IS NULL ORDER BY recorded_at,id")).rows,oldEvidence);
+  await assert.rejects(owner.query('UPDATE shipit.financial_refund_evidence SET cash_location_id=$1,cash_location_revision_id=$2 WHERE id=$3',[cashLocation.id,cashLocation.revision_id,oldEvidence[0]!.id]));
+  const accounts=createReceivingAccountService(s.pool),bankKey=randomUUID(),bank=await accounts.configure(s.local.token,null,q,bankKey,['idempotency-key',bankKey],{name:'Synthetic noncash refund account',methods:['upi'],other_method_name:null,active:true,expected_version:0},randomUUID()),bankLocationKey=randomUUID(),bankLocation=await locations.configure(s.local.token,null,q,bankLocationKey,['idempotency-key',bankLocationKey],{account_id:bank.id,expected_account_version:1,custodian_id:null,name:'Synthetic recorded UPI funds',active:true,expected_version:0},randomUUID());
+  const noncash=await request({booking_id:booking,expected_version:8,payment_version:1,kind:'refund',reason:'customer_refund',refund:10000}),noncashEvidence={account_id:bank.id,expected_account_version:1,method:'upi',occurred_at:'2026-01-01T00:00:00Z',returned_to_ref:'SYN_BENEFICIARY',transfer_ref:'SYN_UPI_REFUND'};
+  await assert.rejects(apply(noncash,{expected_version:1,refund_evidence:{...noncashEvidence,cash_location_id:cashLocation.id,cash_location_revision_id:cashLocation.revision_id}},randomUUID(),s.local.token,custodyService),{code:'VALIDATION_FAILED'});
+  await apply(noncash,{expected_version:1,refund_evidence:noncashEvidence},randomUUID(),s.local.token,custodyService);
+  const finalCash=await cashbook.position(s.local.token,q,randomUUID());assert.equal(finalCash.locations.find(p=>p.location_id===cashLocation.id)!.known_recorded_paise,'100000');assert.equal(finalCash.locations.find(p=>p.location_id===bankLocation.id)!.known_recorded_paise,'-10000');
+
 
 
  }

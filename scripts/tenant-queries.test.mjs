@@ -302,3 +302,9 @@ test('carrier storage requires franchise predicates and routes expose query data
  assert.deepEqual(inspectSource('apps/api/src/modules/carriers/routes.ts','service.read(request.query)'),[]);
  assert.ok(inspectSource('apps/api/src/modules/carriers/routes.ts',"request.query('SELECT * FROM shipit.carrier_installations')").length);
 });
+
+test('cashbook HTTP query data exception cannot call or extract a raw query method',()=>{
+ const path='apps/api/src/modules/cashbook/routes.ts';assert.deepEqual(inspectSource(path,'service.list(request.query)'),[]);
+ for(const code of ["request.query('SELECT * FROM shipit.cashbook_requests')","const run=request.query;run('SELECT * FROM shipit.cashbook_requests')","db.query('SELECT * FROM shipit.cashbook_requests')"])
+ assert.ok(inspectSource(path,code).length,code);
+});

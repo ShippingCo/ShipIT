@@ -546,3 +546,947 @@ counts were corrected without changing historical-row, old-writer or no-op
 assertions. All eight affected API cases then passed against disposable PostgreSQL
 with their original case deadlines; no skipped, cancelled or failed cases. This
 focused result does not replace the full final-commit CI integration gate.
+
+## #140 expense and cashbook implementation plan
+
+The shop needs an explainable recorded drawer balance, private expense evidence and
+acknowledged custody transfers. Reuse receiving-account identities and immutable
+receipt/refund sources; keep revenue, customer allocations and actual custody distinct.
+No bank API or daily-close workflow is introduced.
+
+Approval rule D140-1 (product-owner approved in this Goal on 10 October 2026): operators and franchise
+admins submit expense, opening-float/owner-fund and correction requests; a different
+franchise admin approves or rejects, and an admin applies the exact approved proposal.
+Corrections retain the original, reason, prior version and linked replacement effects.
+An administrator cannot approve their own submitted request. This extends the explicit
+#139 review rule to #140; D137-4's labelled sole-admin cash-close exception stays specific
+to #145. Transfer acknowledgement is performed by the named active receiving custodian,
+not by an initiator setting an approval flag. Existing D137 permissions do not grant
+accountants, organization admins, agents or read_only financial mutations.
+
+Implementation:
+- Add migration 46 with scoped immutable cash locations, request/decision/effect and
+  transfer/acknowledgement sources, bounded exact-intent command results, composite
+  ownership constraints and indexed source joins. No historical balance/expense seed.
+- A location combines a receiving account with an authorized cash custodian; noncash
+  accounts retain account-level recorded funds. New opening float is an explicitly
+  additive amount introduced into custody, not a replacement for a historical total.
+  Owner funds are external inflows. Cash receipts contribute once; allocating or releasing
+  an allocation cannot change that receipt's drawer inflow. Unknown legacy custody is
+  displayed separately, never assigned to the current actor or silently treated as zero.
+- Approved cash expense is an outflow from its owned location; noncash expense affects
+  its noncash source only. Deposit/withdrawal commits equal linked cash/noncash legs,
+  preserving owned money and creating no sales/expense. Manual evidence is recorded,
+  with bank clearance explicitly unverified. Actual refunds drill through to the owning
+  refund source; expense input cannot create a second refund. Custodian attribution for
+  new cash refunds is explicit; unresolved old refund custody remains unknown.
+- Requested handover retains sender possession and separately reserves its remainder.
+  Partial acceptance atomically commits paired legs and leaves the rest outstanding;
+  rejection releases the unaccepted remainder. Scoped expected versions, current account
+  revisions and receiver membership are checked before effects and exact replay.
+- Use short existing PostgreSQL transactions, deterministic lock order, actor-scoped
+  idempotency keys/fingerprints and retained outcomes. Preserve exact intent after an
+  uncertain response; commit source, audit and effects together. No new asynchronous
+  consumer is needed: committed sources and audit remain the authority.
+- Add expense-parent attachment authorization while reusing existing storage, scanner,
+  size/media limits, upload leases and private grant primitives. Preserve booking/proof
+  parent checks and recheck expense authority after storage delays before bytes release.
+- Deliver Material 3 cashbook list/detail/filter/export, expense request/approve/correct
+  and transfer request/accept/reject flows with keyboard/mobile/error/loading/pending/
+  uncertain states. Capture one cutoff for every exposed aggregate and drill-through;
+  private payee/bank references are excluded from audit/export. Feature writes default off.
+- Append recorded/occurred timestamps and correction/source versions for #145's future
+  reviewed-close snapshots and late-evidence reconciliation. No existing closed source is
+  edited, and no synthetic daily-close record is created by migration.
+
+Research and complexity: adapt [AWS caller request identity and atomic effects](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)
+for acknowledgements/lost responses, and [PostgreSQL row locks with consistent ordering](https://www.postgresql.org/docs/18/explicit-locking.html)
+for balance capacity. ShippingCo's application is an inference from those practices:
+reuse current transaction/command patterns with immutable paired legs and no new queue.
+Cost is additive tables/indexes and brief franchise-level money serialization at shop
+scale; verify scoped plans and races rather than adding speculative infrastructure.
+
+Verification maps to #140's full live acceptance: ₹1,000 float + ₹4,000 cash receipt −
+₹500 cash expense = ₹4,500, UPI expense leaves cash unchanged, allocation release leaves
+cash unchanged, ₹2,000 deposit preserves total owned funds, raced/partial/retried
+acknowledgements post one receiving side, prior-day correction retains original evidence,
+unknown/revoked/sibling/unrelated scope cannot leak source totals or private evidence,
+source/capacity/date/amount/version errors preserve balances, and pre/post-COMMIT faults
+recover by exact identity. Real PostgreSQL constraints/services/upgrades and browser
+keyboard/mobile flows complement pure arithmetic tests. All final-commit CI/review/merge,
+issue closure and main/branch cleanup remain required; provider/accountant qualification
+is not claimed.
+
+Foundation verification for #140 (not full issue acceptance): seven pure equation/input
+cases and five real PostgreSQL location/source-version/service cases passed. The revised
+single-query location selector additionally passed a real scoped keyset-pagination case.
+Seventeen native compatibility cases passed: six migration/lock recovery cases, two
+financial-workflow schema cases, six existing cancellation/refund/audit service cases and
+three copied-schema/forward-repair cases. Source assertions preserve old rows and issued
+financial evidence. Workspace types, scoped query AST, changed-file lint and exact
+R33/R34/W57–W61 matrix assertions passed. Initial failures were diagnosed as an incomplete
+test-only direct membership revocation (replaced with the real service), stale explicit
+migration inventory/ledger expectations and strict missing-row typing (now asserted).
+Migration 46 remains unreleased and will be extended with expense/transfer/evidence
+sources before full verification. Expense application, transfer commands, private expense
+attachments, cashbook projections/UI, broader native/browser gates and final PR CI/review/
+merge are still pending; these foundation results do not close #140.
+
+Request/decision implementation for #140 (still partial): `cashbook_requests` retains
+an expense, additive opening float, owner-fund introduction, deposit or withdrawal
+proposal with its exact amount, currency, current location revisions, source generation,
+responsible employee, private payee/category where applicable, reason and occurred time.
+`cashbook_request_decisions` appends one different-admin approval or rejection; both
+sources are immutable and server timestamped. Neither submission nor approval creates
+money effects, reservations, receipts or a source-generation increment. Application and
+corrections remain pending. A deposit must propose cash to noncash, a withdrawal noncash
+to cash, and opening float requires cash. These are manual recorded-funds proposals;
+no bank settlement is verified.
+
+The request service rechecks current scoped memberships and source/account revisions
+under the franchise money lock. Operators submit against their own cash location or a
+noncash source and read only their own proposals; authorized finance readers can read
+franchise proposals. Private payees remain in the scoped request detail. Approval rejects
+stale source generations, deactivated accounts/locations or departed custodians; a
+different admin can reject a stale proposal while retaining its original evidence.
+Submitting an unchanged new-key proposal is a separate request; actor-scoped exact-key
+replay returns the original submission or decision, including after writes are disabled
+or a source changes. Current caller authority remains required for replay. New writes
+stay disabled by default, and HTTP/configuration/UI integration is pending.
+
+Verification for this request slice: eight unit/input cases passed and twelve native
+PostgreSQL cases passed (three request/movement service cases, six migration cases and
+three existing location/receipt/populated-upgrade cases). Native evidence covers all
+five proposal kinds, different-admin enforcement at both service and database boundaries,
+private own-request reads, denied roles and cross-franchise/organization access, stale
+sources, paired-source validation, competing decisions, immutable evidence, failed
+inserts and recovery from post-COMMIT lost acknowledgement using a fresh pool. Requests
+and decisions leave receipt counts and source generations unchanged. A unit timestamp
+expectation initially used fixed milliseconds; it was corrected to the existing canonical
+`instant` representation after diagnosis. The original failed log remains local. Scoped
+query AST, API types and changed-file lint passed. These checks do not qualify money
+application, handover acknowledgement, attachment authorization or the cashbook UI.
+
+Atomic movement application for #140 (remaining scope below still pending): an admin
+applies the identity of a different-admin approval with request version 2. The apply
+body cannot supply an amount, location or approval flag. Immutable `cashbook_effects`
+and `cashbook_effect_legs` bind the exact request and decision; a deferred completeness
+check rejects missing legs, and leg guards reject incorrect amounts, locations and
+insertion outside the owning transaction. One source generation increment is committed
+with the complete effect. Current source revisions/generation, eligible custodians and
+capacity are rechecked under the franchise money lock. An unchanged completed-key replay
+returns the original complete effect after writes are disabled, without another generation
+increment. Request detail now shows applied version 3 and immutable effect legs.
+
+`cashbook_source_facts` projects one actual money receipt independently of booking
+allocation/release, explicit noncash refund accounts, unknown old cash refund custody,
+unknown legacy collection/correction sources and committed movement legs. Legacy payment
+entries linked to a receipt are excluded from the legacy union and its source-version
+hook. New unlinked legacy collection/correction writes increment source generation;
+historical migration creates no generation seed. Legacy recording corrections are labelled
+as such, not described as verified new transfers. The owning refund workflow now accepts
+an explicit cash-location/current-revision pair, bound to the original source account and
+an eligible current custodian. Cashbook-enabled new cash refunds require that pair; the
+actor is never inferred as custodian. The additive nullable fields preserve existing
+refund evidence as unknown custody, and immutable guards prohibit later attribution.
+Refund corrections retain the original location/account. Relevant unresolved unknown
+refund amounts block spending; complete approved record annulment releases that block
+while both source facts remain visible. Unknown legacy collections never add guessed
+location capacity. HTTP/configuration wiring of the cashbook flag is still pending.
+
+The scoped position query captures location control totals, unknown source count and source
+generation at one statement MVCC cutoff. All amounts use exact numeric/BigInt arithmetic;
+gross turnover is returned as decimal strings. `known_recorded_paise` explicitly describes
+the attributed portion. Unknown sources mark an incomplete position, negative recorded
+amounts mark an exception, and neither represents a qualified actual cash count or bank
+settlement. Only finance readers receive this projection; operator selection still grants
+minimum location choices and their own submitted proposal/decision/effect evidence.
+Full cashbook fact drill-through, filters, captured exports, corrections, custody transfers,
+expense attachments, HTTP/configuration wiring and Material 3 UI are still pending.
+
+Application verification for this slice: both native PostgreSQL application cases passed
+with their original 30-second case deadlines. The real-source journey establishes
+₹1,000 opening float + ₹4,000 actual received cash − ₹500 expense = ₹4,500, unchanged cash
+for a UPI expense, unchanged receipt inflow after booking allocation/release, and conserved
+owned funds through ₹2,000 deposit and a withdrawal. The race/fault case establishes
+rollback of failed or incomplete/forged legs and their generation increment, one exact
+same-key concurrent outcome, stale-source/capacity denial, immutable effects and fresh-pool
+recovery after lost post-COMMIT acknowledgement. Nine unit/input cases, scoped query AST,
+changed-file lint and all five workspace type checks passed. Two initial native failures
+were diagnosed and retained locally: the deferred completeness CASE expression needed
+parentheses, and the runtime scope compiler requires a SELECT root (the capture now uses
+the existing SELECT-LATERAL pattern). A lint-only fixture binding was corrected to const,
+and the UPI fixture retains the existing receipt API receiver/custodian contract. No
+production privacy/isolation rules, assertions or test deadlines were weakened.
+
+Seventeen native compatibility cases passed on this application/source implementation:
+six fresh/upgrade/advisory-lock migration cases, two financial-workflow schema cases,
+six existing cancellation/refund/audit/policy service cases and three copied-schema
+forward-repair cases. The extended populated pre-140 upgrade case also passed: all old
+collection evidence is preserved, all seven new cashbook source tables are empty after
+upgrade, the old collection appears as unknown account/custody, and a new legacy recording
+correction advances generation once while both source facts remain unassigned. There
+were no skipped, cancelled or failed cases in these completed runs. This evidence remains
+partial #140 acceptance; recording corrections, handovers,
+private expense attachments, captured cashbook journeys and final PR gates remain pending.
+
+
+Cash-refund custody verification for #140: ten unit/input cases, all five workspace type
+checks, changed-file lint and the tenant-query AST gate passed. All six existing native
+financial workflow cases passed after extending the actual paid-refund journey: explicit
+cash custody differs from the applying admin, missing/unknown/stale locations are denied,
+corrections retain original custody, unknown refunds block spending until fully annulled,
+and a UPI refund affects the recorded noncash account while cash stays unchanged. These
+are real PostgreSQL application services, not qualification of a bank transfer provider.
+
+A separate populated migration-45 refund upgrade passed on native PostgreSQL. The test
+uses the released writer's actual old column list and caller-intent digest before applying
+migration 46. Every old evidence field and all financial/payment/booking rows remain
+unchanged, new custody fields are null, and all seven new cashbook tables remain empty.
+The old apply key returns the exact retained outcome with financial writes disabled and
+new cashbook enforcement enabled; changed intent is rejected and no source generation is
+fabricated. The initial policy fixture omitted its two required approved-policy fields;
+that diagnosed failure log is retained, and the fixture was corrected without changing
+production rules, assertions or the original 60-second deadline. All seven final native
+cases completed with zero failures, skips, cancellations or todos. Expense/fund/movement
+record corrections, handovers, attachments, full cashbook journeys and final PR gates
+remain pending; this slice does not close #140.
+
+
+The extended paid-refund native case also verifies the independent database boundary:
+a synthetic writer corrupts the custody revision after service validation. PostgreSQL
+rejects it, and the previously appended financial change, source-generation increment and
+refund evidence all roll back. The unchanged approved request then succeeds normally.
+The original 60-second case deadline, API types and changed-file lint passed.
+
+
+Linked recording corrections for #140 now reuse the same request, different-admin
+approval and exact-approval apply path. A correction names an applied request's current
+chain head through an owned `correction_of` reference. Movement kind, original source and
+target identity and original occurrence time stay fixed; safe replacement metadata and
+the corrected total amount live in a new immutable request. Requests with no correction
+reference still require positive paise. A zero replacement annuls the prior recorded
+meaning, while an unchanged amount with corrected metadata produces no money legs.
+Both retain the complete approval/effect evidence and advance the source generation once.
+
+Application posts only the difference from the previous applied amount. Expense increases
+produce an outflow difference; reductions produce an inflow correction. Opening/owner fund
+corrections reverse that sign, and deposit/withdrawal corrections produce two equal and
+opposite legs. These are corrections of recorded meaning, not verified new transfers or
+sales. SQL computes the same intended legs for capacity bounds, direct-leg intent and
+deferred completeness. Missing, incorrect or incomplete legs roll back the whole effect
+and generation increment. Original requests, approvals and legs cannot be rewritten.
+
+Current actor/scope, chain head, source generation and current location revision remain
+required. Operators can correct their own applied proposals using their permitted custody
+choices; current franchise admins can submit historical corrections after an account or
+custodian becomes inactive. Historical corrections do not require claiming new receipt by
+that former custodian, and new actual movements still require active accounts/custodians.
+The responsible employee on the new correction must be eligible now. A different current
+admin reviews the exact correction, including when another admin submitted it. Exact-key
+completed retries preserve their prior outcome with writes disabled, but still require the
+caller's current authority. Competing corrections cannot create two applied successors.
+
+A truthful correction may expose a negative recorded balance; it is labelled an exception
+with zero available money. Both positive and negative totals must remain within the exact
+safe paise bound. Original occurrence time and the new server-recorded time remain visible
+for later cutoff/close evidence. #145 owns actual daily-close approval and reopening;
+these tests do not fabricate an already reviewed close or qualify that future workflow.
+
+
+Correction verification: eleven unit/input cases passed. Thirty-one native PostgreSQL
+cases passed across the complete cashbook service set (nine cases), one additional signed-
+bound/paired-completeness case, all four cashbook source/fresh/populated-upgrade cases and
+seventeen existing finance/migration/copied-schema compatibility cases. The three new
+correction journeys cover retained prior-day requests/legs, exact ₹500-to-₹700 differences,
+metadata-only zero-leg effects, full annulment and successive replacement, inactive-account/
+departed-custodian admin recovery, all five original movement kinds, paired owned-money
+conservation, unknown/unapplied/changed/stale targets, operator ownership, sibling/unrelated
+scope denial, self-approval denial, direct SQL forgeries, competing applied successors,
+failed/missing/incomplete/wrong legs, both signed safe-money bounds, source-generation
+rollback, fresh-pool recovery after lost COMMIT acknowledgement and current-role denial on
+replay. Completed native runs had zero failures, skips, cancellations or todos with their
+original 30/60-second case deadlines; disposable clusters were stopped and cleaned.
+
+All five workspace type checks, final API fixture types, changed-file lint, tenant-query
+AST, the exact 99-row authorization contract and diff checks passed. Initial static errors
+were diagnosed as using a field outside the existing validation-field union and missing
+assertions on the fixture's two known race keys; the safe existing `$` validation field
+and non-null fixture index assertions corrected them without changing runtime assertions.
+This is service/schema acceptance for corrections, not full #140 completion. Transfer
+acknowledgements/reservations, expense attachments, captured query/export journeys,
+HTTP/configuration wiring, Material 3 UI and final PR gates remain pending.
+
+
+Acknowledged handovers for #140 now use immutable `cash_handovers`,
+`cash_handover_commands` and `cash_handover_legs`, extending unreleased migration 46
+without historical seeds. A request reserves its amount while the sender retains recorded
+possession. The named active target custodian accepts a positive portion or rejects the
+remaining portion; an initiator cannot supply an acceptance flag or act as a different
+recipient. Each accepted command has one identity and two exact opposing custody legs,
+with deferred completeness and owning-transaction guards. Rejection/cancellation produces
+no actual money legs and releases only the unaccepted remainder. Current own sender or
+franchise admin can append cancellation after source deactivation or custodian departure,
+while all accepted history stays immutable. This custody acknowledgement is distinct from
+the different-admin expense/fund/correction approval path under D140-1.
+
+Requests and responses check current scoped roles, location/account revisions, eligible
+custodians, source generation and expected handover version under the same short franchise
+money lock. Every request/response advances the generation once; exact actor/key/intent
+replay returns the original immutable outcome before disabled-write and changed-source
+checks, while still requiring current command authority. A later partial acceptance cannot
+rewrite an earlier command's retained amount/remainder or legs. Accepted fact occurrence
+uses the server-recorded acknowledgement time, not an earlier requested date; the request's
+own original occurrence remains separately visible. No bank transfer provider is invoked.
+
+The same-cutoff location projection now reports pending reservations and shortfall
+separately from known recorded possession. New expense/deposit/withdrawal checks subtract
+reserved custody at both service and SQL boundaries. An acknowledgement excludes its own
+reservation when checking capacity, still protects other reservations and blocks unresolved
+unknown refund custody. A truthful prior-source correction may reveal a shortage; available
+money becomes zero and acceptance/spending stops. Shortfall is an exact derived decimal
+quantity and can exceed the safe bound of an individual stored money amount; actual signed
+recorded balances and requested/accepted amounts keep their existing bounds.
+
+Purpose-limited target choices expose only active location identity/revision, staff label
+and custodian identity. They require an authorized source and reveal neither other balances
+nor receiving-account configuration. Operator inbox/detail/history includes only their own
+initiated/source/target handovers; finance roles retain their scoped reads. Lists use bounded
+UUID keyset pages, and command history uses at most 100 rows with an explicit version cursor
+and one batched leg query. Source generations and current totals share the held read cutoff.
+An operator's participating handover evidence does not confer franchise-ledger access.
+
+Verification: twelve unit/input cases passed. Thirty-four distinct native PostgreSQL cases
+passed: thirteen cashbook service cases, four fresh/source/populated-upgrade cases and
+seventeen existing finance/migration/copied-schema cases. The strengthened reservation
+case was additionally retested with complete, otherwise valid expense legs to prove the
+independent SQL capacity denial, plus denied direct/request over-reservation. Final selector/
+inbox and both-custodian-departure admin recovery changes were verified by rerunning the
+two affected native cases. Native evidence covers partial acceptance, rejection, one paired
+receiving side under same/distinct-key races, failed/omitted/incorrect legs and rollback of
+reservations/generation, fresh-pool recovery after lost request/ack COMMIT responses, current-
+role replay denial, stale/inactive sources, scope/role denial, 101 acknowledgements across
+bounded history pages, safe recipient fields, immutable accepted evidence and shortage
+recovery. The actual refund fixture also confirms that an unresolved old cash refund blocks
+a new handover without creating a request or generation increment. All final completed runs
+had zero failures, skips, cancellations or todos under the original case deadlines, and
+disposable clusters were stopped and cleaned. Populated upgrades preserve old evidence and
+leave all ten new cashbook tables empty, including handovers.
+
+All five workspace type checks, final changed-file lint, tenant-query AST, exact 99-row
+permission contract and diff checks passed. Initial failures remain in local logs: a missing
+reservation projection field, PostgreSQL 42803 from the ungrouped correlated scope columns,
+strict pagination-query selection and two malformed fixture/source-body paths. The missing
+field/group columns and explicit query allowlist were fixed, and the fixture paths were
+corrected without weakening constraints, assertions, privacy rules or deadlines. Handover
+services now satisfy their scoped custody/retry contract; full #140 acceptance still needs
+captured cashbook source/filter/export journeys, private expense attachments, HTTP/strict
+feature-flag integration, Material 3 UI/browser qualification and final PR CI/review/merge.
+
+## #140 request inbox acceptance slice
+
+The live request inbox now supports bounded UUID keyset pages (1–100 items) and
+strict movement, category, approval/application state, source custody, responsible
+employee and half-open occurrence-time filters. Operators see only their own
+submitted requests; current finance readers see their permitted franchise. Applied
+correction links retain the original request and expose metadata-only corrections
+that have no money legs. Payee/reason text, account metadata, keys and fingerprints
+remain absent from list rows. Scoped detail retains private request evidence.
+
+One SQL statement captures each page's status, correction head, source generation
+and timestamp. This is a live inbox, not a frozen monetary report or export. Existing
+membership transactions already hold the organization authority lock across detail
+reads, so decisions and effects form a consistent prefix. No extra read lock was
+needed. A native regression pauses a real detail read and observes PostgreSQL's
+concurrent approval lock wait before releasing it and checking before/after prefixes.
+
+Focused native cashbook compatibility passed 14 cases; final inbox and authority-lock
+cases passed two cases (one repeated inbox plus one additional distinct regression),
+with original 30-second case deadlines and no failures/skips/cancellations/todos.
+All disposable clusters were stopped and removed. Workspace types, changed lint,
+tenant-query AST, exact 99-row permission contract and diff checks passed; final
+fixture/API types and query checks passed after the lock-test correction. Evidence
+is in ignored local 140-request-inbox-* and 140-request-detail-lock-native.log logs.
+The first lock regression waited at the wrong boundary (franchise after the already
+exclusive organization lock) and hit the existing timeout; its full failed log is
+retained as 140-request-detail-lock-wrong-boundary-failure.log. The test now observes
+the actual authority boundary and the redundant proposed lock was removed. Assertions
+and deadlines were retained. The matrix validator's initial Windows decoding error
+was corrected by its established PYTHONUTF8 environment setting. Full #140 source
+reports, attachments, HTTP/UI and final delivery acceptance remain pending.
+## #140 captured cashbook sources
+
+Cashbook source capture reuses report snapshots, their per-actor retained keys,
+24-hour lifetime, 20-live-snapshot quota, 5,000-row/8-MiB bounds, access audit and
+current read/export authority. New capture needs no table, job or provider. Each
+captured row has a kind/source/location identity so the two custody legs of an
+accepted handover or bank movement remain distinct while sharing the owning source.
+Capture, read, pagination, drill-through and export are private to the capturing
+principal and current permitted franchise. Finance readers can capture/read;
+exports retain the existing franchise-admin/accountant gate. Operators retain the
+separate own-request/participating-handover inbox, without a ledger report grant.
+
+Rows filter by Kolkata occurrence-day range (maximum 31 days), source kind and
+owned location, with deterministic occurrence/source ordering. Independently
+aggregated selected-row controls distinguish known and unassigned inflows/outflows.
+The complete current custody position and pending reservations are captured at the
+same statement cutoff; they are explicitly current positions, not balances for a
+filtered date/category cohort. Rows, controls and complete positions are read from
+the canonical source view in one SQL statement. Amounts/control totals remain exact
+decimal paise strings. CSV repeats the retained cutoff, generation, selected-source
+controls and each row's current recorded/reserved/available/shortfall state; private
+payees, reasons, customer details and bank/transfer references are absent. Opaque
+owned source/account IDs support authorized drill-through. Empty captures keep their
+metadata and zero controls. A zero-leg recording correction remains in the request
+history without inventing a monetary source row.
+
+This adapts PostgreSQL 18's documented statement snapshot behavior under Read
+Committed: successive statements can see different committed data, while one read
+statement sees a consistent committed snapshot. Source:
+https://www.postgresql.org/docs/18/transaction-iso.html (verified 10 October 2026).
+The ShippingCo choice is to retain that single capture through the existing bounded
+report service rather than change the application's isolation level. Its cost is
+one scoped aggregation plus the existing snapshot/audit storage, with no speculative
+queue or reconciliation service. Native checks compare independently aggregated
+controls with source rows and the existing position API, then change sources and
+confirm the old capture and CSV remain byte-for-byte stable. Recorded positions do
+not qualify bank clearance, physical cash count or #145's reviewed daily close.
+Captured-source acceptance evidence: final four affected native cases passed in
+140-source-report-final-native.log with original 30/60-second case deadlines and
+zero failures/skips/cancellations/todos. Actual receipt allocation/release remains
+one inflow; ₹1,000 float + ₹4,000 cash − ₹500 expense reconciles, UPI stays in its
+noncash source, and paired deposits/withdrawals conserve ₹4,700 total recorded funds.
+Independent report controls equal the sum of all nine retained source rows. The
+existing 101-ack journey now checks all frozen pages without omission/duplication
+and an identical export row count. Partial acknowledgement exposes reserved remainder,
+filtered transfer legs reconcile separately from complete current custody, and
+source changes leave the earlier snapshot/CSV unchanged. Pre-audit failure rolls
+back capture; lost COMMIT acknowledgement recovers the exact retained capture from
+a fresh pool. Role/foreign-scope/foreign-principal/revocation/export denials and
+legacy collection's unknown account/custody remain real PostgreSQL evidence. Expiry
+rejects reads/retries and later capture removes expired payload while retaining the
+original key tombstone. All disposable clusters were stopped and removed.
+
+All five workspace types, changed lint, tenant-query AST, exact permission contract
+and diff checks passed. Logs remain in ignored 140-source-report-* files. Earlier
+two-case runs cover the same cases and are not counted again. An inferred non-null
+pagination cursor fixture variable was explicitly typed number|null; the initial
+failed type logs are retained as *-types-offset-failure.log. Unnecessary escaping
+in the CSV assertion was removed without changing its expected string or behavior.
+The shared current-position mapping was extracted without changing its calculation.
+No schema or released migration changed in this slice. Full #140 HTTP/UI, attachment,
+explicit expense-method and final delivery acceptance remain pending.
+## #140 explicit expense payment methods
+
+Every expense proposal now records cash, UPI, card, bank transfer or the receiving
+account's configured other method. The chosen method is immutable proposal evidence;
+review/apply never accepts a caller-supplied substitute. Cash requires a cash custody
+location and noncash methods require a noncash location. The chosen method must be
+allowed by that location's recorded account revision. Current account/revision checks
+still reject a new expense or approval when the account changes. Location selectors
+return the recorded method choices without exposing balances. Non-expense requests
+keep their previous normalized intent shape and have no invented expense method.
+
+A linked recording correction can retain its predecessor's recorded method even
+after the current account drops it. A changed method must be permitted by the current
+recorded revision and remain consistent with the unchanged custody location. This
+changes recorded meaning under different-admin approval; it does not create an actual
+transfer. A metadata-only correction has no money leg and remains visible in request
+history. Original money source rows retain the method recorded at their own occurrence;
+zero-leg annotations do not rebucket historical physical money. A new expense cannot
+use this correction exception. The migration is still the same unreleased #140 forward
+migration; no historical expense exists in released migration 45 to populate or infer.
+
+Request lists can filter by explicit method. Captured source rows and CSV expose the
+original recorded receipt/refund/payment/expense method, and acknowledged handover legs
+are cash. A fund/deposit/withdrawal source without a separately recorded expense method
+is labelled not_recorded rather than guessed. Method filtering changes selected-source
+controls; complete current custody remains separately labelled and shares the cutoff.
+Legacy payment method can be known while its account/custody remains unknown. Private
+payee, reason and bank reference exclusions are unchanged. These extend the approved
+immutable-approval, idempotency and one-statement report practices already researched
+for #140; they add no provider, queue, new table or paid dependency.
+Explicit-method acceptance evidence: 39 distinct scoped native cases passed on this
+slice: complete cashbook API file18 (140-expense-method-cashbook-compatibility.log),
+source/populated-upgrade4 (140-expense-method-source-upgrades.log), and existing
+finance/migration/copied-repair17 (140-expense-method-finance-migration-compatibility.log).
+Original 30/60-second cases and 300-second file deadlines were retained; zero failures,
+skips, cancellations or todos; all clusters/data/leases were cleaned. Focused method/
+movement2 passed earlier and cover the same cases, so are not counted again.
+Mixed UPI/card choices remain distinct approved evidence; forged/missing/unsupported
+methods fail API and real SQL; stale account review fails; original-method exact retries
+survive writes disabled and changed account methods. Same-method historical annotation
+and an allowed changed-method annotation each retain the original and apply zero money
+legs. Current list/source filters, frozen CSV evidence and recorded/cash-control totals
+agree. Released45 populated collections/refunds and exact old apply fingerprints remain
+unchanged, with no invented custody or expense backfill.
+
+Unit12, all five workspace types, changed lint, tenant-query AST, exact99-row permission
+contract and diff checks passed (ignored 140-expense-method-* logs). No failed native or
+static check occurred in this slice. Expense DTOs now require an explicit method at the
+runtime expense boundary; the new feature has not yet been wired into HTTP or enabled.
+Private attachment parent/snapshot authorization, API/UI journeys, broader final gates
+and reviewed PR delivery remain required for full #140 completion.
+
+### #140 reviewed expense attachment foundation
+
+Unreleased migration46 extends the existing private attachment metadata, commands
+and audit tables with an explicit expense-request parent. Every row has exactly
+one booking or expense parent and an owned composite foreign key. Expense evidence
+is restricted to an expense proposal (including its linked correction), with no
+parcel parent or inherited delivery-agent access. Released migrations remain unchanged.
+Booking DTOs, grant payloads, retained command fingerprints and purpose rules remain
+unchanged. Existing ready attachment immutability and cleanup discovery are reused.
+
+Expense metadata writes require a current local franchise admin or the current
+operator who submitted the proposal. Worker updates remain restricted to cleaning
+non-ready evidence. The expense parent lock enforces the existing 8 MiB file,
+10 item, 32 MiB aggregate and three pending limits per exact expense, alongside the
+existing media, integrity and lifecycle constraints. Approval and upload share the
+franchise/request lock order; an upload racing review cannot be added after approval.
+Approval rejects pending or quarantined evidence and generates an immutable sorted
+snapshot of ready file IDs, versions and SHA-256 digests. Callers cannot supply this
+snapshot. Ready evidence cannot change after review; rejected unsettled evidence
+can still be canceled or cleaned. Later evidence belongs to a new correction request.
+This is ShippingCo's implementation of D140-1's exact approved-request contract,
+using the existing short-transaction and idempotency practices researched above.
+
+Cashbook decision DTOs include the snapshot only when it contains evidence, retaining
+existing empty-evidence response shapes. The approval service independently rejects
+unsettled evidence before the SQL guard. Its runtime identity needs scoped internal
+SELECT access to attachment metadata; deployment grants and the private expense
+read/download service remain part of the outstanding HTTP integration work.
+
+The native metadata fixture verifies unsettled and forged approvals, exact retained
+snapshots, wrong/non-expense parents, other-operator denial, reviewed immutability,
+expense audit ownership, competing pending quota reservations, upload/review races
+and cleanup after rejection. These SQL metadata fixtures are not scanner or object
+store qualification. Populated migration45 evidence includes a ready booking file,
+retained grant command and all original audits: every original field remains equal
+after migration46 and no expense/custody backfill is created. Actual upload/scanning,
+private download grants with post-provider authority checks, expense routes and UI,
+and final full-issue acceptance/delivery remain outstanding.
+
+
+Foundation static verification passed: all five workspace typechecks, repository lint
+including the tenant-query AST gate, migration history (all 45 released files
+unchanged), and diff checks. The first metadata fixture failed because its actor
+parameter was used as both UUID and text without the existing explicit casts;
+strict TypeScript also required asserting count-row presence. These fixture errors
+were corrected without changing the assertions or deadlines; original failure logs
+remain in ignored `140-expense-attachment-fixture-*` files. The package-local lint
+command does not exist; the required root lint command passed instead.
+
+Native foundation verification passed 39 distinct cases: cashbook services19
+(16 in `140-expense-attachment-cashbook-compatibility.log`, three handovers in
+`140-expense-attachment-handover-compatibility.log`), schema/populated upgrades4
+(`140-expense-attachment-populated-upgrades.log`), and existing booking attachments16
+(`140-expense-attachment-booking-boundaries.log`). Earlier focused metadata and booking
+lifecycle passes cover the same cases and are not counted twice. Original case/file
+deadlines remained unchanged; final scoped runs had zero failures, skips, cancellations
+or todos, and all disposable clusters/data/leases were cleaned. This verifies the
+schema foundation and existing synthetic-provider booking paths, not live expense
+storage/scanner qualification or full #140 delivery.
+
+
+### #140 private expense attachment service
+
+A server-selected expense factory now reuses the existing upload lease, bounded
+stream, MIME/digest validation, scanning, immutable command replay and signed-byte
+lifecycle. Expense DTOs expose an expense-request ID with a fixed expense purpose;
+they cannot carry a booking or parcel parent. The booking factory retains its
+original DTOs, canonical intent fingerprints and seven-field signed-grant payload.
+An expense parent is domain-separated as `expense:<request UUID>` in fingerprints
+and signed grants, so an otherwise valid booking-domain token cannot release its bytes.
+
+The expense factory issues the existing W58 cashbook.request capability for writes
+and R33 cashbook.select capability for scoped evidence reads/downloads, using the
+existing current-membership transaction. Finance roles read scoped expenses, while
+an operator must be the immutable submitting requester. Dispatcher, delivery-agent,
+read-only and unrelated/sibling owners gain no access. Every private lookup proves
+an owned expense proposal before looking up its attachment. A held franchise lock
+serializes review and evidence changes; the immutable proposal itself requires no
+UPDATE privilege. Upload and finalization require an undecided proposal and enabled
+new writes. Exact command retries are checked before the new-write gate, preserving
+retained outcomes after review or disabled writes while rechecking live authority.
+Rejected unsettled evidence can still be canceled and cleaned. No permission-matrix
+row or production provider configuration is broadened.
+
+Downloaded bytes remain bounded and digest-checked, and authority is rechecked after
+provider delay before release. Grant commands retain the exact expense parent in
+private metadata and audit events. The existing cleanup worker handles rejected or
+orphaned expense evidence; ready files remain immutable. At this service-only slice the new service was not yet registered in HTTP and its
+factory defaulted to writes disabled. The subsequent HTTP integration/rollout section
+below supersedes that status; expense UI and full issue acceptance remain required.
+
+Three native service cases verify actual PNG bytes through synthetic storage/scanner
+adapters, role/private-parent denials, immutable approval snapshots, disabled/reviewed
+exact retries, uncertain provider writes, the final-ready lost-COMMIT outcome and
+fresh-pool recovery, parent-domain/session grant isolation, membership revocation
+during download and scanning, scanner error/infection and rejected-evidence cleanup.
+This establishes application/SQL integration with controlled adapters, not live S3
+or antivirus qualification. The initial service failure exposed an unnecessary
+FOR UPDATE on immutable proposals: native SQL confirms runtime lacks that privilege
+(42501); the existing franchise lock supplies serialization without broadening grants.
+The initial COMMIT fault targeted the preparatory transaction, not final ready commit;
+the corrected fixture follows the existing booking test by interrupting the second
+commit. Original failed logs are retained in ignored service-lock/fault-phase logs.
+The tenant-query gate initially rejected identifier-only action allowlists; explicit
+closed allowlists fixed that without changing the gate.
+
+
+Service verification: 19 distinct native cases passed (expense lifecycle3 in
+`140-expense-attachment-service-native.log`, existing booking lifecycle16 in
+`140-expense-attachment-lifecycle-booking-compatibility.log`). The first expense
+case was then strengthened and passed again in `140-expense-attachment-service-parent-boundaries.log`
+with an authorized sibling-franchise reader and a non-expense fund proposal; that
+repeat is not counted twice. Original deadlines were retained, all final runs have
+zero failed/skipped/canceled/todo cases, and all disposable clusters/data/leases
+were cleaned. Stream/scanner/grant and tenant-capability unit checks17 passed in
+`140-expense-attachment-service-unit.log`. All five workspace types, final API types,
+root lint/query AST and diff checks passed in service-final logs. No HTTP route,
+browser journey or live expense provider qualification is claimed by this slice.
+
+
+### #140 HTTP integration and rollout
+
+The authenticated server now registers the complete cashbook location, proposal,
+review/application, position, custody and retained-source endpoint families described
+in the API contract. It also reuses the existing seven private attachment routes
+with a server-selected expense-request parent when storage/scanner dependencies exist.
+Current membership, owning parent proof, browser CSRF/origin and idempotency checks
+remain in force. Every cashbook response is no-store. Exact numeric JSON validation
+now includes this financial namespace, and the binary media exception names only
+its PUT upload-content path alongside the existing booking path.
+
+CASHBOOK_ENABLED defaults false, accepts only literal true/false and cannot be enabled
+in demo. New mutations are disabled without it; reads, authorized financial snapshot
+capture and exact completed-command recovery remain available. The owning financial
+workflow receives the cashbook flag independently of FINANCIAL_WORKFLOW_ENABLED so
+new refund evidence uses explicit approved custody when cashbook writes are enabled;
+legacy NULL custody and retained original fingerprints are not backfilled or rewritten.
+No production configuration or data has been changed.
+
+Development/staging rollout requires migration46 and existing money receipt, receiving
+account, membership, report-snapshot and audit grants. Grant SELECT/INSERT to the managed
+API runtime on cash_locations, cash_location_revisions, cashbook_requests,
+cashbook_request_decisions, cashbook_effects, cashbook_effect_legs, cash_handovers,
+cash_handover_commands and cash_handover_legs. Grant SELECT only on
+cashbook_source_versions, cashbook_source_facts and cash_handover_positions. Preserve
+existing narrow franchise locking grants; do not grant UPDATE/DELETE on the immutable
+cashbook evidence tables or direct source-version writes. Expense approval also needs
+SELECT on attachments. Uploads use the existing attachment SELECT/INSERT and exact
+lifecycle/lease/audit-actor UPDATE column grants; do not permit changing their parent,
+identity or ready evidence. Existing cleanup discovery EXECUTE grants stay unchanged.
+Enable the flag only after a different-admin proposal/apply and custody acknowledgement
+have been verified against the actual staged schema, then verify the same retained
+command with the flag disabled. Production activation remains separately authorized.
+
+Native HTTP acceptance passed a real float/expense/scanned-byte review/application,
+partial paired custody acknowledgement/cancellation and retained-source CSV chain.
+A separate native case proves disabled new intent versus exact old replay, CSRF denial,
+fractional/duplicate JSON and unsupported binary rejection, anonymous/finance-write
+denial and revoked replay. Controlled storage/scanner adapters are labelled synthetic.
+Five native booking attachment cases preserve upload/list/content/grant/cancel,
+current role/assignment and real sibling-owner boundary behavior with shared routes.
+These seven distinct native cases passed in cashbook-http-final-native and
+cashbook-http-booking-compatibility logs, with original deadlines, zero bad statuses
+and all disposable clusters/data/leases cleaned. Earlier focused runs are the same
+cases and are not counted twice. Config/HTTP parser/attachment unit checks88 passed;
+all five workspace types, root lint/query AST, 25 query-gate cases and diff checks passed.
+
+Failures were diagnosed and retained: the initial expense PUT hit the old booking-only
+binary media check; the exact new route was added. The malformed fractional fixture
+expected 400 but the established field-validation contract is 422; rejection stayed
+intact. An omitted optional webhook field in the server test fixture was supplied.
+The new route was added to the existing Fastify request.query data exception; its
+negative extraction test exposed an overbroad prior exception, now narrowed to direct
+data arguments. Raw method calls/extraction remain denied, including the new route,
+and maintained source checks still pass. No query compiler, assertion or deadline
+was weakened. Full UI/browser, remaining direct SQL/lifecycle acceptance and final
+full-issue quality/CI/review/merge remain outstanding.
+
+
+#### Expense and custody web workflows
+
+The production `/business/cashbook` route uses scoped API adapters; its request
+and custody workflows are separate views. Operators and franchise admins select
+actual permitted locations and current responsible employees, record explicit
+expense methods or compatible cash/noncash fund movements, and submit immutable
+requests. Current franchise admins can review another user's request and apply
+its exact approved decision. Finance readers have no mutation forms. Saved detail
+shows private payee/reason only through the scoped request endpoint; list responses
+exclude these fields. Corrections retain the original occurrence and location
+identity, accept zero annulment, and preserve every paise in editable amounts.
+
+The custody view uses the current permitted target directory and captured source
+versions. The named current receiver can accept an actual partial amount or reject
+the remaining reservation; the current sender or franchise admin can cancel the
+remainder. Historical acknowledgement pages show recorded amounts and reasons.
+Server checks remain authoritative for current membership, revisions, capacity,
+reservations and receiver identity. No operator balance is inferred or exposed.
+
+One command lifecycle covers both views. Pending/uncertain commands disable edits,
+view changes, links and franchise navigation; replay retains the original path,
+body and idempotency key. Scope invalidation unmounts private state. Selection of
+a different request immediately hides the preceding detail/actions. Explicit
+selector labels support keyboard and assistive technology. Response projections
+reject inconsistent request/decision/effect links, self approval, monetary control
+totals, handover conservation and paired acceptance legs; they discard unknown
+private fields. Captured report and location-configuration views are implemented below; private
+expense attachment UI is still outstanding. Component evidence does not establish
+native browser or live-provider qualification.
+
+Ten focused web checks cover protocol integrity, lost response and same-key replay,
+blocked navigation, current scope revocation, another-admin review/application,
+partial custody acknowledgement, read-only finance roles, and exact correction
+inputs/zero annulment through actual adapters with controlled fictional transport.
+This is component/transport evidence, not native browser or live-provider evidence.
+The first uncertain-expense case identified a selector accessible-name failure;
+explicit aria labels fixed it, with the failed log retained. Existing messaging and
+demo regression tests emit React act warnings; these are recorded separately from
+cashbook outcomes. Full issue SQL/lifecycle acceptance, remaining UI, browser checks,
+quality/CI/review and merge remain required before #140 can close.
+
+The final web slice passes 228 tests across 21 files, web typecheck, production web
+build, root lint/query AST and whitespace checks. Logs are retained locally under
+`140-cashbook-web-{focused-final,regression-final,final-types,build,final-lint}`.
+The ten cashbook checks are included in the 228, not additional cases. Native browser qualification still needs explicit acceptance. The recovery detail
+contract below removes dependency on the currently loaded location choices; the
+location list itself retains inactive rows. Do not infer full recovery acceptance
+from the partial acknowledgement fixture.
+
+
+#### Captured sources, configuration and custody recovery UI
+
+Finance readers can capture sources filtered by Kolkata occurrence days, payment
+method, source kind and location; open a saved snapshot; page its original rows;
+read composite source detail; and inspect its filtered controls alongside complete
+current recorded positions at the same cutoff. The two sets of controls are
+explicitly labelled. Unknown custody and shortfalls remain visible. Receipt
+allocations do not become new receipt rows. Amounts use exact decimal paise for
+aggregate display. Franchise admins and accountants can download the matching
+CSV; org admins read without export and operators have no captured finance view.
+
+The browser retains identical snapshot metadata across pages, detail and export.
+A response changing the saved cutoff or controls fails instead of mixing evidence.
+Download reads are aborted on unmount/current scope loss and check the scope again
+before creating a local blob. The lifetime works with the application's existing
+React StrictMode effect cleanup. Capture uses the shared command lifecycle and
+keeps its exact identity after an uncertain response. The client default order
+matches the server's `occurred_desc` when optional filters are omitted.
+
+Franchise admins configure actual receiving-account/custodian locations, using
+current account versions and the selected location version. Existing account and
+custodian identity is fixed; new revisions rename, deactivate, reactivate or
+refresh the recorded account revision. Inactive locations can be opened by their
+reference. Actual account and employee selectors are paged, with loading/failure
+states and no fabricated defaults. Receiving accounts remain configured through
+the existing Money receipts workflow.
+
+Expense/fund inbox filters now include status, kind, category, method, source
+location, responsible employee and occurrence range. Kolkata input becomes an
+inclusive start and explicitly exclusive end in UTC. Detail shows category,
+responsible employee and source/target references without placing private payees
+in list responses. Finance readers also see permitted custody history without
+reservation/acknowledgement forms.
+
+Handover detail returns the scoped source/target custodian IDs already joined by
+its participant lookup. Current senders/receivers can find recovery controls even
+when a selector page is absent, including after account/location deactivation.
+This introduces no additional query, table, grant, custodian directory or operator
+ledger access. The command service still checks current named membership and
+validates movement capacity/revisions; rejection/cancellation moves no cash.
+The existing real PostgreSQL current-authority/private-paging/inactive-source
+recovery case passed with explicit participant assertions, original 60-second
+case deadline, zero bad statuses, and disposable cluster/data/lease cleanup.
+
+Nineteen focused component checks use actual adapters with controlled fictional
+transport. They include capture paging/detail/control retention, exact capture
+replay, CSV mismatch rejection, successful StrictMode export, late export discard
+after scope invalidation, finance read/export distinctions, exact location revision
+inputs, half-open Kolkata request filters and recovery without selector/cross-parent
+reads. The initial report detail fixture looked up an ID appearing both as source
+and request; it now explicitly expects both displayed references. The failed log
+is retained. These checks do not establish native browser qualification. Full
+attachment UI, direct SQL lifecycle acceptance and final full-issue quality/CI/
+review/merge remain required before #140 closes.
+
+The final finance-view increment passes all five workspace typechecks, 237 web
+tests across 21 files, production web build, root lint/query AST and whitespace
+checks. The nineteen cashbook checks are included in that 237. Native recovery
+passed separately with its existing original deadline and cleaned infrastructure.
+Final logs: `140-cashbook-finance-ui-final-{types,web,build,lint}` and
+`140-custody-recovery-native`. Diagnosed failures remain in the override, cleanup
+and detail-fixture failure logs. The URL test shim needed explicit TypeScript
+`override` modifiers; delayed blob cleanup needed to retain its original URL
+implementation rather than look up a restored global after test teardown. No
+assertion, compiler option, timeout or asynchronous-error check was weakened.
+### #140 private expense proof UI
+
+Expense request detail now reuses the booking attachment transport and uploader with
+an explicit expense parent and purpose. The submitter adds optional supported private
+photos, voice notes or videos; permitted finance readers request ready bytes explicitly.
+Booking/parcel metadata, foreign grant URLs, mismatched parents and command identities
+are rejected before accepting evidence. Scope invalidation aborts work and revokes local
+previews. Approval hides new uploads and shows the frozen reviewed evidence references;
+the server remains authoritative over current access, review and file safety.
+
+An uncertain initiation, upload or cancellation retains its original intent and command
+identity. Cancellation stays visible until confirmed or current evidence reconciles it;
+an unknown cancellation cannot be presented as successful. Pending submitter proof work
+locks expense navigation and other financial commands. Read-only metadata loading does
+not lock another admin's review. Existing booking attachment callers retain their parent
+contract and use the same recovery implementation.
+
+Verification: final web suite passes 248 tests in 22 files, including 10 expense proof
+transport/lifecycle checks, 20 cashbook checks and 14 existing booking attachment checks
+(these counts are included in 248). All five workspace typechecks pass; after callback
+dependency fixes the affected web typecheck passes again. Root lint/query AST, production
+web build and whitespace checks pass. Controlled fictional HTTP/XHR and component
+fixtures prove the exercised UI recovery boundaries, not live storage/scanner or native
+browser qualification. Logs are ignored local 140-expense-proof-final-* files. The initial
+hook-dependency/unused projection lint failure is retained and corrected without relaxing
+the gate. Direct SQL lifecycle acceptance, native browser journeys and final full-issue
+quality/CI/review/merge remain required before #140 closes.
+
+### #140 direct expense proof lifecycle acceptance
+
+The unreleased migration 46 now locks and reads current organization then franchise
+lifecycle for user expense evidence writes. New metadata/upload/finalization transitions
+cannot proceed after parent disable; current membership and user lifecycle still gate
+the actor. Cancellation/temporary-byte cleanup remains bounded by the existing state
+machine. The trusted cleanup worker can delete abandoned unsettled evidence after
+organization/franchise disable and submitter revocation, but cannot upload, link or
+rewrite ready evidence. Booking parents return through their existing guard unchanged.
+
+This adapts PostgreSQL's [row-lock behavior](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS)
+to ShippingCo's existing organization-before-franchise API authority boundary. The
+locking read waits for a concurrent lifecycle change and checks the committed row;
+this is verified by observing an actual blocked PostgreSQL writer, then committing
+organization and franchise disables separately. It adds no worker, table or new API
+permission. Arbitrary direct updates may acquire their target row before a trigger
+runs; this does not promise deadlock-free client SQL. Owning APIs keep the documented
+authority/parent lock order and transactional retry contract.
+
+Nine distinct real PostgreSQL checks pass for expense metadata/review, service recovery,
+HTTP integration and the new direct SQL lifecycle/quotas/ownership cases. The disable
+race case was strengthened to check both parents and passed again with its original
+30-second deadline. A revoked submitter cannot cancel by forging user metadata, while
+actual trusted cleanup deletes its abandoned temporary evidence on disabled parents.
+Four ready 8 MiB records exhaust the 32 MiB parent limit; ten small ready records exhaust
+the count limit. Existing pending quota/review races remain covered. Wrong expense,
+missing parent, mixed booking/expense, sibling franchise and unrelated organization
+command references fail; grant audits retain exact parent and actor. Runtime roles
+cannot read/write audit history, delete/truncate evidence or disable triggers.
+
+Sixteen existing native booking attachment lifecycle/authority checks pass unchanged
+against the final migration (140-expense-sql-booking-compatibility). Together these
+are 29 distinct native checks; the strengthened parent race rerun is included, not
+an extra distinct case. The four native cashbook source/upgrade cases also pass, preserving populated pre-140
+collections, released booking attachment tuples and original refund exact retry without
+fabricated custody. Final API types, root lint/query AST and migration history pass
+(all 45 released migrations unchanged). Logs: 140-expense-sql-native,
+140-expense-sql-parent-races, 140-expense-sql-upgrades, 140-expense-sql-final-types,
+140-expense-sql-final-lint and 140-expense-sql-migrations. Native test resources and
+loopback cluster are cleaned after each run. These controlled metadata/storage fixtures
+do not qualify a live provider or finish native browser and full-issue release gates.
+
+### #140 owning refund HTTP qualification
+
+The actual server composition is qualified with both financial workflow and cashbook
+writes enabled, and with both disabled. New cash refund application requires the exact
+current cash location/revision; missing or incomplete custody evidence fails before any
+financial change. An approved but unexecuted refund remains blocked when writes are
+disabled. Existing legacy application replays with its original key/body across either
+configuration, retaining its original NULL custody evidence. Current actor/tenant grants
+are checked before replay, including sibling/unrelated scopes and revoked membership.
+
+The native scenario passes with the original 60-second deadline. A reviewed 100000-paise
+float remains unchanged by a legacy 10000-paise refund with unknown custody; the next
+20000-paise refund explicitly records its owning drawer, leaving 80000 known recorded
+paise. Replay across enabled/disabled servers adds no second outflow or source generation.
+Original collection count stays one, original refund evidence remains byte-for-byte equal,
+and financial sources reconcile gross 0, collections 50000 and refunds 30000. Live position
+comparisons require the same complete financial facts/source generation and a nondecreasing
+current cutoff; each read deliberately has its own as-of time.
+
+Logs: 140-refund-http-native, 140-refund-http-final-types and 140-refund-http-final-lint.
+Initial fixture failures are retained: the applied command identity was mistaken for the
+financial evidence identity (now queried by immutable request parent), and a live cutoff
+was incorrectly expected to equal an earlier read's time. An initial typecheck also caught
+a nonexistent derived field; assertions now reconcile the actual authoritative source DTO.
+No source/amount assertion, privacy check or deadline was relaxed. This adds acceptance
+evidence only, without changing the owning refund implementation or released schema.
+Native cluster/data/lease cleanup completed. Browser and final full-issue gates remain.
+
+
+### #140 browser evidence and source-row mobile correction
+
+Actual React cashbook components, API adapters and production styles were exercised
+in the native in-app browser with explicitly fictional controlled transport. This
+qualifies browser rendering and interaction, not live providers or a full actual-API
+end-to-end deployment. At a 360-pixel viewport (350-pixel content area), the expense
+request, private proof, different-admin keyboard review, exact application and
+correction draft remain contained without horizontal overflow. The ready PNG preview
+decoded, Tab focused Record review with a visible solid outline, approval retained
+proof ID/version 3, and the applied request exposed a correction draft with immutable
+kind, source and occurrence. Ending the synthetic scope removed private evidence.
+
+Captured-source paging retained the saved cutoff and complete control totals across
+101 synthetic rows; the final page contained one row. Accountant controls exposed
+no expense/configuration mutations. The browser completed the controlled CSV download,
+whose payload was synthetic; this is download interaction evidence, not accountant
+format qualification. Earlier controlled custody checks exercised partial acceptance
+and ending the remaining amount without a second movement.
+
+With production CSS, source-row labels were clipped by inherited nowrap styling.
+Only cashbook source buttons now wrap, grow in height and contain long identifiers.
+The measured row changed from a 283-pixel client width/397-pixel scroll width to
+283/283 with normal whitespace and a 72-pixel height. An earlier page-overflow
+observation came from missing production styles in the temporary fixture and is
+not counted as a product defect. Fixture parent/decision identity mistakes were
+corrected without relaxing the production decoders. Native date fill did not persist
+a custom date; custom date interaction is not yet qualified by this browser evidence.
+
+After the scoped style change, all 248 web tests in 22 files, all five workspace
+typechecks, root lint/tenant-query AST checks and production web build passed. Logs:
+140-browser-final-web, 140-browser-final-types, 140-browser-final-lint and
+140-browser-final-build. No additional mirror test was added for this style change.
+Browser failure/uncertain/empty/configuration checks and final whole-issue gates
+remain; #140 stays open.
+
+
+The next native browser pass also confirmed empty request/handover states, the
+controlled read-outage message and Retry action, uncertain review navigation locks
+and recovery through Retry same request. Configuration showed fixed account/custodian
+identity with current account revision 5, then rename/deactivation advanced location
+revision 1 to 2. Empty fixture responses initially omitted cutoff/source generation;
+these were corrected to the real DTO without decoder changes. An export-mismatch
+browser attempt was inconclusive and is not recorded as passing. The temporary tab
+and Vite process were closed and the viewport override reset.
+
+The first whole-quality run stopped at the strict prototype source inventory:
+thirty new cashbook/expense proof test declarations and five UI effects had no
+reviewed dispositions. Their reports/proof ownership and preservation rationale
+are now recorded in the existing inventory and document; callers, routes, exports,
+storage operations and fingerprints did not drift. The validator was unchanged.
+
+
+Final source review corrected one controlled handover fixture: an acknowledgement
+previously overwrote the parent inbox identity and requested amount. The fixture
+now updates only the cumulative custody state/version and history. The existing
+partial-acceptance UI test additionally requires the refreshed inbox to retain
+its original 20000-paise request with 10000 accepted and 10000 remaining, without
+a read-error fallback. All 20 cashbook UI cases pass after this correction; no
+production handover behavior changed.
+
+Whole local quality passed pinned tooling, planning, gate/unit checks, lint, types,
+689 API and 248 web tests, then failed Docker-backed attachment creation/cleanup.
+Separate API/web production build and 45-file migration-history checks passed.
+The complete native cashbook file reached its existing 300000ms deadline after
+19 passing cases (one cancelled file); it is not a full pass. The nine unreached
+cases passed separately under unchanged original deadlines, with no failures,
+cancellations, skips or todos. Thus all 28 distinct cases have passing evidence
+across those runs; the cancelled aggregate remains recorded. Both native database
+clusters/data/leases were cleaned. Full final-head Linux CI remains the release gate.

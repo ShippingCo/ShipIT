@@ -51,27 +51,27 @@ export async function insert(scope: TenantAccess, booking: string, input: Attach
     input.purpose==='parcel_proof'?'delivery_proof':'operational_evidence',c.actor.id,c.correlationId,now,c.organizationId])).rows[0]!;
 }
 export async function replay<T>(scope: TenantAccess, operation: string, key: string, fingerprint: string): Promise<T | null> {
-  const c = assertTenantAccess(scope, ['attachments.write','attachments.download']);
-  const row = (await scopedQuery<{ fingerprint: string; result: T }>(scope, ['attachments.write','attachments.download'], `SELECT fingerprint,result FROM shipit.attachment_commands
+  const c = assertTenantAccess(scope, ['attachments.write','attachments.download','cashbook.request','cashbook.select','cashbook.read']);
+  const row = (await scopedQuery<{ fingerprint: string; result: T }>(scope, ['attachments.write','attachments.download','cashbook.request','cashbook.select','cashbook.read'], `SELECT fingerprint,result FROM shipit.attachment_commands
     WHERE {{franchise:organization_id:franchise_id}} AND principal_id=$1 AND operation=$2 AND key_digest=$3`, [c.actor.id, operation, key])).rows[0];
   if (!row) return null;
   if (row.fingerprint !== fingerprint) throw new HttpError('IDEMPOTENCY_CONFLICT');
   return row.result;
 }
 export async function receipt(scope: TenantAccess, row: AttachmentRow, operation: string, key: string, fingerprint: string, result: object, now: Date) {
-  const c = assertTenantAccess(scope, ['attachments.write','attachments.download']);
-  await scopedQuery(scope, ['attachments.write','attachments.download'], `INSERT INTO shipit.attachment_commands
-    (id,organization_id,franchise_id,booking_id,attachment_id,principal_id,operation,key_digest,fingerprint,result,created_at)
-    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`, [randomUUID(),c.permittedFranchiseIds[0],row.booking_id,row.id,c.actor.id,operation,key,fingerprint,result,now,c.organizationId]);
+  const c = assertTenantAccess(scope, ['attachments.write','attachments.download','cashbook.request','cashbook.select','cashbook.read']);
+  await scopedQuery(scope, ['attachments.write','attachments.download','cashbook.request','cashbook.select','cashbook.read'], `INSERT INTO shipit.attachment_commands
+    (id,organization_id,franchise_id,booking_id,attachment_id,principal_id,operation,key_digest,fingerprint,result,created_at,expense_request_id)
+    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10,$12 WHERE {{franchise:$11:$2}}`, [randomUUID(),c.permittedFranchiseIds[0],row.booking_id,row.id,c.actor.id,operation,key,fingerprint,result,now,c.organizationId,row.expense_request_id??null]);
 }
 export async function update(scope: TenantAccess, row: AttachmentRow, changes: Partial<Pick<AttachmentRow, 'state'|'scan_state'|'actual_size'|'detected_type'|'digest'|'linked_at'|'cleanup_due_at'|'upload_lease_until'|'upload_attempt'>> & { uploaded_at?: Date; validated_at?: Date; deleted_at?: Date; cleanup_attempts?: number }) {
-  const c = assertTenantAccess(scope, ['attachments.write','attachments.cleanup']);
+  const c = assertTenantAccess(scope, ['attachments.write','attachments.cleanup','cashbook.request']);
   // Fixed column map; all values remain parameters. No caller-controlled SQL identifier.
   const columns = ['state','scan_state','actual_size','detected_type','digest','linked_at','cleanup_due_at','upload_lease_until','upload_attempt','uploaded_at','validated_at','deleted_at','cleanup_attempts'] as const;
   const values: unknown[] = [row.id,row.version,c.actor.type,c.actor.id,c.correlationId];
   const sets: string[] = [];
   for (const name of columns) if (Object.hasOwn(changes,name)) { values.push(changes[name]); sets.push(`${name}=$${values.length}`); }
-  const updated = (await scopedQuery<AttachmentRow>(scope, ['attachments.write','attachments.cleanup'], `UPDATE shipit.attachments SET ${sets.join(',')},version=version+1,actor_type=$3,actor_id=$4,correlation_id=$5
+  const updated = (await scopedQuery<AttachmentRow>(scope, ['attachments.write','attachments.cleanup','cashbook.request'], `UPDATE shipit.attachments SET ${sets.join(',')},version=version+1,actor_type=$3,actor_id=$4,correlation_id=$5
     WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND version=$2 RETURNING *`, values)).rows[0];
   if (!updated) throw new HttpError('VERSION_CONFLICT');
   return updated;

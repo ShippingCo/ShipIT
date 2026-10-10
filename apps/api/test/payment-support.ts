@@ -14,8 +14,8 @@ export function paymentFault(pool:DatabasePool,point:string,mode:'before'|'after
   const r=await c.query<Row>(sql,params);if(sql.includes(point)&&mode==='after')throw new DatabaseError('DB_CONNECTION_FAILED');return r;
  }};}};
 }
-export async function paymentSetup(t:Parameters<typeof bookingSetup>[0],requestedGross?:50000|100000) {
- const s=await bookingSetup(t);await s.db.preparePayments();
+export async function paymentSetup(t:Parameters<typeof bookingSetup>[0],requestedGross?:50000|100000,database?:Parameters<typeof bookingSetup>[1]) {
+ const s=await bookingSetup(t,database);await s.db.preparePayments();
  let body=s.body;
  if(requestedGross){
   const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:s.operator.id,role:'franchise_admin',franchise_ids:[A]});
