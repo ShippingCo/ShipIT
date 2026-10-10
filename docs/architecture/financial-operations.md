@@ -666,3 +666,63 @@ expectation initially used fixed milliseconds; it was corrected to the existing 
 `instant` representation after diagnosis. The original failed log remains local. Scoped
 query AST, API types and changed-file lint passed. These checks do not qualify money
 application, handover acknowledgement, attachment authorization or the cashbook UI.
+
+Atomic movement application for #140 (remaining scope below still pending): an admin
+applies the identity of a different-admin approval with request version 2. The apply
+body cannot supply an amount, location or approval flag. Immutable `cashbook_effects`
+and `cashbook_effect_legs` bind the exact request and decision; a deferred completeness
+check rejects missing legs, and leg guards reject incorrect amounts, locations and
+insertion outside the owning transaction. One source generation increment is committed
+with the complete effect. Current source revisions/generation, eligible custodians and
+capacity are rechecked under the franchise money lock. An unchanged completed-key replay
+returns the original complete effect after writes are disabled, without another generation
+increment. Request detail now shows applied version 3 and immutable effect legs.
+
+`cashbook_source_facts` projects one actual money receipt independently of booking
+allocation/release, explicit noncash refund accounts, unknown old cash refund custody,
+unknown legacy collection/correction sources and committed movement legs. Legacy payment
+entries linked to a receipt are excluded from the legacy union and its source-version
+hook. New unlinked legacy collection/correction writes increment source generation;
+historical migration creates no generation seed. Legacy recording corrections are labelled
+as such, not described as verified new transfers. Explicit cash-refund custody integration
+through the owning refund workflow is still pending; actor identity is never inferred as
+possession. Relevant unresolved refund custody currently blocks new spending from that
+account. Unknown legacy collections remain visible as unknown and never add guessed
+location capacity. Complete refund-record annulment and custody qualification need the
+owning-source integration before full issue acceptance.
+
+The scoped position query captures location control totals, unknown source count and source
+generation at one statement MVCC cutoff. All amounts use exact numeric/BigInt arithmetic;
+gross turnover is returned as decimal strings. `known_recorded_paise` explicitly describes
+the attributed portion. Unknown sources mark an incomplete position, negative recorded
+amounts mark an exception, and neither represents a qualified actual cash count or bank
+settlement. Only finance readers receive this projection; operator selection still grants
+minimum location choices and their own submitted proposal/decision/effect evidence.
+Full cashbook fact drill-through, filters, captured exports, corrections, custody transfers,
+expense attachments, HTTP/configuration wiring and Material 3 UI are still pending.
+
+Application verification for this slice: both native PostgreSQL application cases passed
+with their original 30-second case deadlines. The real-source journey establishes
+₹1,000 opening float + ₹4,000 actual received cash − ₹500 expense = ₹4,500, unchanged cash
+for a UPI expense, unchanged receipt inflow after booking allocation/release, and conserved
+owned funds through ₹2,000 deposit and a withdrawal. The race/fault case establishes
+rollback of failed or incomplete/forged legs and their generation increment, one exact
+same-key concurrent outcome, stale-source/capacity denial, immutable effects and fresh-pool
+recovery after lost post-COMMIT acknowledgement. Nine unit/input cases, scoped query AST,
+changed-file lint and all five workspace type checks passed. Two initial native failures
+were diagnosed and retained locally: the deferred completeness CASE expression needed
+parentheses, and the runtime scope compiler requires a SELECT root (the capture now uses
+the existing SELECT-LATERAL pattern). A lint-only fixture binding was corrected to const,
+and the UPI fixture retains the existing receipt API receiver/custodian contract. No
+production privacy/isolation rules, assertions or test deadlines were weakened.
+
+Seventeen native compatibility cases passed on this application/source implementation:
+six fresh/upgrade/advisory-lock migration cases, two financial-workflow schema cases,
+six existing cancellation/refund/audit/policy service cases and three copied-schema
+forward-repair cases. The extended populated pre-140 upgrade case also passed: all old
+collection evidence is preserved, all seven new cashbook source tables are empty after
+upgrade, the old collection appears as unknown account/custody, and a new legacy recording
+correction advances generation once while both source facts remain unassigned. There
+were no skipped, cancelled or failed cases in these completed runs. This evidence remains
+partial #140 acceptance; explicit cash-refund custody, recording corrections, handovers,
+private expense attachments, captured cashbook journeys and final PR gates remain pending.

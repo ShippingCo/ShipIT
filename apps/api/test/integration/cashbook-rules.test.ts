@@ -91,3 +91,9 @@ test('expense proposals validate exact money, private fields, paired sources and
  assert.deepEqual(cashbookDecisionInput({decision:'approved',reason:' Synthetic review ',expected_version:1}),{decision:'approved',reason:'Synthetic review',expected_version:1});
  for(const changes of [{expected_version:2},{decision:'applied'},{amount_paise:1},{reason:' '}])assert.throws(()=>cashbookDecisionInput({decision:'approved',reason:'Review',expected_version:1,...changes}),{code:'VALIDATION_FAILED'});
 });
+
+test('application accepts only the exact approval identity and rejects caller-supplied money, source and status fields',async()=>{
+ const {cashbookApplyInput}=await import('../../src/modules/cashbook/effect-service.ts'),body={expected_version:2,decision_id:'11111111-1111-4111-8111-111111111111'};
+ assert.deepEqual(cashbookApplyInput(body),body);
+ for(const changes of [{expected_version:1},{expected_version:3},{decision_id:'not-an-id'},{amount_paise:1},{source_location_id:body.decision_id},{actor_id:body.decision_id},{approved:true},{status:'applied'}])assert.throws(()=>cashbookApplyInput({...body,...changes}),{code:'VALIDATION_FAILED'});
+});

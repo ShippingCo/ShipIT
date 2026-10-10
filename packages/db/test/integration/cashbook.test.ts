@@ -63,6 +63,13 @@ await test('populated pre-140 upgrade retains all collection evidence and create
  const payment=createPaymentService(s.pool),key=randomUUID(),input=collectionInput(20000),paid=await payment.execute(s.local.token,s.bookingId,null,q,key,headers(key),input,'payments.collect',randomUUID());
  const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','booking_obligations','payment_entries','payment_commands','domain_events'].map(async table=>[table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY 1`)).rows])));
  const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
- for(const table of ['cash_locations','cash_location_revisions','cashbook_source_versions'])assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
+ for(const table of ['cash_locations','cash_location_revisions','cashbook_source_versions','cashbook_requests','cashbook_request_decisions','cashbook_effects','cashbook_effect_legs'])assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
  assert.deepEqual(await payment.execute(s.local.token,s.bookingId,null,q,key,headers(key),input,'payments.collect',randomUUID()),paid);
+ const sources=async()=>(await db.adminQuery('SELECT source_kind,location_id,account_id,direction,amount_paise::text amount,unknown_reason FROM shipit.cashbook_source_facts ORDER BY recorded_at,source_id')).rows;
+ assert.deepEqual(await sources(),[{source_kind:'legacy_collection',location_id:null,account_id:null,direction:'in',amount:'20000',unknown_reason:'legacy_collection_custody_unknown'}]);
+ const correctionKey=randomUUID();await payment.execute(s.local.token,s.bookingId,paid.entry.id,q,correctionKey,headers(correctionKey),{amount_paise:5000,currency:'INR',reason_code:'incorrect_amount'},'payments.reverse',randomUUID());
+ assert.equal((await db.adminQuery('SELECT version::text v FROM shipit.cashbook_source_versions WHERE organization_id=$1 AND franchise_id=$2',[org,A])).rows[0]!.v,'1');
+ const after=await sources();assert.equal(after.length,2);assert.ok(after.every(row=>row.location_id===null&&row.account_id===null));assert.equal(after.reduce((sum,row)=>sum+(row.direction==='in'?1n:-1n)*BigInt(row.amount as string),0n),15000n);
+ assert.equal(after.find(row=>row.source_kind==='legacy_collection_correction')!.direction,'out');
+
 });

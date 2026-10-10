@@ -358,8 +358,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     async prepareCashbook() {
       await handle.prepareMoneyReceipts();const owner=handle.ownerPool();
       try {
-        await owner.query(`GRANT SELECT,INSERT ON shipit.cash_locations,shipit.cash_location_revisions,shipit.cashbook_requests,shipit.cashbook_request_decisions TO ${identifier(resource.runtimeRole)}`);
-        await owner.query(`GRANT SELECT ON shipit.cashbook_source_versions TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT ON shipit.cash_locations,shipit.cash_location_revisions,shipit.cashbook_requests,shipit.cashbook_request_decisions,shipit.cashbook_effects,shipit.cashbook_effect_legs TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.cashbook_source_versions,shipit.cashbook_source_facts TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareMoneyReceipts() {
