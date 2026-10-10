@@ -1419,3 +1419,39 @@ a nonexistent derived field; assertions now reconcile the actual authoritative s
 No source/amount assertion, privacy check or deadline was relaxed. This adds acceptance
 evidence only, without changing the owning refund implementation or released schema.
 Native cluster/data/lease cleanup completed. Browser and final full-issue gates remain.
+
+
+### #140 browser evidence and source-row mobile correction
+
+Actual React cashbook components, API adapters and production styles were exercised
+in the native in-app browser with explicitly fictional controlled transport. This
+qualifies browser rendering and interaction, not live providers or a full actual-API
+end-to-end deployment. At a 360-pixel viewport (350-pixel content area), the expense
+request, private proof, different-admin keyboard review, exact application and
+correction draft remain contained without horizontal overflow. The ready PNG preview
+decoded, Tab focused Record review with a visible solid outline, approval retained
+proof ID/version 3, and the applied request exposed a correction draft with immutable
+kind, source and occurrence. Ending the synthetic scope removed private evidence.
+
+Captured-source paging retained the saved cutoff and complete control totals across
+101 synthetic rows; the final page contained one row. Accountant controls exposed
+no expense/configuration mutations. The browser completed the controlled CSV download,
+whose payload was synthetic; this is download interaction evidence, not accountant
+format qualification. Earlier controlled custody checks exercised partial acceptance
+and ending the remaining amount without a second movement.
+
+With production CSS, source-row labels were clipped by inherited nowrap styling.
+Only cashbook source buttons now wrap, grow in height and contain long identifiers.
+The measured row changed from a 283-pixel client width/397-pixel scroll width to
+283/283 with normal whitespace and a 72-pixel height. An earlier page-overflow
+observation came from missing production styles in the temporary fixture and is
+not counted as a product defect. Fixture parent/decision identity mistakes were
+corrected without relaxing the production decoders. Native date fill did not persist
+a custom date; custom date interaction is not yet qualified by this browser evidence.
+
+After the scoped style change, all 248 web tests in 22 files, all five workspace
+typechecks, root lint/tenant-query AST checks and production web build passed. Logs:
+140-browser-final-web, 140-browser-final-types, 140-browser-final-lint and
+140-browser-final-build. No additional mirror test was added for this style change.
+Browser failure/uncertain/empty/configuration checks and final whole-issue gates
+remain; #140 stays open.
