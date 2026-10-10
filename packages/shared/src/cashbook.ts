@@ -22,5 +22,25 @@ export interface CashbookRequestDetail {request:CashbookRequestDto;decision:Cash
 
 export interface CashbookApplyInput {expected_version:2;decision_id:string}
 export interface CashbookEffectDto {id:string;request_id:string;decision_id:string;actor_id:string;recorded_at:string;version:3;legs:{location_id:string;direction:'in'|'out';amount_paise:string}[]}
-export interface CashbookLocationPosition {location_id:string;known_inflows_paise:string;known_outflows_paise:string;known_recorded_paise:string;available_paise:string;unknown_sources:number;state:'recorded'|'incomplete'|'exception'}
+export interface CashbookLocationPosition {location_id:string;known_inflows_paise:string;known_outflows_paise:string;known_recorded_paise:string;available_paise:string;pending_reserved_paise:string;shortfall_paise:string;unknown_sources:number;state:'recorded'|'incomplete'|'exception'}
 export interface CashbookPositionSnapshot {as_of:string;source_version:number;locations:CashbookLocationPosition[];unknown_sources:number}
+
+
+export type CashHandoverState='requested'|'partially_accepted'|'accepted'|'rejected'|'cancelled';
+export interface CashHandoverInput {
+ source_location_id:string;source_revision_id:string;target_location_id:string;target_revision_id:string;
+ expected_source_version:number;amount_paise:number;currency:'INR';reason:string;occurred_at:string;
+}
+export interface CashHandoverRequestDto extends CashHandoverInput {id:string;actor_id:string;recorded_at:string;version:1}
+export interface CashHandoverCommandInput {kind:'accept'|'reject'|'cancel';expected_version:number;expected_source_version:number;amount_paise:number;currency:'INR';reason:string}
+export interface CashHandoverCommandDto {
+ id:string;handover_id:string;version:number;kind:'accept'|'reject'|'cancel';amount_paise:number;currency:'INR';reason:string;
+ actor_id:string;recorded_at:string;accepted_paise:number;remaining_paise:number;ended_paise:number;state:Exclude<CashHandoverState,'requested'>;
+ legs:{location_id:string;direction:'in'|'out';amount_paise:string}[];
+}
+export interface CashHandoverDetail {request:CashHandoverRequestDto;version:number;accepted_paise:number;remaining_paise:number;ended_paise:number;state:CashHandoverState;current_source_version:number;commands:CashHandoverCommandDto[];next_cursor:number|null}
+
+export interface CashHandoverTargets {source_location_id:string;source_revision_id:string;current_source_version:number;items:{id:string;revision_id:string;name:string;custodian_id:string}[];next_cursor:string|null}
+
+export interface CashHandoverListItem {id:string;source_location_id:string;target_location_id:string;actor_id:string;amount_paise:number;accepted_paise:number;remaining_paise:number;ended_paise:number;version:number;state:CashHandoverState;occurred_at:string;recorded_at:string}
+export interface CashHandoverList {items:CashHandoverListItem[];next_cursor:string|null;current_source_version:number}

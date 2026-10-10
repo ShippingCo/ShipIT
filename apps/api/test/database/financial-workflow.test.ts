@@ -17,6 +17,7 @@ import {createReceivingAccountService} from '../../src/modules/payments/account-
 import type {FinancialAuditPage,FinancialAuditExport} from '@shippingco/shared';
 import {createCashLocationService} from '../../src/modules/cashbook/location-service.ts';
 import {createCashbookRequestService} from '../../src/modules/cashbook/request-service.ts';
+import {createCashHandoverService} from '../../src/modules/cashbook/handover-service.ts';
 import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
 import {createFinancialWorkflowService} from '../../src/modules/reports/finance-workflow-service.ts';
 import {createFinanceService} from '../../src/modules/reports/finance-service.ts';
@@ -205,6 +206,13 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
    assert.equal((await current()).refunds,String(index===0?20000:50000));
    const position=(await cashbook.position(s.local.token,q,randomUUID())).locations.find(p=>p.location_id===cashLocation.id)!;
    assert.equal(position.known_recorded_paise,'80000');assert.equal(position.available_paise,index===0?'80000':'0');
+   if(index===1){
+    const targetKey=randomUUID(),target=await locations.configure(s.local.token,null,q,targetKey,['idempotency-key',targetKey],{account_id:account,expected_account_version:1,custodian_id:s.local.id,name:'Synthetic receiving admin drawer',active:true,expected_version:0},randomUUID()),handoverKey=randomUUID();
+    const sourceVersion=(await cashbook.position(s.local.token,q,randomUUID())).source_version;
+    await assert.rejects(createCashHandoverService(s.pool,true).request(s.operator.token,q,handoverKey,['idempotency-key',handoverKey],{source_location_id:cashLocation.id,source_revision_id:cashLocation.revision_id,target_location_id:target.id,target_revision_id:target.revision_id,expected_source_version:sourceVersion,amount_paise:1,currency:'INR',reason:'Synthetic unknown-refund denial',occurred_at:'2026-01-01T00:00:00Z'},randomUUID()),{code:'CASHBOOK_CONFLICT'});
+    assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.cash_handovers')).rows[0]!.n,0);assert.equal((await cashbook.position(s.local.token,q,randomUUID())).source_version,sourceVersion);
+   }
+
    const recorded=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE transfer_ref=$1',[evidence.transfer_ref])).rows[0]!;
    assert.equal(recorded.cash_location_id,index===0?cashLocation.id:null);assert.equal(recorded.actor_id,s.local.id);assert.notEqual(recorded.actor_id,s.operator.id);
    const fact=(await owner.query("SELECT location_id,unknown_reason FROM shipit.cashbook_source_facts WHERE source_kind='refund' AND source_id=$1",[recorded.id])).rows[0]!;assert.equal(fact.location_id,index===0?cashLocation.id:null);assert.equal(fact.unknown_reason,index===0?null:'cash_refund_custody_unknown');

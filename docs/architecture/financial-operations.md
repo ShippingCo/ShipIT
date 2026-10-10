@@ -816,3 +816,69 @@ and non-null fixture index assertions corrected them without changing runtime as
 This is service/schema acceptance for corrections, not full #140 completion. Transfer
 acknowledgements/reservations, expense attachments, captured query/export journeys,
 HTTP/configuration wiring, Material 3 UI and final PR gates remain pending.
+
+
+Acknowledged handovers for #140 now use immutable `cash_handovers`,
+`cash_handover_commands` and `cash_handover_legs`, extending unreleased migration 46
+without historical seeds. A request reserves its amount while the sender retains recorded
+possession. The named active target custodian accepts a positive portion or rejects the
+remaining portion; an initiator cannot supply an acceptance flag or act as a different
+recipient. Each accepted command has one identity and two exact opposing custody legs,
+with deferred completeness and owning-transaction guards. Rejection/cancellation produces
+no actual money legs and releases only the unaccepted remainder. Current own sender or
+franchise admin can append cancellation after source deactivation or custodian departure,
+while all accepted history stays immutable. This custody acknowledgement is distinct from
+the different-admin expense/fund/correction approval path under D140-1.
+
+Requests and responses check current scoped roles, location/account revisions, eligible
+custodians, source generation and expected handover version under the same short franchise
+money lock. Every request/response advances the generation once; exact actor/key/intent
+replay returns the original immutable outcome before disabled-write and changed-source
+checks, while still requiring current command authority. A later partial acceptance cannot
+rewrite an earlier command's retained amount/remainder or legs. Accepted fact occurrence
+uses the server-recorded acknowledgement time, not an earlier requested date; the request's
+own original occurrence remains separately visible. No bank transfer provider is invoked.
+
+The same-cutoff location projection now reports pending reservations and shortfall
+separately from known recorded possession. New expense/deposit/withdrawal checks subtract
+reserved custody at both service and SQL boundaries. An acknowledgement excludes its own
+reservation when checking capacity, still protects other reservations and blocks unresolved
+unknown refund custody. A truthful prior-source correction may reveal a shortage; available
+money becomes zero and acceptance/spending stops. Shortfall is an exact derived decimal
+quantity and can exceed the safe bound of an individual stored money amount; actual signed
+recorded balances and requested/accepted amounts keep their existing bounds.
+
+Purpose-limited target choices expose only active location identity/revision, staff label
+and custodian identity. They require an authorized source and reveal neither other balances
+nor receiving-account configuration. Operator inbox/detail/history includes only their own
+initiated/source/target handovers; finance roles retain their scoped reads. Lists use bounded
+UUID keyset pages, and command history uses at most 100 rows with an explicit version cursor
+and one batched leg query. Source generations and current totals share the held read cutoff.
+An operator's participating handover evidence does not confer franchise-ledger access.
+
+Verification: twelve unit/input cases passed. Thirty-four distinct native PostgreSQL cases
+passed: thirteen cashbook service cases, four fresh/source/populated-upgrade cases and
+seventeen existing finance/migration/copied-schema cases. The strengthened reservation
+case was additionally retested with complete, otherwise valid expense legs to prove the
+independent SQL capacity denial, plus denied direct/request over-reservation. Final selector/
+inbox and both-custodian-departure admin recovery changes were verified by rerunning the
+two affected native cases. Native evidence covers partial acceptance, rejection, one paired
+receiving side under same/distinct-key races, failed/omitted/incorrect legs and rollback of
+reservations/generation, fresh-pool recovery after lost request/ack COMMIT responses, current-
+role replay denial, stale/inactive sources, scope/role denial, 101 acknowledgements across
+bounded history pages, safe recipient fields, immutable accepted evidence and shortage
+recovery. The actual refund fixture also confirms that an unresolved old cash refund blocks
+a new handover without creating a request or generation increment. All final completed runs
+had zero failures, skips, cancellations or todos under the original case deadlines, and
+disposable clusters were stopped and cleaned. Populated upgrades preserve old evidence and
+leave all ten new cashbook tables empty, including handovers.
+
+All five workspace type checks, final changed-file lint, tenant-query AST, exact 99-row
+permission contract and diff checks passed. Initial failures remain in local logs: a missing
+reservation projection field, PostgreSQL 42803 from the ungrouped correlated scope columns,
+strict pagination-query selection and two malformed fixture/source-body paths. The missing
+field/group columns and explicit query allowlist were fixed, and the fixture paths were
+corrected without weakening constraints, assertions, privacy rules or deadlines. Handover
+services now satisfy their scoped custody/retry contract; full #140 acceptance still needs
+captured cashbook source/filter/export journeys, private expense attachments, HTTP/strict
+feature-flag integration, Material 3 UI/browser qualification and final PR CI/review/merge.

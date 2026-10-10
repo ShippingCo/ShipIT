@@ -112,3 +112,14 @@ test('linked corrections permit zero replacement but preserve old non-correction
  assert.equal(cashbookRequestInput({...body,correction_of:id,amount_paise:0}).amount_paise,0);
  for(const change of [{correction_of:'bad'},{correction_of:id,amount_paise:-1},{correction_of:id,amount_paise:0.5},{correction_of:id,amount_paise:Number.MAX_SAFE_INTEGER+1},{corrected_balance_paise:1},{previous_amount_paise:1}])assert.throws(()=>cashbookRequestInput({...body,...change}),{code:'VALIDATION_FAILED'});
 });
+
+
+test('handover commands require exact named custody, versions and positive acceptance with zero-money reject/cancel',async()=>{
+ const {handoverInput,handoverCommandInput}=await import('../../src/modules/cashbook/handover-service.ts'),id='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',body={source_location_id:id,source_revision_id:id,target_location_id:other,target_revision_id:other,expected_source_version:2,amount_paise:50000,currency:'INR',reason:'Synthetic handover',occurred_at:'2026-01-01T00:00:00Z'};
+ assert.deepEqual(handoverInput(body),body);
+ for(const change of [{target_location_id:id},{amount_paise:0},{amount_paise:0.5},{amount_paise:Number.MAX_SAFE_INTEGER+1},{currency:'USD'},{actor_id:id},{accepted:true},{receiver_id:id},{reason:' '}])assert.throws(()=>handoverInput({...body,...change}),{code:'VALIDATION_FAILED'});
+ const command={kind:'accept',expected_version:1,expected_source_version:3,amount_paise:20000,currency:'INR',reason:'Synthetic acceptance'};assert.deepEqual(handoverCommandInput(command),command);
+ for(const change of [{amount_paise:0},{kind:'reject'},{kind:'cancel'},{kind:'accepted'},{expected_version:0},{expected_version:2147483646},{expected_source_version:-1},{currency:'USD'},{accepted_paise:20000},{target_location_id:other},{actor_id:id}])assert.throws(()=>handoverCommandInput({...command,...change}),{code:'VALIDATION_FAILED'});
+ assert.equal(handoverCommandInput({...command,kind:'reject',amount_paise:0}).kind,'reject');assert.equal(handoverCommandInput({...command,kind:'cancel',amount_paise:0}).kind,'cancel');
+ const worst=cashbookPosition([{...received,source_kind:'correction',direction:'out',amount_paise:maximumPaise}],cash,[maximumPaise]);assert.equal(worst.shortfall,maximumPaise*2n);assert.equal(worst.available,0n);assert.equal(worst.state,'exception');
+});

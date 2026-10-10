@@ -26,7 +26,7 @@ export function cashbookPosition(facts:readonly CashbookFact[],location:string,r
  }
  // All intermediate arithmetic stays exact even when the gross turnover exceeds JS safe integers.
  const recorded=bounded(inflows-outflows),reserved=reservations.reduce((sum,value)=>sum+amount(value,true),0n);bounded(reserved);
- const available=recorded>reserved?recorded-reserved:0n,shortfall=recorded<reserved?reserved-recorded:0n;bounded(shortfall);
+ const available=recorded>reserved?recorded-reserved:0n,shortfall=recorded<reserved?reserved-recorded:0n;
  return {inflows,outflows,recorded,reserved,available,shortfall,unknown_sources:unknownSources,
   state:recorded<0n||shortfall>0n?'exception' as const:unknownSources>0?'incomplete' as const:'recorded' as const};
 }

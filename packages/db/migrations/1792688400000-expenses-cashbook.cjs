@@ -17,7 +17,7 @@ CREATE TRIGGER cashbook_source_version_guard BEFORE INSERT OR UPDATE OR DELETE O
 CREATE FUNCTION shipit.bump_cashbook_source_version() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 BEGIN
- IF TG_OP<>'INSERT' OR TG_TABLE_SCHEMA<>'shipit' OR TG_TABLE_NAME NOT IN ('money_receipts','financial_changes','cash_location_revisions','cashbook_effects','payment_entries')
+ IF TG_OP<>'INSERT' OR TG_TABLE_SCHEMA<>'shipit' OR TG_TABLE_NAME NOT IN ('money_receipts','financial_changes','cash_location_revisions','cashbook_effects','payment_entries','cash_handovers','cash_handover_commands')
  THEN RAISE EXCEPTION 'CASHBOOK_VERSION_SOURCE_INVALID' USING ERRCODE='23514'; END IF;
  IF TG_TABLE_NAME='payment_entries' THEN
   IF EXISTS(SELECT 1 FROM shipit.payment_commands c WHERE c.organization_id=NEW.organization_id AND c.franchise_id=NEW.franchise_id AND c.id=NEW.command_id AND c.receipt_command_id IS NOT NULL) THEN RETURN NEW;END IF;
@@ -249,6 +249,124 @@ BEGIN
 END $fn$;
 REVOKE ALL ON FUNCTION shipit.cashbook_intended_legs(shipit.cashbook_requests) FROM PUBLIC;
 
+-- A request reserves sender custody. Only named-recipient acceptance produces paired money legs.
+CREATE TABLE shipit.cash_handovers (
+ id uuid PRIMARY KEY,organization_id uuid NOT NULL,franchise_id uuid NOT NULL,
+ source_location_id uuid NOT NULL,source_revision_id uuid NOT NULL,target_location_id uuid NOT NULL,target_revision_id uuid NOT NULL,
+ expected_source_version bigint NOT NULL CHECK(expected_source_version BETWEEN 0 AND 9007199254740991),
+ amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 1 AND 9007199254740991),currency text NOT NULL CHECK(currency='INR'),
+ reason text NOT NULL CHECK(char_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason) AND reason !~ '[\x01-\x1f\x7f-\x9f]'),
+ occurred_at timestamptz NOT NULL CHECK(isfinite(occurred_at)),actor_id uuid NOT NULL REFERENCES shipit.auth_users(id),correlation_id uuid NOT NULL,
+ key_digest text NOT NULL CHECK(key_digest ~ '^[a-f0-9]{64}$'),fingerprint text NOT NULL CHECK(fingerprint ~ '^[a-f0-9]{64}$'),recorded_at timestamptz NOT NULL CHECK(isfinite(recorded_at)),
+ UNIQUE(organization_id,franchise_id,id),UNIQUE(organization_id,franchise_id,actor_id,key_digest),CHECK(source_location_id<>target_location_id),
+ FOREIGN KEY(organization_id,franchise_id,source_location_id,source_revision_id) REFERENCES shipit.cash_location_revisions(organization_id,franchise_id,location_id,id) ON DELETE RESTRICT,
+ FOREIGN KEY(organization_id,franchise_id,target_location_id,target_revision_id) REFERENCES shipit.cash_location_revisions(organization_id,franchise_id,location_id,id) ON DELETE RESTRICT
+);
+CREATE INDEX cash_handover_source_idx ON shipit.cash_handovers(organization_id,franchise_id,source_location_id,id);
+CREATE INDEX cash_handover_target_idx ON shipit.cash_handovers(organization_id,franchise_id,target_location_id,id);
+CREATE TABLE shipit.cash_handover_commands (
+ id uuid PRIMARY KEY,organization_id uuid NOT NULL,franchise_id uuid NOT NULL,handover_id uuid NOT NULL,
+ version integer NOT NULL CHECK(version BETWEEN 2 AND 2147483646),expected_source_version bigint NOT NULL CHECK(expected_source_version BETWEEN 0 AND 9007199254740991),
+ kind text NOT NULL CHECK(kind IN ('accept','reject','cancel')),amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 0 AND 9007199254740991),currency text NOT NULL CHECK(currency='INR'),
+ reason text NOT NULL CHECK(char_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason) AND reason !~ '[\x01-\x1f\x7f-\x9f]'),
+ actor_id uuid NOT NULL REFERENCES shipit.auth_users(id),correlation_id uuid NOT NULL,
+ key_digest text NOT NULL CHECK(key_digest ~ '^[a-f0-9]{64}$'),fingerprint text NOT NULL CHECK(fingerprint ~ '^[a-f0-9]{64}$'),
+ accepted_paise bigint NOT NULL CHECK(accepted_paise BETWEEN 0 AND 9007199254740991),remaining_paise bigint NOT NULL CHECK(remaining_paise BETWEEN 0 AND 9007199254740991),ended_paise bigint NOT NULL CHECK(ended_paise BETWEEN 0 AND 9007199254740991),
+ state text NOT NULL CHECK(state IN ('partially_accepted','accepted','rejected','cancelled')),recorded_at timestamptz NOT NULL CHECK(isfinite(recorded_at)),creation_xid xid8 NOT NULL DEFAULT pg_current_xact_id(),
+ UNIQUE(organization_id,franchise_id,id),UNIQUE(organization_id,franchise_id,handover_id,version),UNIQUE(organization_id,franchise_id,actor_id,key_digest),
+ CHECK((kind='accept')=(amount_paise>0)),FOREIGN KEY(organization_id,franchise_id,handover_id) REFERENCES shipit.cash_handovers(organization_id,franchise_id,id) ON DELETE RESTRICT
+);
+CREATE TABLE shipit.cash_handover_legs (
+ organization_id uuid NOT NULL,franchise_id uuid NOT NULL,command_id uuid NOT NULL,location_id uuid NOT NULL,
+ direction text NOT NULL CHECK(direction IN ('in','out')),amount_paise bigint NOT NULL CHECK(amount_paise BETWEEN 1 AND 9007199254740991),
+ PRIMARY KEY(organization_id,franchise_id,command_id,location_id),
+ FOREIGN KEY(organization_id,franchise_id,command_id) REFERENCES shipit.cash_handover_commands(organization_id,franchise_id,id) ON DELETE RESTRICT,
+ FOREIGN KEY(organization_id,franchise_id,location_id) REFERENCES shipit.cash_locations(organization_id,franchise_id,id) ON DELETE RESTRICT
+);
+CREATE INDEX cash_handover_leg_location_idx ON shipit.cash_handover_legs(organization_id,franchise_id,location_id,command_id);
+CREATE VIEW shipit.cash_handover_positions AS
+ SELECT h.organization_id,h.franchise_id,h.id,h.source_location_id,h.target_location_id,COALESCE(c.version,1) version,
+ COALESCE(c.accepted_paise,0) accepted_paise,COALESCE(c.remaining_paise,h.amount_paise) remaining_paise,COALESCE(c.ended_paise,0) ended_paise,COALESCE(c.state,'requested') state
+ FROM shipit.cash_handovers h LEFT JOIN LATERAL(SELECT * FROM shipit.cash_handover_commands c WHERE c.organization_id=h.organization_id AND c.franchise_id=h.franchise_id AND c.handover_id=h.id ORDER BY version DESC LIMIT 1) c ON true;
+CREATE FUNCTION shipit.check_cash_handover_sources(request shipit.cash_handovers) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE found integer;
+BEGIN
+ SELECT count(*) INTO found FROM shipit.cash_locations l
+ JOIN LATERAL(SELECT * FROM shipit.cash_location_revisions r WHERE r.organization_id=l.organization_id AND r.franchise_id=l.franchise_id AND r.location_id=l.id ORDER BY version DESC LIMIT 1) r ON true
+ JOIN LATERAL(SELECT * FROM shipit.receiving_account_revisions a WHERE a.organization_id=l.organization_id AND a.franchise_id=l.franchise_id AND a.account_id=l.account_id ORDER BY version DESC LIMIT 1) a ON true
+ WHERE l.organization_id=request.organization_id AND l.franchise_id=request.franchise_id AND l.kind='cash' AND l.id IN(request.source_location_id,request.target_location_id)
+ AND r.id=CASE WHEN l.id=request.source_location_id THEN request.source_revision_id ELSE request.target_revision_id END AND r.active AND a.active AND r.account_revision_id=a.id
+ AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE f.organization_id=l.organization_id AND f.franchise_id=l.franchise_id AND m.lifecycle='active' AND m.role IN('operator','franchise_admin') AND m.user_id=l.custodian_id);
+ IF found<>2 THEN RAISE EXCEPTION 'CASH_HANDOVER_SOURCE_STALE' USING ERRCODE='23514';END IF;
+END $fn$;
+CREATE FUNCTION shipit.guard_cash_handover() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE capacity record;
+BEGIN
+ IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASH_HANDOVER_IMMUTABLE' USING ERRCODE='23514';END IF;
+ IF NEW.recorded_at IS NOT NULL THEN RAISE EXCEPTION 'CASH_HANDOVER_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
+ IF NOT EXISTS(SELECT 1 FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id AND lifecycle='active' FOR UPDATE) THEN RAISE EXCEPTION 'CASH_HANDOVER_SCOPE_INVALID' USING ERRCODE='23514';END IF;
+ IF NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND m.lifecycle='active' AND m.role IN('operator','franchise_admin') AND m.user_id=NEW.actor_id
+ AND (m.role='franchise_admin' OR EXISTS(SELECT 1 FROM shipit.cash_locations l WHERE l.organization_id=NEW.organization_id AND l.franchise_id=NEW.franchise_id AND l.id=NEW.source_location_id AND l.custodian_id=NEW.actor_id))) THEN RAISE EXCEPTION 'CASH_HANDOVER_ACTOR_INVALID' USING ERRCODE='23514';END IF;
+ IF COALESCE((SELECT version FROM shipit.cashbook_source_versions WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id),0)<>NEW.expected_source_version OR NEW.occurred_at>clock_timestamp() THEN RAISE EXCEPTION 'CASH_HANDOVER_VERSION_TIME_INVALID' USING ERRCODE='23514';END IF;
+ PERFORM shipit.check_cash_handover_sources(NEW);
+ SELECT * INTO capacity FROM shipit.cashbook_custody_capacity(NEW.organization_id,NEW.franchise_id,NEW.source_location_id,NULL);
+ IF capacity.recorded-capacity.reserved<NEW.amount_paise OR capacity.unknown_refund>0 OR abs(capacity.recorded)>9007199254740991 THEN RAISE EXCEPTION 'CASH_HANDOVER_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
+ NEW.recorded_at=date_trunc('milliseconds',clock_timestamp());RETURN NEW;
+END $fn$;
+CREATE TRIGGER cash_handover_guard BEFORE INSERT OR UPDATE OR DELETE ON shipit.cash_handovers FOR EACH ROW EXECUTE FUNCTION shipit.guard_cash_handover();
+CREATE TRIGGER cash_handover_source_version AFTER INSERT ON shipit.cash_handovers FOR EACH ROW EXECUTE FUNCTION shipit.bump_cashbook_source_version();
+CREATE FUNCTION shipit.guard_cash_handover_command() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE request shipit.cash_handovers;position record;capacity record;target_total numeric;source_custodian uuid;target_custodian uuid;
+BEGIN
+ IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_IMMUTABLE' USING ERRCODE='23514';END IF;
+ IF NEW.recorded_at IS NOT NULL OR NEW.accepted_paise IS NOT NULL OR NEW.remaining_paise IS NOT NULL OR NEW.ended_paise IS NOT NULL OR NEW.state IS NOT NULL OR NEW.creation_xid<>pg_current_xact_id() THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
+ IF NOT EXISTS(SELECT 1 FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id AND lifecycle='active' FOR UPDATE) THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_SCOPE_INVALID' USING ERRCODE='23514';END IF;
+ SELECT * INTO request FROM shipit.cash_handovers WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.handover_id FOR UPDATE;
+ SELECT * INTO position FROM shipit.cash_handover_positions WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.handover_id;
+ IF request.id IS NULL OR NEW.version<>position.version+1 OR position.remaining_paise=0 OR COALESCE((SELECT version FROM shipit.cashbook_source_versions WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id),0)<>NEW.expected_source_version THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_STALE' USING ERRCODE='23514';END IF;
+ SELECT custodian_id INTO source_custodian FROM shipit.cash_locations WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=request.source_location_id;
+ SELECT custodian_id INTO target_custodian FROM shipit.cash_locations WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=request.target_location_id;
+ IF NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND m.lifecycle='active' AND m.role IN('operator','franchise_admin') AND m.user_id=NEW.actor_id
+ AND CASE WHEN NEW.kind='cancel' THEN m.role='franchise_admin' OR NEW.actor_id=source_custodian ELSE NEW.actor_id=target_custodian END) THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_ACTOR_INVALID' USING ERRCODE='23514';END IF;
+ NEW.accepted_paise=position.accepted_paise;NEW.ended_paise=position.ended_paise;
+ IF NEW.kind='accept' THEN
+  PERFORM shipit.check_cash_handover_sources(request);
+  SELECT * INTO capacity FROM shipit.cashbook_custody_capacity(NEW.organization_id,NEW.franchise_id,request.source_location_id,request.id);
+  SELECT recorded INTO target_total FROM shipit.cashbook_custody_capacity(NEW.organization_id,NEW.franchise_id,request.target_location_id,NULL);
+  IF NEW.amount_paise>position.remaining_paise OR NEW.amount_paise>capacity.recorded-capacity.reserved OR capacity.unknown_refund>0 OR target_total+NEW.amount_paise>9007199254740991 THEN RAISE EXCEPTION 'CASH_HANDOVER_COMMAND_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
+  NEW.accepted_paise=position.accepted_paise+NEW.amount_paise;NEW.remaining_paise=position.remaining_paise-NEW.amount_paise;NEW.state=CASE WHEN NEW.remaining_paise=0 THEN 'accepted' ELSE 'partially_accepted' END;
+ ELSE NEW.remaining_paise=0;NEW.ended_paise=position.ended_paise+position.remaining_paise;NEW.state=CASE WHEN NEW.kind='reject' THEN 'rejected' ELSE 'cancelled' END;
+ END IF;
+ NEW.recorded_at=date_trunc('milliseconds',clock_timestamp());RETURN NEW;
+END $fn$;
+CREATE TRIGGER cash_handover_command_guard BEFORE INSERT OR UPDATE OR DELETE ON shipit.cash_handover_commands FOR EACH ROW EXECUTE FUNCTION shipit.guard_cash_handover_command();
+CREATE TRIGGER cash_handover_command_source_version AFTER INSERT ON shipit.cash_handover_commands FOR EACH ROW EXECUTE FUNCTION shipit.bump_cashbook_source_version();
+CREATE FUNCTION shipit.guard_cash_handover_leg() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+DECLARE command shipit.cash_handover_commands;request shipit.cash_handovers;
+BEGIN
+ IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASH_HANDOVER_LEG_IMMUTABLE' USING ERRCODE='23514';END IF;
+ SELECT * INTO command FROM shipit.cash_handover_commands WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=NEW.command_id;
+ SELECT * INTO request FROM shipit.cash_handovers WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND id=command.handover_id;
+ IF command.id IS NULL OR command.kind<>'accept' OR command.creation_xid<>pg_current_xact_id() OR NEW.amount_paise<>command.amount_paise
+ OR NOT COALESCE((NEW.location_id=request.source_location_id AND NEW.direction='out') OR (NEW.location_id=request.target_location_id AND NEW.direction='in'),false) THEN RAISE EXCEPTION 'CASH_HANDOVER_LEG_INTENT_INVALID' USING ERRCODE='23514';END IF;RETURN NEW;
+END $fn$;
+CREATE TRIGGER cash_handover_leg_guard BEFORE INSERT OR UPDATE OR DELETE ON shipit.cash_handover_legs FOR EACH ROW EXECUTE FUNCTION shipit.guard_cash_handover_leg();
+CREATE FUNCTION shipit.check_cash_handover_complete() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+BEGIN
+ IF (SELECT count(*) FROM shipit.cash_handover_legs WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND command_id=NEW.id)<>(CASE WHEN NEW.kind='accept' THEN 2 ELSE 0 END) THEN RAISE EXCEPTION 'CASH_HANDOVER_LEGS_INCOMPLETE' USING ERRCODE='23514';END IF;RETURN NULL;
+END $fn$;
+CREATE CONSTRAINT TRIGGER cash_handover_complete AFTER INSERT ON shipit.cash_handover_commands DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION shipit.check_cash_handover_complete();
+REVOKE ALL ON shipit.cash_handovers,shipit.cash_handover_commands,shipit.cash_handover_legs,shipit.cash_handover_positions FROM PUBLIC;
+REVOKE ALL ON FUNCTION shipit.check_cash_handover_sources(shipit.cash_handovers),shipit.guard_cash_handover(),shipit.guard_cash_handover_command(),shipit.guard_cash_handover_leg(),shipit.check_cash_handover_complete() FROM PUBLIC;
+
 -- Nullable additive ownership references: existing refunds remain explicitly unattributed.
 ALTER TABLE shipit.financial_refund_evidence ADD COLUMN cash_location_id uuid,ADD COLUMN cash_location_revision_id uuid;
 ALTER TABLE shipit.financial_refund_evidence ADD CONSTRAINT refund_cash_location_pair CHECK((cash_location_id IS NULL)=(cash_location_revision_id IS NULL)),
@@ -294,10 +412,23 @@ CREATE VIEW shipit.cashbook_source_facts AS
  SELECT leg.organization_id,leg.franchise_id,CASE WHEN r.correction_of IS NULL THEN r.kind ELSE 'correction' END,e.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,r.occurred_at,e.recorded_at,e.actor_id,r.id,r.correction_of,NULL::text
  FROM shipit.cashbook_effect_legs leg JOIN shipit.cashbook_effects e ON e.organization_id=leg.organization_id AND e.franchise_id=leg.franchise_id AND e.id=leg.effect_id
  JOIN shipit.cashbook_requests r ON r.organization_id=e.organization_id AND r.franchise_id=e.franchise_id AND r.id=e.request_id
+ JOIN shipit.cash_locations l ON l.organization_id=leg.organization_id AND l.franchise_id=leg.franchise_id AND l.id=leg.location_id
+ UNION ALL
+ SELECT leg.organization_id,leg.franchise_id,'handover',c.id,leg.location_id,l.account_id,leg.direction,leg.amount_paise,c.recorded_at,c.recorded_at,c.actor_id,h.id,NULL::uuid,NULL::text
+ FROM shipit.cash_handover_legs leg JOIN shipit.cash_handover_commands c ON c.organization_id=leg.organization_id AND c.franchise_id=leg.franchise_id AND c.id=leg.command_id
+ JOIN shipit.cash_handovers h ON h.organization_id=c.organization_id AND h.franchise_id=c.franchise_id AND h.id=c.handover_id
  JOIN shipit.cash_locations l ON l.organization_id=leg.organization_id AND l.franchise_id=leg.franchise_id AND l.id=leg.location_id;
+CREATE FUNCTION shipit.cashbook_custody_capacity(p_org uuid,p_franchise uuid,p_location uuid,p_exclude uuid)
+RETURNS TABLE(recorded numeric,reserved numeric,unknown_refund numeric)
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
+ SELECT COALESCE((SELECT sum(CASE WHEN f.direction='in' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END) FROM shipit.cashbook_source_facts f WHERE f.organization_id=p_org AND f.franchise_id=p_franchise AND f.location_id=p_location),0),
+ COALESCE((SELECT sum(h.remaining_paise::numeric) FROM shipit.cash_handover_positions h WHERE h.organization_id=p_org AND h.franchise_id=p_franchise AND h.source_location_id=p_location AND h.id IS DISTINCT FROM p_exclude),0),
+ COALESCE((SELECT sum(CASE WHEN f.source_kind='refund' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END) FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=p_location WHERE f.organization_id=p_org AND f.franchise_id=p_franchise AND f.location_id IS NULL AND f.source_kind IN('refund','refund_correction') AND (f.account_id IS NULL OR f.account_id=l.account_id)),0);
+$fn$;
+REVOKE ALL ON FUNCTION shipit.cashbook_custody_capacity(uuid,uuid,uuid,uuid) FROM PUBLIC;
 CREATE FUNCTION shipit.guard_cashbook_effect() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
-DECLARE request shipit.cashbook_requests;approval shipit.cashbook_request_decisions;available numeric;target_total numeric;leg record;
+DECLARE request shipit.cashbook_requests;approval shipit.cashbook_request_decisions;available numeric;pending numeric;target_total numeric;leg record;
 BEGIN
  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_IMMUTABLE' USING ERRCODE='23514';END IF;
  IF NEW.recorded_at IS NOT NULL OR NEW.creation_xid<>pg_current_xact_id() THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_GENERATED_FIELDS' USING ERRCODE='23514';END IF;
@@ -311,7 +442,7 @@ BEGIN
  IF request.id IS NULL OR approval.request_id IS DISTINCT FROM request.id OR approval.decision IS DISTINCT FROM 'approved' OR approval.actor_id=request.actor_id
  THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_APPROVAL_REQUIRED' USING ERRCODE='23514';END IF;
  PERFORM shipit.check_cashbook_request_sources(request);
- SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO available FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=request.source_location_id;
+ SELECT recorded,reserved INTO available,pending FROM shipit.cashbook_custody_capacity(NEW.organization_id,NEW.franchise_id,request.source_location_id,NULL);
  IF request.correction_of IS NOT NULL THEN
   FOR leg IN SELECT * FROM shipit.cashbook_intended_legs(request) LOOP
    SELECT COALESCE(sum(CASE WHEN direction='in' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) INTO target_total FROM shipit.cashbook_source_facts WHERE organization_id=NEW.organization_id AND franchise_id=NEW.franchise_id AND location_id=leg.location_id;
@@ -319,7 +450,7 @@ BEGIN
    IF abs(target_total)>9007199254740991 THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
   END LOOP;
  ELSIF request.kind IN ('expense','deposit','withdrawal') THEN
-  IF available<request.amount_paise OR (SELECT COALESCE(sum(CASE WHEN f.source_kind='refund' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0) FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=request.source_location_id
+  IF available-pending<request.amount_paise OR (SELECT COALESCE(sum(CASE WHEN f.source_kind='refund' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0) FROM shipit.cashbook_source_facts f JOIN shipit.cash_locations l ON l.organization_id=f.organization_id AND l.franchise_id=f.franchise_id AND l.id=request.source_location_id
    WHERE f.organization_id=NEW.organization_id AND f.franchise_id=NEW.franchise_id AND f.location_id IS NULL AND f.source_kind IN ('refund','refund_correction') AND (f.account_id IS NULL OR f.account_id=l.account_id))>0
   THEN RAISE EXCEPTION 'CASHBOOK_EFFECT_CAPACITY_INVALID' USING ERRCODE='23514';END IF;
  ELSE

@@ -13,7 +13,7 @@ interface DecisionRow extends Omit<CashbookDecisionDto,'version'|'recorded_at'> 
 interface Source {id:string;revision_id:string;kind:'cash'|'noncash';custodian_id:string|null;active:boolean;account_active:boolean;account_current:boolean}
 export const requestDto=(r:RequestRow):CashbookRequestDto=>({id:r.id,kind:r.kind,source_location_id:r.source_location_id,source_revision_id:r.source_revision_id,target_location_id:r.target_location_id,target_revision_id:r.target_revision_id,expected_source_version:Number(r.expected_source_version),amount_paise:Number(r.amount_paise),currency:r.currency,category:r.category,payee:r.payee,responsible_employee_id:r.responsible_employee_id,reason:r.reason,occurred_at:instant(r.occurred_at),actor_id:r.actor_id,recorded_at:instant(r.recorded_at),...(r.correction_of?{correction_of:r.correction_of}:{})});
 const decisionDto=(r:DecisionRow):CashbookDecisionDto=>({id:r.id,request_id:r.request_id,decision:r.decision,reason:r.reason,actor_id:r.actor_id,recorded_at:instant(r.recorded_at),version:2});
-function text(value:unknown,max:number):string {
+export function cashbookText(value:unknown,max:number):string {
  if(typeof value!=='string'||value.length>max*4||!value.trim()||[...value.trim()].length>max||[...value].some(char=>{const code=char.codePointAt(0)!;return code<32||(code>=127&&code<=159)||(code>=0xd800&&code<=0xdfff);}))throw new FieldValidationError('$','INVALID_FORMAT');return value.trim();
 }
 export function cashbookRequestInput(value:unknown):CashbookRequestInput {
@@ -24,12 +24,12 @@ export function cashbookRequestInput(value:unknown):CashbookRequestInput {
  if(expense?!['rent','utilities','supplies','transport','maintenance','other'].includes(b.category as string):(b.category!==null||b.payee!==null))throw new FieldValidationError('$','INVALID_FORMAT');
  const source=uuid(b.source_location_id,'$'),target=paired?uuid(b.target_location_id,'$'):null;if(source===target)throw new FieldValidationError('$','INVALID_FORMAT');
  return {kind,source_location_id:source,source_revision_id:uuid(b.source_revision_id,'$'),target_location_id:target,target_revision_id:paired?uuid(b.target_revision_id,'$'):null,
- expected_source_version:integer(b.expected_source_version,'expected_version'),amount_paise:integer(b.amount_paise,'amount_paise',correction?0:1),currency:'INR',category:expense?b.category as ExpenseCategory:null,payee:expense?text(b.payee,120):null,
- responsible_employee_id:uuid(b.responsible_employee_id,'$'),reason:text(b.reason,500),occurred_at:timestamp(b.occurred_at,'occurred_at'),...(correction?{correction_of:correction}:{})};
+ expected_source_version:integer(b.expected_source_version,'expected_version'),amount_paise:integer(b.amount_paise,'amount_paise',correction?0:1),currency:'INR',category:expense?b.category as ExpenseCategory:null,payee:expense?cashbookText(b.payee,120):null,
+ responsible_employee_id:uuid(b.responsible_employee_id,'$'),reason:cashbookText(b.reason,500),occurred_at:timestamp(b.occurred_at,'occurred_at'),...(correction?{correction_of:correction}:{})};
 }
 export function cashbookDecisionInput(value:unknown):CashbookDecisionInput {
  const b=object(value,['decision','reason','expected_version']);if(b.decision!=='approved'&&b.decision!=='rejected')throw new FieldValidationError('$','INVALID_FORMAT');
- integer(b.expected_version,'expected_version',1,1);return {decision:b.decision,reason:text(b.reason,500),expected_version:1};
+ integer(b.expected_version,'expected_version',1,1);return {decision:b.decision,reason:cashbookText(b.reason,500),expected_version:1};
 }
 export async function lock(scope:TenantAccess) {
  const f=(await scopedQuery<{lifecycle:string}>(scope,[...actions],`SELECT lifecycle FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`)).rows[0];
