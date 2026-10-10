@@ -18,7 +18,7 @@ The production destination is React → ShipIT API → domain services + Postgre
 | M3 — WhatsApp Messaging & Automation | 11 | Replace simulated notifications with durable events, policy-aware WhatsApp delivery and secure final-mile proof. |
 | M4 — Customer Self-Service & Assistant | 7 | Let verified customers resolve routine shipment needs through trusted tools and obtain accountable human support. |
 | M5 — Courier Integrations & Pricing | 8 | Provide carrier-agnostic manual/file/live integration paths and reviewed rate imports without depending on any carrier API being available. |
-| M6 — Reporting, Compliance & Operations | 7 | Make financial, operational, messaging and compliance reports reconcile to persistent authoritative records. |
+| M6 — Reporting, Compliance & Operations | 21 | Make financial, operational, messaging and compliance reports reconcile to persistent authoritative records. |
 | M7 — Production Readiness & Pilot | 9 | Qualify and operate a first real franchise pilot with tested recovery, monitoring, privacy lifecycle and release evidence. |
 | M8 — Commercial SaaS & Scale | 7 | POST-MVP / FUTURE COMMERCIALIZATION: enable paid SaaS and controlled larger-organization deployment after pilot learning. |
 
@@ -53,14 +53,14 @@ See [prototype transition](PROTOTYPE_TO_PRODUCTION.md) and [inspection/reference
 <!-- finance-plan:2026-10-03 -->
 ## Approved financial-management expansion — 2026-10-03
 
-The original milestone table and initial-ready discussion above are historical planning
-snapshots retained in full. The current approved plan contains **96 issues**: the original
+The milestone table includes the approved expansion; the initial-ready discussion
+above is a historical publication snapshot. The current approved plan contains **96 issues**: the original
 82 plus [#137–#150](https://github.com/ShippingCo/ShipIT/milestone/7), all assigned to M6.
 M6 therefore has **21 issues**, replacing the initial count of seven for current planning.
 No existing milestone is removed or renumbered; M4's #46–#52 scope is unchanged.
 
 See the [10-module map and ordering](FINANCIAL_MANAGEMENT_PLAN.md) and the
-[additive dependency index](ISSUE_INDEX.md#approved-financial-management-expansion--2026-10-03).
+[combined M6 dependency index](ISSUE_INDEX.md#m6--reporting-compliance--operations).
 
 - M5 retains every carrier integration task and adds selling-rate versus courier-cost
   provenance to #53/#59. No live bank connection is required for the first finance release.
@@ -80,3 +80,12 @@ The newly approved M6 account billing is a courier shop billing its regular ship
 customers; it does not introduce enterprise SSO, corporate deployment or an analytics warehouse.
 Bank reconciliation starts with manual review and supported statement files. Government
 filing, automatic payroll deductions and unverified live bank integrations remain outside scope.
+
+## M6 execution correction — 10 October 2026
+
+Use the [current dependency map](ISSUE_INDEX.md) and
+[M6 execution order](ISSUE_INDEX.md#m6-execution-order--10-october-2026).
+#61 is closed; #64, #65 and #137 are ready. #62/#63 retain merged partial work but
+remain blocked on the expanded financial producers. Higher issue numbers #137–#150
+are M6 work, not M7/M8 prerequisites. Combined dependency lists replace the split
+original/additive lists for M6 without dropping scope or adding new dependency edges.

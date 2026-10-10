@@ -1,6 +1,6 @@
 # ShipIT issue index
 
-Compact planning map only. Read each GitHub issue for full scope, risks, acceptance criteria, tests and workflow. Initial status is a publication snapshot, not a live board. Stable PLAN identifiers used during drafting are replaced with assigned GitHub numbers after publication.
+Compact planning map only. Read each GitHub issue for full scope, risks, acceptance criteria, tests and workflow. M6 dependencies and status were reconciled on 10 October 2026. Other milestone statuses are initial publication snapshots, not a live board. Stable PLAN identifiers used during drafting are replaced with assigned GitHub numbers after publication.
 
 ## M0 — Engineering & Architecture Foundation
 
@@ -99,23 +99,75 @@ the historical planning labels below are not a live readiness check.
 
 ## M6 — Reporting, Compliance & Operations
 
-Local #61 implementation (2026-10-04, not yet published/merged): the
-[report guide](architecture/reporting.md) defines single-franchise booking snapshots,
-separate financial measures, source versions, unknown evidence, Kolkata cutoff rules,
-limits and runtime grants. See [verification](architecture/issue-61-verification.md)
-and [PR draft](architecture/issue-61-pr-draft.md). Its actual #15/#21/#23/#29 prerequisites
-and #60 were verified merged; historical table labels below are not readiness evidence.
-Downstream consumers remain separate issues and require their own prerequisites.
+All 21 M6 issues are listed here with their combined prerequisites.
 
-| Issue | Implementation scope | Prerequisites | Initial status |
+The closed #61 reporting framework is documented in the
+[report guide](architecture/reporting.md) and its
+[verification record](architecture/issue-61-verification.md): scoped booking
+snapshots, separate financial measures, source versions, unknown evidence, Kolkata
+cutoffs, limits and runtime grants. Downstream consumers retain their own scope.
+
+| Issue | Implementation scope | Prerequisites | Status (2026-10-10) |
 | --- | --- | --- | --- |
-| [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Implement scoped reporting queries and safe CSV exports | [#15](https://github.com/ShippingCo/ShipIT/issues/15), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#23](https://github.com/ShippingCo/ShipIT/issues/23), [#29](https://github.com/ShippingCo/ShipIT/issues/29) | Blocked |
-| [#62](https://github.com/ShippingCo/ShipIT/issues/62) | Implement sales register and GST summary reports | [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#63](https://github.com/ShippingCo/ShipIT/issues/63) | Implement To-Pay ageing and collection reconciliation reports | [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#64](https://github.com/ShippingCo/ShipIT/issues/64) | Implement destination, delivery and route performance reports | [#24](https://github.com/ShippingCo/ShipIT/issues/24), [#27](https://github.com/ShippingCo/ShipIT/issues/27), [#28](https://github.com/ShippingCo/ShipIT/issues/28), [#42](https://github.com/ShippingCo/ShipIT/issues/42), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#65](https://github.com/ShippingCo/ShipIT/issues/65) | Implement messaging and assistant effectiveness reports | [#44](https://github.com/ShippingCo/ShipIT/issues/44), [#52](https://github.com/ShippingCo/ShipIT/issues/52), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#66](https://github.com/ShippingCo/ShipIT/issues/66) | Implement versioned franchise settings and organization reporting scope | [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#16](https://github.com/ShippingCo/ShipIT/issues/16), [#17](https://github.com/ShippingCo/ShipIT/issues/17), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#38](https://github.com/ShippingCo/ShipIT/issues/38), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#67](https://github.com/ShippingCo/ShipIT/issues/67) | Verify report reconciliation, compliance provenance and audit drill-through | [#32](https://github.com/ShippingCo/ShipIT/issues/32), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#64](https://github.com/ShippingCo/ShipIT/issues/64), [#65](https://github.com/ShippingCo/ShipIT/issues/65), [#66](https://github.com/ShippingCo/ShipIT/issues/66) | Blocked |
+| [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Implement scoped reporting queries and safe CSV exports | [#15](https://github.com/ShippingCo/ShipIT/issues/15), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#23](https://github.com/ShippingCo/ShipIT/issues/23), [#29](https://github.com/ShippingCo/ShipIT/issues/29) | Closed |
+| [#62](https://github.com/ShippingCo/ShipIT/issues/62) | Implement sales register and GST summary reports | [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Blocked |
+| [#63](https://github.com/ShippingCo/ShipIT/issues/63) | Implement To-Pay ageing and collection reconciliation reports | [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Blocked |
+| [#64](https://github.com/ShippingCo/ShipIT/issues/64) | Implement destination, delivery and route performance reports | [#24](https://github.com/ShippingCo/ShipIT/issues/24), [#27](https://github.com/ShippingCo/ShipIT/issues/27), [#28](https://github.com/ShippingCo/ShipIT/issues/28), [#42](https://github.com/ShippingCo/ShipIT/issues/42), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Ready |
+| [#65](https://github.com/ShippingCo/ShipIT/issues/65) | Implement messaging and assistant effectiveness reports | [#44](https://github.com/ShippingCo/ShipIT/issues/44), [#52](https://github.com/ShippingCo/ShipIT/issues/52), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Ready |
+| [#66](https://github.com/ShippingCo/ShipIT/issues/66) | Implement versioned franchise settings and organization reporting scope | [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#16](https://github.com/ShippingCo/ShipIT/issues/16), [#17](https://github.com/ShippingCo/ShipIT/issues/17), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#38](https://github.com/ShippingCo/ShipIT/issues/38), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Blocked |
+| [#67](https://github.com/ShippingCo/ShipIT/issues/67) | Verify report reconciliation, compliance provenance and audit drill-through | [#32](https://github.com/ShippingCo/ShipIT/issues/32), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#64](https://github.com/ShippingCo/ShipIT/issues/64), [#65](https://github.com/ShippingCo/ShipIT/issues/65), [#66](https://github.com/ShippingCo/ShipIT/issues/66), [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#147](https://github.com/ShippingCo/ShipIT/issues/147), [#148](https://github.com/ShippingCo/ShipIT/issues/148), [#149](https://github.com/ShippingCo/ShipIT/issues/149), [#150](https://github.com/ShippingCo/ShipIT/issues/150) | Blocked |
+| [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Ratify financial operations, account billing and reconciliation contracts | [#8](https://github.com/ShippingCo/ShipIT/issues/8), [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#16](https://github.com/ShippingCo/ShipIT/issues/16), [#19](https://github.com/ShippingCo/ShipIT/issues/19), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#22](https://github.com/ShippingCo/ShipIT/issues/22), [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#42](https://github.com/ShippingCo/ShipIT/issues/42) | Ready |
+| [#138](https://github.com/ShippingCo/ShipIT/issues/138) | Extend payment recording with methods, receiving accounts and allocation evidence | [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#33](https://github.com/ShippingCo/ShipIT/issues/33), [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Blocked |
+| [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Implement approved discounts, cancellations, refunds and financial adjustment audit | [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#22](https://github.com/ShippingCo/ShipIT/issues/22), [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Blocked |
+| [#140](https://github.com/ShippingCo/ShipIT/issues/140) | Implement expense records, cashbook movements and acknowledged cash transfers | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#138](https://github.com/ShippingCo/ShipIT/issues/138) | Blocked |
+| [#141](https://github.com/ShippingCo/ShipIT/issues/141) | Implement monthly customer accounts, negotiated rates and credit controls | [#19](https://github.com/ShippingCo/ShipIT/issues/19), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#22](https://github.com/ShippingCo/ShipIT/issues/22), [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Blocked |
+| [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Implement monthly account bills, statements and customer payment allocation | [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#141](https://github.com/ShippingCo/ShipIT/issues/141) | Blocked |
+| [#143](https://github.com/ShippingCo/ShipIT/issues/143) | Implement temporary delivery-agent onboarding and parcel handover receipts | [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#24](https://github.com/ShippingCo/ShipIT/issues/24), [#27](https://github.com/ShippingCo/ShipIT/issues/27), [#42](https://github.com/ShippingCo/ShipIT/issues/42), [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Blocked |
+| [#144](https://github.com/ShippingCo/ShipIT/issues/144) | Implement delivery-agent cash, COD, fees and end-of-day settlement | [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#143](https://github.com/ShippingCo/ShipIT/issues/143) | Blocked |
+| [#145](https://github.com/ShippingCo/ShipIT/issues/145) | Implement daily cash counting, closing approval and discrepancy accountability | [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#144](https://github.com/ShippingCo/ShipIT/issues/144) | Blocked |
+| [#146](https://github.com/ShippingCo/ShipIT/issues/146) | Implement bank and payment statement reconciliation with exception review | [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Blocked |
+| [#147](https://github.com/ShippingCo/ShipIT/issues/147) | Implement shipment cost capture and revenue contribution analysis | [#59](https://github.com/ShippingCo/ShipIT/issues/59), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#144](https://github.com/ShippingCo/ShipIT/issues/144) | Blocked |
+| [#148](https://github.com/ShippingCo/ShipIT/issues/148) | Implement owner daily sales dashboard and comparable business metrics | [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Blocked |
+| [#149](https://github.com/ShippingCo/ShipIT/issues/149) | Implement scheduled owner summaries and overdue operational alerts | [#35](https://github.com/ShippingCo/ShipIT/issues/35), [#38](https://github.com/ShippingCo/ShipIT/issues/38), [#39](https://github.com/ShippingCo/ShipIT/issues/39), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#64](https://github.com/ShippingCo/ShipIT/issues/64), [#65](https://github.com/ShippingCo/ShipIT/issues/65), [#66](https://github.com/ShippingCo/ShipIT/issues/66), [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#147](https://github.com/ShippingCo/ShipIT/issues/147), [#148](https://github.com/ShippingCo/ShipIT/issues/148) | Blocked |
+| [#150](https://github.com/ShippingCo/ShipIT/issues/150) | Implement accountant invoice register and versioned accounting exports | [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#142](https://github.com/ShippingCo/ShipIT/issues/142), [#144](https://github.com/ShippingCo/ShipIT/issues/144), [#146](https://github.com/ShippingCo/ShipIT/issues/146) | Blocked |
+
+### M6 execution order — 10 October 2026
+
+#61 is closed. All prerequisites outside M6 are closed in GitHub; merged producer
+contracts must still be checked before implementation. Issue numbers do not set
+execution order. #137–#150 are part of M6, not later milestones. The full declared
+96-issue prerequisite graph has no cycles or missing references; M6 has no M7/M8
+ancestors. No prerequisite or approved acceptance scope is removed by this cleanup.
+
+| Stage | Issues | Execution rule |
+| --- | --- | --- |
+| 1 | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#64](https://github.com/ShippingCo/ShipIT/issues/64), [#65](https://github.com/ShippingCo/ShipIT/issues/65) | Ready to start after normal contract review. |
+| 2 | [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#141](https://github.com/ShippingCo/ShipIT/issues/141), [#143](https://github.com/ShippingCo/ShipIT/issues/143), [#66](https://github.com/ShippingCo/ShipIT/issues/66) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+| 3 | [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#142](https://github.com/ShippingCo/ShipIT/issues/142), [#146](https://github.com/ShippingCo/ShipIT/issues/146) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+| 4 | [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#144](https://github.com/ShippingCo/ShipIT/issues/144) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+| 5 | [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#147](https://github.com/ShippingCo/ShipIT/issues/147), [#148](https://github.com/ShippingCo/ShipIT/issues/148), [#150](https://github.com/ShippingCo/ShipIT/issues/150) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+| 6 | [#149](https://github.com/ShippingCo/ShipIT/issues/149) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+| 7 | [#67](https://github.com/ShippingCo/ShipIT/issues/67) | Start each issue after its own listed prerequisites are merged; stages are guidance, not extra dependencies. |
+
+Readiness is a dated snapshot, not permission to skip acceptance, CI or review.
+Only #64, #65 and #137 are ready; the other 17 open M6 issues remain blocked.
+The stale blocked label on closed #61 is removed. Non-status labels are preserved.
+#65 explicitly lists #149 as downstream work, matching #149's prerequisites.
+
+[PR #161](https://github.com/ShippingCo/ShipIT/pull/161) delivered #61.
+The merged prerequisite PRs for #64/#65 are
+[#107](https://github.com/ShippingCo/ShipIT/pull/107),
+[#110](https://github.com/ShippingCo/ShipIT/pull/110),
+[#111](https://github.com/ShippingCo/ShipIT/pull/111),
+[#126](https://github.com/ShippingCo/ShipIT/pull/126),
+[#128](https://github.com/ShippingCo/ShipIT/pull/128),
+[#151](https://github.com/ShippingCo/ShipIT/pull/151) and #161.
+
+#62 and #63 stay open and blocked. [PR #162](https://github.com/ShippingCo/ShipIT/pull/162)
+and [PR #163](https://github.com/ShippingCo/ShipIT/pull/163) delivered partial work;
+reuse it without treating #139/#142 or #138/#139/#142, respectively, as complete.
+#137 ratifies finance policy before the remaining producer work. The finance modules
+remain required for #67 and the #76 pilot release gate.
 
 ## M7 — Production Readiness & Pilot
 
@@ -146,43 +198,19 @@ Downstream consumers remain separate issues and require their own prerequisites.
 <!-- finance-plan:2026-10-03 -->
 ## Approved financial-management expansion — 2026-10-03
 
-The original 82 issue rows and their initial publication snapshot above are preserved.
-The current plan adds 14 M6 issues, bringing the total to **96**. M6 now has **21**
-issues (the original seven plus these fourteen); other milestone counts are unchanged.
-M4 remains #46–#52. Read the [module map](FINANCIAL_MANAGEMENT_PLAN.md) and each
-live issue's additive section for the current combined contract.
-
-### M6 additional issues
-
-| Issue | Implementation scope | Prerequisites | Publication status |
-| --- | --- | --- | --- |
-| [#137](https://github.com/ShippingCo/ShipIT/issues/137) | Ratify financial operations, account billing and reconciliation contracts | [#8](https://github.com/ShippingCo/ShipIT/issues/8), [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#16](https://github.com/ShippingCo/ShipIT/issues/16), [#19](https://github.com/ShippingCo/ShipIT/issues/19), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#21](https://github.com/ShippingCo/ShipIT/issues/21), [#22](https://github.com/ShippingCo/ShipIT/issues/22), [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#42](https://github.com/ShippingCo/ShipIT/issues/42) | Ready |
-| [#138](https://github.com/ShippingCo/ShipIT/issues/138) | Extend payment recording with methods, receiving accounts and allocation evidence | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#33](https://github.com/ShippingCo/ShipIT/issues/33) | Blocked |
-| [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Implement approved discounts, cancellations, refunds and financial adjustment audit | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#29](https://github.com/ShippingCo/ShipIT/issues/29), [#30](https://github.com/ShippingCo/ShipIT/issues/30), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#22](https://github.com/ShippingCo/ShipIT/issues/22) | Blocked |
-| [#140](https://github.com/ShippingCo/ShipIT/issues/140) | Implement expense records, cashbook movements and acknowledged cash transfers | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#138](https://github.com/ShippingCo/ShipIT/issues/138) | Blocked |
-| [#141](https://github.com/ShippingCo/ShipIT/issues/141) | Implement monthly customer accounts, negotiated rates and credit controls | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#19](https://github.com/ShippingCo/ShipIT/issues/19), [#20](https://github.com/ShippingCo/ShipIT/issues/20), [#22](https://github.com/ShippingCo/ShipIT/issues/22) | Blocked |
-| [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Implement monthly account bills, statements and customer payment allocation | [#141](https://github.com/ShippingCo/ShipIT/issues/141), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#30](https://github.com/ShippingCo/ShipIT/issues/30) | Blocked |
-| [#143](https://github.com/ShippingCo/ShipIT/issues/143) | Implement temporary delivery-agent onboarding and parcel handover receipts | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#14](https://github.com/ShippingCo/ShipIT/issues/14), [#24](https://github.com/ShippingCo/ShipIT/issues/24), [#27](https://github.com/ShippingCo/ShipIT/issues/27), [#42](https://github.com/ShippingCo/ShipIT/issues/42) | Blocked |
-| [#144](https://github.com/ShippingCo/ShipIT/issues/144) | Implement delivery-agent cash, COD, fees and end-of-day settlement | [#143](https://github.com/ShippingCo/ShipIT/issues/143), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Blocked |
-| [#145](https://github.com/ShippingCo/ShipIT/issues/145) | Implement daily cash counting, closing approval and discrepancy accountability | [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#144](https://github.com/ShippingCo/ShipIT/issues/144), [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Blocked |
-| [#146](https://github.com/ShippingCo/ShipIT/issues/146) | Implement bank and payment statement reconciliation with exception review | [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139) | Blocked |
-| [#147](https://github.com/ShippingCo/ShipIT/issues/147) | Implement shipment cost capture and revenue contribution analysis | [#137](https://github.com/ShippingCo/ShipIT/issues/137), [#59](https://github.com/ShippingCo/ShipIT/issues/59), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#144](https://github.com/ShippingCo/ShipIT/issues/144), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#61](https://github.com/ShippingCo/ShipIT/issues/61) | Blocked |
-| [#148](https://github.com/ShippingCo/ShipIT/issues/148) | Implement owner daily sales dashboard and comparable business metrics | [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) | Blocked |
-| [#149](https://github.com/ShippingCo/ShipIT/issues/149) | Implement scheduled owner summaries and overdue operational alerts | [#35](https://github.com/ShippingCo/ShipIT/issues/35), [#38](https://github.com/ShippingCo/ShipIT/issues/38), [#39](https://github.com/ShippingCo/ShipIT/issues/39), [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#64](https://github.com/ShippingCo/ShipIT/issues/64), [#65](https://github.com/ShippingCo/ShipIT/issues/65), [#66](https://github.com/ShippingCo/ShipIT/issues/66), [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#147](https://github.com/ShippingCo/ShipIT/issues/147), [#148](https://github.com/ShippingCo/ShipIT/issues/148) | Blocked |
-| [#150](https://github.com/ShippingCo/ShipIT/issues/150) | Implement accountant invoice register and versioned accounting exports | [#61](https://github.com/ShippingCo/ShipIT/issues/61), [#62](https://github.com/ShippingCo/ShipIT/issues/62), [#63](https://github.com/ShippingCo/ShipIT/issues/63), [#142](https://github.com/ShippingCo/ShipIT/issues/142), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#140](https://github.com/ShippingCo/ShipIT/issues/140), [#144](https://github.com/ShippingCo/ShipIT/issues/144), [#146](https://github.com/ShippingCo/ShipIT/issues/146) | Blocked |
+The approved expansion adds 14 M6 issues to the original 82, for **96** total.
+All **21 M6 issues** and their combined dependencies are consolidated in the M6
+table above. Read the [module map](FINANCIAL_MANAGEMENT_PLAN.md) and live issue
+acceptance criteria for scope; no issue is renumbered, split, closed or reduced here.
 
 ### Additional prerequisites for existing issues
 
-These edges are added to, never substituted for, the prerequisite lists above.
+These M7 edges are added to the original M7 prerequisite lists above. M6 additions are already included in its combined table.
 They are completion gates for the expanded scope; original infrastructure/framework
 work may start as its original contracts permit. Status labels are not proof of readiness.
 
 | Existing issue | Added prerequisites |
 | --- | --- |
-| Extra prerequisites for #62 | [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) |
-| Extra prerequisites for #63 | [#138](https://github.com/ShippingCo/ShipIT/issues/138), [#139](https://github.com/ShippingCo/ShipIT/issues/139), [#142](https://github.com/ShippingCo/ShipIT/issues/142) |
-| Extra prerequisites for #66 | [#137](https://github.com/ShippingCo/ShipIT/issues/137) |
-| Extra prerequisites for #67 | [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#147](https://github.com/ShippingCo/ShipIT/issues/147), [#148](https://github.com/ShippingCo/ShipIT/issues/148), [#149](https://github.com/ShippingCo/ShipIT/issues/149), [#150](https://github.com/ShippingCo/ShipIT/issues/150) |
 | Extra prerequisites for #69 | [#142](https://github.com/ShippingCo/ShipIT/issues/142), [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#149](https://github.com/ShippingCo/ShipIT/issues/149), [#150](https://github.com/ShippingCo/ShipIT/issues/150) |
 | Extra prerequisites for #70 | [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#149](https://github.com/ShippingCo/ShipIT/issues/149) |
 | Extra prerequisites for #71 | [#142](https://github.com/ShippingCo/ShipIT/issues/142), [#144](https://github.com/ShippingCo/ShipIT/issues/144), [#145](https://github.com/ShippingCo/ShipIT/issues/145), [#146](https://github.com/ShippingCo/ShipIT/issues/146), [#149](https://github.com/ShippingCo/ShipIT/issues/149), [#150](https://github.com/ShippingCo/ShipIT/issues/150) |
@@ -190,7 +218,8 @@ work may start as its original contracts permit. Status labels are not proof of 
 | Extra prerequisites for #75 | [#67](https://github.com/ShippingCo/ShipIT/issues/67) |
 
 Existing issues #53, #59, #61–#64, #66–#67, #69–#72 and #74–#76 contain labelled
-additions preserving every original body and acceptance criterion. All new issues
+additions preserving the original scope and acceptance criteria. M6 dependency
+guidance is consolidated above and in each live issue. All new issues
 feed the #76 pilot gate; no M8 commercial issue is a prerequisite for this expansion.
 
 ## Issue #62 local implementation note (2026-10-04)
@@ -202,8 +231,8 @@ documented in [reporting](architecture/reporting.md),
 Combined prerequisites remain #21, #30, #61, #139 and #142. The local producer
 subset supports reductions, actual refunds and account statements without duplicate
 sales; it does not close the wider credit/allocation workflows in #137-#142.
-Initial tracker status above is historical; publication, review and dependency
-closure must be verified before claiming the GitHub issue complete.
+The M6 status snapshot above is dated 10 October; review and dependency closure
+must be verified before claiming the GitHub issue complete.
 
 ## Issue #63 original reporting scope (2026-10-04)
 
