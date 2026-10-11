@@ -1670,7 +1670,7 @@ Current transfer discovery now provides the giving agent with approved source re
 
 Three focused web tests verify exact discovered-source preparation/release, named response binding, absence of another account's giver controls, private projection and contradictory preparation claims. Extended native grant/recovery tests verify actual query output before/after dispatcher instruction, giver-only discovery, released-manifest evidence, revoked grant hiding and removal of stale dispatcher/inactive recipient choices. The production HTTP test separately qualifies both new read routes, malformed cursors, another-agent denial, office release evidence and disappearance after actual return. Those tests pass with the original case/file deadlines and do not replace real browser, competing-agent race or export failure qualification.
 
-### #143 browser and recovery qualification (implementation remains unmerged)
+### #143 browser and recovery qualification before merge
 
 The loopback-only synthetic browser fixture runs the production React page, Fastify routes, runtime PostgreSQL role and existing auth/membership services. Actor selection creates a fresh disposable session through AuthRepository; production session expiry remains unchanged. Browser qualification exposed a delivery-agent workspace-context omission. Operator context now lists the agent's explicit active franchise metadata without granting general franchise-profile, directory or finance authority. Native HTTP verifies ready context for the local franchise, sibling hiding and unavailable context after revocation.
 
