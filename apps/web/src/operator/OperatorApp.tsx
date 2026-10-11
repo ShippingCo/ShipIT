@@ -84,6 +84,7 @@ export default function OperatorApp() {
     {!loading && state.status !== 'signed_out' && <footer className="operator-actions">
       <button className="btn btn-text" disabled={busy} onClick={() => { selected.current = undefined; void refresh(); }}>Refresh workspace access</button>
       <button className="btn btn-text" disabled={busy} onClick={() => { void logout(); }}>Sign out</button>
+      {context && <p>Verified account reference: {context.user_id}</p>}
       {context && <form onSubmit={event => { void accept(event); }} className="operator-invitation">
         <TextField label="Invitation code" type="password" value={invitation} onChange={setInvitation} autoComplete="off" required disabled={busy} />
         <button className="btn btn-outlined" disabled={busy || !invitation}>Accept invitation</button>

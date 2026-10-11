@@ -13,7 +13,7 @@ const migration='1789578000000-atomic-bookings.cjs';
 await test('Issue 21 upgrades through booking retrieval without changing existing tenant/customer/audit rows; repeated install is a no-op',{timeout:30000},async t=>{
   const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:10}),{applied:10});const owner=db.ownerPool();
   await owner.query("INSERT INTO shipit.organizations(id,display_name) VALUES($1,'Synthetic')",[org]);await owner.query("INSERT INTO shipit.franchises(id,organization_id,franchise_code,display_name) VALUES($1,$2,'MAIN','Synthetic')",[A,org]);
-  const before=(await owner.query('SELECT * FROM shipit.franchises')).rows;assert.deepEqual(await db.migrate(),{applied:36});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual((await owner.query('SELECT * FROM shipit.franchises')).rows,before);
+  const before=(await owner.query('SELECT * FROM shipit.franchises')).rows;assert.deepEqual(await db.migrate(),{applied:37});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual((await owner.query('SELECT * FROM shipit.franchises')).rows,before);
   const key=(await owner.query("SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conname='parcels_docket_key'")).rows[0]!;
   assert.equal(key.definition,'UNIQUE (docket)');
   const indexes=(await owner.query("SELECT indexname FROM pg_indexes WHERE schemaname='shipit' AND indexname IN ('parcels_owner_docket_idx','parcels_owner_status_booking_idx','bookings_owner_created_idx','bookings_owner_customer_created_idx','domain_events_parcel_timeline_idx') ORDER BY indexname")).rows.map(row=>row.indexname);

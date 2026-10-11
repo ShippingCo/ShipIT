@@ -168,3 +168,5 @@ export * from './financial-audit.ts';
 export * from './financial-workflow.ts';
 
 export * from './cashbook.ts';
+
+export type * from './custody.ts';

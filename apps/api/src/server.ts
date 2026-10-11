@@ -28,6 +28,7 @@ import { createOutboxService } from './modules/outbox/service.ts';
 import { registerOutbox } from './modules/outbox/routes.ts';
 import { createEwayService } from './modules/eway/service.ts';
 import { registerEway } from './modules/eway/routes.ts';
+import {registerCustody} from './modules/custody/routes.ts';
 import {registerCashbook} from './modules/cashbook/routes.ts';
 import {createExpenseAttachmentService} from './modules/attachments/expense-service.ts';
 import { createAttachmentService } from './modules/attachments/service.ts';
@@ -145,6 +146,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
+      registerCustody(instance,database,config.environment!=='developer',config.custodyWritesEnabled===true&&config.environment!=='demo');
       const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';
       registerCashbook(instance,database,config.environment!=='developer',cashbookWrites);
       if(attachments){registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');registerAttachments(instance,createExpenseAttachmentService(database,attachments,cashbookWrites),config.environment!=='developer','request_id');}

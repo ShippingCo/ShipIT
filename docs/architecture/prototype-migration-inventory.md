@@ -782,3 +782,32 @@ Existing callers, routes, exports, storage operations and fingerprints are uncha
 | apps/web/src/test/expense-attachments.test.tsx: reconciles ready evidence after an uncertain cancellation without replacing the original cancellation key | preserve | proof |
 | apps/web/src/test/expense-attachments.test.tsx: allows finance proof read without upload, retry or cancel and never locks review on another creator’s unsettled metadata | preserve | proof |
 | apps/web/src/test/expense-attachments.test.tsx: freezes new evidence after review and purges previews on scope loss | preserve | proof |
+
+## Issue #143 reviewed custody additions
+
+The production custody page and temporary-agent access panel retain exact pending requests
+and clear private state on scope changes. New effects are navigation/scope guards and
+short-lived CSV object-URL cleanup; no production localStorage or demo import is added.
+All previous regression declarations, dependencies and fingerprints remain unchanged.
+These web tests use synthetic transport; native and browser evidence is separate.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/agent-access.test.tsx: creates only this franchise agent grant, exposes one-time code in memory and revokes exact current membership version | preserve | seam |
+| apps/web/src/test/agent-access.test.tsx: reconciles lost invitation by read and offers revocation, never replaying its unrecoverable token command | preserve | seam |
+| apps/web/src/test/agent-access.test.tsx: rejects foreign tenant projections and never mutates a multiple-franchise grant through this screen | preserve | seam |
+| apps/web/src/test/custody-actions.test.tsx: requires reassignment instruction and source-specific grant for mixed custody cohort | preserve | parcels |
+| apps/web/src/test/custody-actions.test.tsx: records missing separately from actual office receipt using exact source version | preserve | parcels |
+| apps/web/src/test/custody-actions.test.tsx: prevents replacement submission while locked and keeps giver actions separate from administration | preserve | parcels |
+| apps/web/src/test/custody-data-access.test.ts: projects only source fields and rejects invented proof, wrong control totals and missing custody | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: rejects duplicate parcels and reused delivery or failure evidence across a full cohort | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: requires immutable snapshot count, same cutoff and exact expiry while dropping unknown private fields | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: does not accept partial acknowledgement or a proof masquerading as unknown physical custody | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: rejects mismatched capture manifest, export identity and sibling snapshot before display | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: never confirms another manifest or approval and rejects receipt claims from proposal-only actions | preserve | reports |
+| apps/web/src/test/custody-data-access.test.ts: discards an in-flight captured snapshot and its retry intent when scope changes | preserve | reports |
+| apps/web/src/test/custody-transfers.test.tsx: prepares and releases exact source evidence without manually entering approval, instruction or manifest references | preserve | parcels |
+| apps/web/src/test/custody-transfers.test.tsx: rejects a mismatched named approval and does not offer giver controls to another account | preserve | parcels |
+| apps/web/src/test/custody-transfers.test.tsx: rejects false preparation claims and office-grant destination/proof contradictions before display | preserve | parcels |
+| apps/web/src/test/custody.test.tsx: retains exact acknowledgement after a lost response and blocks replacement navigation | preserve | recovery |
+| apps/web/src/test/custody.test.tsx: does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss | preserve | recovery |

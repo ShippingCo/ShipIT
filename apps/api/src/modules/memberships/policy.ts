@@ -115,3 +115,23 @@ export function receiptScope(memberships:readonly Membership[],all:readonly stri
   if(active.some(m=>m.role==='org_admin'))return [...all];
   return [...new Set(active.filter(m=>['franchise_admin','operator','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
 }
+
+
+/** #143 R10/E04/W10/W16/W17 ceilings; A/C/G require durable-record checks in the owning service. */
+export function custodyScope(action:import('../custody/types.ts').CustodyAction,memberships:readonly Membership[],all:readonly string[]=[]) {
+ const active=memberships.filter(m=>m.lifecycle==='active');
+ if(action==='custody.read'&&active.some(m=>m.role==='org_admin'))return [...all];
+ const roles:readonly Role[]=action==='custody.read'?['franchise_admin','operator','dispatcher','delivery_agent','read_only']:
+  action==='custody.authorize'?['dispatcher']:
+  action==='custody.acknowledge'||action==='custody.release'?['delivery_agent']:
+  action==='custody.prepare'?['franchise_admin','delivery_agent']:['franchise_admin'];
+ return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+}
+
+
+/** Mixed staff roles must not turn an agent-only transfer into administrator authority. */
+export function custodyAgentOnly(action:import('../custody/types.ts').CustodyAction,roles:readonly Role[]){
+ if(action==='custody.acknowledge'||action==='custody.release')return true;
+ if(action==='custody.prepare')return !roles.includes('franchise_admin');
+ return action==='custody.read'&&!roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only'].includes(r));
+}

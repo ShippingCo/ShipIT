@@ -21,6 +21,7 @@ export interface RuntimeConfig {
   readonly moneyReceiptWritesEnabled?: boolean;
   readonly financialWorkflowWritesEnabled?: boolean;
   readonly cashbookWritesEnabled?: boolean;
+  readonly custodyWritesEnabled?: boolean;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
@@ -113,6 +114,9 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   if(deliveryProofSecretRef!==undefined&&(!/^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,511}$/.test(deliveryProofSecretRef)||deliveryProofSecretRef.includes('://')))issue('DELIVERY_PROOF_SECRET_REF','INVALID_FORMAT');
   if(deliveryProofSecretRef?.startsWith('local:')&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('DELIVERY_PROOF_SECRET_REF','INCONSISTENT');
   if(env.LOCAL_DELIVERY_PROOF_JSON!==undefined&&(environment!=='developer'||deliveryProofSecretRef!=='local:delivery-proof'))issue('LOCAL_DELIVERY_PROOF_JSON','INCONSISTENT');
+  const custodyWritesEnabled=env.CUSTODY_ENABLED==='true';
+  if(env.CUSTODY_ENABLED!==undefined&&!['true','false'].includes(env.CUSTODY_ENABLED))issue('CUSTODY_ENABLED','INVALID_FORMAT');
+  if(custodyWritesEnabled&&environment==='demo')issue('CUSTODY_ENABLED','INCONSISTENT');
   const cashbookWritesEnabled=env.CASHBOOK_ENABLED==='true';
   if(env.CASHBOOK_ENABLED!==undefined&&!['true','false'].includes(env.CASHBOOK_ENABLED))issue('CASHBOOK_ENABLED','INVALID_FORMAT');
   if(cashbookWritesEnabled&&environment==='demo')issue('CASHBOOK_ENABLED','INCONSISTENT');
@@ -142,6 +146,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     moneyReceiptWritesEnabled,
     financialWorkflowWritesEnabled,
     cashbookWritesEnabled,
+    custodyWritesEnabled,
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
   });
 }

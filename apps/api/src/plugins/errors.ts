@@ -3,6 +3,9 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  CUSTODY_CONFLICT:[409,'Parcel custody evidence has changed. Refresh the handover and current assignment.'],
+  CUSTODY_DISABLED:[409,'New parcel custody writes are disabled. Saved evidence remains available.'],
+  CUSTODY_ASSIGNMENT_REQUIRED:[409,'A current dispatcher assignment instruction is required for this handover.'],
   CASHBOOK_CONFLICT:[409,'Cash movement exceeds available custody or conflicts with its saved source. Refresh the cashbook evidence.'],
   CASHBOOK_DISABLED:[409,'New expense and cashbook writes are disabled. Saved evidence and exact completed-command replay remain available.'],
   CASHBOOK_APPROVAL_REQUIRED:[409,'A different franchise administrator must approve this exact expense or cash movement request.'],

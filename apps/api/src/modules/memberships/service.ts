@@ -1,3 +1,4 @@
+import {custodyScope,custodyAgentOnly} from './policy.ts';
 import { active as bookingActive } from '../bookings/repository.ts';
 import type { OperatorContext, OnboardingResult } from '@shippingco/shared';
 import { onboardingInput, requestKey, fingerprint } from '../onboarding/validation.ts';
@@ -27,6 +28,7 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
         // The indexes remain the final boundary if occupancy changes after a check.
         // Translate inside the transaction so normal rollback must succeed first.
         if(error instanceof DatabaseError && error.code==='DB_QUERY_FAILED' && error.sqlState==='23505') {
+          if(error.constraint==='delivery_exception_assignment_key')domainError=new HttpError('DELIVERY_EXCEPTION_INVALID');
           if(error.constraint==='customer_access_commands_pkey')domainError=new HttpError('IDEMPOTENCY_CONFLICT');
           if(error.constraint==='whatsapp_phone_unique') domainError=new HttpError('WHATSAPP_IDENTITY_MISMATCH');
           if(error.constraint==='lot_memberships_one_active_idx') domainError=new HttpError('LOT_MEMBERSHIP_CONFLICT');
@@ -36,6 +38,7 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
         }
         if(error instanceof DatabaseError&&error.code==='DB_QUERY_FAILED'){
           if(error.sqlState==='23505'&&['route_manifest_dispatch_once_idx','route_lots_active_idx','route_parcels_active_idx'].includes(error.constraint??''))domainError=new HttpError('ROUTE_MANIFEST_CONFLICT');
+          if(error.sqlState==='23514'&&error.constraint==='delivery_tracked_custody_guard')domainError=new HttpError('CUSTODY_CONFLICT');
           if(error.sqlState==='23514'&&error.constraint==='lot_active_route_guard')domainError=new HttpError('LOT_ACTIVE_ROUTE');
         }
         throw domainError??error;
@@ -147,8 +150,9 @@ async function permittedContext(tx: TransactionExecutor, userId: string, correla
     if (!await authorityRepository.lockOrganization(tx,organizationId)) continue;
     const memberships=await authorityRepository.activeMemberships(tx,userId,organizationId);
     const all=memberships.some(m=>m.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
-    const ids=tenancyScope('franchise.profile.list',memberships,all);
-    if (!ids) continue;
+    // Agent workspace metadata is limited to explicit active local memberships; general tenancy-profile authority stays unchanged.
+    const ids=[...new Set([...(tenancyScope('franchise.profile.list',memberships,all)??[]),...memberships.filter(m=>m.role==='delivery_agent').flatMap(m=>m.franchiseIds)])].sort();
+    if (!ids.length) continue;
     const scope=issueTenantAccess(tx,{action:'franchise.profile.list',actor:{type:'user',id:userId},organizationId,
       permittedFranchiseIds:ids,organizationWide:false,correlationId,provenance:'membership'});
     for (const row of await usableFranchises(scope)) franchises.push({ id:row.id,display_name:row.display_name,
@@ -867,5 +871,33 @@ export async function withCashbookScope<T>(database:DatabasePool,token:string,or
    if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    return await work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),ownOnly:operator&&!admin&&!accountant&&!orgAdmin});
   }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
+ });
+}
+
+
+/** Current authority first, including replay; agents remain record-bound in custody queries. */
+export async function withCustodyScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../custody/types.ts').CustodyAction,correlationId:string,
+ work:(scope:{access:import('../security/scope.ts').TenantAccess;audit:import('../security/scope.ts').TenantAccess;snapshots:import('../security/scope.ts').TenantAccess|null;agentOnly:boolean;roles:readonly Role[]})=>Promise<T>):Promise<T>{
+ validate.uuid(organizationId);validate.uuid(franchiseId);
+ const reading=action==='custody.read'||action==='custody.export';
+ return membershipTransaction(database,async tx=>{
+  const session=await authenticated(tx,token);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+  const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+  if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+  if(!custodyScope(action,memberships,all).includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+  const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+  const roles=memberships.filter(m=>m.franchiseIds.includes(franchiseId)||m.role==='org_admin').map(m=>m.role);
+  const agentOnly=custodyAgentOnly(action,roles);
+  if(!reading||agentOnly){
+   if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   if(franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
+  }
+  const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
+  return work({access:issueTenantAccess(tx,{...context,action}),audit:issueTenantAccess(tx,{...context,action:'custody.audit'}),
+   snapshots:action==='custody.export'?issueTenantAccess(tx,{...context,action:'custody.capture'}):null,agentOnly,roles});
  });
 }
