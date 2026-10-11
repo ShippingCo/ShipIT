@@ -299,6 +299,14 @@ Parameterized cases are preserved in full in JSON. Tests remain unchanged during
 
 | File and test | Disposition | Group |
 | --- | --- | --- |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: keeps source-owned cash, seller liability and fees separate and rejects mismatched source frames or totals | preserve | reports |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: captures first, separately submits exact evidence and recovers a lost submission without a new key | preserve | reports |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: shows immutable sources before different-admin review and records only an explicit decision | preserve | reports |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: preserves departed-agent correction identity and clears private evidence on scope loss | preserve | reports |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: keeps accountant evidence read-only and prevents a submitting administrator from approving their revision | preserve | reports |
+| apps/web/src/test/agent-statements.test.ts: projects paged private headers and rejects impossible cutoffs, duplicate IDs and broken revision links | preserve | reports |
+| apps/web/src/test/agent-statements.test.ts: retains exact immutable intent and key after a lost response and refuses a new derived revision or actor | preserve | reports |
+| apps/web/src/test/agent-statements.test.ts: binds review outcome to the exact selected submission, reviewer, version and saved reason | preserve | reports |
 | apps/web/src/test/app.test.tsx: store seeds itself before first render even with empty localStorage | demo_only | demo |
 | apps/web/src/test/app.test.tsx: heals corrupted persisted state | demo_only | demo |
 | apps/web/src/test/app.test.tsx: renders both entry cards | demo_only | demo |
@@ -811,3 +819,57 @@ These web tests use synthetic transport; native and browser evidence is separate
 | apps/web/src/test/custody-transfers.test.tsx: rejects false preparation claims and office-grant destination/proof contradictions before display | preserve | parcels |
 | apps/web/src/test/custody.test.tsx: retains exact acknowledgement after a lost response and blocks replacement navigation | preserve | recovery |
 | apps/web/src/test/custody.test.tsx: does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss | preserve | recovery |
+
+## Issue #144 reviewed cashbook source corrections
+
+Exactly two new controlled-transport declarations preserve owned advance and earned-fee references, actual payment method, gross earning and explicit replacement cash/advance amounts. All previous declarations, effects, dependencies, routes and fingerprints remain unchanged. These tests are separate from native monetary effects and the pending full settlement browser journey.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: retains the named agent and actual payment method through an advance recording correction and rejects missing payee evidence | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: preserves gross earned fee and explicit advance source when correcting recorded cash, and rejects invalid fee responses | preserve | reports |
+
+## Issue #144 reviewed seller remittance correction
+
+One additional controlled-transport declaration verifies seller remittance source/reference preservation, explicit payment method and unchanged expense/fee classification. All existing declarations, dependency fingerprints, effects and routes remain unchanged.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: retains seller COD allocation and private payment reference through remittance recording correction without creating an expense | preserve | reports |
+
+## Issue #144 reviewed COD reservation reversal correction
+
+One additional controlled-transport declaration verifies COD reversal source preservation, absent payment evidence and zero cash legs. All existing declarations, dependency fingerprints, effects and routes remain unchanged.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: corrects a COD reservation without a payment method or seller payment reference | preserve | reports |
+
+## Issue #144 reviewed handover receipt attribution
+
+One additional controlled-transport declaration verifies captured receipt/component provenance, exact complete control totals and malformed ownership rejection. All existing declarations, dependency fingerprints, effects and routes remain unchanged.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: shows captured receipt components and complete attribution totals after partial acknowledgement, with malformed ownership rejected | preserve | reports |
+
+## Issue #144 reviewed captured statement exports
+
+Three distinct export regressions cover recovery, ownership/protocol bounds and the accountant workspace. Prototype authority, dependency fingerprints, imports and routes are unchanged. One owning setTimeout releases the CSV Blob URL after download; it cannot capture or mutate private data.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/agent-settlement-workspace.test.tsx: captures and downloads a fixed accountant statement export, retaining the exact uncertain request and clearing it on scope loss | preserve | reports |
+| apps/web/src/test/agent-statements.test.ts: recovers captured export with the exact original key and projects only owned immutable metadata | preserve | reports |
+| apps/web/src/test/agent-statements.test.ts: downloads the captured CSV schema and refuses mismatched private scope, columns and byte bounds | preserve | reports |
+
+| apps/web/src/test/agent-money.test.tsx: validates separate COD, direct cash/noncash and advance equations and bounded owned live pages | preserve | payments | Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests. |
+| apps/web/src/test/agent-money.test.tsx: retains immutable finance command content and key through uncertainty and rejects stale scope and mismatched operations | preserve | payments | Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests. |
+| apps/web/src/test/agent-money.test.tsx: owner workflow recovers the same seller revision while locking navigation and gives accountants source-only access | preserve | payments | Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests. |
+
+| apps/web/src/test/agent-money-requests.test.tsx: fee expense keeps full gross recognition, separate noncash direct amount and original advance binding | preserve | payments | Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence. |
+| apps/web/src/test/agent-money-requests.test.tsx: COD reversal binds the original receipt account/custodian, moves no cash and advance requests keep explicit payees | preserve | payments | Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence. |
+| apps/web/src/test/agent-money-requests.test.tsx: cashbook recovery accepts canonical timestamp spelling but rejects changed instants and financial fields | preserve | payments | Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence. |
+
+| apps/web/src/test/agent-cash-handovers.test.tsx: agent opens handover-only controls and recovers the same request while settlement navigation is locked | preserve | payments | Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages. |
+| apps/web/src/test/agent-cash-handovers.test.tsx: own-source adapter minimizes fields, rejects foreign or broken pages and handover recovery requires the identical instant and amount | preserve | payments | Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages. |

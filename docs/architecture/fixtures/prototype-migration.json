@@ -955,6 +955,101 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
+        "name": "agent opens handover-only controls and recovers the same request while settlement navigation is locked",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
+        "name": "own-source adapter minimizes fields, rejects foreign or broken pages and handover recovery requires the identical instant and amount",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money-requests.test.tsx",
+        "name": "fee expense keeps full gross recognition, separate noncash direct amount and original advance binding",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money-requests.test.tsx",
+        "name": "COD reversal binds the original receipt account/custodian, moves no cash and advance requests keep explicit payees",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money-requests.test.tsx",
+        "name": "cashbook recovery accepts canonical timestamp spelling but rejects changed instants and financial fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money.test.tsx",
+        "name": "validates separate COD, direct cash/noncash and advance equations and bounded owned live pages",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money.test.tsx",
+        "name": "retains immutable finance command content and key through uncertainty and rejects stale scope and mismatched operations",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-money.test.tsx",
+        "name": "owner workflow recovers the same seller revision while locking navigation and gives accountants source-only access",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "keeps source-owned cash, seller liability and fees separate and rejects mismatched source frames or totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "captures first, separately submits exact evidence and recovers a lost submission without a new key",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "shows immutable sources before different-admin review and records only an explicit decision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "preserves departed-agent correction identity and clears private evidence on scope loss",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "keeps accountant evidence read-only and prevents a submitting administrator from approving their revision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+        "name": "captures and downloads a fixed accountant statement export, retaining the exact uncertain request and clearing it on scope loss",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-statements.test.ts",
+        "name": "projects paged private headers and rejects impossible cutoffs, duplicate IDs and broken revision links",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-statements.test.ts",
+        "name": "retains exact immutable intent and key after a lost response and refuses a new derived revision or actor",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-statements.test.ts",
+        "name": "binds review outcome to the exact selected submission, reviewer, version and saved reason",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-statements.test.ts",
+        "name": "recovers captured export with the exact original key and projects only owned immutable metadata",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-statements.test.ts",
+        "name": "downloads the captured CSV schema and refuses mismatched private scope, columns and byte bounds",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/app.test.tsx",
         "name": "store seeds itself before first render even with empty localStorage",
         "cases": null
@@ -1197,6 +1292,31 @@
       {
         "file": "apps/web/src/test/cashbook.test.tsx",
         "name": "uses the current actual receiving account revision and freezes the account/custodian of existing cash locations",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "retains the named agent and actual payment method through an advance recording correction and rejects missing payee evidence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "preserves gross earned fee and explicit advance source when correcting recorded cash, and rejects invalid fee responses",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "retains seller COD allocation and private payment reference through remittance recording correction without creating an expense",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "corrects a COD reservation without a payment method or seller payment reference",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "shows captured receipt components and complete attribution totals after partial acknowledgement, with malformed ownership rejected",
         "cases": null
       },
       {
@@ -2135,6 +2255,26 @@
         "kind": "document.addEventListener"
       },
       {
+        "file": "apps/web/src/operations/AgentSettlements.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/AgentSettlements.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/AgentSettlements.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/AgentSettlements.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/AgentSettlements.tsx",
+        "kind": "setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Cashbook.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2752,7 +2892,8 @@
         65,
         67,
         139,
-        143
+        143,
+        144
       ],
       "rules": [
         "docs/architecture/domain-contract.md",
@@ -3051,6 +3192,158 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
+      "name": "agent opens handover-only controls and recovers the same request while settlement navigation is locked",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages."
+    },
+    {
+      "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
+      "name": "own-source adapter minimizes fields, rejects foreign or broken pages and handover recovery requires the identical instant and amount",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages."
+    },
+    {
+      "file": "apps/web/src/test/agent-money-requests.test.tsx",
+      "name": "fee expense keeps full gross recognition, separate noncash direct amount and original advance binding",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-money-requests.test.tsx",
+      "name": "COD reversal binds the original receipt account/custodian, moves no cash and advance requests keep explicit payees",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-money-requests.test.tsx",
+      "name": "cashbook recovery accepts canonical timestamp spelling but rejects changed instants and financial fields",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-money.test.tsx",
+      "name": "validates separate COD, direct cash/noncash and advance equations and bounded owned live pages",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
+    },
+    {
+      "file": "apps/web/src/test/agent-money.test.tsx",
+      "name": "retains immutable finance command content and key through uncertainty and rejects stale scope and mismatched operations",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
+    },
+    {
+      "file": "apps/web/src/test/agent-money.test.tsx",
+      "name": "owner workflow recovers the same seller revision while locking navigation and gives accountants source-only access",
+      "cases": null,
+      "group": "payments",
+      "disposition": "preserve",
+      "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "keeps source-owned cash, seller liability and fees separate and rejects mismatched source frames or totals",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "captures first, separately submits exact evidence and recovers a lost submission without a new key",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "shows immutable sources before different-admin review and records only an explicit decision",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "preserves departed-agent correction identity and clears private evidence on scope loss",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "keeps accountant evidence read-only and prevents a submitting administrator from approving their revision",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
+      "name": "captures and downloads a fixed accountant statement export, retaining the exact uncertain request and clearing it on scope loss",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-statements.test.ts",
+      "name": "projects paged private headers and rejects impossible cutoffs, duplicate IDs and broken revision links",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-statements.test.ts",
+      "name": "retains exact immutable intent and key after a lost response and refuses a new derived revision or actor",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-statements.test.ts",
+      "name": "binds review outcome to the exact selected submission, reviewer, version and saved reason",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-statements.test.ts",
+      "name": "recovers captured export with the exact original key and projects only owned immutable metadata",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
+    },
+    {
+      "file": "apps/web/src/test/agent-statements.test.ts",
+      "name": "downloads the captured CSV schema and refuses mismatched private scope, columns and byte bounds",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
@@ -3443,6 +3736,46 @@
       "group": "reports",
       "disposition": "preserve",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "retains the named agent and actual payment method through an advance recording correction and rejects missing payee evidence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #144: retain original agent/fee/advance sources, explicit cash and advance amounts and exact correction intent; reject malformed fee response evidence. Controlled transport is separate from real PostgreSQL monetary effects."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "preserves gross earned fee and explicit advance source when correcting recorded cash, and rejects invalid fee responses",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #144: retain original agent/fee/advance sources, explicit cash and advance amounts and exact correction intent; reject malformed fee response evidence. Controlled transport is separate from real PostgreSQL monetary effects."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "retains seller COD allocation and private payment reference through remittance recording correction without creating an expense",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #144: preserve immutable seller COD allocation, original occurrence and private manual payment reference through explicit remittance recording correction; no expense or fee source fabricated. Controlled web transport is separate from native money evidence."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "corrects a COD reservation without a payment method or seller payment reference",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #144: preserve immutable seller COD allocation and occurrence through approved classification reversal correction; zero cash legs and no fabricated payment, expense or fee source. Controlled web transport is separate from native money evidence."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "shows captured receipt components and complete attribution totals after partial acknowledgement, with malformed ownership rejected",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #144: preserve immutable handover receipt/component provenance and complete totals, with malformed ownership/control amounts rejected; historical missing evidence remains explicitly unattributed. Controlled web transport is separate from native money evidence."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",

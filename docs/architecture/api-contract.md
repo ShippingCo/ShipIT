@@ -458,6 +458,12 @@ accept, reject or cancel. Every command still checks current membership and the
 named custodian server-side. No extra location lookup or operator ledger permission
 is required. This response does not expose an unrelated custodian directory.
 
+#144 adds dedicated `cashbook.handover.request`, `.acknowledge` and `.select` capabilities to existing handover routes. Current agents request from their own source and accept/reject only as the named receiver. Their inbox/detail exclude unrelated handovers; target choices expose only active location/revision, label and custodian IDs. General location, position, expense and receipt APIs remain unavailable to agent-only callers. Current franchise admins may recover deactivated historical agent source custody to an active named recipient; receiver acknowledgement records the actual paired legs.
+
+Literal `AGENT_MONEY_ENABLED=true` enables new named-agent receipt custody, cash-location configuration and agent handover writes. It defaults false, rejects invalid values and cannot be true in demo. Owning `MONEY_RECEIPTS_ENABLED`/`CASHBOOK_ENABLED` gates still apply independently. Exact completed replay follows current authorization even with new writes disabled. Recording staff remain operators/admins; naming an agent as custodian grants no recording permission. Direct shop UPI creates no agent cash. Full COD/settlement APIs remain under implementation.
+
+The #144 `agent_advance` cashbook request kind records actual company money paid to a named current local delivery agent. Its body adds `agent_payee_id` and requires `payment_method`; category/payee text and target location remain null. The named agent differs from the current responsible employee. Operators/admins submit within existing permitted custody, a different current franchise admin approves, and a current admin applies the exact proposal. New request/decision/application requires both owning cashbook and agent-money write gates; authorized exact replay remains available when disabled. Agent-only callers gain no expense/advance mutation. An advance is an actual outflow source kind, not earned expense, customer collection or fee earning. Corrections retain the same named payee and original occurrence, with linked recording deltas; they do not transfer newly received cash. Current-admin correction after agent departure preserves historical payee identity. Fee expense and later payment use the explicit source fields below; the full settlement workspace remains under implementation.
+
 New financial writes require literal `CASHBOOK_ENABLED=true`; the default is false
 and demo activation is rejected. Historical reads, authorized snapshot capture and
 exact completed-command replay remain available with new writes disabled. Attachment
@@ -477,3 +483,109 @@ GET transfer-grants lists up to 50 current, unrevoked source-specific approvals 
 POST assignment-instructions is dispatcher-only; POST manifests prepares an exact bounded handover; POST manifests/:id/acknowledge is named-agent-only; POST manifests/:id/cancel, returns, grants and grants/:id/revoke require the owning franchise admin. POST releases requires the current giver's exact scoped grant. All writes use existing browser-cookie/CSRF and idempotency-header validation; server services own status, custody, version and proof. CUSTODY_ENABLED defaults false and cannot be true in demo. Disabled physical writes retain current-authority exact replay and private historical reads.
 
 POST manifests/:id/exports captures immutable actor-private evidence with an empty body and an idempotency key. GET exports/:id reads it; GET exports/:id/export returns the same protected snapshot and CSV for the established scoped UI download seam; GET exports/:id/download serves text/csv with a safe UUID filename and nosniff. Every capture/read/download rechecks current local-admin authority and logs successful access. Responses, including private reads, use no-store, private cache policy. No custody endpoint accepts browser delivery proof or changes payment, fees or carrier RTO.
+
+
+#144 fee-linked `expense` and `agent_fee_payment` bodies carry `agent_payee_id`, `fee_earning_id`, `fee_cash_paise`, `fee_advance_paise` and nullable `fee_advance_request_id`. Expense amount equals the immutable gross earning, while cash plus applied advance may be a partial payment. A later fee-payment amount equals its explicitly recorded cash plus applied advance and requires the gross expense already applied. Advance application references an original applied advance with bounded current remaining capacity. Actual cash legs use only `fee_cash_paise`, including zero legs for zero-cash recognition/application. New submission/review/application requires both existing cashbook and agent-money gates; exact replay preserves current-authority checks. Ordinary requests omit these optional source fields and retain their prior command fingerprints. Corrections preserve earning, agent, original advance reference and original occurrence; replacement payment amounts remain bounded. Full COD/settlement routes and source-qualified exports remain pending.
+
+
+#144 fee term service accepts `basis: per_delivery | agreed_period`, an explicit integer INR amount and valid-from/until bounds. Per-delivery earning names genuine proof and terms. Agreed earning names only the exact current approved term revision and freezes the explicit covered period without proof/parcel substitution. Overlapping agreed earnings and delivery earnings already covered by an agreed period are rejected in both service and SQL. Adjacent periods remain distinct. These service contracts remain behind the agent-money gate; their full HTTP/settlement workspace integration is pending.
+
+
+#144 `cod_remittance` cashbook request requires `cod_allocation_id`, private `payment_reference`, `payment_method`, actual positive INR amount, company source location/revision/generation, responsible employee, reason and occurrence. Category/payee, fee and agent-payee fields and target location remain null/absent. A different current franchise admin reviews; a current admin applies the exact proposal. New commands require both write gates; exact current-authority replay survives disabled writes. One current allocation/reference cannot produce repeated payment under new keys. Corrections preserve COD allocation and original occurrence, append recording deltas and may correct the private reference. The original receipt's COD reservation is unchanged by remittance. Strict detail/inbox/source decoders and the existing correction form support this distinct kind. Full settlement creation and COD allocation reversal remain pending.
+
+Issue #144 `cod_reservation_reversal` extends the cashbook request kind: owned `cod_allocation_id` required; payment method/reference, expense category/payee, fee and agent-payment references absent/null. Distinct-admin review and exact admin application produce zero cash legs. Original receipt context is fixed even after agent departure. Applied-head net reversal releases receipt allocation capacity, while remittance alone does not. Restoration is rejected if current freight uses that capacity. No bank/provider, refund or recollection is implied.
+
+Issue #144 handover attribution: `GET /api/v1/cashbook/handovers/:id/attributions` requires selected organization/franchise and an accepted `command_id`; optional ascending integer `cursor` pages at most100 immutable rows. Header includes `as_of`, acknowledged `amount_paise`, complete `attributed_paise`, `unattributed_paise`, `unallocated_paise` and `coverage` (`captured`/`legacy_unattributed`). Rows retain original source/receipt/component IDs and captured component time; amounts are exact decimal paise strings. Historical commands without rows remain entirely unattributed. Exact handover ownership is checked before the nested command. No payment reference, contact or OTP is returned. Source generation/current financial reclassification never rewrites an acknowledgement snapshot.
+
+### #144 immutable daily cash capture (partial settlement input)
+
+`POST /api/v1/agent-settlements/cash-captures` accepts selected `organization_id`/`franchise_id`, an idempotency key, and exactly `{agent_id, day, counted_at, counted_paise, reason}`. `day` is Kolkata-local, `counted_at` is an actual UTC instant within that day and no later than server capture, and `counted_paise` is a nonnegative safe integer. PostgreSQL derives and seals the source snapshot, UTC cutoff and exact decimal aggregate paise; clients cannot provide derived sources or totals. Response201 includes the immutable capture identity, actor, reason and `source_snapshot.kind=physical_cash_capture`. This capture does not submit/approve a settlement or write a receipt, cash movement, expense, deduction, payroll liability or seller payment.
+
+`GET /api/v1/agent-settlements/cash-captures/:id` returns the same saved frame under current R36 authority. Both routes use private/no-store responses; writes retain normal session/origin/CSRF protection. W64 capture is disabled by default under `AGENT_MONEY_ENABLED`; demo cannot enable it. Authorized history and exact committed retries work with the flag off, but current membership and target/self restrictions still apply. The key is actor/franchise scoped; changed intent conflicts, concurrent identical retries return one saved identity, and uncertain commits are recovered by the same key. Captures do not advance monetary source versions.
+
+Agents can capture/read only their own current agent identity. Operators can capture a current local agent and read only captures they prepared (plus their own identity if separately granted delivery-agent membership). Current franchise admins can capture departed local agents' historical cash evidence; approved current finance readers remain franchise-scoped. Current role changes are checked before saved-key replay: a former admin retaining only an agent role cannot recover another agent's capture through an old key. Source projection includes owned cash fact/receipt IDs and precise dates/paise, excludes customer contacts/payment references, and labels unknown franchise sources without assigning them to an agent. The existing 5,000-source /8MiB bounds reject an oversized capture rather than returning a truncated statement. Full COD/fee/parcel statement assembly, submission, different-admin approval/correction and export remain separate pending #144 work.
+
+Cash-capture `source_snapshot.finance` adds source-linked receipt positions/freight applications, COD positions, fee positions, advance positions, immutable financial-effect references and accepted handover attribution references. Its `as_of` equals the saved capture cutoff and its `counted_at` equals the actual count instant. Per-delivery fee effective time is the genuine proof completion; agreed-period effective time is the explicit earning record. Financial effects must have occurred by count and been recorded by capture. Corrections select the head visible at that cutoff rather than today's head. The seller-liability measure is explicitly labelled as liability linked to origin receipts, not debt owed by the agent; source IDs do not grant customer directory or general ledger access. Minimum evidence excludes customer contacts, beneficiary names and payment references. Combined cash/finance source limits reject atomically with `REPORT_LIMIT_EXCEEDED` rather than returning partial arrays. The capture remains partial statement input until parcel/submission/approval contracts are implemented.
+
+The finance snapshot distinguishes `fee_direct_paid_paise` (all direct fee payment), `fee_cash_paid_paise` (physical cash), and `fee_noncash_paid_paise` (bank/UPI). Each fee position exposes `direct_paid_paise`, `cash_paid_paise`, and `noncash_paid_paise`; remaining fees subtract direct payment plus explicit advance applications. Financial effects and advance positions include payment method. These snapshot labels clarify the established request field `fee_cash_paise`, which continues to represent direct payment across methods.
+
+The cash-capture snapshot also includes `parcels` at its exact `as_of` and `counted_at`. `held_positions` reference opening/closing custody receipts; day `transitions` include original/previous receipt, parcel, attempt and proof references. `delivery_proofs` distinguish genuine proof with a tracked custody receipt from explicit untracked legacy proof. `discrepancies` retain source receipt and reason codes without changing custody. Totals separate opening/received/delivered-from-custody/returned-to-office/transferred-to-agent/held-at-count, genuine proof, untracked proof and reported missing. Physical flow reconciles independently of fee, receipt and COD amounts. All parcel entries share the capture's complete-source and byte limits; proof/challenge secrets and recipient contacts are excluded.
+
+Agent settlement submissions and decisions (D144-1):
+
+- `POST /api/v1/agent-settlements/submissions` uses selected organization/franchise, an idempotency key and exact `{capture_id, previous_submission_id, expected_version, reason}`. First revision uses null predecessor/version0. Agent/day/revision/actor/time are server-owned. A fresh linked revision replaces the current view; prior evidence is immutable. Capture and predecessor IDs require current owned access, with foreign/unknown IDs returning the same not-found response.
+- `POST /api/v1/agent-settlements/submissions/:id/decisions` accepts `{kind: approve|reject, expected_version, reason}`. Only a different current franchise admin may decide. Approval of changed relevant sources, stale revision, superseded record or a previously decided record conflicts. Approval records review rather than a money/payment effect. Saved decision key/body replay stays exact and checks current authority before history recovery.
+- `GET /api/v1/agent-settlements/submissions/:id` returns immutable capture/header/decision evidence and current `pending|approved|rejected|superseded` status. Agents see self, operators their own prepared submissions (plus separately authorized self agent history); current local finance readers retain scoped history.
+- `GET /api/v1/agent-settlements/submissions` returns100 headers per page, a fixed millisecond-format `as_of` and actor/tenant-bound `next_cursor`. Revision/decision state on subsequent pages uses that same cutoff. No global page-total claim. Current authorization is rechecked on every page.
+
+All routes use standard session/origin/CSRF protection and private no-store responses. New submit/decide entry defaults off with `AGENT_MONEY_ENABLED`; saved-key replay/read history remains within current authority. W65 separates submission from W66 independent decision and R36 read. Captured CSV uses E03 as described below. PDF export and public event-consumer integration remain pending.
+
+
+Agent statement captured CSV (E03):
+
+- `POST /api/v1/agent-settlements/submissions/:id/exports` accepts exactly `{}` with session/origin/CSRF and an idempotency key. A current local franchise admin or accountant captures the owned immutable statement source frame and current revision status/decision under the existing franchise lock. Agents/operators and organization-admin-only sessions cannot export. Server-owned export metadata includes original count/source cutoff, distinct export cutoff, Kolkata day/timezone, INR, revision/status, source count and exact 24-hour expiry.
+- `GET /api/v1/agent-settlements/exports/:id` returns saved metadata and up to100 source rows, with `offset` in multiples of100. Four explicit statement/cash/finance/parcel summaries reside in metadata; `count` and `source_count` both count source rows. This preserves all5000 permitted source rows without changing released report storage. The complete CSV has four additional summary rows.
+- `GET /api/v1/agent-settlements/exports/:id/download` returns `{snapshot, columns, csv}` from the captured data. Fields use the shared explicit `agent_statement_v1` schema, allowlisted scalar projections, exact integer-paise strings and formula-neutralized quoted CRLF CSV, bounded to8MiB. Summary balances overlap and remain labelled; custody, origin-receipt seller liability and agent entitlement are separate. Legacy `fee_cash_paise` represents all-method direct fee payment and is exported as `fee_direct_paid_paise`; actual payment method and cash/noncash totals are retained.
+
+Every capture/read/download rechecks current E03 authorization and actor/organization/franchise ownership. Wrong actor/tenant/ID and expired reads return not-found; replay of an expired capture key returns `REPORT_EXPIRED`. Same-key replay returns the identical saved artifact even after statement correction/supersession; a changed statement conflicts. Existing shared snapshot quota20, expired payload purge, report access audit and private no-store responses apply. Saved statement evidence remains durable after artifact expiry. No new table, migration, permission, physical money effect or provider is introduced. Read/capture of this historical export remains available when new agent-money writes are disabled.
+
+The workspace shows capture/download controls only to current franchise admins/accountants, retains an uncertain capture's exact immutable request/key, shows frozen revision/status/cutoffs/expiry and downloads the matching saved CSV. Scope loss cancels/discards private responses and removes captured metadata. Download uses current server authorization and cannot substitute a new statement revision.
+
+
+Owner COD and fee command HTTP boundary (#144, partial owner workspace):
+
+- `POST /api/v1/agent-settlements/cod-beneficiaries` accepts `{expected_version:0, name, active}`. `POST /cod-beneficiaries/:id/revisions` uses the same fields and current positive version; `:id` is the beneficiary root, not its revision.
+- `POST /api/v1/agent-settlements/cod-obligations` accepts `{booking_id, parcel_id, expected_version:0, beneficiary_id, beneficiary_revision_id, amount_paise, currency:INR, active}`. `POST /cod-obligations/:id/revisions` uses the current positive version and obligation root. Owned parcel/booking and approved beneficiary revision are bound before immutable configuration. Existing collected/reserved principal rules govern changes.
+- `POST /api/v1/agent-settlements/cod-allocations` accepts `{receipt_id, obligation_id, obligation_revision_id, amount_paise, currency:INR}`. It reserves owned goods principal within the receipt's common freight/COD capacity; it does not record another collection or seller payment.
+- `POST /api/v1/agent-settlements/agents/:id/fee-terms` accepts `{expected_version, basis:per_delivery|agreed_period, amount_paise, currency:INR, valid_from, valid_until, active}`; current agent identity, latest version and approved half-open period are checked by the existing fee service.
+- `POST /api/v1/agent-settlements/fee-earnings/delivery` accepts `{proof_id, term_revision_id}` and requires genuine eligible completed proof and current per-delivery terms. `POST /fee-earnings/agreed` accepts `{term_revision_id}` for the explicit approved agreed period. Neither accrual recognizes expense or pays money; overlapping accrual remains rejected.
+
+All eight commands return201 with `{command_id, resource_id, recorded_at}` from the existing actor-owned immutable command record. `resource_id` names the new beneficiary/obligation/term revision or allocation/earning as appropriate. Session/origin/CSRF, strict fields, current owned scope, idempotency fingerprint, optimistic version, private no-store response and existing franchise-lock rules apply. Configuration/accrual requires current local franchise admin; receipt COD reservation allows the existing admin/operator action. Org-admin-only, accountant/read-only and agent membership confer no new mutation capability. `AGENT_MONEY_ENABLED` defaults off for new entry; exact completed-key recovery rechecks current authority and remains available with entry disabled. Existing cashbook proposal/different-admin approval/application still owns fee expense, advance/payment, remittance and corrections. Production owner read selectors/forms remain pending and cannot be replaced by these service endpoints alone.
+
+#### #144 bounded owner finance sources (partial)
+
+`GET /api/v1/agent-settlements/finance/:kind?organization_id=...&franchise_id=...&cursor=...` accepts `beneficiaries`, `obligations`, `allocations`, `fee-terms`, `fee-earnings`, `advances`, `proofs`, `receipts` or `parcels`. It returns `{kind,organization_id,franchise_id,as_of,timezone:"Asia/Kolkata",currency:"INR",items,next_cursor}` with at most 100 minimum scalar rows. Current scoped finance-read authority is required. Cursors bind actor/catalog/tenant; each page has one current SQL snapshot. No frozen multi-page or total-count promise is made. These private reads remain available with agent money writes disabled. Unknown query fields and mismatched/malformed cursors are validation errors; sibling/foreign ownership is concealed.
+
+Public shared `agent-money.ts` specifies source projections. Fee `direct_paid_paise` includes all payment methods; `cash_paid_paise` and `noncash_paid_paise` partition it. Original advance request `id` is the payment binding and `head_request_id` is correction evidence. Genuine completed-proof references exclude proof secrets; parcel `recorded_at` uses committed command time. The owner form calls the previously documented versioned command routes and rereads current catalogs after confirmation. Request submission, independent approval and applying money effects remain separate cashbook routes.
+
+
+#### #144 source-backed money requests
+
+The franchise-admin cashbook view offers actual agent advance, earned fee expense
+recognition, payment of an already recognized fee, seller COD remittance and unused
+reservation reversal. It uses the existing cashbook request/decision/application
+routes and current source version. A different current local franchise admin must
+review; an admin applies the exact approved request. Accountants and agents receive
+no money mutation grant. Responsible employees remain current operators/admins.
+Current delivery agents may be cash custodians only behind the agent money gate;
+that extension grants them no ordinary cashbook write authority.
+
+Fee expense amount preserves the full earned entitlement once. Direct payment and
+explicit application of an original same-agent advance are separate bounded fields.
+The selected payment method affects only the direct amount. Later fee payment
+requires recognized expense and cannot exceed remaining entitlement or advance.
+COD remittance binds its original allocation and beneficiary revision. Reservation
+reversal has a null method, uses the original receipt account/custodian and creates
+no cash leg. The receipts catalog adds only `account_id` for that owned selector.
+
+Exact request recovery compares occurrence timestamps by their identical instant
+when the server canonicalizes fractional zeros; all money and source fields retain
+exact comparison. A different instant or amount remains a protocol failure.
+
+
+#### #144 own-agent handover entry
+
+Agent settlements exposes a handover-only screen for delivery agents.
+`GET /api/v1/cashbook/handover-sources` uses the existing handover-select authority
+and returns at most100 current owned cash locations plus a UUID keyset cursor.
+Fields are only `{id,name,custodian_id,kind:cash,active:true}`. Every location belongs
+to the signed-in actor and selected franchise, with an active current account/location
+revision; even an admin using this selector receives only their own sending locations.
+Continuation rechecks current scope and membership. The existing target selector
+supplies current revisions and source version; request/acknowledgement routes retain
+their exact owner and named-receiver checks. General cashbook locations, balances,
+requests, expense and money receipt endpoints remain forbidden to agent-only users.
+
+The handover workspace preserves its immutable uncertain request, blocks settlement
+and franchise navigation, and recovers the same key. Occurrence spelling is compared
+by identical instant, while source/target references and amounts remain exact.

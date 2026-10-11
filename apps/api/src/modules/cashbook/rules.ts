@@ -1,6 +1,6 @@
 import {HttpError} from '../../plugins/errors.ts';
 export const maximumPaise=BigInt(Number.MAX_SAFE_INTEGER);
-export type MovementKind='opening_float'|'owner_funds'|'expense'|'deposit'|'withdrawal';
+export type MovementKind='cod_reservation_reversal'|'cod_remittance'|'agent_fee_payment'|'agent_advance'|'opening_float'|'owner_funds'|'expense'|'deposit'|'withdrawal';
 export type SourceKind=MovementKind|'receipt'|'refund'|'refund_correction'|'correction'|'handover';
 export interface CashbookFact {source_kind:SourceKind;source_id:string;location_id:string;direction:'in'|'out';amount_paise:bigint}
 export interface CashLeg {location_id:string;direction:'in'|'out';amount_paise:bigint}
@@ -17,10 +17,10 @@ export function cashbookPosition(facts:readonly CashbookFact[],location:string,r
  let inflows=0n,outflows=0n;const seen=new Set<string>();
  for(const fact of facts){
   identity(fact.source_id);identity(fact.location_id);amount(fact.amount_paise);
-  if(!['opening_float','owner_funds','expense','deposit','withdrawal','receipt','refund','refund_correction','correction','handover'].includes(fact.source_kind)||!['in','out'].includes(fact.direction))conflict();
+  if(!['opening_float','owner_funds','expense','agent_advance','agent_fee_payment','cod_remittance','deposit','withdrawal','receipt','refund','refund_correction','correction','handover'].includes(fact.source_kind)||!['in','out'].includes(fact.direction))conflict();
   // One source contributes at most one leg to a location; a paired transfer has distinct locations.
   const key=JSON.stringify([fact.source_kind,fact.source_id,fact.location_id]);if(seen.has(key))conflict();seen.add(key);
-  if((['receipt','opening_float','owner_funds','refund_correction'].includes(fact.source_kind)&&fact.direction!=='in')||(['expense','refund'].includes(fact.source_kind)&&fact.direction!=='out'))conflict();
+  if((['receipt','opening_float','owner_funds','refund_correction'].includes(fact.source_kind)&&fact.direction!=='in')||(['expense','agent_advance','agent_fee_payment','cod_remittance','refund'].includes(fact.source_kind)&&fact.direction!=='out'))conflict();
   if(fact.location_id!==location)continue;
   if(fact.direction==='in')inflows+=fact.amount_paise;else outflows+=fact.amount_paise;
  }
@@ -33,7 +33,8 @@ export function cashbookPosition(facts:readonly CashbookFact[],location:string,r
 /** New outflows consume spendable custody; a reservation never claims actual receipt. */
 export function movementLegs(kind:MovementKind,value:bigint,source:string,target:string|null,available:bigint):CashLeg[] {
  amount(value);identity(source);amount(available,true);
- if(!['opening_float','owner_funds','expense','deposit','withdrawal'].includes(kind))conflict();
+ if(kind==='cod_reservation_reversal'){if(target!==null)conflict();return [];}
+ if(!['opening_float','owner_funds','expense','agent_advance','agent_fee_payment','cod_remittance','deposit','withdrawal'].includes(kind))conflict();
  const paired=kind==='deposit'||kind==='withdrawal';
  if(paired){if(target===null||identity(target)===source)conflict();}
  else if(target!==null)conflict();
@@ -48,8 +49,9 @@ export function movementLegs(kind:MovementKind,value:bigint,source:string,target
  */
 export function correctionLegs(kind:MovementKind,previous:bigint,replacement:bigint,source:string,target:string|null):CashLeg[] {
  amount(previous,true);amount(replacement,true);identity(source);
+ if(kind==='cod_reservation_reversal'){if(target!==null)conflict();return [];}
  const paired=kind==='deposit'||kind==='withdrawal';
- if(!['opening_float','owner_funds','expense','deposit','withdrawal'].includes(kind)||(paired?(target===null||identity(target)===source):target!==null))conflict();
+ if(!['opening_float','owner_funds','expense','agent_advance','agent_fee_payment','cod_remittance','deposit','withdrawal'].includes(kind)||(paired?(target===null||identity(target)===source):target!==null))conflict();
  const delta=replacement-previous;if(delta===0n)return [];
  const originalIn=kind==='opening_float'||kind==='owner_funds',direction=(delta>0n)===originalIn?'in' as const:'out' as const;
  const magnitude=delta<0n?-delta:delta,result:CashLeg[]=[{location_id:source,direction,amount_paise:magnitude}];

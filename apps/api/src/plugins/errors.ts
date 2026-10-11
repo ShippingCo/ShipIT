@@ -3,6 +3,7 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  AGENT_MONEY_DISABLED:[409,'New agent money and settlement writes are disabled. Saved evidence and exact completed-command replay remain available.'],
   CUSTODY_CONFLICT:[409,'Parcel custody evidence has changed. Refresh the handover and current assignment.'],
   CUSTODY_DISABLED:[409,'New parcel custody writes are disabled. Saved evidence remains available.'],
   CUSTODY_ASSIGNMENT_REQUIRED:[409,'A current dispatcher assignment instruction is required for this handover.'],

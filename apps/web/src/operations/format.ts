@@ -1,4 +1,7 @@
-export function formatMoney(paise:number){return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(paise/100);}
+export function formatMoney(paise:number){
+ const value=BigInt(paise),whole=value/100n,fraction=String((value<0n?-value:value)%100n).padStart(2,'0');
+ return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).formatToParts(value<0n&&whole===0n?-0:whole).map(part=>part.type==='fraction'?fraction:part.value).join('');
+}
 export function formatKolkata(instant:string,options:Intl.DateTimeFormatOptions={dateStyle:'medium',timeStyle:'short'}){
  return new Intl.DateTimeFormat('en-IN',{...options,timeZone:'Asia/Kolkata'}).format(new Date(instant));
 }
@@ -22,6 +25,6 @@ export function kolkataInputToInstant(value:string){
  return new Date(localMilliseconds-kolkataOffsetMilliseconds).toISOString();
 }
 export function rupeesToPaise(value:string){
- const match=/^(\d{1,13})(?:\.(\d{1,2}))?$/.exec(value.trim());if(!match)return null;
+ const match=/^(\d{1,14})(?:\.(\d{1,2}))?$/.exec(value.trim());if(!match)return null;
  const paise=BigInt(match[1]!)*100n+BigInt((match[2]??'').padEnd(2,'0'));return paise<=BigInt(Number.MAX_SAFE_INTEGER)?Number(paise):null;
 }

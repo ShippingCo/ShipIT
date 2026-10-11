@@ -313,3 +313,31 @@ reference crosses the durable stream. Finance reads resolve private evidence und
 current grants; the operator balance response excludes it. These events enable no
 new automatic consumer or provider call. Existing payment.settled leaf contracts
 remain unchanged and express satisfied debt, independently of when money arrived.
+
+
+### Agent statement journal (#144)
+
+Settlements owns the private `agent_settlement_events` journal. Its three facts are
+`submitted`, `approved` and `rejected`. Each row contains exactly `id`,
+`organization_id`, `franchise_id`, `submission_id`, nullable `decision_id`, `kind`,
+`actor_id`, `correlation_id` and `recorded_at`. The ID is the immutable submission
+or decision ID; actor, correlation and server recording time are derived from that
+owned source. Submission and decision triggers append the matching fact in the
+same transaction. Composite source keys, unique fact identities and immutable
+guards prevent a fabricated, missing, duplicated or edited fact. The application
+role cannot insert into the journal directly. Safe audit projects action, actor,
+source reference, correlation and time without the statement payload or reason.
+
+This journal is private source history, not the common outbox envelope or a new
+subscription. Current authorized statement reads and captured exports resolve the
+owned immutable sources directly. No asynchronous effect is required by #144:
+statement approval confirms evidence and never initiates a notification, physical
+handover, seller remittance, fee expense or payout. Consequently no consumer job
+is registered. Existing receipt/delivery facts retain their owning producers and
+consumers. A later consumer must define its minimized versioned envelope, current
+scoped resolution and source/effect deduplication through its owning issue.
+
+Native statement-review tests verify atomic rollback and lost-commit replay,
+competing decisions, exact event/audit counts and denied direct journal fabrication,
+updates and deletion. Financial source counts and cash positions remain unchanged
+after statement review.

@@ -12,11 +12,11 @@ export async function customer(scope:TenantAccess,id:string) {
  if(!(await scopedQuery(scope,['money_receipts.record','money_receipts.allocate','money_receipts.correct','money_receipts.select'],`SELECT id FROM shipit.customers
  WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }
-export async function receiver(scope:TenantAccess,id:string) {
+export async function receiver(scope:TenantAccess,id:string,allowAgentCustody=false) {
  if(!(await scopedQuery(scope,['money_receipts.record'],`SELECT m.user_id FROM shipit.memberships m
  JOIN shipit.membership_franchise_scopes s ON s.membership_id=m.id AND s.organization_id=m.organization_id
  JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
- WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin')`,[id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND (m.role IN ('operator','franchise_admin') OR ($2::boolean AND m.role='delivery_agent'))`,[id,allowAgentCustody])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }
 export async function account(scope:TenantAccess,id:string) {
  const row=(await scopedQuery<{id:string;account_id:string;version:number;methods:ReceiptMethod[];active:boolean}>(scope,['money_receipts.record'],`SELECT id,account_id,version,methods,active
@@ -109,4 +109,11 @@ export async function receivers(scope:TenantAccess,cursor:string|null,limit:numb
  JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
  WHERE {{franchise:m.organization_id:f.franchise_id}} AND m.lifecycle='active' AND u.lifecycle='active' AND m.role IN ('franchise_admin','operator') AND ($1::uuid IS NULL OR u.id>$1) ORDER BY u.id LIMIT $2`,[cursor,limit])).rows;
  return rows.map(row=>({id:row.id,label:row.id===c.actor.id?'You (signed-in staff)':'Staff '+row.id.slice(-8)}));
+}
+
+/** Current seller-owned reservation is separate from a completed receipt command's historical result. */
+export async function codReserved(scope:TenantAccess,id:string):Promise<bigint> {
+ const row=(await scopedQuery<{reserved:string}>(scope,['money_receipts.allocate'],`SELECT COALESCE(sum(reserved_paise),0)::text reserved
+ FROM shipit.cod_receipt_positions WHERE {{franchise:organization_id:franchise_id}} AND receipt_id=$1`,[id])).rows[0];
+ if(!row)throw new HttpError('TEMPORARILY_UNAVAILABLE');return BigInt(row.reserved);
 }

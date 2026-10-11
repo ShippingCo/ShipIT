@@ -8,7 +8,7 @@ import {useResource} from './hooks';
 import {Empty,Failure,Loading} from './AsyncState';
 import {formatKolkata} from './format';
 const money=(paise:string)=>{const n=BigInt(paise),v=n<0n?-n:n;return `${n<0n?'-':''}₹${(v/100n).toLocaleString('en-IN')}.${String(v%100n).padStart(2,'0')}`;};
-const kinds=['receipt','refund','refund_correction','legacy_collection','legacy_collection_correction','expense','opening_float','owner_funds','deposit','withdrawal','correction','handover'];
+const kinds=['receipt','refund','refund_correction','legacy_collection','legacy_collection_correction','expense','agent_advance','agent_fee_payment','opening_float','owner_funds','deposit','withdrawal','correction','handover'];
 export default function CashbookSources({source,locations,canExport,locked,reportId,open,run,isCurrent}:{source:CashbookSource;locations:CashLocationDto[];canExport:boolean;locked:boolean;reportId:string|null;open:(id:string)=>void;run:(intent:CommandIntent)=>void;isCurrent:()=>boolean}){
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),[from,setFrom]=useState(today),[to,setTo]=useState(today),[sort,setSort]=useState<'occurred_asc'|'occurred_desc'>('occurred_desc'),[method,setMethod]=useState(''),[kind,setKind]=useState(''),[location,setLocation]=useState(''),[reference,setReference]=useState(''),[offset,setOffset]=useState(0),[rowId,setRowId]=useState<string|null>(null),[downloading,setDownloading]=useState(false),[notice,setNotice]=useState('');
  const lifetime=useRef(new AbortController());useEffect(()=>{const abort=new AbortController();lifetime.current=abort;return()=>abort.abort();},[]);

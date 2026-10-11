@@ -2,7 +2,7 @@ import {reportLimits,type CashbookReportFilter,type CashbookSourceRow,type Cashb
 import {object,uuid} from '../pricing/validation.ts';
 import {FieldValidationError,HttpError} from '../../plugins/errors.ts';
 import {reportFilter,csvCell} from '../reports/rules.ts';
-export const cashbookSourceKinds=['receipt','refund','refund_correction','legacy_collection','legacy_collection_correction','expense','opening_float','owner_funds','deposit','withdrawal','correction','handover'] as const;
+export const cashbookSourceKinds=['receipt','refund','refund_correction','legacy_collection','legacy_collection_correction','expense','agent_advance','agent_fee_payment','cod_remittance','opening_float','owner_funds','deposit','withdrawal','correction','handover'] as const;
 export function cashbookReportFilter(value:unknown):CashbookReportFilter {
  const b=object(value,['from_day','to_day','sort','kind','location_id','payment_method']),sort=b.sort??'occurred_desc',kind=b.kind??null;
  if(sort!=='occurred_asc'&&sort!=='occurred_desc'||kind!==null&&!cashbookSourceKinds.includes(kind as CashbookSourceRow['source_kind']))throw new FieldValidationError('$','INVALID_FORMAT');

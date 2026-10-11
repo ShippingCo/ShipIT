@@ -855,7 +855,7 @@ export async function withMoneyReceiptScope<T>(database:DatabasePool,token:strin
 export async function withCashbookScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
  action:import('../cashbook/types.ts').CashbookAction,correlationId:string,
  work:(scope:import('../cashbook/types.ts').CashbookScope)=>Promise<T>):Promise<T> {
- const reading=action==='cashbook.read'||action==='cashbook.select';
+ const handover=action.startsWith('cashbook.handover.'),reading=action==='cashbook.read'||action==='cashbook.select'||action==='cashbook.handover.select';
  return membershipTransaction(database,async tx=>{
   try {
    const session=await authenticated(tx,token);
@@ -865,11 +865,14 @@ export async function withCashbookScope<T>(database:DatabasePool,token:string,or
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
-   const allowed=action==='cashbook.read'?(orgAdmin||admin||accountant):action==='cashbook.select'?(orgAdmin||admin||accountant||operator):
+   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant'),agent=local.some(m=>m.role==='delivery_agent');
+   const allowed=handover?(action==='cashbook.handover.select'?(orgAdmin||admin||accountant||operator||agent):(admin||operator||agent)):action==='cashbook.read'?(orgAdmin||admin||accountant):action==='cashbook.select'?(orgAdmin||admin||accountant||operator):
     action==='cashbook.request'||action==='cashbook.acknowledge'?(admin||operator):admin;
-   if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
-   return await work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),ownOnly:operator&&!admin&&!accountant&&!orgAdmin});
+   if(!allowed)throw new HttpError('ACTION_FORBIDDEN');
+   const agentOnly=handover&&agent&&!admin&&!operator&&!accountant&&!orgAdmin;
+   if((!reading||agentOnly)&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   if(handover){const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');if(agentOnly&&franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');}
+   return await work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),ownOnly:(operator||handover&&agent)&&!admin&&!accountant&&!orgAdmin,agentOnly});
   }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
  });
 }
@@ -899,5 +902,54 @@ export async function withCustodyScope<T>(database:DatabasePool,token:string,org
   const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
   return work({access:issueTenantAccess(tx,{...context,action}),audit:issueTenantAccess(tx,{...context,action:'custody.audit'}),
    snapshots:action==='custody.export'?issueTenantAccess(tx,{...context,action:'custody.capture'}):null,agentOnly,roles});
+ });
+}
+
+/** COD configuration is admin-owned; operators reserve actual receipt funds without a private ledger grant. */
+export async function withAgentMoneyScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../agent-settlements/types.ts').AgentMoneyAction,correlationId:string,
+ work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+ validate.uuid(organizationId);validate.uuid(franchiseId);const reading=action==='agent_money.read';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   if(!(reading?(orgAdmin||admin||accountant):action==='agent_money.reserve'?(admin||operator):admin))throw new HttpError('ACTION_FORBIDDEN');
+   const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+   if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   if(!reading&&franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
+   return await work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+  }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
+ });
+}
+
+/** Minimum statement evidence only; no agent/operator general finance-read capability. */
+export async function withAgentStatementScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../agent-settlements/types.ts').AgentStatementAction,correlationId:string,
+ work:(context:{access:import('../security/scope.ts').TenantAccess;admin:boolean;ownOnly:boolean;agentOnly:boolean;agent:boolean})=>Promise<T>):Promise<T> {
+ validate.uuid(organizationId);validate.uuid(franchiseId);const reading=action==='agent_statement.read';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),orgAdmin=memberships.some(m=>m.role==='org_admin');
+   const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[],local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),agent=local.some(m=>m.role==='delivery_agent'),accountant=local.some(m=>m.role==='accountant');
+   if(!(reading?(orgAdmin||admin||accountant||operator||agent):(action==='agent_statement.decide'?admin:admin||operator||agent)))throw new HttpError('ACTION_FORBIDDEN');
+   const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+   const agentOnly=agent&&!admin&&!operator&&(!reading||!accountant&&!orgAdmin);
+   if((!reading||agentOnly)&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   if((!reading||agentOnly)&&franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
+   const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
+   return await work({access,admin,ownOnly:!orgAdmin&&!admin&&!accountant,agentOnly,agent});
+  }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
  });
 }

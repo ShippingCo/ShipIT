@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {bookingSetup} from '../booking-support.ts';
+import {paymentFault} from '../payment-support.ts';
+import {createReceivingAccountService} from '../../src/modules/payments/account-service.ts';
+import {createCashLocationService} from '../../src/modules/cashbook/location-service.ts';
+import {createCashbookRequestService} from '../../src/modules/cashbook/request-service.ts';
+import {createCashbookEffectService} from '../../src/modules/cashbook/effect-service.ts';
+import {org,A} from '../audit-support.ts';
+const q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
+await test('agent advance pays actual approved shop cash once without earned expense or customer netting and preserves bounded corrections',{timeout:60000},async t=>{
+ const s=await bookingSetup(t),admin=await s.grant('franchise_admin',[A]),reviewer=await s.grant('franchise_admin',[A]),agent=await s.grant('delivery_agent',[A]);await s.db.prepareAgentMoney();
+ const booked=await s.book();assert.equal(booked.statusCode,201);const obligation=(await s.db.adminQuery('SELECT outstanding_paise::text FROM shipit.booking_obligations WHERE booking_id=$1',[booked.json().id])).rows[0];
+ const accounts=createReceivingAccountService(s.pool),locations=createCashLocationService(s.pool,true),requests=createCashbookRequestService(s.pool,true,true),effects=createCashbookEffectService(s.pool,true,true),disabledRequests=createCashbookRequestService(s.pool,true),disabledEffects=createCashbookEffectService(s.pool,true);
+ const accountKey=randomUUID(),account=await accounts.configure(admin.token,null,q,accountKey,headers(accountKey),{name:'Synthetic shop cash',methods:['cash'],other_method_name:null,active:true,expected_version:0},randomUUID());
+ const locationKey=randomUUID(),location=await locations.configure(admin.token,null,q,locationKey,headers(locationKey),{account_id:account.id,expected_account_version:1,custodian_id:s.operator.id,name:'Synthetic office paid cash',active:true,expected_version:0},randomUUID());
+ const version=async()=>Number((await effects.position(admin.token,q,randomUUID())).source_version);
+ const base={kind:'owner_funds',source_location_id:location.id,source_revision_id:location.revision_id,target_location_id:null,target_revision_id:null,expected_source_version:await version(),amount_paise:10000,currency:'INR',category:null,payee:null,responsible_employee_id:s.operator.id,reason:'Synthetic actual owner funds',occurred_at:new Date(Date.now()-1000).toISOString()};
+ async function approve(id:string,actor=reviewer){const key=randomUUID();return requests.decide(actor.token,id,q,key,headers(key),{expected_version:1,decision:'approved',reason:'Synthetic independent voucher review'},randomUUID());}
+ async function apply(id:string,decision:string){const key=randomUUID();return effects.apply(admin.token,id,q,key,headers(key),{expected_version:2,decision_id:decision},randomUUID());}
+ const fundKey=randomUUID(),fund=await requests.submit(s.operator.token,q,fundKey,headers(fundKey),base,randomUUID());await apply(fund.id,(await approve(fund.id)).id);
+ const input={...base,kind:'agent_advance',agent_payee_id:agent.id,payment_method:'cash',expected_source_version:await version(),amount_paise:1000,reason:'Synthetic actual advance voucher'},key=randomUUID();
+ await assert.rejects(disabledRequests.submit(admin.token,q,key,headers(key),input,randomUUID()),{code:'AGENT_MONEY_DISABLED'});
+ await assert.rejects(requests.submit(agent.token,q,key,headers(key),input,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ const advance=await requests.submit(admin.token,q,key,headers(key),input,randomUUID());assert.equal(advance.agent_payee_id,agent.id);
+ assert.deepEqual(await disabledRequests.submit(admin.token,q,key,headers(key),input,randomUUID()),advance);
+ const selfKey=randomUUID();await assert.rejects(requests.decide(admin.token,advance.id,q,selfKey,headers(selfKey),{expected_version:1,decision:'approved',reason:'Synthetic self review'},randomUUID()),{code:'CASHBOOK_APPROVAL_REQUIRED'});
+ const decision=await approve(advance.id),applyKey=randomUUID(),body={expected_version:2,decision_id:decision.id};
+ await assert.rejects(disabledEffects.apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID()),{code:'AGENT_MONEY_DISABLED'});
+ await assert.rejects(createCashbookEffectService(paymentFault(s.pool,'COMMIT'),true,true).apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID()),{code:'TEMPORARILY_UNAVAILABLE'});
+ const effect=await disabledEffects.apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID());
+ assert.deepEqual(effect.legs,[{location_id:location.id,direction:'out',amount_paise:'1000'}]);
+ assert.deepEqual(await Promise.all([effects.apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID()),effects.apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID())]),[effect,effect]);
+ const position=await effects.position(admin.token,q,randomUUID());assert.equal(position.locations.find(l=>l.location_id===location.id)!.known_recorded_paise,'9000');
+ const facts=(await s.db.adminQuery("SELECT source_kind,amount_paise::text,payment_method FROM shipit.cashbook_source_facts WHERE source_kind='agent_advance'")).rows;
+ assert.deepEqual(facts,[{source_kind:'agent_advance',amount_paise:'1000',payment_method:'cash'}]);
+ assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.cashbook_requests WHERE kind='expense'")).rows[0]!.n,0);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.agent_fee_earnings')).rows[0]!.n,0);
+ assert.deepEqual((await s.db.adminQuery('SELECT outstanding_paise::text FROM shipit.booking_obligations WHERE booking_id=$1',[booked.json().id])).rows[0],obligation);
+ const excessiveKey=randomUUID(),excessive=await requests.submit(admin.token,q,excessiveKey,headers(excessiveKey),{...input,expected_source_version:await version(),amount_paise:10000},randomUUID()),excessiveApproval=await approve(excessive.id);
+ await assert.rejects(apply(excessive.id,excessiveApproval.id),{code:'CASHBOOK_CONFLICT'});
+ const owner=s.db.ownerPool();t.after(()=>owner.close());
+ await assert.rejects(owner.query(`INSERT INTO shipit.cashbook_effects(id,organization_id,franchise_id,request_id,decision_id,actor_id,correlation_id,key_digest,fingerprint)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8)`,[randomUUID(),org,A,excessive.id,excessiveApproval.id,admin.id,randomUUID(),'a'.repeat(64)]),{sqlState:'23514'});
+ await s.memberships.revokeMembership(s.admin.token,agent.member.id,{expected_version:1});
+ const newKey=randomUUID();await assert.rejects(requests.submit(admin.token,q,newKey,headers(newKey),{...input,expected_source_version:await version()},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ assert.deepEqual(await disabledEffects.apply(admin.token,advance.id,q,applyKey,headers(applyKey),body,randomUUID()),effect);
+ const correctionKey=randomUUID(),corrected=await requests.submit(admin.token,q,correctionKey,headers(correctionKey),{...input,expected_source_version:await version(),correction_of:advance.id,amount_paise:800,reason:'Synthetic source voucher confirms only eight rupees were originally paid'},randomUUID());
+ const correctedEffect=await apply(corrected.id,(await approve(corrected.id)).id);assert.deepEqual(correctedEffect.legs,[{location_id:location.id,direction:'in',amount_paise:'200'}]);
+ assert.equal((await effects.position(admin.token,q,randomUUID())).locations.find(l=>l.location_id===location.id)!.known_recorded_paise,'9200');
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.cashbook_effects WHERE request_id=$1',[advance.id])).rows[0]!.n,1);
+});

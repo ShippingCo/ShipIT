@@ -1,0 +1,36 @@
+import React from 'react';
+import {afterEach,expect,it,vi} from 'vitest';
+import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {agentMoney,moneySourcePage} from '../data-access/agent-money';
+import {scopedApi} from '../data-access/scoped-api';
+import {createScopeController} from '../operator/scope';
+import AgentSettlements from '../operations/AgentSettlements';
+const id=(n:number)=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0'),now='2026-10-11T06:00:00.000Z',org=id(1),fr=id(2),user=id(3),root=id(4),revision=id(5);
+const page=(kind:string,items:unknown[])=>({kind,organization_id:org,franchise_id:fr,as_of:now,timezone:'Asia/Kolkata',currency:'INR',items,next_cursor:null});
+const common={id:root,recorded_at:now},seller={...common,revision_id:revision,version:1,name:'Synthetic seller',active:true};
+const fee={...common,agent_id:id(6),term_revision_id:id(7),basis:'per_delivery',proof_id:id(8),parcel_id:id(9),covered_from:null,covered_until:null,earned_paise:'4000',expense_paise:'4000',direct_paid_paise:'3000',cash_paid_paise:'0',noncash_paid_paise:'3000',advance_applied_paise:'1000',remaining_paise:'0'};
+const json=(value:unknown)=>new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});
+function controller(role='franchise_admin'){const c=createScopeController();c.runtime.bind({userId:user,organizationId:org,franchiseId:fr,permissions:role});return c;}
+afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
+it('validates separate COD, direct cash/noncash and advance equations and bounded owned live pages',async()=>{
+ const c=controller(),source=agentMoney(scopedApi(c));let response:unknown=page('fee-earnings',[{...fee,customer_phone:'PRIVATE',challenge_ref:'PRIVATE'}]);vi.stubGlobal('fetch',vi.fn(async()=>json(response)));
+ expect((await source.list('fee-earnings')).items).toEqual([fee]);
+ for(const corrupt of [{...fee,cash_paid_paise:'3000'},{...fee,remaining_paise:'1'},{...fee,expense_paise:'1000'},{...fee,direct_paid_paise:'-1'},{...fee,proof_id:null}]){response=page('fee-earnings',[corrupt]);await expect(source.list('fee-earnings')).rejects.toMatchObject({kind:'protocol'});}
+ const allocation={...common,receipt_id:id(10),obligation_id:id(11),obligation_revision_id:id(12),beneficiary_id:id(13),beneficiary_revision_id:id(14),collected_paise:'200000',reversed_paise:'1000',reserved_paise:'199000',remitted_paise:'100000',remaining_paise:'99000'};
+ expect(moneySourcePage('allocations',page('allocations',[allocation])).items[0]).toEqual(allocation);expect(()=>moneySourcePage('allocations',page('allocations',[{...allocation,remaining_paise:'100000'}]))).toThrow();
+ const advance={...common,head_request_id:id(15),agent_id:id(6),payment_method:'upi',paid_paise:'1000',applied_paise:'400',remaining_paise:'600'};
+ expect(moneySourcePage('advances',page('advances',[advance])).items[0]!.id).toBe(root);expect(()=>moneySourcePage('advances',page('advances',[{...advance,remaining_paise:'1000'}]))).toThrow();
+ for(const bad of [{...page('beneficiaries',[seller]),franchise_id:id(99)},page('beneficiaries',[seller,seller]),page('beneficiaries',[{...seller,recorded_at:'2026-10-12T06:00:00.000Z'}]),{...page('beneficiaries',[]),next_cursor:'cursor'},{...page('beneficiaries',[seller]),currency:'USD'}]){response=bad;await expect(source.list('beneficiaries')).rejects.toMatchObject({kind:'protocol'});}
+});
+it('retains immutable finance command content and key through uncertainty and rejects stale scope and mismatched operations',async()=>{
+ const c=controller(),source=agentMoney(scopedApi(c)),body={expected_version:1,name:'Revised seller',active:true},intent=source.beneficiary(root,body),writes:{body:string;key:string}[]=[];body.name='Mutated later';let lose=true;
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic_csrf'});writes.push({body:String(options.body),key:(options.headers as Record<string,string>)['Idempotency-Key']});if(lose){lose=false;throw new TypeError('Synthetic response lost');}return json({command_id:id(16),resource_id:id(17),recorded_at:now,secret:'PRIVATE'});}));
+ await expect(source.execute(intent)).rejects.toMatchObject({dispatched:true});expect(await source.execute(intent)).toEqual({command_id:id(16),resource_id:id(17),recorded_at:now});expect(writes[0]).toEqual(writes[1]);expect(JSON.parse(writes[0]!.body).name).toBe('Revised seller');
+ expect(()=>source.execute({...intent,operation:'agent-money.delivery'})).toThrow();c.runtime.bind({userId:user,organizationId:org,franchiseId:id(98),permissions:'franchise_admin'});await expect(source.execute(intent)).rejects.toMatchObject({code:'SCOPE_CHANGED'});expect(writes.length).toBe(2);
+});
+it('owner workflow recovers the same seller revision while locking navigation and gives accountants source-only access',async()=>{
+ const c=controller(),writes:{path:string;body:string;key:string}[]=[];let lose=true;
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{const url=new URL(path,'https://example.test');if(url.pathname==='/auth/bootstrap')return json({csrf_token:'synthetic_csrf'});if(options.method==='POST'){writes.push({path:url.pathname,body:String(options.body),key:(options.headers as Record<string,string>)['Idempotency-Key']});if(lose){lose=false;throw new TypeError('Synthetic response lost');}return json({command_id:id(16),resource_id:id(17),recorded_at:now});}if(url.pathname.endsWith('/submissions'))return json({items:[],as_of:now,next_cursor:null});if(url.pathname.endsWith('/eligible-agents'))return json({agents:[{id:id(6)}],next_cursor:null});const kind=url.pathname.split('/').at(-1)!;return json(page(kind,kind==='beneficiaries'?[seller]:[]));}));
+ render(<AgentSettlements controller={c} roles={['franchise_admin']}/>);fireEvent.click(screen.getByRole('button',{name:'Open COD and agent fees'}));await waitFor(()=>expect(screen.getByRole('option',{name:'Synthetic seller - version 1'})).toBeInTheDocument());fireEvent.change(screen.getByLabelText('Existing beneficiary (leave blank to create)'),{target:{value:root}});fireEvent.change(screen.getByLabelText('Seller beneficiary name'),{target:{value:'Revised seller'}});fireEvent.click(screen.getByRole('button',{name:'Record money source'}));await screen.findByText(/outcome is uncertain/);expect(screen.getByRole('button',{name:'Open daily statements'})).toBeDisabled();expect(screen.getByLabelText('Seller beneficiary name')).toBeDisabled();fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));await waitFor(()=>expect(writes).toHaveLength(2));expect(writes[0]).toEqual(writes[1]);expect(JSON.parse(writes[0]!.body).expected_version).toBe(1);await waitFor(()=>expect(screen.getByRole('button',{name:'Open daily statements'})).toBeEnabled());
+ cleanup();render(<AgentSettlements controller={controller('accountant')} roles={['accountant']}/>);fireEvent.click(screen.getByRole('button',{name:'Open COD and agent fees'}));await screen.findByText('Synthetic seller',{selector:'summary'});expect(screen.queryByRole('form',{name:'Configure COD and agent fees'})).toBeNull();expect(writes).toHaveLength(2);
+});

@@ -12,8 +12,8 @@ import * as receipts from './receipt-repository.ts';
 import * as payments from './repository.ts';
 import {allocate,releaseAllocation} from './allocation-rules.ts';
 import type {MoneyReceiptScopes,MoneyReceiptCommand,MoneyReceiptRow} from './receipt-types.ts';
-async function apply(s:MoneyReceiptScopes,p:MoneyReceiptCommand,receipt:Pick<MoneyReceiptRow,'customer_id'|'method'|'amount_paise'>,items:ReceiptAllocationInput[],allocated:number) {
- let net=BigInt(allocated);const time=instant(p.recorded_at);
+async function apply(s:MoneyReceiptScopes,p:MoneyReceiptCommand,receipt:Pick<MoneyReceiptRow,'customer_id'|'method'|'amount_paise'>,items:ReceiptAllocationInput[],allocated:number,codReserved=0n) {
+ let net=BigInt(allocated)+codReserved;const time=instant(p.recorded_at);
  for(const item of items){
   await receipts.bookingCustomer(s.command,item.booking_id,receipt.customer_id);
   const o=await payments.obligation(s.payment,item.booking_id,true),before=await payments.projection(s.payment,o);
@@ -33,7 +33,7 @@ function replay(previous:Awaited<ReturnType<typeof receipts.replay>>,intent:stri
  if(previous.fingerprint!==intent)throw new HttpError('IDEMPOTENCY_CONFLICT');
  if(!previous.result)throw new HttpError('IDEMPOTENCY_IN_PROGRESS');return structuredClone(previous.result);
 }
-export function createMoneyReceiptService(database:DatabasePool,writesEnabled=true) {
+export function createMoneyReceiptService(database:DatabasePool,writesEnabled=true,allowAgentCustody=false) {
  async function record(token:string,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string):Promise<MoneyReceiptResult> {
   const q=selection(query),input=validate.moneyReceipt(body),key=keyDigest(idempotencyKey(keyInput,headers)),intent=digest({operation:'money_receipts.record',input});
   return withMoneyReceiptScope(database,token,q.organizationId,q.franchiseId,'money_receipts.record',correlation,async s=>{
@@ -42,7 +42,7 @@ export function createMoneyReceiptService(database:DatabasePool,writesEnabled=tr
    if(!writesEnabled)throw new HttpError('MONEY_RECEIPTS_DISABLED');
    const account=await receipts.account(s.command,input.account_id);
    if(account.version!==input.expected_account_version||!account.active||!account.methods.includes(input.method))throw new HttpError('VERSION_CONFLICT');
-   await receipts.receiver(s.command,input.receiver_id);
+   await receipts.receiver(s.command,input.receiver_id,allowAgentCustody);
    if(input.custodian_id!==input.receiver_id)throw new FieldValidationError('custodian_id','INVALID_FORMAT');
    const p=await receipts.reserve(s.command,randomUUID(),randomUUID(),1,key,intent,input);
    if(Date.parse(input.occurred_at)>p.recorded_at.getTime())throw new FieldValidationError('occurred_at','OUT_OF_RANGE');
@@ -59,7 +59,7 @@ export function createMoneyReceiptService(database:DatabasePool,writesEnabled=tr
    if(!writesEnabled)throw new HttpError('MONEY_RECEIPTS_DISABLED');
    const balance=await receipts.current(s.command,id);if(balance.version!==input.expected_version)throw new HttpError('VERSION_CONFLICT');
    const p=await receipts.reserve(s.command,randomUUID(),id,input.expected_version+1,key,intent,input);
-   await apply(s,p,source,input.allocations,balance.allocated_paise);return receipts.finish(s.command,p);
+   await apply(s,p,source,input.allocations,balance.allocated_paise,await receipts.codReserved(s.command,id));return receipts.finish(s.command,p);
   });
  }
  async function correct(token:string,idInput:unknown,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string):Promise<MoneyReceiptResult> {
