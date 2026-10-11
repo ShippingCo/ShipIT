@@ -5,7 +5,7 @@ import type {AggregateCell} from './effectiveness-rules.ts';
 export async function captureEffectiveness(scope:TenantAccess,from:Date,to:Date,hours:SupportHours|undefined) {
   const configured=!!hours?.staffed;
   return (await scopedQuery<{as_of:Date;messaging:AggregateCell[];assistant:MetricRow[];queue:AggregateCell[]}>(scope,['reports.capture'],`
-    SELECT statement_timestamp() AS as_of,
+    SELECT date_trunc('milliseconds',statement_timestamp()) AS as_of,
       COALESCE((SELECT jsonb_agg(cells ORDER BY category) FROM (
         WITH messages AS (
           SELECT m.id,m.customer_id,COALESCE('customer:'||m.customer_id::text,'contact:'||m.installation_id::text||':'||m.contact_key) AS subject,
@@ -43,18 +43,18 @@ export async function captureEffectiveness(scope:TenantAccess,from:Date,to:Date,
       COALESCE((SELECT jsonb_agg(cells ORDER BY category) FROM (${assistantMetricsSql}) cells),'[]'::jsonb) AS assistant,
       COALESCE((SELECT jsonb_agg(cells ORDER BY category) FROM (
         WITH active AS (
-          SELECT c.id,c.state,c.conversation_id,CASE WHEN $7::boolean AND anchor.at IS NOT NULL AND anchor.at<=statement_timestamp()
+          SELECT c.id,c.state,c.conversation_id,CASE WHEN $7::boolean AND anchor.at IS NOT NULL AND anchor.at<=date_trunc('milliseconds',statement_timestamp())
             THEN elapsed.minutes ELSE NULL END AS business_minutes
           FROM shipit.support_cases c
           LEFT JOIN LATERAL (SELECT max(e.occurred_at) at FROM shipit.support_events e
             WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id
               AND e.case_id=c.id AND e.event_type IN ('opened','reopened')) anchor ON true
           LEFT JOIN LATERAL (SELECT COALESCE(sum(GREATEST(0,extract(epoch FROM
-              LEAST(statement_timestamp(),(d.day+make_interval(mins=>$5::int)) AT TIME ZONE $3::text)
+              LEAST(date_trunc('milliseconds',statement_timestamp()),(d.day+make_interval(mins=>$5::int)) AT TIME ZONE $3::text)
               -GREATEST(anchor.at,(d.day+make_interval(mins=>$4::int)) AT TIME ZONE $3::text)))),0)/60 minutes
             FROM generate_series(date_trunc('day',anchor.at AT TIME ZONE $3::text),
-              date_trunc('day',statement_timestamp() AT TIME ZONE $3::text),interval '1 day') d(day)
-            WHERE extract(dow FROM d.day)::int=ANY($6::int[]) AND $7::boolean AND anchor.at<=statement_timestamp()) elapsed ON true
+              date_trunc('day',date_trunc('milliseconds',statement_timestamp()) AT TIME ZONE $3::text),interval '1 day') d(day)
+            WHERE extract(dow FROM d.day)::int=ANY($6::int[]) AND $7::boolean AND anchor.at<=date_trunc('milliseconds',statement_timestamp())) elapsed ON true
           WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.state IN ('open','claimed')
         ) SELECT v.category,count(*)::int n,count(DISTINCT a.conversation_id)::int subjects,
           avg(a.business_minutes)::double precision business_minutes,
