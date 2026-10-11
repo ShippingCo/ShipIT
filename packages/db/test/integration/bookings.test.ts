@@ -27,8 +27,8 @@ await test('failed additive booking migration rolls back schema/ledger; retry an
   await writeFile(join(temp,migration),original);
   // A fresh migration module path models a restarted migrator (CommonJS caches loaded failures).
   const repaired=await mkdtemp(join(tmpdir(),'shipit-booking-repair-'));t.after(()=>rm(repaired,{recursive:true,force:true}));await cp(temp,repaired,{recursive:true});
-  assert.deepEqual(await db.migrate({dir:repaired}),{applied:36});
-  await writeFile(join(repaired,'1792688400001-synthetic-forward-repair.cjs'),"exports.up=pgm=>pgm.sql('CREATE INDEX synthetic_booking_repair_idx ON shipit.bookings(confirmed_at)');");
+  assert.deepEqual(await db.migrate({dir:repaired}),{applied:37});
+  await writeFile(join(repaired,'1792774800001-synthetic-forward-repair.cjs'),"exports.up=pgm=>pgm.sql('CREATE INDEX synthetic_booking_repair_idx ON shipit.bookings(confirmed_at)');");
   assert.deepEqual(await db.migrate({dir:repaired}),{applied:1});assert.deepEqual(await db.migrate({dir:repaired}),{applied:0});
 });
 await test('runtime least privilege and owner triggers protect snapshots, dockets, obligation, receipts and append-only evidence',{timeout:30000},async t=>{
