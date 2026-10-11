@@ -99,6 +99,10 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
       VALUES($1,$2,$3,$4,'opened','human_requested',1,'service','fixture65',$5,'2026-03-08T06:00:00Z')`,[randomUUID(),org,A,id,randomUUID()]);
   }
   const read=(hours:import('../../src/modules/support/rules.ts').SupportHours)=>withMessagingReportScope(s.pool,s.admin.token,org,A,randomUUID(),scope=>captureEffectiveness(scope,monday,new Date(monday.getTime()+7*86400000),hours));
+  // All-day staffing makes the partial-current-hour cutoff check independent of
+  // which weekday/time the suite runs; use the exposed source cutoff exactly.
+  const continuous=await read({franchise_id:A,timezone:'UTC',weekdays:[0,1,2,3,4,5,6],start_minute:0,end_minute:1440,staffed:true});
+  assert.equal(continuous.queue.find(r=>r.category==='all_active')?.business_minutes,(continuous.as_of.getTime()-Date.parse('2026-03-08T06:00:00Z'))/60000);
   const ny={franchise_id:A,timezone:'America/New_York',weekdays:[0],start_minute:60,end_minute:240,staffed:true};
   const spring=await read(ny);
   // Independent Intl projection counts elapsed UTC hours, including DST's skipped
@@ -117,11 +121,15 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
     await s.db.adminQuery(`INSERT INTO shipit.support_events(id,organization_id,franchise_id,case_id,event_type,reason,version,actor_type,actor_id,correlation_id) VALUES($1,$2,$3,$4,'noted','operational_review',5,'user',$5,$6)`,[randomUUID(),org,A,id,s.admin.id,randomUUID()]);
   }
   const hours={franchise_id:A,timezone:'Asia/Kolkata',weekdays:[1,2,3,4,5],start_minute:540,end_minute:1080,staffed:true};
-  const source=await read(hours);let minutes=0;
-  for(let day=new Date(monday);day<source.as_of;day=new Date(day.getTime()+86400000))if([1,2,3,4,5].includes(day.getUTCDay())){
-    const start=day.getTime()+3.5*3600000,end=day.getTime()+12.5*3600000;
-    minutes+=Math.max(0,Math.min(source.as_of.getTime(),end)-Math.max(reopened.getTime(),start))/60000;
-  }
+  const expectedMinutes=(cutoff:Date)=>{
+    let minutes=0;
+    for(let day=new Date(monday);day<cutoff;day=new Date(day.getTime()+86400000))if([1,2,3,4,5].includes(day.getUTCDay())){
+      const start=day.getTime()+3.5*3600000,end=day.getTime()+12.5*3600000;
+      minutes+=Math.max(0,Math.min(cutoff.getTime(),end)-Math.max(reopened.getTime(),start))/60000;
+    }
+    return minutes;
+  };
+  const source=await read(hours),minutes=expectedMinutes(source.as_of);
   assert.equal(source.queue.find(r=>r.category==='all_active')?.business_minutes,minutes);
   assert.equal((await read({...hours,staffed:false})).queue.find(r=>r.category==='age_unknown')?.n,5);
   const service=createEffectivenessService(s.pool,[hours]),query={organization_id:org,franchise_id:A},key=randomUUID();
@@ -129,7 +137,7 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
   const cell=(section:string,category:string)=>saved.items.find(r=>r.section===section&&r.category===category)!;
   assert.equal(cell('assistant','failure').count,5);assert.equal(cell('assistant','thanks').count,5);assert.equal(cell('assistant','success').count,0);
   assert.equal(cell('assistant','failure').denominator,10);assert.equal(cell('assistant','case_resolved').count,5);assert.equal(cell('assistant','case_reopened').count,5);
-  assert.equal(cell('queue','all_active').count,5);assert.equal(cell('queue','all_active').business_minutes,minutes);
+  assert.equal(cell('queue','all_active').count,5);assert.equal(cell('queue','all_active').business_minutes,expectedMinutes(new Date(saved.snapshot.as_of)));
   assert.equal(saved.snapshot.staffing.timezone,'Asia/Kolkata');
   await s.db.adminQuery(`UPDATE shipit.support_cases SET updated_at=clock_timestamp() WHERE id=ANY($1::uuid[])`,[cases]);
   assert.deepEqual(await service.read(s.admin.token,saved.snapshot.id,query,randomUUID()),saved);
