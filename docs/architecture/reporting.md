@@ -427,6 +427,15 @@ and financial report access do not grant this report. Current membership is chec
 on capture, replay and drill-through. Another actor's or foreign snapshot is not found.
 
 One SQL statement captures the existing owning sources and a statement cutoff.
+The cutoff is truncated to milliseconds before both returning `as_of` and computing
+queue business minutes. This matches the JavaScript/JSON timestamp precision so
+an elapsed partial business hour reconciles exactly to the published cutoff.
+[PostgreSQL's datetime contract](https://www.postgresql.org/docs/18/functions-datetime.html)
+specifies a stable statement start and explicit `date_trunc` precision; this adapts
+those functions to the existing public timestamp contract with constant SQL work,
+no schema/backfill and no client-supplied clock. The native weekly fixture includes
+all-day staffing to exercise a partial hour on any weekday, independent DST projection,
+reopen anchors, and separate exact equations for each captured snapshot's own cutoff.
 Messages are a creation-week cohort of immutable logical outbound IDs; all normalized
 attempt observations are reduced before joining. Read/delivered evidence wins over
 an earlier failed attempt. Accepted/sent/pending/uncertain are explicitly not proof
