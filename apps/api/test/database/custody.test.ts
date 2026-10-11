@@ -11,8 +11,22 @@ import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
 import {withCustodyScope} from '../../src/modules/memberships/service.ts';
 import {assertTenantAccess} from '../../src/modules/security/scope.ts';
 
+// Service scenarios install migration 47 once. Repeated prerequisite grant helpers
+// cannot change this schema; restore the real migrator after custody grants, before
+// custody commands. Dedicated fresh/populated migration tests retain real installs.
+async function custodyDatabase(t:import('node:test').TestContext) {
+ const db=await provisionDatabase(t);assert.deepEqual(await db.migrate(),{applied:47});
+ const migrate=db.migrate,prepare=db.prepareCustody,prepareBookings=db.prepareBookings,prepareMemberships=db.prepareMemberships;
+ let bookings:Promise<void>|undefined,memberships:Promise<void>|undefined;
+ db.prepareBookings=()=>bookings??=prepareBookings();
+ db.prepareMemberships=()=>memberships??=prepareMemberships();
+ db.migrate=async options=>{if(options)throw new Error('CUSTODY_SERVICE_FIXTURE_MIGRATION_OPTIONS');return {applied:0};};
+ db.prepareCustody=async()=>{try{await prepare();}finally{db.migrate=migrate;db.prepareCustody=prepare;}};
+ t.after(()=>{db.migrate=migrate;db.prepareCustody=prepare;db.prepareBookings=prepareBookings;db.prepareMemberships=prepareMemberships;});
+ return db;
+}
 await test('physical receipt services preserve one custodian across competing acknowledgements, exact replay, missing reports and actual returns',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  const booked=await s.book();assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id;
  await startTestDelivery(s,parcel,agent);await s.db.prepareCustody();
  const service=createParcelCustodyService(s.pool,true),disabled=createParcelCustodyService(s.pool),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
@@ -68,7 +82,7 @@ await test('populated migration46 upgrades preserve actual assignment and challe
 
 
 await test('custody current-membership ceilings deny foreign selectors, agent exports and revoked replay before issuing access',{timeout:30000},async t=>{
- const s=await auditSetup(t),agent=await s.grant('delivery_agent',[A]),dispatcher=await s.grant('dispatcher',[A]),admin=await s.grant('franchise_admin',[A]),accountant=await s.grant('accountant',[A]);
+ const s=await auditSetup(t,undefined,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),dispatcher=await s.grant('dispatcher',[A]),admin=await s.grant('franchise_admin',[A]),accountant=await s.grant('accountant',[A]);
  let workCalls=0;
  const call=(token:string,action:import('../../src/modules/custody/types.ts').CustodyAction,organization=org,franchise=A)=>
   withCustodyScope(s.pool,token,organization,franchise,action,randomUUID(),async access=>{
@@ -90,7 +104,7 @@ await test('custody current-membership ceilings deny foreign selectors, agent ex
 
 
 await test('specific custody grants and source release preserve current assignment; revocation denies agent replay and recipient acknowledgement',{timeout:30000},async t=>{
- const s=await bookingSetup(t),sourceAgent=await s.grant('delivery_agent',[A]),targetAgent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),foreignAgent=await s.grant('delivery_agent',[B]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),sourceAgent=await s.grant('delivery_agent',[A]),targetAgent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),foreignAgent=await s.grant('delivery_agent',[B]);
  const booked=await s.book();assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id;
  const start=await startTestDelivery(s,parcel,sourceAgent);await s.db.prepareCustody();
  const service=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
@@ -146,7 +160,7 @@ await test('specific custody grants and source release preserve current assignme
 });
 
 await test('custody rollback and lost commit reply preserve one receipt/event and exact uncertain command identity',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
  assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id;await startTestDelivery(s,parcel,agent);await s.db.prepareCustody();
  const service=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key],prepareKey=randomUUID();
  const manifest=await service.prepare(admin.token,q,prepareKey,headers(prepareKey),{agent_id:agent.id,items:[{parcel_id:parcel,expected_parcel_version:5,previous_receipt_id:null,instruction_id:null,grant_id:null}]},randomUUID());
@@ -166,7 +180,7 @@ await test('custody rollback and lost commit reply preserve one receipt/event an
 
 
 await test('tracked office custody blocks genuine proof until acknowledged handback; actual42 proof atomically releases recipient custody and replays once',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
  assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id;
  // Pricing retains its existing synthetic clock; delivery uses the live server clock.
  const live={...s,clock:()=>new Date()},start=await startTestDelivery(live,parcel,agent),code=await testDeliveryCode(live,parcel);
@@ -196,7 +210,7 @@ await test('tracked office custody blocks genuine proof until acknowledged handb
 
 
 await test('genuine proof custody hook rolls back with owning delivery failure and retries one original proof intent',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),booked=await s.book();
  assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id,live={...s,clock:()=>new Date()},start=await startTestDelivery(live,parcel,agent);
  const code=await testDeliveryCode(live,parcel);await s.db.prepareCustody();
  const custody=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key],prepareKey=randomUUID();
@@ -217,7 +231,7 @@ await test('genuine proof custody hook rolls back with owning delivery failure a
 });
 
 await test('each acknowledged custody generation needs independent exceptional review without resetting the attempt',{timeout:30000},async t=>{
- const s=await attachmentSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
+ const s=await attachmentSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  const started=await startTestDelivery({...s,clock:()=>new Date()},s.parcelId,agent);await s.db.prepareCustody();
  const custody=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
  const prepare=async(previous:string|null)=>{const key=randomUUID();return custody.prepare(admin.token,q,key,headers(key),
@@ -264,7 +278,7 @@ await test('each acknowledged custody generation needs independent exceptional r
 });
 
 await test('acknowledged reassignment preserves the challenge, removes former completion authority and requires a fresh independent review',{timeout:30000},async t=>{
- const s=await attachmentSetup(t),first=await s.grant('delivery_agent',[A]),next=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
+ const s=await attachmentSetup(t,await custodyDatabase(t)),first=await s.grant('delivery_agent',[A]),next=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  const started=await startTestDelivery({...s,clock:()=>new Date()},s.parcelId,first);await s.db.prepareCustody();
  const code=await testDeliveryCode(s,s.parcelId),service=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
  const initialKey=randomUUID(),manifest=await service.prepare(admin.token,q,initialKey,headers(initialKey),{agent_id:first.id,
@@ -319,7 +333,7 @@ await test('acknowledged reassignment preserves the challenge, removes former co
 });
 
 await test('ten-parcel custody report traces six genuine deliveries two physical returns and two held parcels at one cutoff',{timeout:60000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),other=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),other=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  const booked=await s.book({...s.body,parcels:Array.from({length:10},(_,n)=>({...s.body.parcels[0],weight_grams:n===9?99:100}))});
  assert.equal(booked.statusCode,201,booked.body);const parcels=booked.json().parcels.map((p:{id:string})=>p.id) as string[];
  // Grant the same fixture runtime once; repeated parcel journeys reuse those actual completed preparations.
@@ -410,7 +424,7 @@ await test('ten-parcel custody report traces six genuine deliveries two physical
 });
 
 await test('production custody HTTP gates writes, authenticates and protects CSV while paging the complete scoped worklist',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),other=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),viewer=await s.grant('read_only',[A]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),other=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]),viewer=await s.grant('read_only',[A]);
  const booked=await s.book({...s.body,parcels:Array.from({length:50},(_,n)=>({...s.body.parcels[0],weight_grams:n===49?19:20}))});
  assert.equal(booked.statusCode,201,booked.body);const parcels=booked.json().parcels.map((p:{id:string})=>p.id) as string[],parcel=parcels[0]!;
  const prepared=await s.prepared(),calculated=await s.tax.calculate(s.operator.token,org,A,randomUUID(),{intent_id:prepared.intent.id},randomUUID());
@@ -506,7 +520,7 @@ await test('production custody HTTP gates writes, authenticates and protects CSV
 });
 
 await test('custody candidate pages retain all active agents without siblings, duplicate rows or revoked access',{timeout:60000},async t=>{
- const s=await auditSetup(t),admin=await s.grant('franchise_admin',[A]);await s.db.prepareCustody();
+ const s=await auditSetup(t,undefined,await custodyDatabase(t)),admin=await s.grant('franchise_admin',[A]);await s.db.prepareCustody();
  const expected:string[]=[];
  for(let n=0;n<101;n++){const agent=await s.grant('delivery_agent',[A]);expected.push(agent.id);}
  const sibling=await s.grant('delivery_agent',[B]),revoked=await s.grant('delivery_agent',[A]);
@@ -522,7 +536,7 @@ await test('custody candidate pages retain all active agents without siblings, d
 });
 
 await test('different receiving agents competing for one released source produce one current custodian and one reassignment',{timeout:30000},async t=>{
- const s=await bookingSetup(t),giver=await s.grant('delivery_agent',[A]),targets=[await s.grant('delivery_agent',[A]),await s.grant('delivery_agent',[A])],admin=await s.grant('franchise_admin',[A]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),giver=await s.grant('delivery_agent',[A]),targets=[await s.grant('delivery_agent',[A]),await s.grant('delivery_agent',[A])],admin=await s.grant('franchise_admin',[A]);
  const booked=await s.book();assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id,start=await startTestDelivery(s,parcel,giver);await s.db.prepareCustody();
  const service=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key];
  const initialKey=randomUUID(),initial=await service.prepare(admin.token,q,initialKey,headers(initialKey),{agent_id:giver.id,items:[{parcel_id:parcel,expected_parcel_version:5,previous_receipt_id:null,instruction_id:null,grant_id:null}]},randomUUID());
@@ -552,7 +566,7 @@ await test('different receiving agents competing for one released source produce
 });
 
 await test('custody export lost commit reply, rollback, expiry and quota preserve immutable private capture identity',{timeout:30000},async t=>{
- const s=await bookingSetup(t),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
+ const s=await bookingSetup(t,await custodyDatabase(t)),agent=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  const booked=await s.book();assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id;await startTestDelivery(s,parcel,agent);await s.db.prepareCustody();
  const service=createParcelCustodyService(s.pool,true),q={organization_id:org,franchise_id:A},headers=(key:string)=>['idempotency-key',key],prepareKey=randomUUID();
  const manifest=await service.prepare(admin.token,q,prepareKey,headers(prepareKey),{agent_id:agent.id,items:[{parcel_id:parcel,expected_parcel_version:5,previous_receipt_id:null,instruction_id:null,grant_id:null}]},randomUUID());
