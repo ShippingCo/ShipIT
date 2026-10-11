@@ -410,3 +410,15 @@ Apply migration 35 and the [multilingual runtime grants and configuration](../..
 Customers can send LANGUAGE HI/EN. Optional Groq interpretation uses the existing server
 LLM_API_KEY; AI defaults off. Fixed language commands and trusted replies remain available
 without a model. [Acceptance and verification](../../docs/architecture/issue-51-verification.md).
+
+## Physical parcel custody (#143)
+
+Apply migration 47 and the narrow runtime grants, then enable server-only `CUSTODY_ENABLED`
+(default false). The production Parcel custody page supports identity-bound temporary-agent
+invitations, named receipt acknowledgement, explicitly authorized giver/receiver transfers,
+physical office return/discrepancies and source-linked worklists/counts. #42 remains the owner
+of delivery proof; custody never fabricates delivery, failure or RTO. Admin captures are
+actor-private, immutable and expire after 24 hours. See the [custody contracts, rollout,
+operator recovery and fictional browser runbook](../../docs/architecture/financial-operations.md#143-operator-and-development-runbook)
+and [API contract](../../docs/architecture/api-contract.md). Disable new physical commands
+through the flag while retaining historical reads and exact committed outcomes.

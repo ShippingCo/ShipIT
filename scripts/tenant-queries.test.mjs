@@ -308,3 +308,10 @@ test('cashbook HTTP query data exception cannot call or extract a raw query meth
  for(const code of ["request.query('SELECT * FROM shipit.cashbook_requests')","const run=request.query;run('SELECT * FROM shipit.cashbook_requests')","db.query('SELECT * FROM shipit.cashbook_requests')"])
  assert.ok(inspectSource(path,code).length,code);
 });
+
+test('custody HTTP request query data remains distinct from raw or extracted SQL execution',()=>{
+ const path='apps/api/src/modules/custody/routes.ts';
+ assert.deepEqual(inspectSource(path,'service.report(request.query)'),[]);
+ for(const code of ["request.query('SELECT * FROM shipit.custody_receipts')","const run=request.query;run('SELECT * FROM shipit.custody_receipts')","db.query('SELECT * FROM shipit.custody_receipts')"])
+  assert.ok(inspectSource(path,code).length);
+});

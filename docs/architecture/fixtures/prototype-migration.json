@@ -940,6 +940,21 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/agent-access.test.tsx",
+        "name": "creates only this franchise agent grant, exposes one-time code in memory and revokes exact current membership version",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-access.test.tsx",
+        "name": "reconciles lost invitation by read and offers revocation, never replaying its unrecoverable token command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/agent-access.test.tsx",
+        "name": "rejects foreign tenant projections and never mutates a multiple-franchise grant through this screen",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/app.test.tsx",
         "name": "store seeds itself before first render even with empty localStorage",
         "cases": null
@@ -1277,6 +1292,81 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-actions.test.tsx",
+        "name": "requires reassignment instruction and source-specific grant for mixed custody cohort",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-actions.test.tsx",
+        "name": "records missing separately from actual office receipt using exact source version",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-actions.test.tsx",
+        "name": "prevents replacement submission while locked and keeps giver actions separate from administration",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "projects only source fields and rejects invented proof, wrong control totals and missing custody",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "rejects duplicate parcels and reused delivery or failure evidence across a full cohort",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "requires immutable snapshot count, same cutoff and exact expiry while dropping unknown private fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "does not accept partial acknowledgement or a proof masquerading as unknown physical custody",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "rejects mismatched capture manifest, export identity and sibling snapshot before display",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "never confirms another manifest or approval and rejects receipt claims from proposal-only actions",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-data-access.test.ts",
+        "name": "discards an in-flight captured snapshot and its retry intent when scope changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-transfers.test.tsx",
+        "name": "prepares and releases exact source evidence without manually entering approval, instruction or manifest references",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-transfers.test.tsx",
+        "name": "rejects a mismatched named approval and does not offer giver controls to another account",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody-transfers.test.tsx",
+        "name": "rejects false preparation claims and office-grant destination/proof contradictions before display",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody.test.tsx",
+        "name": "retains exact acknowledgement after a lost response and blocks replacement navigation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody.test.tsx",
+        "name": "does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss",
         "cases": null
       },
       {
@@ -2033,6 +2123,18 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/AgentAccess.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/AgentAccess.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/AgentAccess.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
         "file": "apps/web/src/operations/Cashbook.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2050,6 +2152,26 @@
       },
       {
         "file": "apps/web/src/operations/CashbookSources.tsx",
+        "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/Custody.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/Custody.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Custody.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Custody.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Custody.tsx",
         "kind": "setTimeout"
       },
       {
@@ -2383,7 +2505,8 @@
         13,
         17,
         18,
-        138
+        138,
+        143
       ],
       "rules": [
         "docs/architecture/frontend-migration-contract.md",
@@ -2465,7 +2588,8 @@
         24,
         25,
         34,
-        138
+        138,
+        143
       ],
       "rules": [
         "docs/architecture/parcel-lifecycle.md",
@@ -2499,7 +2623,8 @@
         8,
         24,
         42,
-        66
+        66,
+        143
       ],
       "rules": [
         "docs/architecture/parcel-lifecycle.md"
@@ -2626,7 +2751,8 @@
         64,
         65,
         67,
-        139
+        139,
+        143
       ],
       "rules": [
         "docs/architecture/domain-contract.md",
@@ -2901,6 +3027,30 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #63: authorized saved ageing, explicit unknown dates, matching CSV and exact uncertain retry."
+    },
+    {
+      "file": "apps/web/src/test/agent-access.test.tsx",
+      "name": "creates only this franchise agent grant, exposes one-time code in memory and revokes exact current membership version",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-access.test.tsx",
+      "name": "reconciles lost invitation by read and offers revocation, never replaying its unrecoverable token command",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/agent-access.test.tsx",
+      "name": "rejects foreign tenant projections and never mutates a multiple-franchise grant through this screen",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
@@ -3445,6 +3595,126 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #33: old-scope dispatched mutation retains opaque recovery and cannot replay under a new franchise."
+    },
+    {
+      "file": "apps/web/src/test/custody-actions.test.tsx",
+      "name": "requires reassignment instruction and source-specific grant for mixed custody cohort",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-actions.test.tsx",
+      "name": "records missing separately from actual office receipt using exact source version",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-actions.test.tsx",
+      "name": "prevents replacement submission while locked and keeps giver actions separate from administration",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "projects only source fields and rejects invented proof, wrong control totals and missing custody",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "rejects duplicate parcels and reused delivery or failure evidence across a full cohort",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "requires immutable snapshot count, same cutoff and exact expiry while dropping unknown private fields",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "does not accept partial acknowledgement or a proof masquerading as unknown physical custody",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "rejects mismatched capture manifest, export identity and sibling snapshot before display",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "never confirms another manifest or approval and rejects receipt claims from proposal-only actions",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-data-access.test.ts",
+      "name": "discards an in-flight captured snapshot and its retry intent when scope changes",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-transfers.test.tsx",
+      "name": "prepares and releases exact source evidence without manually entering approval, instruction or manifest references",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-transfers.test.tsx",
+      "name": "rejects a mismatched named approval and does not offer giver controls to another account",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody-transfers.test.tsx",
+      "name": "rejects false preparation claims and office-grant destination/proof contradictions before display",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody.test.tsx",
+      "name": "retains exact acknowledgement after a lost response and blocks replacement navigation",
+      "cases": null,
+      "group": "recovery",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody.test.tsx",
+      "name": "does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss",
+      "cases": null,
+      "group": "recovery",
+      "disposition": "preserve",
+      "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",

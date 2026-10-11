@@ -11,6 +11,9 @@ describe('fail-closed runtime configuration', () => {
     expect(config.moneyReceiptWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:'true'}).moneyReceiptWritesEnabled).toBe(true);
     for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:value})).toThrow(ConfigurationError);
     expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',MONEY_RECEIPTS_ENABLED:'true'})).toThrow(ConfigurationError);
+    expect(config.custodyWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,CUSTODY_ENABLED:'true'}).custodyWritesEnabled).toBe(true);
+    for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,CUSTODY_ENABLED:value})).toThrow(ConfigurationError);
+    expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',CUSTODY_ENABLED:'true'})).toThrow(ConfigurationError);
     expect(config.cashbookWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,CASHBOOK_ENABLED:'true'}).cashbookWritesEnabled).toBe(true);
     for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,CASHBOOK_ENABLED:value})).toThrow(ConfigurationError);
     expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',CASHBOOK_ENABLED:'true'})).toThrow(ConfigurationError);

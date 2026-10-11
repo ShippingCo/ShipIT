@@ -168,6 +168,7 @@ export interface DisposableDatabase {
   prepareReceivingAccounts(): Promise<void>;
   prepareMoneyReceipts(): Promise<void>;
   prepareCashbook(): Promise<void>;
+  prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
@@ -354,6 +355,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.route_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       } finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCustody() {
+      await handle.prepareDeliveries();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.report_snapshots TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(metadata,rows) ON shipit.report_snapshots TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(agent_id) ON shipit.delivery_attempts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT ON shipit.custody_access_events,shipit.custody_commands,shipit.custody_assignment_instructions,shipit.custody_manifests,shipit.custody_manifest_items,shipit.custody_receipts,
+          shipit.custody_discrepancies,shipit.custody_transfer_grants,shipit.custody_grant_revocations,shipit.custody_releases,shipit.custody_manifest_cancellations,shipit.custody_events
+          TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
     },
     async prepareCashbook() {
       await handle.prepareMoneyReceipts();const owner=handle.ownerPool();

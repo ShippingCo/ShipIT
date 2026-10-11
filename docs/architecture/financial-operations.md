@@ -1490,3 +1490,212 @@ cases passed separately under unchanged original deadlines, with no failures,
 cancellations, skips or todos. Thus all 28 distinct cases have passing evidence
 across those runs; the cancelled aggregate remains recorded. Both native database
 clusters/data/leases were cleaned. Full final-head Linux CI remains the release gate.
+
+
+### #143 agent onboarding and physical parcel custody implementation plan
+
+Status: implementation in progress; this plan is not acceptance evidence. Prerequisites
+#14/#24/#27/#42/#137 are merged. #143 owns parcel custody; #144 owns agent money
+settlement and #145 owns cash close. D137 and D140 approvals do not grant agent
+ledger access or a new self-approval exception.
+
+Keep the seven approved roles. Reuse identity-bound membership invitations, acceptance,
+revocation and current franchise scopes for temporary delivery agents. Revocable access
+satisfies the engagement requirement without inventing a new login system or default
+employment duration. Local franchise admins manage their agents under W30; organization
+administrators retain only existing W42 management authority. Invitation creation returns
+its token once; the agent accepts as the named signed-in user. No directory search by
+customer phone, anonymous staff identity or deletion of historical evidence.
+
+The operational parcel status/custody fields describe lifecycle state; they do not prove
+physical receipt. Add an append-only physical receipt chain, scoped manifest and immutable
+items tied to actual dispatcher assignments and delivery attempts. Preparing a manifest
+reserves no physical possession. The named active recipient acknowledges the exact current
+manifest items; a committed receipt records server time, responsible agent, previous
+receipt, current parcel/attempt references, actor and command. Lock the organization,
+franchise and bounded parcel IDs in canonical order. A unique parcel sequence and unique
+predecessor prohibit competing successors; no browser value establishes custody.
+Legacy assignments with no receipt remain explicitly unknown; do not backfill evidence.
+
+Initial handovers require the current W10 assignment. Reassignment requires a separate,
+exact dispatcher instruction and W16 responsible-franchise admin preparation; named
+recipient acknowledgement records receipt, not an independent transfer permission.
+Recheck the dispatcher, administrator and recipient's current scopes at acknowledgement.
+The owning deliveries service then changes the current attempt agent and parcel assignment
+atomically with the acknowledged receipt, retaining the original attempt, assignment ID,
+recipient, challenge, lock state and resend/verification counters. Preserve old/new agent
+history. A new assignment is not a failed attempt or retry. Any exceptional-proof request
+from the previous agent becomes invalid; never carry its approval to the next agent.
+Existing OTP identity does not bind the agent, so reassignment requires no code disclosure,
+challenge regeneration or additional message send. Completion still requires #42 proof
+and the current assignment; the old agent immediately loses completion authority.
+
+Independent transfer initiation by an agent remains W16/G: add explicit W17 admin-granted,
+revocable capability bound to current assignment, source receipt and permitted destination.
+Never turn named-recipient acknowledgement into a blanket transfer grant. Agent release
+and receiving-agent acknowledgement preserve both sides of an agent-to-agent movement;
+admin recovery after access revocation records the administrator's physical receiving
+acknowledgement and discrepancy, not a fabricated agent signature. Capability revocation
+or membership removal preserves all receipts, commands and proofs.
+
+Physical return records a shop administrator's receiving acknowledgement, linked source
+receipt and a bounded discrepancy reason. It does not change attempt failure, office hold
+or carrier RTO state. Block proof completion while the tracked parcel is physically at the
+office; a subsequent acknowledged handover and current assignment restore eligibility.
+On genuine #42 completion, append recipient receipt referencing that exact immutable proof
+in the same transaction. No custody command may create delivery proof or money movement.
+
+Serve a bounded agent worklist using explicit current assignment/receipt predicates;
+owner manifest detail includes authorized source receipts and proof links. Never add agents
+to full-franchise shipment/customer/finance reads. Every retry, detail, worklist and receipt
+download rechecks current membership and nested ownership. Bulk delivery export is E04,
+franchise-admin only, with the existing private captured-export/access-audit discipline.
+Receipt retrieval is a single scoped record; it grants no bulk enumeration.
+
+Manifest outcomes at one server cutoff are mutually exclusive: delivered with real proof,
+physically returned, held by its named agent, reassigned, awaiting acknowledgement, or
+unknown historical custody. Failed-attempt count is a separately labelled overlapping
+operational count; never subtract it as another physical outcome. Every count retains
+manifest item, receipt/proof and failure source IDs and reconciles to its drill-through.
+Reassignment preserves the original manifest and distinguishes the later custodian.
+
+Implement additive migration47, runtime least-privilege grants, custody capability and
+idempotent command services, owning deliveries integration, validated Fastify routes and
+public DTOs. Update the production operations seam with agent onboarding/accept/revoke,
+manifest prepare/acknowledge/reassign, physical returns/discrepancies and source worklist.
+Reuse Material 3 tokens and provide labelled inputs, preserved safe drafts, visible pending,
+empty/error/retry states, keyboard focus and narrow-screen layouts. Demo remains fictional.
+
+Verification maps the full contract: a ten-parcel real PostgreSQL cohort with six actual
+#42 proofs, two office receipts and two held; two competing handovers; stale/repeated/lost
+acknowledgements; reassignment retaining challenge counters and old-agent denial; return
+without synthetic failure/RTO; revoked access with retained owner evidence; sibling/other-org
+read/write/export/retry denial; runtime immutable/FK/atomic constraints; fresh and populated
+migration46-to47 upgrades without backfill; exact cutoff/source counts; production UI
+keyboard/mobile and failure recovery. Focused checks precede final required quality/CI,
+review and gated merge. No live provider, accountant format or physical count qualification
+is implied by fictional evidence.
+
+Roll out schema and least-privilege grants first, then deploy APIs/UI with new custody writes
+disabled by default. Reads retain known/unknown history while disabled. Enable only after
+the synthetic full workflow and revocation checks. Compatible rollback disables new writes
+and retains evidence; schema repairs are forward-only. Existing legacy proof behavior remains
+compatible until a deployment enables tracking; once a parcel has tracked receipt evidence,
+proof must respect it even if new custody writes are subsequently disabled.
+
+Research and design challenge: [PostgreSQL row locking](https://www.postgresql.org/docs/18/explicit-locking.html)
+supports serialized bounded writers and consistent lock order; adapt existing transactions
+and verify races with independent connections. [PostgreSQL partial indexes](https://www.postgresql.org/docs/18/indexes-partial.html)
+can enforce one active projection, but defer a second mutable projection: an indexed unique
+append-only successor chain plus parcel locks supplies one authoritative latest physical
+receipt with less repair work. This is ShippingCo's inference, not a claim about a company's
+implementation. [AWS request identity guidance](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)
+supports retaining scoped caller keys and semantic fingerprints across uncertain replies;
+reuse existing command patterns and test post-commit replay, conflicts and revocation.
+All choices use existing PostgreSQL/services; no provider, queue or framework is added.
+
+
+#### #143 tracked proof and receipt chronology
+
+The #143 forward migration attaches physical-custody guards to the existing #42 proof
+and owned parcel transition. A tracked office receipt blocks proof completion. Only
+the actual immutable proof can append its recipient receipt, saved custody command
+and event in the same delivery transaction. A deferred proof check also requires that
+receipt. Replayed #42 commands do not rerun the transition. Untracked legacy deliveries
+retain their original behavior; no historical receipt is invented. These guards remain
+authoritative when new custody entry points are disabled.
+
+Receipt recording uses database transaction time. #42 proof completion can sample its
+server clock later within that transaction, so recording time is not a bound on the
+proof's completion instant. [PostgreSQL documents this distinction](https://www.postgresql.org/docs/18/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT).
+For historical outcomes both receipt recording and proof completion must be at or before
+the same cutoff; proof must still belong to the exact parcel, attempt, preceding agent
+and receipt chain, and cannot predate that agent's receipt. This adapts the existing
+transaction clock without adding infrastructure or weakening source identity checks.
+
+Initial real PostgreSQL evidence: 143-proof-custody verifies a real OTP blocked at the
+office, acknowledged handback using the same attempt/challenge, one genuine proof and
+recipient receipt on exact retry, and unchanged customer debt. This is focused synthetic
+evidence. Subsequent native cohort, reassignment and browser qualification are recorded below; final CI and merge still gate completion.
+
+### #143 exceptional review after acknowledged handover
+
+An exceptional delivery review belongs to its acknowledged physical custody receipt. Migration 47 adds a nullable, composite-owned receipt reference to delivery exception requests; existing requests stay NULL with no invented history. The unique key permits one request for each acknowledged receipt and retains one NULL request per legacy attempt. PostgreSQL 18's [unique-constraint NULLS NOT DISTINCT semantics](https://www.postgresql.org/docs/18/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS) support retaining that legacy limit without a separate partial index; the adopted cost is one bounded composite index plus the existing transaction and receipt chain. Duplicate requests return the existing controlled exception-invalid response after rollback. Database triggers derive the current receipt, reject requests or approvals while the parcel is at the office or held by another agent, and invalidate prior pending/approved reviews when custody changes. Proof insertion additionally checks the approved request against the exact current receipt. Recipient release preserves the completed review history.
+
+The delivery projection prefers the current non-invalidated request before timestamp ordering, so tied test clocks cannot select an obsolete approval. A return and handback permit fresh independent review without resetting the assignment, challenge, resend count, or failed-verification count. This is authority separation within the existing #42 review policy; it does not relax evidence requirements or permit self-approval. Native PostgreSQL evidence uses a protected finalized attachment and real delivery services, denies office-held requests and old approvals, then records one exceptional proof and recipient receipt with exact replay.
+
+### #143 acknowledged reassignment implementation
+
+A current dispatcher authorizes an exact parcel, attempt, assignment, original agent, receiving agent and parcel version. The physical handover still requires a live franchise-admin preparation or the current giver's scoped grant, the giver's release, and the named receiving agent's acknowledgement. Preparation and release leave completion authority with the original agent. Acknowledgement applies the owning delivery module's api.v1.deliveries.reassign command, one same-status parcel transition and one delivery.assignment_changed event, followed by the immutable receiving receipt and custody command, in the same transaction.
+
+The original attempt ID, assignment ID, recipient binding, challenge and remaining verification/resend counters survive. Only the current agent and parcel version change. The old agent loses reads/completion through existing current-assignment checks; the receiving receipt invalidates the old exceptional review and permits a fresh independent review. A guarded runtime grant permits updating the attempt's agent column; a BEFORE guard binds it to the exact reserved reassignment, and a deferred constraint requires its committed owning parcel transition. The parcel command's deferred completeness check additionally requires the actual receiving receipt and custody acknowledgement. SQL updates cannot substitute a journal row for receipt acknowledgement.
+
+Migration 47 extends the existing parcel edge/input/event contracts without changing released migrations. It follows the released receiving-account migration's explicit handling of the absent separate event owner check; existing event creation, shape and command-completeness guards retain ownership. Native verification identified that catalog difference before the correction, and the failed run remains recorded separately. A real different-agent handover verifies challenge preservation, old-agent proof denial, fresh independent exceptional review and exactly one transition/event. Faults after the parcel update or omission of the event roll back assignment, receipt and approval invalidation before exact-key retry.
+
+### #143 complete manifest counts and current worklist
+
+The private manifest report reads the entire manifest (at most 50 items) at one server cutoff under the existing current-membership transaction. Each item links its initial agent receipt, last eligible receipt, proof and failed-attempt source IDs. Indexed latest-receipt and first-departure lookups traverse receipt history without imposing an arbitrary history cap or deriving totals from a paged subset. Recipient receipt and actual proof must both be visible at the cutoff. Failed attempts are an overlapping subtotal within the responsible agent's custody interval; physical return never implies failure or carrier RTO.
+
+The current worklist pages 50 parcels using a parcel UUID cursor. Agents see currently assigned work or parcels they still physically hold; another agent's new assignment removes the previous holder's operational access. Completed parcels remain in the manifest's evidence and counts. A legacy assignment without a custody receipt explicitly shows unknown physical custody. Worklist DTOs contain operational references and docket only, with no recipient contact, OTP, customer directory or money. Owner and agent permissions are derived on each read; revocation does not erase owner history.
+
+The native ten-parcel scenario uses real #42 OTP completion for six parcels, real office receipts for two, and two retained agent receipts. It verifies every delivered count against actual proof IDs, re-reads the earlier held cutoff after those changes, adds a genuine failed attempt without changing 6/2/2 physical counts, and checks agent/other-agent/sibling/revoked access. The initial failure subtotal assertion exposed the pricing fixture's future parcel-service clock; the report correctly excluded that future source. The corrected test uses the owning parcel service's live clock for operational failure and reuses already completed runtime permission setup for its ten journeys. Its original 60-second case deadline remains unchanged.
+
+### #143 private custody exports and access history
+
+Custody exports reuse the existing report snapshot store and its immutable 24-hour payload, per-actor franchise key, expiry cleanup and active snapshot quota. A franchise admin captures the complete manifest cohort once; retrieval and CSV download require that same actor's current local admin authority. Each snapshot identifies custody_manifest_v1, the tenant, source manifest, agent, source cutoff, complete control totals and source-linked item rows. Later operational changes do not alter those rows or the same-key capture response. Generic report readers reject this definition; custody readers reject other definitions.
+
+The CSV quotes cells through the existing formula-safe report encoder. Each parcel row includes the common manifest, agent, cutoff and cohort control totals, followed by its item, parcel, outcome, initial/current receipt, delivery proof and failed-attempt IDs. These are operational evidence references; no recipient contact, OTP or money is exported. The production API transport and operator download now use this same protected snapshot seam.
+
+Read and worklist access, capture, snapshot read and download append immutable custody_access_events with actor, tenant, manifest/snapshot references, action, server time and request correlation. Composite foreign keys preserve source ownership. The safe canonical audit projection includes these records. Read-only query capabilities remain unable to mutate business or audit data: the membership boundary issues a separate scoped audit capability, and only an already-authorized custody export receives the snapshot-storage capability. Native tests caught and corrected accidental use of read and export capabilities for writes, without relaxing the generic scope guard.
+
+The real ten-parcel scenario additionally verifies immutable captured rows/CSV after a new failed attempt and exact replay; agent, another admin, sibling-franchise and revoked-admin download/capture denials; retained actor/correlation audit facts; and direct database rejection of audit update/deletion. A fresh inventory and populated migration upgrade validate the additive access table, with no fabricated historical accesses.
+
+### #143 production transport and rollout
+
+The custody services now register with the production Fastify composition. CUSTODY_ENABLED is explicit true/false, defaults false and rejects demo activation; apply migration 47 and runtime privileges before enabling physical commands. Reads and export capture remain available for authorized historical evidence while new physical commands are disabled. API handlers reuse the existing secure/developer session cookies, global browser CSRF checks, strict field validators and same-key server transactions. All custody responses are private/no-store. CSV is available through the existing JSON export seam and a protected attachment download with a UUID filename and nosniff.
+
+A native production-server case creates 51 actual scoped parcels and verifies complete keyset traversal without duplicates, agent and read-only ceilings, missing authentication and CSRF denial, disabled new writes and exact prepare/ack replay, private named manifest selection, source counts, protected export headers, later physical return with captured CSV unchanged, sibling download denial and revoked agent reads. Configuration validation and the tenant AST's real-call/extracted-query rejection controls also pass. The new HTTP file receives only the same request-query-data allowance as existing route files; SQL execution remains rejected. Subsequent real browser, competing-agent and export recovery qualification are recorded below; final repository gates remain required.
+
+### #143 operator custody controls
+
+The scoped operator custody page lists current parcels and handover manifests with explicit physical custody, operational status, source receipts and genuine proof references. Named agents acknowledge every prepared item; franchise admins capture private reports and download the unchanged CSV. Dispatcher reassignment authorization, admin preparation of up to 50 selected parcels, specific transfer approval/revocation, giver release, office receipt/discrepancies and prepared-manifest cancellation use the same command-intent seam. Preparation uses current parcel versions and receipt references; a changed assigned agent requires the dispatcher instruction, and an agent-held source requires its transfer approval. Missing records a discrepancy without asserting office receipt. Server responses supply saved references for the subsequent transfer steps.
+
+Pending and uncertain commands block navigation, franchise changes and replacement submission. Recovery retains the exact original body and key; scope generation changes clear private page state. DTO projections reject invented proof, partial acknowledgement, inconsistent cohort totals and reused evidence. Nine focused web tests verify those source, role, form and lost-response risks with synthetic transport; they do not qualify real browser journeys. Native tests separately traverse 101 active agent identities over two pages with no duplicates, excluding sibling and revoked memberships and denying continuation after reader revocation. Identity selection uses bounded UUID keyset pages rather than a silent 100-agent limit. The subsequent browser and native recovery evidence below qualifies those journeys and failure cases; full repository checks and review remain required before issue completion.
+
+The temporary-agent access panel reuses the existing membership endpoints. An administrator invites an existing verified account for the selected franchise; the named account accepts through the existing operator footer, activating the delivery-agent membership. The footer displays the signed-in account reference so the agent can supply the correct identity. Revocation uses the current membership version and keeps custody and access history; reactivation issues a fresh invitation. The panel projects only this franchise's single-franchise delivery-agent grants. Multiple-franchise grant changes remain in organization administration.
+
+Membership writes do not claim custody-command idempotency. A lost response blocks replacement writes and navigation until current membership/invitation records can be read. Invitation codes are one-time response data held only in component memory. If creation committed without delivering its response, a pending invitation is visible but its code cannot be recovered; an administrator can revoke it and create a replacement. Three web tests verify that recovery, exact current-version revocation, private projection and tenant/multiple-franchise boundaries. The extended native production HTTP case verifies identity-bound acceptance, unauthorized and sibling-franchise denial, seven-day expiry, custody visibility before/after activation and revocation, fresh reactivation and retained active/revoked history. Its first new assertion expected 403 for an unmanaged franchise; the existing resource-hiding contract correctly returned 404, and the strict assertion was corrected after inspecting that service. All original native deadlines remain unchanged.
+
+Current transfer discovery now provides the giving agent with approved source receipts, named destinations and matching current dispatcher instructions. The agent can prepare a handover directly from that evidence, find its pending outgoing manifests and confirm release without manually entering those references. Preparation remains conditional on an active delivery attempt and current assignment/instruction; recipient acknowledgement remains separate. Owners can revoke a displayed approval. Agent-only reads do not expose another giver's approval, and current choices exclude revoked grants, inactive giver/recipient identities and sources already transferred. Grant and outgoing-manifest lists use 50-row UUID keyset pages.
+
+Three focused web tests verify exact discovered-source preparation/release, named response binding, absence of another account's giver controls, private projection and contradictory preparation claims. Extended native grant/recovery tests verify actual query output before/after dispatcher instruction, giver-only discovery, released-manifest evidence, revoked grant hiding and removal of stale dispatcher/inactive recipient choices. The production HTTP test separately qualifies both new read routes, malformed cursors, another-agent denial, office release evidence and disappearance after actual return. Those tests pass with the original case/file deadlines and do not replace real browser, competing-agent race or export failure qualification.
+
+### #143 browser and recovery qualification before merge
+
+The loopback-only synthetic browser fixture runs the production React page, Fastify routes, runtime PostgreSQL role and existing auth/membership services. Actor selection creates a fresh disposable session through AuthRepository; production session expiry remains unchanged. Browser qualification exposed a delivery-agent workspace-context omission. Operator context now lists the agent's explicit active franchise metadata without granting general franchise-profile, directory or finance authority. Native HTTP verifies ready context for the local franchise, sibling hiding and unavailable context after revocation.
+
+Actual keyboard browser actions confirmed admin preparation, named-agent receipt, dispatcher instruction, specific admin transfer approval, giver preparation/release and receiving-agent acknowledgement. Preparation/release retained the old physical holder until acknowledgement. The owner report showed one reassigned and one actual damaged office return, zero delivered, and linked origin/current receipts. A missing report retained agent custody and did not create proof or an office receipt. A separate fresh fixture confirmed identity-bound invitation acceptance, activated scoped workspace, admin revocation and subsequent unavailable workspace. These are synthetic production-path browser checks, not provider qualification or production rollout.
+
+At a 390 by 844 viewport the report remained within the viewport (document width381, viewport390), with wrapped evidence references and usable controls. An owner captured and downloaded the actual protected CSV; its three records contained the header and two held parcels, matching total 2 / held 2 / delivered 0 and receipt IDs. Switching to the sibling franchise removed the old manifest, parcels and captured download; returning did not restore the captured private state. The browser viewport override was reset and temporary tab closed. The initial download observation timed out and reset browser control; a bounded concurrent event/control observation later returned the real downloaded file path and CSV bytes. The timeout is not recorded as passing evidence.
+
+Two additional native cases verify different receiving agents racing for a released source (one acknowledged custodian and one owning reassignment/event, exact winner replay, losing conflict, former-agent worklist removal), and snapshot rollback/lost committed response/expiry/quota (one immutable capture identity, retained expired replay identity, twenty active captures, exact replay at quota). They passed with the original 30-second case and 300-second file deadlines. Full repository quality, final CI and PR review remain required before completion.
+
+The native pagination-only case creates 51 current grants and 51 pending outgoing manifests through actual services, reads each complete 50+1 result without duplicates, and denies receiving-agent, sibling, revoked-grant and revoked-giver continuations. Its initial and timing-instrumented runs cancelled at the original 30-second deadline before paging assertions: prerequisite helpers repeatedly launched the migration CLI for unchanged schema. The fixture now actually applies and asserts all 47 migrations once, suppresses only redundant no-op launches during prerequisite permission setup, then restores the real migration function before business commands. The case passed in 25.8 seconds without changing its deadline, assertions, runtime permissions or writes. Fresh/populated migration acceptance is covered by its separate native cases, not this fixture optimization.
+
+The browser adapter binds acknowledgement/cancellation/revocation confirmations to the requested resource and rejects receipt claims from preparation, authorization, grant or release responses. Seven adapter tests include mismatched capture source, sibling snapshot, mismatched download identity and stale in-flight capture. Existing transport returns an aborted failure for a request cancelled while in flight; replaying its stale scope intent is rejected before dispatch. The original test's mistaken SCOPE_CHANGED expectation was corrected after inspecting that established transport contract. Other focused form, transfer, access and uncertain-receipt tests passed separately; no failed aggregate is labelled passing.
+
+### #143 operator and development runbook
+
+Apply migration 47 with the existing separate migration identity. Keep the application role's existing session, membership, delivery, parcel-command/transition/event and scoped read privileges. Add SELECT/INSERT on the12 custody tables listed by migration 47, SELECT/INSERT and expiry-only UPDATE(metadata,rows) on report_snapshots, and UPDATE(agent_id) on delivery_attempts. The SQL guards enforce exact owning commands and immutable evidence; the application role receives no schema ownership, trigger disable, table DELETE or other-column update grant. Check these permissions using the native runtime cases before setting server-only CUSTODY_ENABLED=true. Disable that flag to stop new physical commands while preserving authorized history and exact committed outcomes; repair released schema through a forward migration.
+
+In the production Parcel custody page, a franchise admin invites an existing verified account; that exact account accepts its one-time invitation in the operator footer. Prepare up to 50 current parcels for a named agent, then have that agent confirm actual receipt. For a different agent, obtain the dispatcher instruction and the specific admin transfer approval, let the giver prepare/release, and let the receiver acknowledge. Only that last step changes assignment and custody. For return, the admin records the actual received condition; missing records a discrepancy without office receipt. Inspect the manifest's source counts; delivered requires #42 proof. Capture/download is admin-private for 24 hours, limited to 20 active snapshots per actor/franchise; source changes do not rewrite a capture. Revoke an agent to remove current access while retaining owner history.
+
+For a fictional browser check with the guarded pinned disposable PostgreSQL runner, run `pnpm db:local exec node --experimental-strip-types apps/api/test/custody-browser-fixture.ts`. In another terminal start the existing web Vite task in production data mode, with API proxy `http://127.0.0.1:3061` and browser origin `http://localhost:5173`. The fixture prints only synthetic actor/parcel references. Open its localhost actor-selection URL for admin/giver/receiver/dispatcher/candidate, exercise the page, then request its loopback stop endpoint or interrupt the fixture. It cleans its registered resources; the runner owns cluster cleanup. The fixture accepts the canonical db_test and native Windows db_test_1 identities, requires NODE_ENV=test, and retains the existing guarded database provisioning. These actor-selection routes belong only to this synthetic fixture, never production buildServer.
+
+Local final planning (including219registered web declarations and17negative inventory controls), root lint/query AST, affected web/API types, API build and production web build passed. Released migration history confirms all46existing files unchanged. The first aggregate quality command passed37tooling tests but stopped at unregistered new source inventory; its log is retained. Exactly18reviewed custody/access test declarations and8navigation/download effects were registered with strict checks that no existing regressions, coupled fingerprints, exports, dependencies or routes changed. The corrected local aggregate passed tooling37, planning/prototype checks, lint, all five workspace types, testkit22, database unit12, API699 and web266 tests, then failed attachment infrastructure creation/cleanup because the local Docker engine is unavailable. The disposable native PostgreSQL wrapper stopped successfully. This is a failed aggregate; separate API/web builds and the focused native/browser results above do not establish full quality or final-commit CI. Full Linux integration and required final-commit gates remain necessary before merge.
+
+Linux CI head7502c946 passed all five quality jobs, including container-backed attachment tests, but failed three existing migration-repair cases before the API database group. Native reproduction confirmed all three: copied-directory repair counts in booking/proof still expected46 migrations, and the e-way synthetic repair timestamp preceded new migration47. Update those exact remaining counts and make synthetic booking/e-way repairs sort after47; retain rollback, unchanged populated source, immutability, repeat-install and original deadline assertions. Failed CI/native logs are retained. All three corrected native cases passed under their original30-second case/300000ms file deadlines, with no skips/cancellations and successful cluster cleanup. Planning/prototype validation also passed. Final-head Linux CI remains required; this focused result does not establish passing aggregate checks.
+
+Subsequent custody CI headbec8693 passed all83 database/schema cases and all five quality jobs, but named an existing messaging-effectiveness API failure before cancellation at the unchanged15-minute job limit. Native reproduction found #65's queue-age calculation used PostgreSQL microseconds while publishing a millisecond cutoff; its exact partial-hour equation failed. The owning correction was delivered separately in PR172, merged as e06da3914a9b0998a19e67c1537b9e499882799f after all7 checks passed (83DB+478API, zero failures/skips/cancellations/todos, container cleanup confirmed). Custody now incorporates that merged correction. The failed custody aggregate remains failed/cancelled evidence; original individual/file/job budgets and equality assertions are retained. The strengthened weekly fixture also passes on custody's migration47 schema under its original60-second case deadline, with successful owned-cluster cleanup. Final custody-head CI remains required before completion.
+
+Custody head3c1dfab completed83DB+493API integration cases with zero failures/skips/cancellations/todos and removed its disposable container, but the overall job was cancelled at the existing15-minute limit during completion. The required aggregate failed; those case results are not a passing job. Service fixtures now use the same bounded setup approach as pagination: assert one actual migration47 install, retain real prerequisite runtime grants, reuse the successfully completed membership/booking preparation within that disposable fixture, suppress repeated unchanged no-op migration CLI launches, and restore the real migrator after custody preparation. Dedicated populated46-to47 migration checks remain unchanged. No test assertion, individual/file/job deadline or production code changes in this correction. The first Windows whole-file run passed11cases but timed out two unchanged attachment-backed fixtures and reached its original300-second file deadline (three cancellations); its failed log is retained and the owned cluster stopped and cleaned up. Those two scenarios now inject the same prepared database through a backward-compatible optional test-fixture argument; other attachment tests retain their default setup. The corrected full native custody file passed all15cases in199.6seconds under the original300-second file cap and unchanged individual deadlines, with zero failures/skips/cancellations/todos and successful owned-cluster stop/data cleanup. The two previously timed-out attachment cases completed in12.1/13.6seconds; no acceptance assertions changed. API typecheck, fixture lint and planning/prototype219declarations+17negativecontrols passed. All final-head CI gates remain required before completion.
