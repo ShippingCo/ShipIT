@@ -226,6 +226,11 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     pools.add(pool);
     return pool;
   };
+  // Fixture grant setup does not need to re-run a completed full migration.
+  // Explicit migrate calls always use the real runner; partial/alternate/failed
+  // installs invalidate this knowledge, including historical upgrade fixtures.
+  let schemaReady = false;
+  const ensureSchema = async () => { validate(); if (!schemaReady) await handle.migrate(); };
   const handle: DisposableDatabase = {
     ...resource,
     migrationConfig() { return configuration(resource.migrationRole, migrationPassword); },
@@ -240,9 +245,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       validate();
       return trackedPool(configuration(resource.migrationRole, migrationPassword));
     },
-    async migrate(options) { validate(); return runMigrations(handle.migrationConfig(), options); },
+    async migrate(options) {
+      validate(); schemaReady = false;
+      const result = await runMigrations(handle.migrationConfig(), options);
+      schemaReady = options === undefined;
+      return result;
+    },
     async prepareAudit() {
-      validate(); await handle.migrate();
+      validate(); await ensureSchema();
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -254,7 +264,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     async prepareTenancy() {
       await handle.prepareAudit();
       validate();
-      await handle.migrate();
+      await ensureSchema();
       const owner = handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -265,7 +275,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     },
     async prepareAuth() {
       await handle.prepareAudit();
-      validate(); await handle.migrate();
+      validate(); await ensureSchema();
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -617,7 +627,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     },
     async prepareFixtures() {
       validate();
-      await handle.migrate();
+      await ensureSchema();
       const owner = handle.ownerPool();
       try {
         await owner.query('CREATE SCHEMA synthetic');

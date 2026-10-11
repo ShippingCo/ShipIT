@@ -196,4 +196,22 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
   client.release();
   await owner.close();
   assert.deepEqual(await database.migrate(), { applied: 48 });
+  const installedOwner = database.ownerPool(), held = await installedOwner.connect();
+  try {
+    await held.query('SELECT pg_advisory_lock($1::bigint)', [migrationLockId]);
+    // Grant preparation reuses only a successful full install; permissions are
+    // still granted against the actual tables while explicit migration stays guarded.
+    await database.prepareAudit();
+    assert.equal((await installedOwner.query<{ allowed: boolean }>(
+      "SELECT has_table_privilege($1, 'shipit.audit_history', 'SELECT') AS allowed",
+      [database.runtimeRole])).rows[0]?.allowed, true);
+    await assert.rejects(database.migrate(), { code: 'DB_MIGRATION_LOCKED' });
+    // A failed explicit attempt invalidates setup knowledge and must not be hidden.
+    await assert.rejects(database.prepareAudit(), { code: 'DB_MIGRATION_LOCKED' });
+  } finally {
+    await held.query('SELECT pg_advisory_unlock($1::bigint)', [migrationLockId]);
+    held.release();
+  }
+  await database.prepareAudit();
+  assert.deepEqual(await database.migrate(), { applied: 0 });
 });

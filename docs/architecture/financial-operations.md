@@ -2033,3 +2033,24 @@ and ledger inventory includes the new owned agent/COD tables, and the synthetic
 forward booking repair follows48. All six focused migration cases passed with
 zero skipped/cancelled/TODO cases and disposable-container cleanup. This explains
 the failed aggregate; it does not make that aggregate a passing run.
+
+
+The later API aggregate exposed the same stale total in nine legacy API fixture
+files, including custody's full-install helper. Only final unbounded migration
+counts were advanced; initial limited installs, retained source snapshots and
+no-op expectations are unchanged. All15 legacy custody cases passed after the
+correction, including populated upgrade, role revocation, races and real proof.
+
+CI at `fe1fa2de` passed its five quality jobs and83 schema cases but was cancelled
+at the existing15-minute database-job limit before an API aggregate result. It is
+not qualifying completion evidence. Fixture grant preparation now reuses knowledge
+of a successfully completed full default install instead of repeatedly invoking
+the migration runner as a no-op. Explicit migration calls always use the real
+runner, and alternate/partial/failed attempts invalidate that knowledge. Grants
+still execute on every preparation. The existing lock-disconnect case verifies
+real grants, cached preparation under the held lock, rejection of explicit migration,
+invalidation after that failure and recovery. All six migration cases passed.
+The same five-case agent-cash file passed in53.210seconds versus59.858 previously;
+no deadlines, concurrency limits, assertions or registered cases were changed.
+DB/API type checks passed. Fresh complete verification and final PR gates remain
+required; neither earlier failed/cancelled aggregate is relabelled as passing.
