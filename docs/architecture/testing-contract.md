@@ -38,18 +38,21 @@ application TypeScript/React. PostgreSQL dependencies are recorded in the
 | `pnpm test:api` | API configuration/security/lifecycle tests using Vitest injection and synthetic dependencies |
 | `pnpm test:web` or `pnpm --filter @shippingco/web test` | Existing standalone frontend tests; no PostgreSQL needed |
 | `pnpm test` | Testkit/DB unit tests, API injection, then frontend; any failure fails the command |
-| `pnpm test:db` | Runs 17 DB plus 1 API real PostgreSQL integration cases; guarded bootstrap configuration required |
+| `pnpm test:db` | Discovers and runs all DB and API PostgreSQL integration files serially by group; guarded bootstrap configuration required |
 | `pnpm db:local test:db` | Creates the pinned disposable PostgreSQL service, supplies generated bootstrap configuration, runs integration tests and cleans up |
-| `pnpm test:quality` | 10 tooling tests, including final CI gate, migration immutability, container lifecycle and import boundaries |
+| `pnpm test:quality` | Tooling, tenant-query and web-isolation tests, including strict DB shard execution, final CI gate, migration immutability, container lifecycle and import boundaries |
 | `pnpm quality` | Exact toolchain, tooling tests, planning checks, lint, all workspace typechecks, `pnpm test`, required `pnpm test:db`, build |
 | `pnpm db:local quality` or `pnpm db:local` | Runs full quality against a freshly provisioned disposable PostgreSQL service |
 | `pnpm db:local verify:gates` | Runs the disposable-checkout failure drills with a valid bootstrap for clean/restored quality |
 | `pnpm check:migrations` | Separately compares released migration files with `MIGRATION_BASE_SHA` or fetched `origin/main`; required in CI |
 
-CI `Quality (tests)` runs `pnpm test`; **PostgreSQL integration** runs
-`pnpm db:local test:db`. The branch-required **Planning and prototype checks** job
-uses `always()` and accepts exactly two successful results: the whole matrix and the
-PostgreSQL job. Failed, cancelled, skipped, missing or malformed results fail closed.
+CI `Quality (tests)` runs `pnpm test`; **PostgreSQL integration** runs a schema shard
+and four disjoint API file shards with `pnpm db:local test:db --shard <name>`.
+Every discovered file belongs to exactly one required shard; each owns a disposable
+PostgreSQL service and retains the full runner's strict assertions and cleanup.
+The branch-required **Planning and prototype checks** job uses `always()` and accepts
+exactly two successful aggregate results: the whole quality matrix and the whole
+PostgreSQL matrix. Failed, cancelled, skipped, missing or malformed results fail closed.
 Absent/unsafe DB configuration, unreachable service, empty/incomplete required tests,
 migration failure and setup/cleanup failure cannot yield a green database suite.
 

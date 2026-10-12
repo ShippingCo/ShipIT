@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { preflightTestDatabase, cleanupRegisteredResources } from '../packages/db/test/support.ts';
+import { databaseTestGroups } from './database-test-groups.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 // Empty files pass as wrapper tests. Only per-file summaries prove registration.
@@ -114,6 +115,7 @@ export async function executeDatabaseTests(files, registry, { signal, timeoutMs 
       if (!Number.isSafeInteger(file[key]) || file[key] < 0) throw new Error('DB_TEST_REPORT_INVALID');
       counts[key] += file[key];
     }
+    if (file.tests === 0) throw new Error('DB_TEST_SUITE_EMPTY');
   }
   for (const failure of report.failures) {
     if (failure && typeof failure.file === 'string' && Number.isSafeInteger(failure.line) &&
@@ -138,27 +140,27 @@ async function main() {
     await preflightTestDatabase();
     const folder = join(root, 'packages/db/test/integration');
     const files = (await readdir(folder)).filter(name => name.endsWith('.test.ts')).sort().map(name => join(folder, name));
-    if (files.length === 0) throw new Error('DB_TEST_SUITE_EMPTY');
+    const apiFolder = join(root, 'apps/api/test/database');
+    const apiFiles = (await readdir(apiFolder)).filter(name => name.endsWith('.test.ts')).sort().map(name => join(apiFolder, name));
+    const groups = databaseTestGroups(files, apiFiles, process.argv.slice(2));
     if (controller.signal.aborted) throw new Error('DB_TEST_INTERRUPTED');
     temporary = await mkdtemp(join(tmpdir(), 'shipit-db-tests-'));
     const registry = join(temporary, 'resources.jsonl');
     await writeFile(registry, '', { mode: 0o600 });
-    const result = await executeDatabaseTests(files, registry, { signal: controller.signal });
-    console.log(`PostgreSQL schema/DB group: ${result.passed} passed, 0 failed/skipped/cancelled/todo.`);
-    const apiFolder = join(root, 'apps/api/test/database');
-    const apiFiles = (await readdir(apiFolder)).filter(name => name.endsWith('.test.ts')).sort().map(name => join(apiFolder, name));
-    // Hundreds of API scenarios repeatedly install the full schema on Windows.
-    // Keep the aggregate bounded while retaining every individual test deadline
-    // and the platform's bounded file limit; this does not permit skipping failed work.
-    const apiResult = await executeDatabaseTests(apiFiles, registry, { signal: controller.signal,
-      // Windows Docker's repeated fixture setup exceeded the 15-minute aggregate
-      // budget with 360 API cases. Preserve individual deadlines and Linux CI's cap.
-      timeoutMs: process.platform === 'win32' ? 1_800_000 : 900_000 });
-    console.log(`PostgreSQL integration tests: ${result.passed} DB + ${apiResult.passed} API passed, 0 failed/skipped/cancelled/todo.`);
+    let passed = 0;
+    for (const group of groups) {
+      const started = performance.now();
+      const result = await executeDatabaseTests(group.files, registry, { signal: controller.signal,
+        // Preserve the existing schema and API budgets, including Windows Docker.
+        timeoutMs: group.name === 'schema/DB' ? 600_000 : process.platform === 'win32' ? 1_800_000 : 900_000 });
+      passed += result.passed;
+      console.log(`PostgreSQL ${group.name} group: ${result.passed} passed across ${group.files.length} files in ${Math.round(performance.now() - started)}ms, 0 failed/skipped/cancelled/todo.`);
+    }
+    console.log(`PostgreSQL integration tests: ${passed} passed, 0 failed/skipped/cancelled/todo.`);
   } catch (error) {
     const safeCodes = ['DB_TEST_CONFIG_INVALID', 'DB_TEST_CONNECTION_FAILED', 'DB_TEST_SUITE_EMPTY',
       'DB_TEST_SUITE_INCOMPLETE', 'DB_TEST_INTERRUPTED', 'DB_TEST_TIMEOUT', 'DB_TEST_EXECUTION_FAILED',
-      'DB_TEST_REPORT_INVALID', 'DB_TEST_PROCESS_CLEANUP_FAILED'];
+      'DB_TEST_REPORT_INVALID', 'DB_TEST_PROCESS_CLEANUP_FAILED', 'DB_TEST_SHARD_INVALID'];
     console.error(error instanceof Error && safeCodes.includes(error.message) ? error.message : 'DB_TEST_SETUP_FAILED');
     process.exitCode = 1;
   } finally {

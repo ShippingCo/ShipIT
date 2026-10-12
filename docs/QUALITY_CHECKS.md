@@ -133,23 +133,36 @@ explicitly discards the handled Promise. No async checks are disabled globally.
 
 Every PR into main and main push runs five independent matrix jobs on ubuntu-24.04:
 `Quality (planning)`, `Quality (lint)`, `Quality (types)`, `Quality (tests)`,
-`Quality (build)`, plus the required **PostgreSQL integration** job. Each job has a
-15-minute timeout and the same pinned toolchain. The PostgreSQL job runs
-`pnpm db:local test:db` with a digest-pinned container, generated credentials,
+`Quality (build)`, plus the required **PostgreSQL integration** matrix. Each job has a
+15-minute timeout and the same pinned toolchain. PostgreSQL runs one schema shard and
+four API shards using `pnpm db:local test:db --shard <schema|api-1|api-2|api-3|api-4>`.
+Sorted, fully discovered API files are assigned round-robin; tooling tests require
+the workflow matrix to cover each file exactly once, including newly added files.
+Each shard uses its own digest-pinned container, generated credentials,
 loopback-only port binding, bounded readiness and cleanup after failure or interruption.
 Matrix fail-fast is disabled so one failure does not hide other results. Older runs
 are cancelled when replaced. There are no changed-path shortcuts.
 
 The branch-required check remains **Planning and prototype checks**. It runs with
-`always()` and depends on both the entire matrix and PostgreSQL integration. Its
+`always()` and depends on both complete matrices. Its
 two-minute inline gate accepts exactly those two successful results. Failure,
 cancellation, skip, neutral, missing or malformed results cannot pass. It does not
 depend on checkout or installation.
 The tooling test executes the actual inline gate body for success and negative cases.
 
+Issue #144 exposed the aggregate CI scheduling limit: a PR run passed all 83 schema
+cases in 99 seconds, then the 15-minute job was cancelled before the API group's own
+deadline; main had also been cancelled. Shards isolate service load instead of
+increasing file concurrency or deadlines. The local `pnpm db:local quality` and
+`pnpm db:local test:db` commands still run the complete schema and API groups serially.
+Both modes retain two file workers, existing per-file/per-test/group deadlines,
+strict nonempty per-file results and zero failures/skips/cancellations/todos, with
+registered resource cleanup. Synthetic runner regressions exercise exact shard
+selection and reject incomplete execution, failures and timeouts.
+
 The planning job also runs `pnpm check:migrations`. Its checkout fetches full history
 and supplies the PR base SHA or previous main SHA as `MIGRATION_BASE_SHA`; this check
-cannot silently pass because a comparison commit is unavailable. The **10 tooling
+cannot silently pass because a comparison commit is unavailable. The **13 tooling
 tests** cover the workflow, final gate, migration history, container lifecycle,
 toolchain and lint/import boundaries.
 
