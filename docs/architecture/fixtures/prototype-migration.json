@@ -2205,6 +2205,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "keeps same-path history and replacement selections authoritative across capture and retry epochs, including round trips",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/shipment-cost.test.tsx",
         "name": "rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money",
         "cases": null
@@ -5409,6 +5414,14 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #147 completed-result repair: consume displayed outcomes once; explicit saved-report navigation/export wins over old completions; preserve unobserved recovery without crossing scope. Actual OperatorApp under controlled transport, not native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "keeps same-path history and replacement selections authoritative across capture and retry epochs, including round trips",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 navigation epoch repair: actual OperatorApp same-path history/replace and return-to-original-entry sequences keep selected/exported report authoritative; dispatch and exact retry each capture a monotonic navigation epoch. Controlled transport, six scenarios in one declaration."
     },
     {
       "file": "apps/web/src/test/shipment-cost.test.tsx",

@@ -993,3 +993,17 @@ No new effects, routes, prototype fingerprints or existing regression decisions 
 | --- | --- | --- |
 | apps/web/src/test/shipment-cost-navigation.test.tsx: consumes an observed capture once so explicit report navigation and export stay on the requested snapshot after OperatorApp remount | preserve | reports |
 | apps/web/src/test/shipment-cost-navigation.test.tsx: offers an unobserved late completion without overriding an explicit report and clears the recovered reference on authority loss | preserve | reports |
+
+## Issue #147 report selection epoch
+
+Dispatch and exact retry record the current monotonic navigation epoch. Every committed
+router location change advances it, including Back/Forward returning to the same entry.
+A completion after intervening navigation is offered for recovery and cannot replace the
+selected report. With no navigation after dispatch/retry, ordinary result opening remains.
+The actual OperatorApp controlled-router regression covers six capture/retry history,
+round-trip and replacement scenarios, asserting both selected and exported snapshot identity.
+Existing recovery/security declarations and effects/fingerprints are unchanged.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: keeps same-path history and replacement selections authoritative across capture and retry epochs, including round trips | preserve | reports |

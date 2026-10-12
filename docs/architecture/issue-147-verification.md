@@ -88,6 +88,17 @@ completed A → leave → explicitly open B preserves B and exports B; a late A 
 remains recoverable and is cleared on authority loss. Previously passing exact retry and
 late completion cases remain covered. Web types and lint passed.
 
+A further independent same-path history probe showed that component-local dispatch state
+was insufficient when only the saved-report query changed. The final navigation repair
+uses a monotonic committed-location epoch captured by both dispatch and exact retry.
+Intervening Back/Forward, including a round trip to the original entry, or query replacement
+preserves the explicitly selected report and offers the late capture separately. A deliberate
+capture/retry with no intervening navigation still opens its result. Forty-five focused
+React tests passed, including six actual-operator-shell scenarios within the added regression;
+web types, lint and planning passed (277 declarations, 17 negative controls). Independent
+review additionally ran eleven passing controlled-router probes across the original failures
+and eight selection-epoch cases; these remain distinct from native-browser qualification.
+
 The combined repairs still require final full quality, exact-head CI and independent
 re-review before release. The earlier successful gate does not approve later changes.
 
