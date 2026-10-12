@@ -1,6 +1,6 @@
 import React from 'react';
 import {afterEach,describe,it,expect,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {cashClose,closeCount,closeDetail} from '../data-access/cash-close';
 import CashClosing from '../operations/CashClosing';
 import {createScopeController} from '../operator/scope';
@@ -28,7 +28,7 @@ function transport(role:OperatorRole='operator',lost=false,self=false){
   if(u.pathname.endsWith('/download')){await new Promise(resolve=>setTimeout(resolve,1));return json({snapshot:exportMeta,columns:cashCloseExportColumns,csv:cashCloseExportColumns.map(c=>'"'+c+'"').join(',')+'\r\n'});}
   if(u.pathname.endsWith('/sessions'))return json({items:[{id:session,location_id:location,location_name:'Synthetic counter drawer',day:'2026-10-12',sequence:1,version:detail.session.version,state:detail.session.state,accepted_submission_id:detail.session.accepted_submission_id}],next_cursor:null});
   if(u.pathname.endsWith('/history'))return json({items:[],next_cursor:null});
-  if(u.pathname.endsWith('/sources'))return json({capture_id:capture,controls:detail.session.count!.controls,items:[{kind:'source',source:{source_kind:'receipt',source_id:id(11),location_id:location,account_id:id(10),direction:'in',amount_paise:'500000',occurred_at:at,recorded_at:at,request_id:null,correction_of:null,unknown_reason:null}},{kind:'source',source:{source_kind:'expense',source_id:id(12),location_id:location,account_id:id(10),direction:'out',amount_paise:'80000',occurred_at:at,recorded_at:at,request_id:id(13),correction_of:null,unknown_reason:null}}],next_cursor:null});
+  if(u.pathname.endsWith('/sources'))return json({capture_id:capture,controls:(detail.session.count??detail.session.accepted_count)!.controls,items:[{kind:'source',source:{source_kind:'receipt',source_id:id(11),location_id:location,account_id:id(10),direction:'in',amount_paise:'500000',occurred_at:at,recorded_at:at,request_id:null,correction_of:null,unknown_reason:null}},{kind:'source',source:{source_kind:'expense',source_id:id(12),location_id:location,account_id:id(10),direction:'out',amount_paise:'80000',occurred_at:at,recorded_at:at,request_id:id(13),correction_of:null,unknown_reason:null}}],next_cursor:null});
   if(u.pathname.endsWith('/'+detail.session.id))return json(detail);
   throw new Error('Unexpected test transport path '+u.pathname);
  }));
@@ -59,6 +59,18 @@ describe('cash closing controlled transport and evidence validation',()=>{
  it('renders server-authorized administrator recovery while retaining the departed opening observer',async()=>{
   const {detail}=transport('franchise_admin');detail.session.state='open';detail.session.submission=null;detail.session.version=2;detail.can_capture=true;
   fireEvent.click(await screen.findByRole('button',{name:/Synthetic counter drawer ·/}));expect(await screen.findByRole('button',{name:'Save immutable count'})).toBeEnabled();expect(detail.session.initial_opening!.actor_id).toBe(actor);
+ });
+ it('derives checklist capture, submission and stale states without claiming human source review',async()=>{
+  const {detail}=transport();fireEvent.click(await screen.findByRole('button',{name:/Synthetic counter drawer ·/}));const checklist=within(await screen.findByRole('region',{name:'Closing checklist'}));
+  expect(checklist.getByText(/Captured evidence available — 2 retained records/)).toBeInTheDocument();expect(checklist.getByText('Pending — submit the exact saved count.')).toBeInTheDocument();expect(checklist.getByText(/does not attest that someone reviewed/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Submit exact saved count reason'),{target:{value:'Explain and submit captured physical difference'}});fireEvent.click(screen.getByRole('button',{name:'Submit exact saved count'}));expect(await screen.findByText('Exact current count submitted.')).toBeInTheDocument();expect(checklist.getByText('Pending — eligible local administrator review required.')).toBeInTheDocument();
+  detail.source_changed=true;fireEvent.click(screen.getByRole('button',{name:'Refresh closing evidence'}));expect(await screen.findByText('Stale — reconcile changed source or opening evidence before approval.')).toBeInTheDocument();expect(screen.getByText('Saved submission retained; refreshed evidence requires linked resubmission.')).toBeInTheDocument();
+ });
+ it('keeps prior approval separate from reopened checklist work and labels approved late evidence',async()=>{
+  const {detail}=transport('franchise_admin');detail.session.accepted_count=detail.session.count;detail.session.accepted_submission_id=submission;detail.session.decision={id:id(20),submission_id:submission,kind:'approve',mode:'independent',actor_id:admin,reason:'Original independent approval',recorded_at:at};detail.session.state='open';detail.session.version=5;detail.session.count=null;
+  fireEvent.click(await screen.findByRole('button',{name:/Synthetic counter drawer ·/}));const checklist=within(await screen.findByRole('region',{name:'Closing checklist'}));expect(checklist.getByText('Pending replacement count; prior approved observation retained.')).toBeInTheDocument();expect(checklist.getByText('Pending replacement review; prior approval retained.')).toBeInTheDocument();expect(checklist.queryByText('Exact current count submitted.')).not.toBeInTheDocument();
+  detail.session.count=detail.session.accepted_count;detail.session.state='approved';detail.session.version=4;fireEvent.click(screen.getByRole('button',{name:'Refresh closing evidence'}));expect(await screen.findByText('Review recorded — independent administrator approval.')).toBeInTheDocument();
+  detail.source_changed=true;fireEvent.click(screen.getByRole('button',{name:'Refresh closing evidence'}));expect(await screen.findByText('Approval retained; current evidence needs reconciliation.')).toBeInTheDocument();
  });
  it('finance readers inspect immutable counts without recording or approval forms',async()=>{transport('accountant');fireEvent.click(await screen.findByRole('button',{name:/Synthetic counter drawer ·/}));await screen.findByText('Attributable expected cash');expect(screen.queryByRole('button',{name:'Save immutable count'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Record closing review'})).not.toBeInTheDocument();await waitFor(()=>expect(screen.getByRole('button',{name:'Capture private count export'})).toBeEnabled());});
 });

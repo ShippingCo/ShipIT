@@ -892,3 +892,14 @@ These effects add no persistent browser data or prototype write authority.
 | apps/web/src/test/cash-close.test.tsx: allows the attached CSV download anchor through the command navigation guard | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: renders server-authorized administrator recovery while retaining the departed opening observer | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: finance readers inspect immutable counts without recording or approval forms | preserve | reports |
+
+## Issue #145 derived checklist regression disposition
+
+The derived checklist labels current server evidence, pending submission/review, retained
+prior approval and stale reconciliation. It creates no additional persistent state or human
+review attestation. These regressions preserve that distinction through submission and reopen.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cash-close.test.tsx: derives checklist capture, submission and stale states without claiming human source review | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: keeps prior approval separate from reopened checklist work and labels approved late evidence | preserve | reports |

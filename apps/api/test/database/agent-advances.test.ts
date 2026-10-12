@@ -67,9 +67,10 @@ await test('fee applications cannot precede their paid advance and historical cu
  const version=async()=>Number((await effects.position(admin.token,q,randomUUID())).source_version);
  // All three occurrence boundaries use the source database clock, including its native
  // earning precision. Host/VM clock skew must not put the first cutoff before earning.
+ // Ten-millisecond boundaries deterministically exercise trimmed trailing-zero ISO output.
  async function instantAfter(previous:string|null=null){
   for(let attempt=0;;attempt++){
-   const row=(await s.db.adminQuery(`WITH moment AS MATERIALIZED(SELECT date_trunc('milliseconds',clock_timestamp()) at)
+   const row=(await s.db.adminQuery(`WITH moment AS MATERIALIZED(SELECT date_bin('10 milliseconds',clock_timestamp(),'2000-01-01Z'::timestamptz) at)
     SELECT to_char(at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at,
     at>GREATEST((SELECT max(recorded_at) FROM shipit.agent_fee_earnings),COALESCE($1::timestamptz,'-infinity'::timestamptz)) ready FROM moment`,[previous])).rows[0]!;
    if(row.ready)return String(row.at);assert(attempt<100,'Database source boundary did not advance');await new Promise(resolve=>setTimeout(resolve,2));
@@ -82,7 +83,7 @@ await test('fee applications cannot precede their paid advance and historical cu
   const applyKey=randomUUID();return effects.apply(admin.token,id,q,applyKey,headers(applyKey),{expected_version:2,decision_id:decision.id},randomUUID());
  }
  const fund=await submit({kind:'owner_funds'});await apply(fund.id);
- const advanceAt=await instantAfter(before);assert.ok(Date.parse(advanceAt)>Date.parse(before));
+ const advanceAt=await instantAfter(before);assert.match(advanceAt,/\.\d{2}0Z$/);assert.ok(Date.parse(advanceAt)>Date.parse(before));
  const advance=await submit({kind:'agent_advance',agent_payee_id:agent.id,payment_method:'cash',amount_paise:1000,occurred_at:advanceAt});await apply(advance.id);
  const fee={kind:'expense',agent_payee_id:agent.id,payment_method:'cash',amount_paise:4000,category:'transport',payee:'Synthetic agreed earning',fee_earning_id:earning.resource_id,fee_cash_paise:0,fee_advance_paise:500,fee_advance_request_id:advance.id};
  const facts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.cashbook_requests) requests,(SELECT count(*)::int FROM shipit.cashbook_request_decisions) decisions,
@@ -90,7 +91,8 @@ await test('fee applications cannot precede their paid advance and historical cu
  const beforeDenied=await facts();await assert.rejects(submit({...fee,occurred_at:before}),{code:'CASHBOOK_CONFLICT'});assert.deepEqual(await facts(),beforeDenied);
  // Equal instants are allowed, including a different input timezone representation.
  const equalOffset=new Date(Date.parse(advanceAt)+330*60_000).toISOString().replace('Z','+05:30');
- const expense=await submit({...fee,occurred_at:equalOffset});assert.equal(expense.occurred_at,advanceAt);
+ const expense=await submit({...fee,occurred_at:equalOffset});assert.equal(new Date(expense.occurred_at).toISOString(),advanceAt);assert.ok(!/\.\d*0Z$/.test(expense.occurred_at),'Public instant uses canonical fractional digits');
+ assert.equal((await s.db.adminQuery('SELECT occurred_at=$2::timestamptz equal_instant FROM shipit.cashbook_requests WHERE id=$1',[expense.id,advanceAt])).rows[0]!.equal_instant,true);
  const owner=s.db.ownerPool();t.after(()=>owner.close());
  const columns=['id','organization_id','franchise_id','kind','source_location_id','source_revision_id','target_location_id','target_revision_id','expected_source_version','amount_paise','currency','category','payee','responsible_employee_id','reason','occurred_at','actor_id','correlation_id','key_digest','fingerprint','payment_method','agent_payee_id','fee_earning_id','fee_cash_paise','fee_advance_paise','fee_advance_request_id'];
  const expressions=columns.map(c=>c==='id'?'$1':c==='correlation_id'?'$2':c==='key_digest'||c==='fingerprint'?'$3':c==='occurred_at'?'$4':'r.'+c);

@@ -132,3 +132,33 @@ lint/tenant-query checks passed. The next complete gate must qualify this repair
 these diagnostics do not establish a successful full run. Local diagnostic logs are
 `quality-agent-diagnostic.log`, `quality-agent-clocks.log`, `quality-agent-skew-red.log`
 and `quality-agent-clock-repair.log` under `.codex/logs`.
+
+## Residual canonical timestamp assertion and closing checklist
+
+The third full gate at `a4f845b` again reported only the advance-history API case
+after all84 schema cases passed. The unchanged case reproduced immediately in a
+representative two-file cohort at the required concurrency2. Its detailed assertion
+was expected `2026-10-12T16:39:27.410Z`, actual `2026-10-12T16:39:27.41Z`: the
+existing public instant formatter intentionally trims trailing fractional zeros.
+This concrete fixture string mismatch is separate from the prior clock-skew probes.
+The committed privacy-preserving aggregate reporter remains unchanged.
+
+The fixture now selects database10ms boundaries to guarantee trailing-zero input,
+checks canonical normalized ISO equality and checks native PostgreSQL timestamp
+equality for the persisted request. Before/equal/timezone-offset/later funding and
+all money assertions remain intact. Ageing, advances and cash-attribution files ran
+together at concurrency2:8/8 passed in8.690seconds with zero failures/skips/cancellations
+or todos and clean teardown. Logs retain both red cohort and repaired cohort results.
+
+Final scope review also identified the missing explicit closing checklist. The view
+now derives opening, physical-count, source/coverage, explanation, submission and
+approval states from existing server evidence. It distinguishes available source
+evidence from human review, prior approval from pending replacement work, and saved
+approval from current late-evidence reconciliation. It introduces no persistent
+checkbox or new approval policy. Two focused React cases cover submission/stale
+transitions and reopened/approved-late states; all10 closing React cases and all
+workspace typechecks passed. The governed inventory registers the two new cases.
+Prior actual-browser qualification remains valid for its recorded workflow; this
+checklist addition is qualified here by controlled React evidence, not a new browser
+claim. The first-opening observer restriction remains visible for independent policy
+review; this addition does not expand or reinterpret that rule.

@@ -1231,6 +1231,16 @@
       },
       {
         "file": "apps/web/src/test/cash-close.test.tsx",
+        "name": "derives checklist capture, submission and stale states without claiming human source review",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cash-close.test.tsx",
+        "name": "keeps prior approval separate from reopened checklist work and labels approved late evidence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cash-close.test.tsx",
         "name": "finance readers inspect immutable counts without recording or approval forms",
         "cases": null
       },
@@ -3692,6 +3702,22 @@
     {
       "file": "apps/web/src/test/cash-close.test.tsx",
       "name": "renders server-authorized administrator recovery while retaining the departed opening observer",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue 145 controlled transport checks reviewed physical closing, scoped commands and retained evidence; not database or actual browser proof."
+    },
+    {
+      "file": "apps/web/src/test/cash-close.test.tsx",
+      "name": "derives checklist capture, submission and stale states without claiming human source review",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue 145 controlled transport checks reviewed physical closing, scoped commands and retained evidence; not database or actual browser proof."
+    },
+    {
+      "file": "apps/web/src/test/cash-close.test.tsx",
+      "name": "keeps prior approval separate from reopened checklist work and labels approved late evidence",
       "cases": null,
       "disposition": "preserve",
       "group": "reports",

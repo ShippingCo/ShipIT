@@ -2173,3 +2173,11 @@ The original aggregate failures were not reproduced without deliberate skew; the
 exact original cause remains unproven. [Verification](issue-145-verification.md) keeps
 that distinction explicit. The role table above also clarifies existing E03 behavior:
 org-admin-only users can inspect closing history but cannot capture/download exports.
+
+The closing view includes a derived checklist for opening provenance, current physical
+count, source/coverage evidence, difference explanation, submission and approval.
+Captured rows are labelled available for inspection, never automatically reviewed.
+A reopened session shows its replacement count/submission/review as pending while
+retaining the old approval. Late source/opening changes label reconciliation work
+without revoking or overwriting the historical approved evidence. Checklist states
+come from the current server detail; no new attestation policy or stored checkbox exists.
