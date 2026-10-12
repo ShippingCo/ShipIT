@@ -447,7 +447,7 @@ REVOKE ALL ON FUNCTION shipit.check_cashbook_cod_sources(shipit.cashbook_request
 CREATE FUNCTION shipit.check_cashbook_fee_sources(request shipit.cashbook_requests) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 DECLARE earning shipit.agent_fee_earnings;advance shipit.cashbook_requests;previous shipit.cashbook_requests;
- origin uuid;used numeric;paid numeric;recognized integer;
+ origin uuid;used numeric;paid numeric;recognized integer;effective_at timestamptz;
 BEGIN
  -- Called under the owning franchise lock at submission, review and application.
  IF request.kind='agent_advance' AND request.correction_of IS NOT NULL THEN
@@ -470,6 +470,11 @@ BEGIN
  SELECT * INTO earning FROM shipit.agent_fee_earnings WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.fee_earning_id;
  IF earning.id IS NULL OR earning.agent_id IS DISTINCT FROM request.agent_payee_id OR (request.kind='expense' AND request.amount_paise<>earning.amount_paise)
  THEN RAISE EXCEPTION 'AGENT_FEE_EARNING_SOURCE_INVALID' USING ERRCODE='23514';END IF;
+ IF earning.basis='per_delivery' THEN
+  SELECT completed_at INTO effective_at FROM shipit.delivery_proofs WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=earning.proof_id;
+ ELSE effective_at=earning.recorded_at;END IF;
+ IF effective_at IS NULL OR request.occurred_at<effective_at
+ THEN RAISE EXCEPTION 'AGENT_FEE_NOT_YET_EARNED' USING ERRCODE='23514';END IF;
 
  SELECT COALESCE(sum(r.fee_cash_paise::numeric+r.fee_advance_paise),0),count(*) FILTER(WHERE r.kind='expense') INTO paid,recognized
  FROM shipit.cashbook_requests r JOIN shipit.cashbook_effects e ON e.organization_id=r.organization_id AND e.franchise_id=r.franchise_id AND e.request_id=r.id

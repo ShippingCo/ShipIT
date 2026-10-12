@@ -23,9 +23,13 @@ export async function validateFeeSources(scope:TenantAccess,input:CashbookReques
   if(!advance)throw new HttpError('RESOURCE_NOT_FOUND');if(BigInt(input.amount_paise)<BigInt(advance.applied))throw new HttpError('CASHBOOK_CONFLICT');
  }
  if(!input.fee_earning_id)return;
- const fee=(await scopedQuery<{agent_id:string;earned:string;recognized:string;paid:string}>(scope,[...actions],`SELECT agent_id,earned_paise::text earned,expense_paise::text recognized,(cash_paid_paise+advance_applied_paise)::text paid FROM shipit.agent_fee_positions
- WHERE {{franchise:organization_id:franchise_id}} AND earning_id=$1`,[input.fee_earning_id])).rows[0];
+ const fee=(await scopedQuery<{agent_id:string;earned:string;recognized:string;paid:string;effective:boolean}>(scope,[...actions],`SELECT f.agent_id,f.earned_paise::text earned,f.expense_paise::text recognized,(f.cash_paid_paise+f.advance_applied_paise)::text paid,
+  CASE e.basis WHEN 'per_delivery' THEN p.completed_at ELSE e.recorded_at END <= $2::timestamptz effective
+  FROM shipit.agent_fee_positions f JOIN shipit.agent_fee_earnings e ON e.organization_id=f.organization_id AND e.franchise_id=f.franchise_id AND e.id=f.earning_id
+  LEFT JOIN shipit.delivery_proofs p ON p.organization_id=e.organization_id AND p.franchise_id=e.franchise_id AND p.id=e.proof_id
+ WHERE {{franchise:f.organization_id:f.franchise_id}} AND f.earning_id=$1`,[input.fee_earning_id,input.occurred_at])).rows[0];
  if(!fee||fee.agent_id!==input.agent_payee_id)throw new HttpError('RESOURCE_NOT_FOUND');
+ if(!fee.effective)throw new HttpError('CASHBOOK_CONFLICT');
  let paid=BigInt(fee.paid),recognized=BigInt(fee.recognized);
  if(previous){paid-=BigInt(previous.fee_cash_paise!)+BigInt(previous.fee_advance_paise!);if(previous.kind==='expense')recognized-=BigInt(previous.amount_paise);}
  const total=BigInt(input.fee_cash_paise!)+BigInt(input.fee_advance_paise!);
