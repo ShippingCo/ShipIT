@@ -980,3 +980,16 @@ Back/Forward, and distinguish that evidence from native browser qualification.
 | apps/web/src/test/shipment-cost-navigation.test.tsx: clears every retained shipment operation on real scope abort and never allows replacing an unresolved command | preserve | reports |
 | apps/web/src/test/shipment-cost-navigation.test.tsx: preserves navigation scope only for identical complete context and discards late navigation or explicit refresh authority | preserve | reports |
 | apps/web/src/test/shipment-cost-navigation.test.tsx: recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file | preserve | reports |
+
+## Issue #147 completed-result consumption
+
+An acknowledged completed outcome is removed from the ephemeral command owner by identity,
+so remounts cannot replay a previously displayed capture. Unobserved late results remain
+recoverable. An explicitly selected different saved report keeps its selection and export;
+a recovered completion is offered separately and its reference is cleared on scope abort.
+No new effects, routes, prototype fingerprints or existing regression decisions change.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: consumes an observed capture once so explicit report navigation and export stay on the requested snapshot after OperatorApp remount | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: offers an unobserved late completion without overriding an explicit report and clears the recovered reference on authority loss | preserve | reports |

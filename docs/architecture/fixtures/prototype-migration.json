@@ -2195,6 +2195,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "consumes an observed capture once so explicit report navigation and export stay on the requested snapshot after OperatorApp remount",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "offers an unobserved late completion without overriding an explicit report and clears the recovered reference on authority loss",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/shipment-cost.test.tsx",
         "name": "rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money",
         "cases": null
@@ -5383,6 +5393,22 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #147 reviewed history-navigation repair: exact in-memory scope-owned command recovery across actual OperatorApp remount and reauthorization; abort, explicit refresh, changed full authority and stale context results clear private state. Controlled router tests, not new native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "consumes an observed capture once so explicit report navigation and export stay on the requested snapshot after OperatorApp remount",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 completed-result repair: consume displayed outcomes once; explicit saved-report navigation/export wins over old completions; preserve unobserved recovery without crossing scope. Actual OperatorApp under controlled transport, not native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "offers an unobserved late completion without overriding an explicit report and clears the recovered reference on authority loss",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 completed-result repair: consume displayed outcomes once; explicit saved-report navigation/export wins over old completions; preserve unobserved recovery without crossing scope. Actual OperatorApp under controlled transport, not native browser evidence."
     },
     {
       "file": "apps/web/src/test/shipment-cost.test.tsx",

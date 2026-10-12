@@ -73,6 +73,21 @@ planning passed; the inventory records four new tests and two observed effects w
 changing prior fingerprints. This is controlled React evidence, not a new native-browser
 qualification.
 
+Focused independent re-review at `b13170d` confirmed both original findings resolved;
+the reviewer's original two PostgreSQL probes then passed independently in 5.352 seconds.
+It found a further navigation regression: a completed capture A could override an explicit
+saved-report B selection after remount. The full gate on that now-obsolete commit was
+intentionally interrupted with exit 130 after schema tests passed, and owned resources
+were removed. Its incomplete API database run is not reported as a passing full gate.
+
+The follow-up completion repair acknowledges only the exact result already handled by
+the workspace. An explicit saved-report target takes priority over an unobserved late
+capture; the recovered capture remains selectable through a separate notice. Forty-four
+focused React tests passed, including two additional actual-operator-shell regressions:
+completed A → leave → explicitly open B preserves B and exports B; a late A alongside B
+remains recoverable and is cleared on authority loss. Previously passing exact retry and
+late completion cases remain covered. Web types and lint passed.
+
 The combined repairs still require final full quality, exact-head CI and independent
 re-review before release. The earlier successful gate does not approve later changes.
 
