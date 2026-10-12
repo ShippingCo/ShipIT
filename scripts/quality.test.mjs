@@ -7,6 +7,8 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { ESLint } from 'eslint';
 import { parse } from 'yaml';
+import { databaseShards, databaseTestGroups } from './database-test-groups.mjs';
+import { executeDatabaseTests } from './test-database.mjs';
 
 const workflow = parse(readFileSync('.github/workflows/ci.yml', 'utf8'));
 const checks = ['planning', 'lint', 'types', 'tests', 'build'];
@@ -98,11 +100,14 @@ test('the exact final CI gate fails closed for failed, cancelled, skipped and ab
 
 test('PostgreSQL integration runs unconditionally with pinned tools and disposable infrastructure', () => {
   const job = workflow.jobs.database;
-  assert.equal(job.name, 'PostgreSQL integration');
+  assert.equal(job.name, 'PostgreSQL integration (${{ matrix.shard }})');
   assert.equal(job['runs-on'], 'ubuntu-24.04');
   assert.equal(job['timeout-minutes'], 15);
   assert.equal(job.if, undefined);
   assert.equal(job['continue-on-error'], undefined);
+  assert.deepEqual(databaseShards, ['schema', 'api-1', 'api-2', 'api-3', 'api-4']);
+  assert.equal(job.strategy['fail-fast'], false);
+  assert.deepEqual(job.strategy.matrix, { shard: databaseShards });
   for (const step of job.steps) {
     assert.equal(step.if, undefined);
     assert.equal(step['continue-on-error'], undefined);
@@ -114,10 +119,80 @@ test('PostgreSQL integration runs unconditionally with pinned tools and disposab
       else assert.deepEqual(step.with, reference.with);
     }
   }
-  for (const command of ['pnpm check:toolchain', 'pnpm install --frozen-lockfile --ignore-scripts', 'pnpm db:local test:db']) {
+  for (const command of ['pnpm check:toolchain', 'pnpm install --frozen-lockfile --ignore-scripts',
+    'pnpm db:local test:db --shard ${{ matrix.shard }}']) {
     assert.ok(job.steps.some((step) => step.run === command), command);
   }
   assert.equal(job.services, undefined, 'Generated credentials belong to the bounded container helper');
+});
+
+test('database shards partition every discovered file exactly once and preserve the complete local default', () => {
+  const discover = folder => readdirSync(folder).filter(name => name.endsWith('.test.ts')).map(name => join(folder, name));
+  const schema = discover('packages/db/test/integration');
+  const api = discover('apps/api/test/database');
+  // A newly discovered file is automatically included, without editing a manifest.
+  for (const apiFiles of [api, [...api, 'apps/api/test/database/new-domain.test.ts']]) {
+    const groups = databaseShards.flatMap(shard => databaseTestGroups(schema, apiFiles, ['--shard', shard]));
+    assert.ok(groups.every(group => group.files.length > 0));
+    const selected = groups.flatMap(group => group.files);
+    assert.equal(new Set(selected).size, selected.length);
+    assert.deepEqual(selected.sort(), [...schema, ...apiFiles].sort());
+    assert.deepEqual(databaseTestGroups([...schema].reverse(), [...apiFiles].reverse()), [
+      { name: 'schema/DB', files: [...schema].sort() }, { name: 'API', files: [...apiFiles].sort() },
+    ]);
+  }
+  for (const args of [['--shard'], ['--shard', 'all'], ['--shard', 'api-0'], ['--shard', 'api-5'],
+    ['--shard', 'schema', 'extra'], ['--unknown', 'schema']]) {
+    assert.throws(() => databaseTestGroups(schema, api, args), /DB_TEST_SHARD_INVALID/);
+  }
+  for (const [schemaFiles, apiFiles, args] of [[[], api, []], [schema, [], []], [schema, [api[0]], ['--shard', 'api-4']]]) {
+    assert.throws(() => databaseTestGroups(schemaFiles, apiFiles, args), /DB_TEST_SUITE_EMPTY/);
+  }
+});
+
+test('selected database shards execute the exact discovered files through the strict runner', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'shipit-shard-execution-'));
+  const registry = join(directory, 'resources.jsonl');
+  const marker = join(directory, 'executed.jsonl');
+  try {
+    writeFileSync(registry, '');
+    const create = name => {
+      const file = join(directory, `${name}.test.mjs`);
+      writeFileSync(file, `import test from 'node:test';\nimport { appendFileSync } from 'node:fs';\nawait test('synthetic registration', () => appendFileSync(${JSON.stringify(marker)}, ${JSON.stringify(name + '\n')}));\n`);
+      return file;
+    };
+    const schema = [create('schema')], api = Array.from({ length: 7 }, (_, index) => create(`api-${index}`));
+    for (const shard of databaseShards) {
+      writeFileSync(marker, '');
+      const [group] = databaseTestGroups(schema, api, ['--shard', shard]);
+      const result = await executeDatabaseTests(group.files, registry);
+      assert.deepEqual(result, { tests: group.files.length, passed: group.files.length, failed: 0, skipped: 0, cancelled: 0, todo: 0 });
+      assert.deepEqual(readFileSync(marker, 'utf8').trim().split('\n').sort(),
+        group.files.map(file => file.slice(directory.length + 1, -'.test.mjs'.length)).sort());
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('strict database execution rejects empty files mixed with passing work and incomplete or failed cases', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'shipit-db-rejections-'));
+  const registry = join(directory, 'resources.jsonl');
+  const passing = join(directory, 'passing.test.mjs'), invalid = join(directory, 'invalid.test.mjs');
+  try {
+    writeFileSync(registry, '');
+    writeFileSync(passing, "import test from 'node:test'; await test('passing', () => {});\n");
+    for (const [source, expected] of [
+      ['', /DB_TEST_SUITE_EMPTY|DB_TEST_SUITE_INCOMPLETE/],
+      ["import test from 'node:test'; await test.skip('skipped', () => {});", /DB_TEST_SUITE_INCOMPLETE/],
+      ["import test from 'node:test'; await test.todo('todo');", /DB_TEST_SUITE_INCOMPLETE/],
+      ["import test from 'node:test'; await test('failure', () => { throw new Error('synthetic'); });", /DB_TEST_EXECUTION_FAILED/],
+      ["import test from 'node:test'; await test('cancelled', {timeout: 20}, () => new Promise(() => {}));", /DB_TEST_SUITE_INCOMPLETE/],
+    ]) {
+      writeFileSync(invalid, source);
+      await assert.rejects(executeDatabaseTests([passing, invalid], registry), expected);
+    }
+    writeFileSync(invalid, 'setInterval(() => {}, 1000);');
+    await assert.rejects(executeDatabaseTests([invalid], registry, { timeoutMs: 200 }), /DB_TEST_TIMEOUT/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('released migrations are immutable while forward additions are allowed', () => {

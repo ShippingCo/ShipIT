@@ -24,7 +24,7 @@ async function readRow(scope:TenantAccess,id:string,ownOnly=false) {
  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.id=$1 AND (NOT $2::boolean OR l.kind='noncash' OR l.custodian_id=$3)`,[id,ownOnly,c.actor.id])).rows[0];
  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');return row;
 }
-export function createCashLocationService(database:DatabasePool,writesEnabled=false) {
+export function createCashLocationService(database:DatabasePool,writesEnabled=false,allowAgentCustody=false) {
  return {
   async configure(token:string,idInput:unknown,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string) {
    const q=selection(query),id=idInput===null?null:uuid(idInput,'$'),input=locationInput(body),key=keyDigest(idempotencyKey(keyInput,headers)),fingerprint=digest({operation:'cashbook.location.configure',id,input});
@@ -46,7 +46,7 @@ export function createCashLocationService(database:DatabasePool,writesEnabled=fa
     const cash=account.methods.includes('cash');if((input.active||!before)&&cash!==(input.custodian_id!==null))throw new FieldValidationError('custodian_id','INVALID_FORMAT');
     if((input.active||!before)&&input.custodian_id!==null){
      const member=(await scopedQuery(scope,['cashbook.configure'],`SELECT m.user_id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
-      JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin')`,[input.custodian_id])).rows[0];if(!member)throw new HttpError('RESOURCE_NOT_FOUND');
+      JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND (m.role IN ('operator','franchise_admin') OR ($2::boolean AND m.role='delivery_agent'))`,[input.custodian_id,allowAgentCustody])).rows[0];if(!member)throw new HttpError('RESOURCE_NOT_FOUND');
     }
     const location=id??randomUUID();
     if(!id){

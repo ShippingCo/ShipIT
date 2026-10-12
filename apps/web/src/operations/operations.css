@@ -39,3 +39,9 @@
 .history-facts { display:grid; grid-template-columns:minmax(100px,1fr) minmax(0,3fr); gap:8px 16px; }
 .history-facts dd { margin:0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 @media(max-width:600px) { .history-facts { grid-template-columns:1fr; } .history-facts dt { font-weight:600; } }
+
+.ops-source-list code { overflow-wrap: anywhere; }
+.ops-source-list li { margin-block: 0.75rem; }
+.agent-statement-list button { white-space: normal; text-align: left; max-width: 100%; overflow-wrap: anywhere; }
+.agent-statement-evidence dd { overflow-wrap: anywhere; }
+.cash-handover-list button { white-space: normal; text-align: left; max-width: 100%; overflow-wrap: anywhere; }

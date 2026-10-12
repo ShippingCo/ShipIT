@@ -4,6 +4,7 @@ import {act,cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import type {CashbookRequestDto,OperatorRole} from '@shippingco/shared';
 import Cashbook from '../operations/Cashbook';
+import {formatMoney,rupeesToPaise} from '../operations/format';
 import {cashbook,cashbookDetail,cashbookPosition,cashbookReportPage,cashHandoverDetail} from '../data-access/cashbook';
 import {createScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
@@ -17,7 +18,7 @@ const position={as_of:now,source_version:9,unknown_sources:0,locations:[{locatio
 const handoverRequest={id:id(30),actor_id:id(8),recorded_at:now,version:1,source_location_id:id(14),source_revision_id:id(15),target_location_id:location.id,target_revision_id:location.revision_id,expected_source_version:9,amount_paise:20000,currency:'INR',reason:'Cash custody',occurred_at:now};
 const handover={source_custodian_id:id(8),target_custodian_id:user,request:handoverRequest,version:1,accepted_paise:0,remaining_paise:20000,ended_paise:0,state:'requested',current_source_version:9,commands:[],next_cursor:null};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
-function fixture(actor=user){let request={...original,actor_id:actor},decision:typeof review|null=null,applied:typeof effect|null=null,h=structuredClone(handover),lose=false,lost=false;const writes:{path:string;body:Record<string,unknown>;key:string}[]=[];
+function fixture(actor=user,initial:CashbookRequestDto=original,attribution?:unknown){let request={...initial,actor_id:actor},decision:typeof review|null=null,applied:typeof effect|null=null,h=structuredClone(handover),lose=false,lost=false;const writes:{path:string;body:Record<string,unknown>;key:string}[]=[];
  const fetcher=vi.fn(async(path:string,options:RequestInit={})=>{const url=new URL(path,'https://fictional.example.test');if(url.pathname==='/auth/bootstrap')return json({csrf_token:'synthetic_csrf'});
  if(options.method==='POST'){const body=JSON.parse(String(options.body)),key=(options.headers as Record<string,string>)['Idempotency-Key'];writes.push({path:url.pathname,body,key});let result:unknown;
  if(url.pathname.endsWith('/cashbook/requests')){request={...original,...body};result=request;}
@@ -28,12 +29,13 @@ function fixture(actor=user){let request={...original,actor_id:actor},decision:t
  if(url.pathname.endsWith('/cashbook/locations'))return json({items:[location],next_cursor:null});
  if(url.pathname.endsWith('/money-receipt-receivers'))return json({items:[{id:user,label:'Synthetic operator'}],next_cursor:null});
  if(url.pathname.endsWith('/cashbook/handovers'))return json({items:[{...h.request,...h,request:undefined,commands:undefined,next_cursor:undefined}],next_cursor:null,current_source_version:9});
+ if(url.pathname.endsWith('/attributions'))return json(attribution);
  if(url.pathname.includes('/cashbook/handovers/'))return json(h);
  if(url.pathname.endsWith('/cashbook/requests'))return json({as_of:now,items:[{...request,payment_method:request.payment_method??null,correction_of:request.correction_of??null,corrected_by:null,state:applied?'applied':decision?.decision??'requested',version:applied?3:decision?2:1}],next_cursor:null,current_source_version:9});
  if(url.pathname.includes('/attachments'))return json({items:[]});
  if(url.pathname.includes('/cashbook/requests/'))return json({request,decision,effect:applied,version:applied?3:decision?2:1,private_extra:'DO_NOT_RENDER'});
  if(url.pathname.includes('/cashbook/locations/'))return json(location);
- throw new Error('Unexpected read path');});vi.stubGlobal('fetch',fetcher);return {writes,fetcher,lose(){lose=true;},applied(amount:number){request.amount_paise=amount;decision=review;applied=effect;}};
+ throw new Error('Unexpected read path');});vi.stubGlobal('fetch',fetcher);return {writes,fetcher,lose(){lose=true;},applied(amount:number){request.amount_paise=amount;decision=review;applied=request.kind==='cod_reservation_reversal'?{...effect,legs:[]}:effect;}};
 }
 function controller(){const c=createScopeController();c.runtime.bind({userId:user,organizationId:org,franchiseId:franchise,permissions:'operator'});return c;}
 function view(roles:OperatorRole[],strict=false){const c=controller();const content=<MemoryRouter><a href="/business">Workspace link</a><select aria-label="Franchise"><option value={franchise}>First</option><option value={id(50)}>Second</option></select><Cashbook controller={c} roles={roles}/></MemoryRouter>;render(strict?<React.StrictMode>{content}</React.StrictMode>:content);return c;}
@@ -68,4 +70,100 @@ describe('captured cashbook reports and actual location revisions',()=>{
  it('downloads matching captured CSV in StrictMode and discards a late export after scope invalidation',async()=>{const f=reportsFixture(),NativeURL=URL,create=vi.fn(()=> 'blob:synthetic-cashbook');class TestURL extends NativeURL{static override createObjectURL=create;static override revokeObjectURL=vi.fn();}vi.stubGlobal('URL',TestURL);const click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{}),c=view(['accountant'],true);fireEvent.click(screen.getByRole('button',{name:'Cashbook sources'}));fireEvent.submit(screen.getByRole('form',{name:'Capture cashbook sources'}));await screen.findByRole('heading',{name:'Captured cashbook evidence'});fireEvent.click(screen.getByRole('button',{name:'Download matching cashbook CSV'}));await screen.findByText('CSV ready. It uses the same saved cutoff and control totals.');expect(create).toHaveBeenCalledTimes(1);expect(click).toHaveBeenCalledTimes(1);const base=f.fetcher.getMockImplementation()!;let resolve!:(response:Response)=>void,exported:Response|undefined;const delayed=new Promise<Response>(r=>{resolve=r;});f.fetcher.mockImplementation(async(path,options)=>{const response=await base(path,options);if(path.includes('/export')){exported=response;return delayed;}return response;});fireEvent.click(screen.getByRole('button',{name:'Download matching cashbook CSV'}));await act(async()=>{await Promise.resolve();});expect(exported).toBeDefined();act(()=>c.clear('signed_out'));await act(async()=>resolve(exported!));expect(create).toHaveBeenCalledTimes(1);expect(click).toHaveBeenCalledTimes(1);expect(screen.queryByRole('heading',{name:'Captured cashbook evidence'})).not.toBeInTheDocument();});
  it('shows current export permission and never gives an operator access to captured financial sources',async()=>{reportsFixture();view(['org_admin']);fireEvent.click(screen.getByRole('button',{name:'Cashbook sources'}));fireEvent.submit(screen.getByRole('form',{name:'Capture cashbook sources'}));await screen.findByText('Your role can read this snapshot but cannot export it.');expect(screen.queryByRole('button',{name:'Download matching cashbook CSV'})).not.toBeInTheDocument();cleanup();fixture();view(['operator']);await screen.findByRole('button',{name:/expense · .*requested/});expect(screen.queryByRole('button',{name:'Cashbook sources'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Configure cash locations'})).not.toBeInTheDocument();});
  it('uses the current actual receiving account revision and freezes the account/custodian of existing cash locations',async()=>{const f=fixture(),base=f.fetcher.getMockImplementation()!,writes:{body:Record<string,unknown>;path:string}[]=[];let current=location;f.fetcher.mockImplementation(async(path,options={})=>{const url=new URL(path,'https://fictional.example.test');if(url.pathname==='/api/v1/receiving-accounts')return json({items:[{id:location.account_id,revision_id:id(70),version:5,name:'Actual synthetic cash account',methods:['cash'],other_method_name:null,active:true,recorded_at:now}],next_cursor:null});if(url.pathname===`/api/v1/cashbook/locations/${location.id}/revisions`){const body=JSON.parse(String(options.body));writes.push({body,path:url.pathname});current={...location,name:body.name,version:body.expected_version+1,active:body.active,account_version:5};return json(current);}if(url.pathname===`/api/v1/cashbook/locations/${location.id}`)return json(current);return base(path,options);});view(['franchise_admin']);fireEvent.click(screen.getByRole('button',{name:'Configure cash locations'}));fireEvent.click(await screen.findByRole('button',{name:/Synthetic till · cash · version 1/}));await screen.findByText('Current account revision 5; location revision 1. No account balance is implied.');expect(screen.getByLabelText('Location receiving account')).toBeDisabled();expect(screen.getByLabelText('Named cash custodian')).toBeDisabled();fireEvent.change(screen.getByLabelText('Cash location name'),{target:{value:'Renamed recorded till'}});fireEvent.change(screen.getByLabelText('Location availability'),{target:{value:'inactive'}});fireEvent.submit(screen.getByRole('form',{name:'Save cash location revision'}));await screen.findByText('Current account revision 5; location revision 2. No account balance is implied.');expect(writes[0]!.body).toEqual({account_id:location.account_id,expected_account_version:5,custodian_id:user,name:'Renamed recorded till',active:false,expected_version:1});});
+});
+
+it('retains the named agent and actual payment method through an advance recording correction and rejects missing payee evidence',async()=>{
+ const advance:CashbookRequestDto={...original,kind:'agent_advance',agent_payee_id:id(88),category:null,payee:null};
+ expect(cashbookDetail({request:advance,decision:review,effect,version:3}).request.agent_payee_id).toBe(id(88));
+ expect(()=>cashbookDetail({request:{...advance,agent_payee_id:undefined},decision:review,effect,version:3})).toThrow();
+ expect(()=>cashbookDetail({request:{...original,agent_payee_id:id(88)},decision:review,effect,version:3})).toThrow();
+ const f=fixture(user,advance);f.applied(50000);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/agent advance · .*applied/}));
+ fireEvent.click(await screen.findByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Request kind')).toHaveValue('agent_advance');
+ expect(screen.getByLabelText('Payment method')).toHaveValue('cash');
+ expect(screen.queryByLabelText('Expense category')).not.toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText('Replacement recorded amount (₹; zero annuls)'),{target:{value:'490.00'}});
+ fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Source voucher confirms the actual advance amount'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));
+ await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(f.writes[0]!.body).toMatchObject({kind:'agent_advance',agent_payee_id:id(88),payment_method:'cash',amount_paise:49000,category:null,payee:null,correction_of:requestId,occurred_at:now});
+});
+it('preserves gross earned fee and explicit advance source when correcting recorded cash, and rejects invalid fee responses',async()=>{
+ const fee:CashbookRequestDto={...original,amount_paise:4000,agent_payee_id:id(88),fee_earning_id:id(89),fee_cash_paise:3000,fee_advance_paise:1000,fee_advance_request_id:id(90)};
+ expect(cashbookDetail({request:fee,decision:review,effect,version:3}).request.fee_cash_paise).toBe(3000);
+ for(const invalid of [{...fee,fee_cash_paise:4001},{...fee,agent_payee_id:undefined},{...fee,fee_advance_request_id:null},{...original,fee_cash_paise:3000}])expect(()=>cashbookDetail({request:invalid,decision:review,effect,version:3})).toThrow();
+ const f=fixture(user,fee);f.applied(4000);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/expense · .*applied/}));
+ expect(await screen.findByText('Recorded direct fee payment')).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Gross earned expense (₹)')).toHaveValue('40.00');
+ expect(screen.getByLabelText('Gross earned expense (₹)')).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Replacement direct fee payment (₹)'),{target:{value:'20.00'}});
+ fireEvent.change(screen.getByLabelText('Replacement advance applied (₹)'),{target:{value:'0'}});
+ fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Voucher confirms twenty rupees paid and the advance remains unapplied'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));
+ await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(f.writes[0]!.body).toMatchObject({kind:'expense',agent_payee_id:id(88),payment_method:'cash',amount_paise:4000,fee_earning_id:id(89),fee_cash_paise:2000,fee_advance_paise:0,fee_advance_request_id:id(90),correction_of:requestId,occurred_at:now});
+ cleanup();
+ expect(rupeesToPaise('90071992547409.91')).toBe(Number.MAX_SAFE_INTEGER);expect(rupeesToPaise('90071992547409.92')).toBeNull();
+ expect(formatMoney(Number.MAX_SAFE_INTEGER)).toMatch(/\.91$/);expect(formatMoney(-1)).toBe('-₹0.01');
+ const max=Number.MAX_SAFE_INTEGER,largeFee={...fee,amount_paise:max,fee_cash_paise:max-1,fee_advance_paise:1},precise=fixture(user,largeFee);precise.applied(max);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/expense · .*applied/}));fireEvent.click(await screen.findByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Replacement direct fee payment (₹)')).toHaveValue('90071992547409.90');
+ expect(screen.getByLabelText('Replacement advance applied (₹)')).toHaveValue('0.01');
+ fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Preserve every integer paise in this source-linked correction'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(precise.writes[0]!.body).toMatchObject({amount_paise:max,fee_cash_paise:max-1,fee_advance_paise:1});
+ cleanup();
+ const payment:CashbookRequestDto={...fee,kind:'agent_fee_payment',amount_paise:1000,fee_cash_paise:1000,fee_advance_paise:0,fee_advance_request_id:null,category:null,payee:null},later=fixture(user,payment);later.applied(1000);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/agent fee payment · .*applied/}));fireEvent.click(await screen.findByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Request kind')).toHaveValue('agent_fee_payment');expect(screen.getByLabelText('Replacement advance applied (₹)')).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Replacement direct fee payment (₹)'),{target:{value:'0'}});fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Annul the recorded later payment using the original source voucher'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(later.writes[0]!.body).toMatchObject({kind:'agent_fee_payment',amount_paise:0,fee_earning_id:id(89),fee_cash_paise:0,fee_advance_paise:0,fee_advance_request_id:null,agent_payee_id:id(88),category:null,payee:null});
+
+
+});
+
+it('retains seller COD allocation and private payment reference through remittance recording correction without creating an expense',async()=>{
+ const remittance:CashbookRequestDto={...original,kind:'cod_remittance',cod_allocation_id:id(91),payment_reference:'SYNTHETIC-SELLER-VOUCHER',category:null,payee:null};
+ expect(cashbookDetail({request:remittance,decision:review,effect,version:3}).request.cod_allocation_id).toBe(id(91));
+ for(const bad of [{...remittance,cod_allocation_id:undefined},{...remittance,payment_reference:null},{...original,cod_allocation_id:id(91),payment_reference:'SYNTHETIC'},{...remittance,payment_reference:' '}])expect(()=>cashbookDetail({request:bad,decision:review,effect,version:3})).toThrow();
+ const f=fixture(user,remittance);f.applied(50000);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/cod remittance · .*applied/}));expect(await screen.findByText('Seller COD source')).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Request kind')).toHaveValue('cod_remittance');expect(screen.getByLabelText('Payment method')).toHaveValue('cash');expect(screen.queryByLabelText('Expense category')).not.toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText('Replacement recorded amount (₹; zero annuls)'),{target:{value:'490.00'}});
+ fireEvent.change(screen.getByLabelText('Private seller payment reference'),{target:{value:'SYNTHETIC-CORRECTED-SELLER-VOUCHER'}});
+ fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Source voucher confirms only 490 rupees were remitted'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(f.writes[0]!.body).toMatchObject({kind:'cod_remittance',cod_allocation_id:id(91),payment_reference:'SYNTHETIC-CORRECTED-SELLER-VOUCHER',payment_method:'cash',amount_paise:49000,category:null,payee:null,correction_of:requestId,occurred_at:now});
+ expect(f.writes[0]!.body).not.toHaveProperty('fee_earning_id');expect(f.writes[0]!.body).not.toHaveProperty('agent_payee_id');
+});
+it('corrects a COD reservation without a payment method or seller payment reference',async()=>{
+ const reversal:CashbookRequestDto={...original,kind:'cod_reservation_reversal',cod_allocation_id:id(91),payment_reference:null,payment_method:null,category:null,payee:null};
+ expect(cashbookDetail({request:reversal,decision:review,effect:{...effect,legs:[]},version:3}).request.cod_allocation_id).toBe(id(91));
+ for(const bad of [{...reversal,cod_allocation_id:undefined},{...reversal,payment_reference:'SYNTHETIC'},{...reversal,payment_method:'cash'}])expect(()=>cashbookDetail({request:bad,decision:review,effect:{...effect,legs:[]},version:3})).toThrow();
+ expect(()=>cashbookDetail({request:reversal,decision:review,effect,version:3})).toThrow();
+ const f=fixture(user,reversal);f.applied(50000);view(['franchise_admin']);
+ fireEvent.click(await screen.findByRole('button',{name:/cod reservation reversal · .*applied/}));await screen.findByText('Seller COD source');
+ fireEvent.click(screen.getByRole('button',{name:'Request recording correction'}));
+ expect(screen.getByLabelText('Request kind')).toHaveValue('cod_reservation_reversal');expect(screen.queryByLabelText('Payment method')).not.toBeInTheDocument();expect(screen.queryByLabelText('Private seller payment reference')).not.toBeInTheDocument();
+ expect(screen.getByText(/adjusts the reservation and moves no cash/)).toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText('Replacement recorded amount (₹; zero annuls)'),{target:{value:'0'}});fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Restore the original seller reservation after independent source review'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));await screen.findByText('Recording correction of '+requestId+'. Original evidence remains unchanged.');
+ expect(f.writes[0]!.body).toMatchObject({kind:'cod_reservation_reversal',cod_allocation_id:id(91),payment_reference:null,payment_method:null,amount_paise:0,category:null,payee:null,correction_of:requestId,occurred_at:now});
+});
+
+it('shows captured receipt components and complete attribution totals after partial acknowledgement, with malformed ownership rejected',async()=>{
+ const row={ordinal:1,source_kind:'receipt',source_id:id(90),origin_location_id:id(14),origin_recorded_at:now,component_kind:'cod',component_id:id(91),receipt_id:id(90),cod_allocation_id:id(91),booking_id:null,amount_paise:'10000',component_captured_at:now};
+ const page={handover_id:id(30),command_id:id(31),as_of:now,amount_paise:'10000',attributed_paise:'10000',unattributed_paise:'0',unallocated_paise:'0',coverage:'captured',items:[row],next_cursor:null};
+ const f=fixture(user,original,page);view(['operator']);fireEvent.click(screen.getByRole('button',{name:'Cash custody'}));fireEvent.click(await screen.findByRole('button',{name:/requested · remaining/}));await screen.findByRole('form',{name:'Acknowledge cash handover'});
+ fireEvent.change(screen.getByLabelText('Actually received cash (₹)'),{target:{value:'100'}});fireEvent.change(screen.getByLabelText('Custody response reason'),{target:{value:'Synthetic counted cash received'}});fireEvent.submit(screen.getByRole('form',{name:'Acknowledge cash handover'}));
+ fireEvent.click(await screen.findByRole('button',{name:'View receipt attribution'}));await screen.findByText(/source attributed ₹100.00; unattributed ₹0.00/);expect(screen.getByText(/COD allocation 00000000-0000-4000-8000-000000000091/)).toBeInTheDocument();expect(screen.getByText(/does not identify physical notes/)).toBeInTheDocument();expect(f.writes).toHaveLength(1);
+ cleanup();
+ const c=controller();const adapter=cashbook(scopedApi(c));
+ for(const bad of [{...page,command_id:id(32)},{...page,attributed_paise:'9999'},{...page,items:[{...row,receipt_id:id(92)}]},{...page,items:[{...row,component_kind:'freight'}]},{...page,items:[{...row,amount_paise:'10001'}]},{...page,unallocated_paise:'1'},{...page,next_cursor:'2'},{...page,coverage:'legacy_unattributed'}]){vi.stubGlobal('fetch',vi.fn(async()=>json(bad)));await expect(adapter.attributions(id(30),id(31))).rejects.toMatchObject({code:'TEMPORARILY_UNAVAILABLE',kind:'protocol',dispatched:true});}
+ vi.stubGlobal('fetch',vi.fn(async()=>json({...page,coverage:'legacy_unattributed',items:[],attributed_paise:'0',unattributed_paise:'10000'})));expect((await adapter.attributions(id(30),id(31))).coverage).toBe('legacy_unattributed');
 });

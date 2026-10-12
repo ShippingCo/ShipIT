@@ -40,7 +40,7 @@ export function cashbookPositionDto(result:CashbookPositionCapture):CashbookPosi
   return {location_id:p.location_id,known_inflows_paise:p.inflows,known_outflows_paise:p.outflows,known_recorded_paise:p.recorded,available_paise:available>0n&&BigInt(p.unresolved_refunds)===0n?available.toString():'0',pending_reserved_paise:p.reserved,shortfall_paise:shortfall.toString(),unknown_sources:p.unknown_sources,state:shortfall>0n?'exception':p.unknown_sources?'incomplete':'recorded'};
  })};
 }
-export function createCashbookEffectService(database:DatabasePool,writesEnabled=false) {
+export function createCashbookEffectService(database:DatabasePool,writesEnabled=false,allowAgentMoney=false) {
  return {
   async position(token:string,query:unknown,correlation:string) {
    const q=selection(query);return withCashbookScope(database,token,q.organizationId,q.franchiseId,'cashbook.read',correlation,s=>captureCashbookPosition(s.access));
@@ -51,13 +51,14 @@ export function createCashbookEffectService(database:DatabasePool,writesEnabled=
     const scope=s.access,c=assertTenantAccess(scope,['cashbook.apply']);await lock(scope);const request=await requestRow(scope,id);
     const saved=(await scopedQuery<EffectRow>(scope,['cashbook.apply'],`SELECT * FROM shipit.cashbook_effects WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND key_digest=$2`,[c.actor.id,key])).rows[0];
     if(saved){if(saved.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');return effectDto(scope,saved);}if(!writesEnabled)throw new HttpError('CASHBOOK_DISABLED');
+    if((request.kind==='agent_advance'||request.fee_earning_id||request.cod_allocation_id)&&!allowAgentMoney)throw new HttpError('AGENT_MONEY_DISABLED');
     const decision=(await scopedQuery<{id:string;decision:string;actor_id:string}>(scope,['cashbook.apply'],`SELECT id,decision,actor_id FROM shipit.cashbook_request_decisions WHERE {{franchise:organization_id:franchise_id}} AND request_id=$1`,[id])).rows[0];
     if(!decision||decision.id!==input.decision_id||decision.decision!=='approved'||decision.actor_id===request.actor_id)throw new HttpError('CASHBOOK_APPROVAL_REQUIRED');
     if((await scopedQuery(scope,['cashbook.apply'],`SELECT id FROM shipit.cashbook_effects WHERE {{franchise:organization_id:franchise_id}} AND request_id=$1`,[id])).rows[0])throw new HttpError('VERSION_CONFLICT');
-    const proposal=requestDto(request);await validateSources(scope,proposal);
+    const proposal=requestDto(request);await validateSources(scope,proposal,false,allowAgentMoney);
     const positions=await captureCashbookPosition(scope),source=positions.locations.find(p=>p.location_id===request.source_location_id);
     if(!source)throw new HttpError('RESOURCE_NOT_FOUND');
-    const amount=BigInt(request.amount_paise),previous=await correctionTarget(scope,proposal),legs=previous?correctionLegs(request.kind,BigInt(previous.amount_paise),amount,request.source_location_id,request.target_location_id):movementLegs(request.kind,amount,request.source_location_id,request.target_location_id,BigInt(source.available_paise));
+    const amount=BigInt(request.fee_cash_paise??request.amount_paise),previous=await correctionTarget(scope,proposal),legs=request.kind==='cod_reservation_reversal'?[]:previous?correctionLegs(request.kind,BigInt(previous.fee_cash_paise??previous.amount_paise),amount,request.source_location_id,request.target_location_id):request.fee_earning_id&&amount===0n?[]:movementLegs(request.kind,amount,request.source_location_id,request.target_location_id,BigInt(source.available_paise));
     for(const leg of legs){const position=positions.locations.find(p=>p.location_id===leg.location_id);if(!position)throw new HttpError('RESOURCE_NOT_FOUND');const after=BigInt(position.known_recorded_paise)+(leg.direction==='in'?1n:-1n)*leg.amount_paise;if(after>maximumPaise||after< -maximumPaise)throw new HttpError('CASHBOOK_CONFLICT');}
     const effect=randomUUID();await scopedQuery(scope,['cashbook.apply'],`INSERT INTO shipit.cashbook_effects(id,organization_id,franchise_id,request_id,decision_id,actor_id,correlation_id,key_digest,fingerprint)
      SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,[effect,c.permittedFranchiseIds[0],id,decision.id,c.actor.id,c.correlationId,key,fingerprint,c.organizationId]);

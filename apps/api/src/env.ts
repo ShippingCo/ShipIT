@@ -22,6 +22,7 @@ export interface RuntimeConfig {
   readonly financialWorkflowWritesEnabled?: boolean;
   readonly cashbookWritesEnabled?: boolean;
   readonly custodyWritesEnabled?: boolean;
+  readonly agentMoneyWritesEnabled?: boolean;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
@@ -117,6 +118,9 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const custodyWritesEnabled=env.CUSTODY_ENABLED==='true';
   if(env.CUSTODY_ENABLED!==undefined&&!['true','false'].includes(env.CUSTODY_ENABLED))issue('CUSTODY_ENABLED','INVALID_FORMAT');
   if(custodyWritesEnabled&&environment==='demo')issue('CUSTODY_ENABLED','INCONSISTENT');
+  const agentMoneyWritesEnabled=env.AGENT_MONEY_ENABLED==='true';
+  if(env.AGENT_MONEY_ENABLED!==undefined&&!['true','false'].includes(env.AGENT_MONEY_ENABLED))issue('AGENT_MONEY_ENABLED','INVALID_FORMAT');
+  if(agentMoneyWritesEnabled&&environment==='demo')issue('AGENT_MONEY_ENABLED','INCONSISTENT');
   const cashbookWritesEnabled=env.CASHBOOK_ENABLED==='true';
   if(env.CASHBOOK_ENABLED!==undefined&&!['true','false'].includes(env.CASHBOOK_ENABLED))issue('CASHBOOK_ENABLED','INVALID_FORMAT');
   if(cashbookWritesEnabled&&environment==='demo')issue('CASHBOOK_ENABLED','INCONSISTENT');
@@ -147,6 +151,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     financialWorkflowWritesEnabled,
     cashbookWritesEnabled,
     custodyWritesEnabled,
+    agentMoneyWritesEnabled,
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
   });
 }

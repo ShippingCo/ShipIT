@@ -168,6 +168,7 @@ export interface DisposableDatabase {
   prepareReceivingAccounts(): Promise<void>;
   prepareMoneyReceipts(): Promise<void>;
   prepareCashbook(): Promise<void>;
+  prepareAgentMoney(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
@@ -225,6 +226,11 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     pools.add(pool);
     return pool;
   };
+  // Fixture grant setup does not need to re-run a completed full migration.
+  // Explicit migrate calls always use the real runner; partial/alternate/failed
+  // installs invalidate this knowledge, including historical upgrade fixtures.
+  let schemaReady = false;
+  const ensureSchema = async () => { validate(); if (!schemaReady) await handle.migrate(); };
   const handle: DisposableDatabase = {
     ...resource,
     migrationConfig() { return configuration(resource.migrationRole, migrationPassword); },
@@ -239,9 +245,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       validate();
       return trackedPool(configuration(resource.migrationRole, migrationPassword));
     },
-    async migrate(options) { validate(); return runMigrations(handle.migrationConfig(), options); },
+    async migrate(options) {
+      validate(); schemaReady = false;
+      const result = await runMigrations(handle.migrationConfig(), options);
+      schemaReady = options === undefined;
+      return result;
+    },
     async prepareAudit() {
-      validate(); await handle.migrate();
+      validate(); await ensureSchema();
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -253,7 +264,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     async prepareTenancy() {
       await handle.prepareAudit();
       validate();
-      await handle.migrate();
+      await ensureSchema();
       const owner = handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -264,7 +275,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     },
     async prepareAuth() {
       await handle.prepareAudit();
-      validate(); await handle.migrate();
+      validate(); await ensureSchema();
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT USAGE ON SCHEMA shipit TO ${identifier(resource.runtimeRole)}`);
@@ -367,6 +378,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
           TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
+    async prepareAgentMoney() {
+      await handle.prepareCashbook();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.agent_settlement_submissions,shipit.agent_settlement_decisions,shipit.agent_daily_cash_captures,shipit.agent_money_commands,shipit.cod_beneficiaries,shipit.cod_beneficiary_revisions,shipit.cod_obligations,shipit.cod_obligation_revisions,shipit.cod_receipt_allocations,shipit.agent_fee_term_revisions,shipit.agent_fee_earnings TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.agent_settlement_events,shipit.cash_receipt_component_captures,shipit.cash_receipt_components,shipit.cash_handover_attributions,shipit.delivery_proofs,shipit.delivery_attempts,shipit.cod_receipt_positions,shipit.agent_fee_positions,shipit.agent_advance_positions,shipit.agent_fee_applied_requests TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(id) ON shipit.cod_obligations TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
     async prepareCashbook() {
       await handle.prepareMoneyReceipts();const owner=handle.ownerPool();
       try {
@@ -379,6 +398,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT ON shipit.money_receipts,shipit.money_receipt_commands,shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.cod_receipt_allocations') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT ON shipit.cod_receipt_allocations,shipit.cod_receipt_positions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT(id,organization_id,franchise_id,receipt_id,principal_id,operation_id,version,key_digest,fingerprint,input,correlation_id)
           ON shipit.money_receipt_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT(id,organization_id,franchise_id,command_id,customer_id,account_id,account_revision_id,amount_paise,currency,method,receiver_id,initial_custodian_id,occurred_at,external_reference)
@@ -606,7 +627,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
     },
     async prepareFixtures() {
       validate();
-      await handle.migrate();
+      await ensureSchema();
       const owner = handle.ownerPool();
       try {
         await owner.query('CREATE SCHEMA synthetic');

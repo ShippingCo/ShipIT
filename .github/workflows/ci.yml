@@ -62,9 +62,13 @@ jobs:
         if: matrix.check == 'build'
         run: pnpm build
   database:
-    name: PostgreSQL integration
+    name: PostgreSQL integration (${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [schema, api-1, api-2, api-3, api-4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -87,7 +91,7 @@ jobs:
       # The helper starts and removes the pinned container with generated
       # credentials, including on failure or cancellation, and exposes loopback only.
       - name: Run required PostgreSQL integration tests
-        run: pnpm db:local test:db
+        run: pnpm db:local test:db --shard ${{ matrix.shard }}
   validate:
     # Preserve the existing branch-required check name during rollout.
     name: Planning and prototype checks

@@ -30,6 +30,7 @@ import { createEwayService } from './modules/eway/service.ts';
 import { registerEway } from './modules/eway/routes.ts';
 import {registerCustody} from './modules/custody/routes.ts';
 import {registerCashbook} from './modules/cashbook/routes.ts';
+import {registerAgentCashCaptures} from './modules/agent-settlements/routes.ts';
 import {createExpenseAttachmentService} from './modules/attachments/expense-service.ts';
 import { createAttachmentService } from './modules/attachments/service.ts';
 import { registerAttachments } from './modules/attachments/routes.ts';
@@ -148,7 +149,8 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       registerCustody(instance,database,config.environment!=='developer',config.custodyWritesEnabled===true&&config.environment!=='demo');
       const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';
-      registerCashbook(instance,database,config.environment!=='developer',cashbookWrites);
+      registerCashbook(instance,database,config.environment!=='developer',cashbookWrites,config.agentMoneyWritesEnabled===true&&config.environment!=='demo');
+      registerAgentCashCaptures(instance,database,config.environment!=='developer',config.agentMoneyWritesEnabled===true&&config.environment!=='demo');
       if(attachments){registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');registerAttachments(instance,createExpenseAttachmentService(database,attachments,cashbookWrites),config.environment!=='developer','request_id');}
       registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock),createCarrierRateService(database,pricingClock));
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
@@ -157,7 +159,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
-      registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
+      registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true,config.agentMoneyWritesEnabled===true&&config.environment!=='demo'),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
       registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');

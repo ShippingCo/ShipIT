@@ -1,0 +1,15 @@
+/** Minimum owned finance sources for the manual agent/COD workflow. No contacts, proof secrets or bank credentials. */
+export const agentMoneyCatalogs=['beneficiaries','obligations','allocations','fee-terms','fee-earnings','advances','proofs','receipts','parcels'] as const;
+export type AgentMoneyCatalog=typeof agentMoneyCatalogs[number];
+export interface AgentMoneySource {id:string;recorded_at:string}
+export interface CodBeneficiarySource extends AgentMoneySource {revision_id:string;version:number;name:string;active:boolean}
+export interface CodObligationSource extends AgentMoneySource {revision_id:string;version:number;booking_id:string;parcel_id:string;customer_id:string;beneficiary_id:string;beneficiary_revision_id:string;amount_paise:string;active:boolean}
+export interface CodAllocationSource extends AgentMoneySource {receipt_id:string;obligation_id:string;obligation_revision_id:string;beneficiary_id:string;beneficiary_revision_id:string;collected_paise:string;remitted_paise:string;reversed_paise:string;reserved_paise:string;remaining_paise:string}
+export interface AgentFeeTermSource extends AgentMoneySource {agent_id:string;revision_id:string;version:number;basis:'per_delivery'|'agreed_period';amount_paise:string;valid_from:string;valid_until:string;active:boolean}
+export interface AgentFeeEarningSource extends AgentMoneySource {agent_id:string;term_revision_id:string;basis:'per_delivery'|'agreed_period';proof_id:string|null;parcel_id:string|null;covered_from:string|null;covered_until:string|null;earned_paise:string;expense_paise:string;direct_paid_paise:string;cash_paid_paise:string;noncash_paid_paise:string;advance_applied_paise:string;remaining_paise:string}
+export interface AgentAdvanceSource extends AgentMoneySource {head_request_id:string;agent_id:string;payment_method:'cash'|'upi'|'card'|'bank_transfer'|'other';paid_paise:string;applied_paise:string;remaining_paise:string}
+export interface AgentProofSource extends AgentMoneySource {parcel_id:string;agent_id:string;completed_at:string;earning_id:string|null}
+export interface AgentReceiptSource extends AgentMoneySource {account_id:string;customer_id:string;receiver_id:string;initial_custodian_id:string|null;method:'cash'|'upi'|'card'|'bank_transfer'|'other';amount_paise:string;freight_applied_paise:string;cod_reserved_paise:string;available_paise:string;occurred_at:string}
+export interface AgentParcelSource extends AgentMoneySource {booking_id:string;customer_id:string;docket:string;obligation_id:string|null}
+export interface AgentMoneySourceMap {beneficiaries:CodBeneficiarySource;obligations:CodObligationSource;allocations:CodAllocationSource;'fee-terms':AgentFeeTermSource;'fee-earnings':AgentFeeEarningSource;advances:AgentAdvanceSource;proofs:AgentProofSource;receipts:AgentReceiptSource;parcels:AgentParcelSource}
+export interface AgentMoneySourcePage<K extends AgentMoneyCatalog> {kind:K;organization_id:string;franchise_id:string;as_of:string;timezone:'Asia/Kolkata';currency:'INR';items:AgentMoneySourceMap[K][];next_cursor:string|null}
