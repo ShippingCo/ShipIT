@@ -32,8 +32,11 @@ export async function validateFeeSources(scope:TenantAccess,input:CashbookReques
  if(input.kind==='expense'?(recognized!==0n||BigInt(input.amount_paise)!==BigInt(fee.earned)):recognized!==BigInt(fee.earned))throw new HttpError('CASHBOOK_CONFLICT');
  if(paid+total>BigInt(fee.earned))throw new HttpError('CASHBOOK_CONFLICT');
  if(input.fee_advance_request_id){
-  const advance=(await scopedQuery<{agent_id:string;remaining:string}>(scope,[...actions],`SELECT agent_id,remaining_paise::text remaining FROM shipit.agent_advance_positions WHERE {{franchise:organization_id:franchise_id}} AND origin_id=$1`,[input.fee_advance_request_id])).rows[0];
+  const advance=(await scopedQuery<{agent_id:string;remaining:string;occurred_at:Date}>(scope,[...actions],`SELECT p.agent_id,p.remaining_paise::text remaining,r.occurred_at FROM shipit.agent_advance_positions p
+   JOIN shipit.cashbook_requests r ON r.organization_id=p.organization_id AND r.franchise_id=p.franchise_id AND r.id=p.head_id
+   WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.origin_id=$1`,[input.fee_advance_request_id])).rows[0];
   if(!advance||advance.agent_id!==input.agent_payee_id)throw new HttpError('RESOURCE_NOT_FOUND');
+  if(input.fee_advance_paise!>0&&advance.occurred_at.getTime()>Date.parse(input.occurred_at))throw new HttpError('CASHBOOK_CONFLICT');
   const released=previous?.fee_advance_request_id===input.fee_advance_request_id?BigInt(previous.fee_advance_paise!):0n;
   if(BigInt(input.fee_advance_paise!)>BigInt(advance.remaining)+released)throw new HttpError('CASHBOOK_CONFLICT');
  }

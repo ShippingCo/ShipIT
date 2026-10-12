@@ -487,6 +487,8 @@ BEGIN
   ) SELECT c.* INTO advance FROM chain c WHERE NOT EXISTS(SELECT 1 FROM chain next WHERE next.correction_of=c.id);
   IF advance.id IS NULL OR advance.agent_payee_id IS DISTINCT FROM request.agent_payee_id
   THEN RAISE EXCEPTION 'AGENT_FEE_ADVANCE_SOURCE_INVALID' USING ERRCODE='23514';END IF;
+  IF request.fee_advance_paise>0 AND advance.occurred_at>request.occurred_at
+  THEN RAISE EXCEPTION 'AGENT_FEE_ADVANCE_NOT_YET_PAID' USING ERRCODE='23514';END IF;
   SELECT COALESCE(sum(r.fee_advance_paise::numeric),0) INTO used FROM shipit.cashbook_requests r
   JOIN shipit.cashbook_effects e ON e.organization_id=r.organization_id AND e.franchise_id=r.franchise_id AND e.request_id=r.id
   WHERE r.organization_id=request.organization_id AND r.franchise_id=request.franchise_id AND r.fee_advance_request_id=request.fee_advance_request_id
