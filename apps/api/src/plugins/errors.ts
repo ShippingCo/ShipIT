@@ -7,6 +7,8 @@ const errors = {
   CUSTODY_CONFLICT:[409,'Parcel custody evidence has changed. Refresh the handover and current assignment.'],
   CUSTODY_DISABLED:[409,'New parcel custody writes are disabled. Saved evidence remains available.'],
   CUSTODY_ASSIGNMENT_REQUIRED:[409,'A current dispatcher assignment instruction is required for this handover.'],
+  SHIPMENT_COST_DISABLED:[409,'New shipment cost writes are disabled. Saved history and exact completed-command replay remain available.'],
+  SHIPMENT_COST_CONFLICT:[409,'Cost source identity, version or allocation conflicts. Review the current evidence and preview again.'],
   CASH_CLOSE_DISABLED:[409,'New cash closing writes are disabled. Saved history and exact completed-command replay remain available.'],
   CASH_CLOSE_SOURCE_CHANGED:[409,'Cash source evidence changed in this count window. Save a refreshed linked count before review.'],
   CASH_CLOSE_OPENING_CHANGED:[409,'The opening evidence changed. Refresh the opening and submit a linked count.'],

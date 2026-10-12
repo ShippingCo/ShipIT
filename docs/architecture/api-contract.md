@@ -647,3 +647,41 @@ initial opening; the UI uses the selected decision's server eligibility. Neither
 nor merely capturing an ending creates an opening approval. A combined closing's self-review
 label may differ from its opening-review label when only the ending is self-authored; each
 saved approval describes the evidence author it actually reviewed.
+
+### Shipment costs and contribution (#147)
+
+Public types are in `packages/shared/src/shipment-cost.ts`. All endpoints are scoped by
+`organization_id`/`franchise_id`, authenticated cookie and standard CSRF on writes,
+`Cache-Control: no-store`. Franchise admins alone mutate costs (W70); report R25/R28
+reads and E03 exports remain unchanged. An org-admin/accountant/operator read grant
+never implies cost mutation. Reauthorize current membership before every replay.
+
+- `GET /api/v1/shipment-costs?cursor=`: 100 source heads, opaque scoped keyset cursor.
+- `GET /api/v1/shipment-costs/selectors?cursor=`: bounded owned booking/parcel, applied
+  expense and approved purchase-rate references; no customer directory projection.
+- `GET /api/v1/shipment-costs/:id`: immutable revisions and allocation history, bounded
+  at 5,000 revisions and 8 MiB with a controlled limit error, never truncated.
+- `POST /api/v1/shipment-costs`: one `ShipmentCostInput`, durable actor-key command.
+- `POST /api/v1/shipment-costs/:id/revisions`: same input with matching `source_id` and
+  `expected_version`; full replacement allocations, no silent over-allocation.
+- `POST /api/v1/shipment-costs/imports/preview`: `{rows: ShipmentCostInput[]}` (1–100),
+  or `{format:'shipit_cost_csv_v1',content_base64:string}`. Strict CSV headers are
+  `category,state,amount_paise,effective_at,reason,reference,supplier,document,line,booking_id,parcel_id`;
+  each row is one whole-source booking allocation. JSON supports split allocations,
+  corrections and native rate/expense references. Preview resolves server evidence,
+  records precise row failures and is immutable. It never applies money or costs.
+- `POST /api/v1/shipment-costs/imports/:id/apply`: `{}` and a durable command key;
+  all rows commit atomically after revalidating the exact preview source versions.
+  Invalid preview, stale sources and conflicting canonical identity fail the batch.
+- `POST /api/v1/reports/contribution`: `ContributionFilter`; null E/K chooses the
+  same current server instant. A selected E/K is canonicalized to six fractional
+  digits without rounding source facts. 31-day IST booking cohort, 5,000 rows,
+  8 MiB, actor-bound 24-hour frozen snapshot and 100-row pages.
+- `GET /api/v1/reports/contribution/:id?offset=` and `.../:id/export`: existing
+  report authorization/expiry semantics; source evidence in each booking row supports
+  drill-through. Export returns formula-safe CSV with allowlisted columns and source
+  IDs, never private reasons or invoice details.
+
+`SHIPMENT_COST_WRITES_ENABLED=false` by default. Disabled entry retains history and
+exact completed-command replay. Uncertain results must retry the identical key/body;
+changed bodies conflict. There are no monetary side effects or external deliveries.

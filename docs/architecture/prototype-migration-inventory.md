@@ -923,3 +923,87 @@ opening approval remains pending. No timer/listener or human attestation is adde
 | Regression | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/cash-close.test.tsx: permits an opening author to reject another counter without granting approval to that opening | preserve | reports |
+
+## Issue #147 shipment cost and contribution regression disposition
+
+The production Reports entry uses the scoped shipment-cost adapter, `ShipmentCostEditor`,
+`ShipmentCosts` and `Contribution`. These files do not import the prototype store;
+existing exports, transitive callers, imports, routes and dependency fingerprints are unchanged.
+The before-unload/click/franchise-change listeners prevent replacing unresolved commands,
+and the scope-abort listener clears private drafts and evidence. All listeners are removed
+on cleanup. The one-second CSV object-URL timer releases the explicitly prepared download.
+No persistent browser data, automatic import, purchase verification or payment authority is added.
+
+Fourteen controlled-transport regressions preserve exact source/allocation and report arithmetic,
+native rate and expense selection (including corrected actual zero expense), immutable import
+preview/apply, historical precision, private export, scope clearing, report-navigation response
+invalidation and keyboard focus. These tests do not claim actual browser or PostgreSQL execution;
+those separate results and the native datetime-entry qualification limit are recorded in
+[Issue #147 verification](issue-147-verification.md).
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost.test.tsx: rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains precise preview row errors without asserting success or fabricating native evidence | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: records manual costs with explicit whole-booking or parcel allocations and rejects over-allocation before dispatch | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: previews a genuine native rate selection before applying its exact immutable batch | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains exact uncertain report keys, blocks replacement/navigation and clears private evidence on scope invalidation | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: pages every retained booking, switches all dimension groups and exposes actual native source drill-through | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: revises full allocations under the current source version and keeps original effective precision when retained | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: keeps estimated and incomplete coverage honest without turning unknown costs into zero contribution | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: maps disabled and conflicting cost responses to authoritative failures without uncertain replacement | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: previews a manual CSV with exact bytes and rejects an oversized file before sending | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: uses the applied expense amount and exact occurrence instant without letting an attribution create another expense | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: discards a delayed old report page after saved-report navigation | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: downloads only the selected private snapshot through an attached anchor | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains a corrected zero native expense as actual evidence with explicit zero allocations, never a manual free cost | preserve | reports |
+
+## Issue #147 reviewed history-navigation recovery
+
+The cost command owner now lives in an ephemeral WeakMap keyed by the exact authorized
+scope ticket. Its one-shot abort listener clears the intent and result, and the workspace
+subscribes with `useSyncExternalStore`. No local/session storage, private-body persistence,
+prototype dependency, route declaration or existing fingerprint changes are introduced.
+Record/revision, preview, apply and report capture share exact-key recovery. A result completed
+while its view is unmounted remains available in the same live scope.
+
+OperatorApp checks the complete current authorization context during pathname navigation;
+only identical context retains the scope ticket. Changed actors, roles or permitted scopes,
+authorization errors, explicit reload and scope loss still invalidate it. Pending navigation
+responses cannot supersede newer loads. Existing operator lifecycle regressions remain intact.
+The new controlled-router tests use the actual OperatorApp lifecycle for capture and import
+Back/Forward, and distinguish that evidence from native browser qualification.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: clears every retained shipment operation on real scope abort and never allows replacing an unresolved command | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: preserves navigation scope only for identical complete context and discards late navigation or explicit refresh authority | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file | preserve | reports |
+
+## Issue #147 completed-result consumption
+
+An acknowledged completed outcome is removed from the ephemeral command owner by identity,
+so remounts cannot replay a previously displayed capture. Unobserved late results remain
+recoverable. An explicitly selected different saved report keeps its selection and export;
+a recovered completion is offered separately and its reference is cleared on scope abort.
+No new effects, routes, prototype fingerprints or existing regression decisions change.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: consumes an observed capture once so explicit report navigation and export stay on the requested snapshot after OperatorApp remount | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: offers an unobserved late completion without overriding an explicit report and clears the recovered reference on authority loss | preserve | reports |
+
+## Issue #147 report selection epoch
+
+Dispatch and exact retry record the current monotonic navigation epoch. Every committed
+router location change advances it, including Back/Forward returning to the same entry.
+A completion after intervening navigation is offered for recovery and cannot replace the
+selected report. With no navigation after dispatch/retry, ordinary result opening remains.
+The actual OperatorApp controlled-router regression covers six capture/retry history,
+round-trip and replacement scenarios, asserting both selected and exported snapshot identity.
+Existing recovery/security declarations and effects/fingerprints are unchanged.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: keeps same-path history and replacement selections authoritative across capture and retry epochs, including round trips | preserve | reports |

@@ -441,3 +441,26 @@ runner discovers both API and schema `cash-close.test.ts` files. Browser qualifi
 must use actual loopback React/Fastify/runtime PostgreSQL synthetic fixtures separately
 from controlled transport UI tests. Disable new closing writes for rollback, retain
 schema/evidence/replay, and repair forward. Neither rollback nor correction moves money.
+
+### Shipment costs and direct contribution (#147)
+
+Apply migration50 and the narrow [runtime grants](../../packages/db/README.md) before
+enabling server-only `SHIPMENT_COST_WRITES_ENABLED=true`. It defaults to `false`, accepts
+only boolean strings and is forbidden in demo mode. Production activation requires its
+own authorization. Existing booking, pricing, cashbook, delivery-fee and report source
+permissions remain prerequisites; do not replace them with schema ownership.
+
+Franchise admins capture and revise cost evidence through Reports. R25/R28 report reads
+and E03 exports retain their existing role ceilings. Recording a cost does not move money,
+change a selling price or certify an invoice. Current authority is checked before replay.
+Disable the flag to stop new cost commands while retaining history and exact committed
+outcomes. Keep applied schema and evidence; correct forward through linked revisions.
+
+The [operator guide](../../docs/architecture/shipment-cost-operations.md) covers allocation,
+missing evidence, imports, E/K reconstruction, snapshots and recovery. Contract details are
+in [API contracts](../../docs/architecture/api-contract.md) and
+[financial operations](../../docs/architecture/financial-operations.md). The guarded default
+PostgreSQL runner discovers `apps/api/test/database/shipment-costs.test.ts`; use the full
+repository quality gate before rollout and qualify the actual browser separately.
+Recorded [qualification evidence and limits](../../docs/architecture/issue-147-verification.md)
+separate browser observations from the required release gates.

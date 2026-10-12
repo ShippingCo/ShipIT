@@ -976,3 +976,18 @@ export async function withCashCloseScope<T>(database:DatabasePool,token:string,o
   }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
  });
 }
+
+/** W70: cost evidence is franchise-admin only; current authority precedes every replay. */
+export async function withShipmentCostScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,lifecycle:{organizationActive:boolean;franchiseActive:boolean})=>Promise<T>):Promise<T>{
+ return membershipTransaction(database,async tx=>{
+  const session=await authenticated(tx,token);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+  const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+  if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+  if(!memberships.some(m=>m.role==='franchise_admin'&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
+  const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+  return work(issueTenantAccess(tx,{action:'shipment_costs.write',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),{organizationActive:parent.lifecycle==='active',franchiseActive:franchise.lifecycle==='active'});
+ });
+}

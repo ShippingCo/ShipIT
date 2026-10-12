@@ -198,10 +198,20 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W65 | Submit exact agent settlement/correction capture; operator own prepared evidence, agent self only | - | F | F | - | S | - | - |
 | W66 | Approve/reject current agent settlement revision; different submitting actor, no self-approval exception | - | F | - | - | - | - | - |
 | W63 | Named receiving custodian acknowledgement or permitted cancellation (`cashbook.handover.acknowledge`); no acknowledgement for another recipient | - | F | F | - | S | - | - |
-
 | W67 | Open/count/submit and revise initial opening evidence; operators assigned drawer only; exact counter submits own capture | - | F | F | - | - | - | - |
 | W68 | Review exact initial opening or closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
 | W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
+| W70 | Record/revise shipment cost evidence and preview/apply cost imports; exact owned source/version and explicit allocations | - | F | - | - | - | - | - |
+
+W70 is the #147 cost-evidence command ceiling. Neither organization administration nor
+accountant financial read access grants this write capability. Current membership is
+checked before command replay; nested booking, parcel, expense and purchase-rate references
+must belong to the selected franchise. New commands require the default-off server flag
+`SHIPMENT_COST_WRITES_ENABLED`; disabling it retains authorized history and exact completed
+outcomes. Cost history/selectors and contribution use existing R25/R28 financial-report
+scope; E03 governs actor-owned private CSV downloads. Multi-franchise captures validate
+every selected franchise and downloads recheck current scope. No grant here permits money
+movement, selling-price changes, invoice certification or access to a customer directory.
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement

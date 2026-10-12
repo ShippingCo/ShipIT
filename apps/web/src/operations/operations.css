@@ -45,3 +45,10 @@
 .agent-statement-list button { white-space: normal; text-align: left; max-width: 100%; overflow-wrap: anywhere; }
 .agent-statement-evidence dd { overflow-wrap: anywhere; }
 .cash-handover-list button { white-space: normal; text-align: left; max-width: 100%; overflow-wrap: anywhere; }
+
+/* Shipment evidence forms keep UUID/source provenance readable on narrow screens. */
+.shipment-cost-workspace fieldset { min-width: 0; border: 1px solid var(--md-outline-variant); border-radius: 12px; padding: 16px; }
+.shipment-cost-workspace .ops-form fieldset { display: grid; gap: 12px; }
+.shipment-cost-workspace input[type="file"] { display: block; max-width: 100%; margin-top: 8px; }
+.shipment-cost-workspace .ops-facts > div { min-width: 0; }
+.shipment-cost-workspace .btn { white-space: normal; }
