@@ -169,6 +169,7 @@ export interface DisposableDatabase {
   prepareMoneyReceipts(): Promise<void>;
   prepareCashbook(): Promise<void>;
   prepareAgentMoney(): Promise<void>;
+  prepareCashClose(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
@@ -376,6 +377,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.custody_access_events,shipit.custody_commands,shipit.custody_assignment_instructions,shipit.custody_manifests,shipit.custody_manifest_items,shipit.custody_receipts,
           shipit.custody_discrepancies,shipit.custody_transfer_grants,shipit.custody_grant_revocations,shipit.custody_releases,shipit.custody_manifest_cancellations,shipit.custody_events
           TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareCashClose() {
+      await handle.prepareAgentMoney();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT ON shipit.cash_close_sessions,shipit.cash_close_dependencies TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT,INSERT ON shipit.cash_close_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.cash_close_instant(timestamptz),shipit.cash_close_source_frame(uuid,uuid,uuid,timestamptz,timestamptz),shipit.cash_close_source_identity(jsonb) TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareAgentMoney() {

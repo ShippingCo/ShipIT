@@ -149,7 +149,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       registerCustody(instance,database,config.environment!=='developer',config.custodyWritesEnabled===true&&config.environment!=='demo');
       const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';
-      registerCashbook(instance,database,config.environment!=='developer',cashbookWrites,config.agentMoneyWritesEnabled===true&&config.environment!=='demo');
+      registerCashbook(instance,database,config.environment!=='developer',cashbookWrites,config.agentMoneyWritesEnabled===true&&config.environment!=='demo',config.cashCloseWritesEnabled===true&&config.environment!=='demo');
       registerAgentCashCaptures(instance,database,config.environment!=='developer',config.agentMoneyWritesEnabled===true&&config.environment!=='demo');
       if(attachments){registerAttachments(instance,createAttachmentService(database,attachments),config.environment!=='developer');registerAttachments(instance,createExpenseAttachmentService(database,attachments,cashbookWrites),config.environment!=='developer','request_id');}
       registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock),createCarrierRateService(database,pricingClock));

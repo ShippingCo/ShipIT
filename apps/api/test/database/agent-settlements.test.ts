@@ -11,7 +11,7 @@ import {createReceivingAccountService} from '../../src/modules/payments/account-
 const headers=(key:string)=>['idempotency-key',key],q={organization_id:org,franchise_id:A};
 const hash=()=>createHash('sha256').update(randomUUID()).digest('hex');
 await test('agent money migration creates empty private owned sources and supports a no-op rerun',{timeout:30000},async t=>{
- const db=await provisionDatabase(t);assert.equal((await db.migrate()).applied,48);
+ const db=await provisionDatabase(t);assert.equal((await db.migrate()).applied,49);
  for(const table of ['agent_settlement_submissions','agent_settlement_decisions','agent_settlement_events','agent_daily_cash_captures','agent_money_commands','cod_beneficiaries','cod_beneficiary_revisions','cod_obligations','cod_obligation_revisions','cod_receipt_allocations','agent_fee_term_revisions','agent_fee_earnings','cash_receipt_component_captures','cash_receipt_components','cash_handover_attributions']){
   assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
   assert.equal((await db.adminQuery('SELECT has_table_privilege($1,$2,\'SELECT\') allowed',[db.runtimeRole,'shipit.'+table])).rows[0]!.allowed,false);

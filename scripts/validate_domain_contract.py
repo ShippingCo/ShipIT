@@ -33,7 +33,7 @@ def validate():
     for header in headers:
         assert [c.strip() for c in header.strip("|").split("|")][2:] == ROLES
     rules = {}
-    for prefix, count in [("R", 36), ("E", 4), ("W", 66)]:
+    for prefix, count in [("R", 37), ("E", 4), ("W", 69)]:
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
@@ -44,6 +44,10 @@ def validate():
         if key[0] in "EW":
             assert row[-1] == "-", f"read_only mutation/export: {key}"
             assert row[2] == "-" or key in {"W31", "W33", "W41", "W42"}, f"org_admin operational grant: {key}"
+    assert rules["R37"][2:] == ["O", "F", "F", "-", "-", "F", "-"]
+    assert rules["W67"][2:] == ["-", "F", "F", "-", "-", "-", "-"]
+    assert rules["W68"][2:] == ["-", "F", "-", "-", "-", "-", "-"]
+    assert rules["W69"][2:] == ["-", "F", "-", "-", "-", "-", "-"]
     assert rules["R36"][2:] == ["O", "F", "F", "-", "S", "F", "-"]
     assert rules["W64"][2:] == ["-", "F", "F", "-", "S", "-", "-"]
     assert rules["W65"][2:] == ["-", "F", "F", "-", "S", "-", "-"]
@@ -254,7 +258,7 @@ def validate():
     for case in fixture["adoption_cases"]:
         eligible = case["franchise_approval"] and case["receiving_approval"] and not case["unresolved"] and case["same_plan"]
         assert eligible == case["eligible"], case["id"]
-    print("Domain contract checks passed: 106 matrix rows including exact W65/W66 submission/independent review and R36/W64 cash-capture and R35/W62/W63 self-participant custody and R33/R34/W57-W61 cashbook permissions, W53-W56 financial permissions, R31/R32 and W49-W52 receipt permissions and six receipt scope cases, exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
+    print("Domain contract checks passed: 110 matrix rows including R37/W67-W69 scoped physical closing and exact W65/W66 submission/independent review and R36/W64 cash-capture and R35/W62/W63 self-participant custody and R33/R34/W57-W61 cashbook permissions, W53-W56 financial permissions, R31/R32 and W49-W52 receipt permissions and six receipt scope cases, exact W41 lifecycle, W42 membership, W43 pricing override W44 redrive, W45 installation and W46 customer-access grants plus W29/W34/W35 restrictions, 28 synthetic access/projection plus 21 pricing role/scope cases, 13 closed transition rows/actors, all Booking fields and prototype failure reasons, global fixture dockets, money/date/cancellation/adoption examples. No production behavior tested.")
 
 
 if __name__ == "__main__":

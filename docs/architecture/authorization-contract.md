@@ -81,6 +81,7 @@ The rows cover every private concept in #2's module/data ownership table.
 | R33 | Cashbook minimum selection (`cashbook.select`): own cash custody IDs/names/current revisions, noncash choices without balances, minimum handover recipient choices, and own submitted proposal/decision/effect or participating handover evidence for operators | O | F | F | - | - | F | - |
 | R34 | Cashbook scoped financial source/detail/captured totals (`cashbook.read`); current authority applies to private expense evidence and downloads | O | F | - | - | - | F | - |
 | R36 | Immutable agent cash capture and settlement evidence (`agent_statement.read`); operators see evidence they prepared, agents see only their own agent identity; minimum source evidence only | O | F | F | - | S | F | - |
+| R37 | Cash closing/session/source/history reads (`cashbook.close.read`); operator restricted to assigned drawer; current own-organization finance projections only | O | F | F | - | - | F | - |
 | R35 | Dedicated cash handover selection/detail/history (`cashbook.handover.select`); delivery agents see only their immutable source/target participation and permitted minimum recipient choices in their currently granted franchise | O | F | F | - | S | F | - |
 
 R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
@@ -197,6 +198,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W65 | Submit exact agent settlement/correction capture; operator own prepared evidence, agent self only | - | F | F | - | S | - | - |
 | W66 | Approve/reject current agent settlement revision; different submitting actor, no self-approval exception | - | F | - | - | - | - | - |
 | W63 | Named receiving custodian acknowledgement or permitted cancellation (`cashbook.handover.acknowledge`); no acknowledgement for another recipient | - | F | F | - | S | - | - |
+
+| W67 | Open/count/submit physical drawer closing; operators assigned drawer only; exact counter submits own capture | - | F | F | - | - | - | - |
+| W68 | Review exact closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
+| W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
 requires empty/unexecuted entities and immutable history preservation; physical movement
@@ -537,3 +542,19 @@ inside the owned franchise and returns minimum location identity/name fields onl
 Agent-only users reach it from Agent settlements; ordinary cashbook/receipt/expense
 permissions remain unchanged. Current membership and source ownership are rechecked
 on every read, target discovery, request, acknowledgement and recovery.
+
+
+R37/W67–W69 are the #145 closing boundary. E03 alone authorizes actor-owned private
+closing CSV snapshots/downloads for local franchise admins/accountants. Org-admin-only,
+agent-only and read-only grant no closing mutations; custody/source references grant no
+customer directory or general agent-ledger access. Current scope precedes nested lookup,
+replay, source paging and download. Current distinct eligible local-admin users are counted
+under organization/franchise locks; duplicated grants, invitations, disabled users, sibling
+admins and org-admin-only users do not change sole-admin eligibility. Exact replay retains
+its original mode after renewed current authority. This exception does not affect W59 or W66.
+
+For the jointly unapproved initial opening, its observer normally captures/submits both
+observations. A current admin may recover a departed observer's session while preserving
+that initial attribution; its exact new counter submits the recovery capture. The initial
+opening/counter cannot be laundered through another submitter to disguise self review.
+Approved predecessor authors and reopen initiators add no independent-review restriction.

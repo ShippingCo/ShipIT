@@ -11,11 +11,11 @@ import {auditSetup,org,A,B,otherOrg,C} from '../audit-support.ts';
 import {withCustodyScope} from '../../src/modules/memberships/service.ts';
 import {assertTenantAccess} from '../../src/modules/security/scope.ts';
 
-// Service scenarios install migration 48 once. Repeated prerequisite grant helpers
+// Service scenarios install migration 49 once. Repeated prerequisite grant helpers
 // cannot change this schema; restore the real migrator after custody grants, before
 // custody commands. Dedicated fresh/populated migration tests retain real installs.
 async function custodyDatabase(t:import('node:test').TestContext) {
- const db=await provisionDatabase(t);assert.deepEqual(await db.migrate(),{applied:48});
+ const db=await provisionDatabase(t);assert.deepEqual(await db.migrate(),{applied:49});
  const migrate=db.migrate,prepare=db.prepareCustody,prepareBookings=db.prepareBookings,prepareMemberships=db.prepareMemberships;
  let bookings:Promise<void>|undefined,memberships:Promise<void>|undefined;
  db.prepareBookings=()=>bookings??=prepareBookings();
@@ -603,7 +603,7 @@ await test('custody transfer and outgoing manifest pages retain fifty-one curren
  const started=performance.now(),stage=(label:string)=>console.log('Pagination setup '+label+': '+Math.round(performance.now()-started)+'ms');
  // Pagination does not qualify migrations. Apply the complete schema once, then avoid
  // spawning the migration CLI repeatedly for unchanged prerequisite grant helpers.
- const database=await provisionDatabase(t);assert.deepEqual(await database.migrate(),{applied:48});
+ const database=await provisionDatabase(t);assert.deepEqual(await database.migrate(),{applied:49});
  const migrate=database.migrate;database.migrate=async options=>{if(options)throw new Error('PAGINATION_FIXTURE_MIGRATION_OPTIONS');return {applied:0};};
  const s=await bookingSetup(t,database),giver=await s.grant('delivery_agent',[A]),receiver=await s.grant('delivery_agent',[A]),admin=await s.grant('franchise_admin',[A]);
  stage('memberships');const booked=await s.book();assert.equal(booked.statusCode,201);const parcel=booked.json().parcels[0].id,start=await startTestDelivery(s,parcel,giver);await s.db.prepareCustody();

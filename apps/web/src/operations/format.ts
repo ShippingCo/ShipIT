@@ -1,4 +1,4 @@
-export function formatMoney(paise:number){
+export function formatMoney(paise:number|string){
  const value=BigInt(paise),whole=value/100n,fraction=String((value<0n?-value:value)%100n).padStart(2,'0');
  return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).formatToParts(value<0n&&whole===0n?-0:whole).map(part=>part.type==='fraction'?fraction:part.value).join('');
 }

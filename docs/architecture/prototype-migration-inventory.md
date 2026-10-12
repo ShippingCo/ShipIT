@@ -873,3 +873,22 @@ Three distinct export regressions cover recovery, ownership/protocol bounds and 
 
 | apps/web/src/test/agent-cash-handovers.test.tsx: agent opens handover-only controls and recovers the same request while settlement navigation is locked | preserve | payments | Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages. |
 | apps/web/src/test/agent-cash-handovers.test.tsx: own-source adapter minimizes fields, rejects foreign or broken pages and handover recovery requires the identical instant and amount | preserve | payments | Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages. |
+
+## Issue #145 physical closing regression disposition
+
+The production closing view uses current scoped API authority and retained server evidence.
+Its before-unload/click/franchise-change listeners block navigation only during an unresolved
+mutation; all listeners are removed on cleanup. The one-second object-URL timer releases
+the completed CSV download. The synthetic test timer lets React settle its download state.
+These effects add no persistent browser data or prototype write authority.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cash-close.test.tsx: validates exact arithmetic, source binding, coverage and denomination evidence before display | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: retains one exact uncertain submission, blocks navigation and displays complete count/source controls | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: requires labelled sole-admin acknowledgment and distinguishes the persisted review mode | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: prepares a real successor-open intent with version zero without the update-only guard | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: submits the actual successor opening form and shows the confirmed new session | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: allows the attached CSV download anchor through the command navigation guard | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: renders server-authorized administrator recovery while retaining the departed opening observer | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: finance readers inspect immutable counts without recording or approval forms | preserve | reports |

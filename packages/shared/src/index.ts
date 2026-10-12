@@ -174,3 +174,4 @@ export type * from './custody.ts';
 export * from './agent-statement-export.ts';
 
 export * from './agent-money.ts';
+export * from './cash-close.ts';
