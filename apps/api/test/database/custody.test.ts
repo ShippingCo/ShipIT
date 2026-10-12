@@ -73,7 +73,7 @@ await test('populated migration46 upgrades preserve actual assignment and challe
   attempt:(await db.adminQuery('SELECT id,assignment_id,agent_id,recipient_ref,recipient_contact_version,state,version,failed_verifications,resend_count,locked_at FROM shipit.delivery_attempts WHERE parcel_id=$1',[parcel])).rows,
   challenge:(await db.adminQuery('SELECT id,challenge_version,consumed_at,superseded_at FROM shipit.delivery_challenges WHERE parcel_id=$1',[parcel])).rows
  });
- const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:2});
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:3});
  assert.deepEqual(await snapshot(),before);assert.deepEqual(await db.migrate(),{applied:0});
  for(const table of ['custody_access_events','custody_commands','custody_assignment_instructions','custody_discrepancies','custody_events','custody_grant_revocations','custody_manifest_cancellations','custody_manifest_items','custody_manifests','custody_receipts','custody_releases','custody_transfer_grants']){
   const count=(await db.adminQuery('SELECT count(*)::int count FROM shipit.'+table)).rows[0]!.count;assert.equal(count,0);

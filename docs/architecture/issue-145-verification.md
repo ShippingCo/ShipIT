@@ -81,3 +81,23 @@ Owner operation and role rules are in [financial operations](financial-operation
 Rollout keeps `CASH_CLOSE_ENABLED` off by default; authorized reads and exact committed
 replay remain available when disabled. Apply migration/grants only in an independently
 authorized environment. Preserve released schema/history and repair forward.
+
+## Full-gate migration expectation repair
+
+The first full gate at `2934abd` passed 709 API tests, 298 web tests and the three
+real object-store cases, then failed 34 schema upgrade cases. Direct attachment
+reproduction showed the historical 19→current upgrade applied 30 migrations while
+the test still expected 29. This was an omitted expected-count update, not a reason
+to weaken the upgrade tests or modify released migrations.
+
+The repair updates 45 unrestricted upgrade expectations across 31 schema and 11 API
+files for current total 49. Historical partial installs, isolated test directories,
+no-op counts, snapshot equality, rollback assertions and test deadlines are unchanged.
+Two synthetic forward-repair filenames now sort strictly after migration 49. The
+API upgrade cases were included proactively because the failed schema group prevented
+the first full run from reaching the API database group. No production code changed.
+
+The exact 45 affected registered upgrade cases passed together in 54.377 seconds,
+with zero failures/skips/cancellations/todos and clean resource/container teardown.
+The earlier full gate remains a failed run; release qualification requires a new
+complete gate on the repaired commit.
