@@ -65,3 +65,33 @@ await test('manual seller remittance consumes owned COD once after actual handov
  await s.memberships.revokeMembership(s.admin.token,s.local.member.id,{expected_version:1});
  await assert.rejects(effects.apply(s.local.token,first.id,q,key,headers(key),input,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
 });
+
+await test('COD remittance cannot precede its original receipt and equal or later outflows reconcile at the same cutoff',{timeout:60000},async t=>{
+ const s=await setupAgentMoney(t),reviewer=await s.grant('franchise_admin',[A]),requests=createCashbookRequestService(s.pool,true,true),effects=createCashbookEffectService(s.pool,true,true);
+ const {createAgentCashCaptureService}=await import('../../src/modules/agent-settlements/cash-capture-service.ts'),captures=createAgentCashCaptureService(s.pool,true);
+ const receiptAt=s.receiptBody.occurred_at,before=new Date(Date.parse(receiptAt)-1).toISOString(),later=new Date(Date.parse(receiptAt)+1).toISOString();
+ const base={source_location_id:s.held.id,source_revision_id:s.held.revision_id,target_location_id:null,target_revision_id:null,amount_paise:1000,currency:'INR',category:null,payee:null,responsible_employee_id:s.operator.id,reason:'Synthetic receipt-backed COD remittance'};
+ async function submit(input:Record<string,unknown>){const key=randomUUID();return requests.submit(s.local.token,q,key,headers(key),{...base,...input,expected_source_version:(await effects.position(s.local.token,q,randomUUID())).source_version},randomUUID());}
+ async function apply(id:string){const reviewKey=randomUUID(),decision=await requests.decide(reviewer.token,id,q,reviewKey,headers(reviewKey),{expected_version:1,decision:'approved',reason:'Synthetic independent COD source review'},randomUUID()),key=randomUUID();return effects.apply(s.local.token,id,q,key,headers(key),{expected_version:2,decision_id:decision.id},randomUUID());}
+ const fund=await submit({kind:'owner_funds',amount_paise:10000,occurred_at:new Date(Date.parse(before)-1000).toISOString()});await apply(fund.id);
+ const remit={kind:'cod_remittance',payment_method:'cash',cod_allocation_id:s.reservation.resource_id,payment_reference:'SYNTHETIC-COD-EQUAL',occurred_at:receiptAt};
+ const facts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.cashbook_requests) requests,(SELECT count(*)::int FROM shipit.cashbook_request_decisions) decisions,(SELECT count(*)::int FROM shipit.cashbook_effects) effects,(SELECT count(*)::int FROM shipit.cashbook_effect_legs) legs,(SELECT count(*)::int FROM shipit.audit_history) audits,(SELECT count(*)::int FROM shipit.domain_events) events`)).rows[0];
+ const initial=await facts();await assert.rejects(submit({...remit,occurred_at:before}),{code:'CASHBOOK_CONFLICT'});assert.deepEqual(await facts(),initial);
+ const equal=await submit(remit),owner=s.db.ownerPool();t.after(()=>owner.close());
+ const columns=['id','organization_id','franchise_id','kind','source_location_id','source_revision_id','target_location_id','target_revision_id','expected_source_version','amount_paise','currency','category','payee','responsible_employee_id','reason','occurred_at','actor_id','correlation_id','key_digest','fingerprint','payment_method','cod_allocation_id','payment_reference'];
+ const expressions=columns.map(c=>c==='id'?'$1':c==='correlation_id'?'$2':c==='key_digest'||c==='fingerprint'?'$3':c==='occurred_at'?'$4':'r.'+c),beforeRaw=await facts();
+ await assert.rejects(owner.query('INSERT INTO shipit.cashbook_requests('+columns.join(',')+') SELECT '+expressions.join(',')+' FROM shipit.cashbook_requests r WHERE r.id=$5',[randomUUID(),randomUUID(),randomUUID().replaceAll('-','').repeat(2),before,equal.id]),{sqlState:'23514'});assert.deepEqual(await facts(),beforeRaw);
+ const receipt=(await s.db.adminQuery('SELECT recorded_at FROM shipit.money_receipts WHERE id=$1',[s.receipt.receipt_id])).rows[0]!;
+ assert.ok(Date.parse(equal.occurred_at)<receipt.recorded_at.getTime()); // Receipt occurrence, not later recording/allocation, is the causal boundary.
+ assert.deepEqual((await apply(equal.id)).legs,[{location_id:s.held.id,direction:'out',amount_paise:'1000'}]);
+ const next=await submit({...remit,occurred_at:later,payment_reference:'SYNTHETIC-COD-LATER'});assert.deepEqual((await apply(next.id)).legs,[{location_id:s.held.id,direction:'out',amount_paise:'1000'}]);
+ type Frame={finance:{totals:{cod_collected_paise:string;cod_remitted_paise:string};cod_positions:unknown[]};cash:{cash_facts:{request_id:string|null;direction:string;amount_paise:string}[]}};
+ for(const [counted_at,collected,remitted] of [[before,'0','0'],[receiptAt,'200000','1000'],[later,'200000','2000']]){
+  const at=counted_at!,day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(at)),key=randomUUID(),capture=await captures.capture(s.agent.token,q,key,headers(key),{agent_id:s.agent.id,day,counted_at:at,counted_paise:10000,reason:'Synthetic historical COD cutoff'},randomUUID()),frame=capture.source_snapshot as unknown as Frame;
+  assert.equal(frame.finance.totals.cod_collected_paise,collected);assert.equal(frame.finance.totals.cod_remitted_paise,remitted);assert.equal(frame.finance.cod_positions.length,collected==='0'?0:1);
+  const legs=frame.cash.cash_facts.filter(f=>f.request_id===equal.id||f.request_id===next.id);assert.ok(legs.every(f=>f.direction==='out'));assert.equal(legs.reduce((n,f)=>n+BigInt(f.amount_paise),0n),BigInt(remitted!));
+ }
+ const correction=await submit({...remit,occurred_at:later,payment_reference:'SYNTHETIC-COD-ANNULLED',correction_of:next.id,amount_paise:0});
+ assert.deepEqual((await apply(correction.id)).legs,[{location_id:s.held.id,direction:'in',amount_paise:'1000'}]);
+ assert.equal((await s.db.adminQuery('SELECT remitted_paise::text FROM shipit.cod_receipt_positions WHERE allocation_id=$1',[s.reservation.resource_id])).rows[0]!.remitted_paise,'1000');
+});

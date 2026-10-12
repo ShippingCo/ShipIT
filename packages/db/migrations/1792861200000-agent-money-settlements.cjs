@@ -426,6 +426,9 @@ BEGIN
  IF request.cod_allocation_id IS NULL THEN RETURN;END IF;
  SELECT * INTO allocation FROM shipit.cod_receipt_allocations WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.cod_allocation_id;
  IF allocation.id IS NULL OR request.kind NOT IN ('cod_remittance','cod_reservation_reversal') OR (request.kind='cod_remittance' AND request.payment_reference IS NULL) THEN RAISE EXCEPTION 'COD_REMITTANCE_SOURCE_INVALID' USING ERRCODE='23514';END IF;
+ SELECT * INTO receipt FROM shipit.money_receipts WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=allocation.receipt_id;
+ IF request.kind='cod_remittance' AND request.amount_paise>0 AND (receipt.id IS NULL OR request.occurred_at<receipt.occurred_at)
+ THEN RAISE EXCEPTION 'COD_REMITTANCE_NOT_YET_COLLECTED' USING ERRCODE='23514';END IF;
  SELECT COALESCE(sum(r.amount_paise::numeric),0),count(*) FILTER(WHERE r.payment_reference=request.payment_reference) INTO remitted,duplicates FROM shipit.cashbook_requests r
  JOIN shipit.cashbook_effects e ON e.organization_id=r.organization_id AND e.franchise_id=r.franchise_id AND e.request_id=r.id
  WHERE r.organization_id=request.organization_id AND r.franchise_id=request.franchise_id AND r.cod_allocation_id=request.cod_allocation_id
@@ -433,7 +436,6 @@ BEGIN
   AND NOT EXISTS(SELECT 1 FROM shipit.cashbook_requests c JOIN shipit.cashbook_effects ce ON ce.organization_id=c.organization_id AND ce.franchise_id=c.franchise_id AND ce.request_id=c.id WHERE c.organization_id=r.organization_id AND c.franchise_id=r.franchise_id AND c.correction_of=r.id);
  IF duplicates<>0 OR remitted+request.amount_paise>allocation.amount_paise THEN RAISE EXCEPTION 'COD_REMITTANCE_CAPACITY_EXCEEDED' USING ERRCODE='23514';END IF;
  IF request.kind='cod_reservation_reversal' THEN
-  SELECT * INTO receipt FROM shipit.money_receipts WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=allocation.receipt_id;
   SELECT * INTO source FROM shipit.cash_locations WHERE organization_id=request.organization_id AND franchise_id=request.franchise_id AND id=request.source_location_id;
   IF receipt.id IS NULL OR source.id IS NULL OR source.account_id IS DISTINCT FROM receipt.account_id OR (receipt.method='cash' AND (source.kind<>'cash' OR source.custodian_id IS DISTINCT FROM receipt.initial_custodian_id)) OR (receipt.method<>'cash' AND source.kind<>'noncash')
   THEN RAISE EXCEPTION 'COD_REVERSAL_RECEIPT_SOURCE_INVALID' USING ERRCODE='23514';END IF;
