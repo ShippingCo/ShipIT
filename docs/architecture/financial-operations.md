@@ -1,7 +1,9 @@
 # Financial operations contract (#137)
 
-Status: **product policy ratified; PR verification and merge pending**. Prepared 10 October 2026
-against main `7ff46da`. This is a ratified product contract, not runtime activation of new
+Status: **product policy ratified and merged through [PR #165](https://github.com/ShippingCo/ShipIT/pull/165)**.
+The [owner approval](https://github.com/ShippingCo/ShipIT/issues/137#issuecomment-6094308527)
+ratifies D137-1–D137-5. Prepared 10 October 2026 against main `7ff46da`.
+This is a ratified product contract, not runtime activation of new
 financial actions. [Payments](payments.md), [ADR 0045](../adr/0045-sales-and-financial-evidence.md),
 [role matrix](authorization-contract.md) and [module plan](../FINANCIAL_MANAGEMENT_PLAN.md)
 retain authority for their already-approved scope.
@@ -27,8 +29,8 @@ franchise-admin authority. It does not ratify the wider #137–#142 workflows.
 
 Approval evidence must identify decision IDs, approver, date and immutable review
 or conversation reference. A prepared document, CI pass or agent review is not
-ratification. Issue #137 remains open until its required decision evidence, checks and review are accepted
-and normal review/CI/merge conditions hold. Later external format qualification
+ratification. Issue #137 is closed through its reviewed merge; later feature issues
+must still meet their own acceptance and review/CI gates. Later external format qualification
 belongs to #146/#150; this contract names those gates rather than claiming support.
 
 ## Definitions and source ownership
