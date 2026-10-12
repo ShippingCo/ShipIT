@@ -35,6 +35,47 @@ Six API validation tests also passed, along with API typecheck, focused lint and
 tenant-query AST gate. All 49 released migrations remained unchanged. This focused
 cohort is not final release approval.
 
+## Independent review and repairs
+
+The first complete local gate at `5f4b8b2` passed 40 tooling, 22 testkit, 12 DB unit,
+716 API unit, 317 web, three real object-store and 637 PostgreSQL tests (85 schema and
+552 API), plus planning, lint, types and builds. All eleven PR CI jobs passed on that
+commit. An earlier full run found nine historical migration-count assertions; their
+remaining counts were corrected without weakening baseline or data-preservation checks,
+then all nine targeted real upgrades and the complete rerun passed.
+
+Independent review nevertheless requested changes for two reproduced gaps: disabled
+roots could create fresh preview/deduplication commands, and browser-history unmount
+could lose an unresolved command's exact retry identity. These findings were not covered
+by the original passing gate. The independent conflicting-invoice import probe verified
+atomic rollback. The history finding came from a controlled React Router probe, not a
+new native-browser observation.
+
+The lifecycle repair checks locked organization/franchise eligibility after current
+authority and exact completed-key replay, before fresh command work. The command SQL
+guard independently enforces active roots and actor. Four real PostgreSQL regression
+cases passed in 9.982 seconds, covering both roots, fresh preview/deduplication/record/
+correction/apply rejection, retained reads and exact replay, reactivation, direct SQL
+rejection, and both concurrent disable/command commit orders. Owned resources were
+removed. An initial assertion expected the wrong unauthenticated error code; the
+unsuccessful log remains retained separately.
+
+The navigation repair retains one ephemeral command owner per live authorized scope,
+including exact intent and completed result, independently of route mounts. Navigation
+revalidates the complete operator context; changed authority, explicit reload or failed
+revalidation clears the scope and retained private command. It uses no browser storage.
+Forty-two focused React tests passed: four new route/controller regressions, fourteen
+cost tests, three report tests and twenty-one existing operator tests. The actual operator
+shell under a controlled router exercised capture and import-preview Back/Forward with
+identical keys/bodies, a response completed while away, explicit reload, changed actor/
+roles/permitted scope, stale responses and failed context refresh. Web types, lint and
+planning passed; the inventory records four new tests and two observed effects without
+changing prior fingerprints. This is controlled React evidence, not a new native-browser
+qualification.
+
+The combined repairs still require final full quality, exact-head CI and independent
+re-review before release. The earlier successful gate does not approve later changes.
+
 ## Actual browser qualification
 
 Chrome and the Codex in-app browser exercised production React/Vite and Fastify against

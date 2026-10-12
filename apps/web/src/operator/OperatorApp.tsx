@@ -27,11 +27,13 @@ export default function OperatorApp() {
   const refresh = () => controller.load(selected.current, latestPath.current);
   useEffect(() => {
     latestPath.current = location.pathname;
-    void controller.load(selected.current, location.pathname);
+    void controller.navigate(selected.current, location.pathname);
+  }, [controller, location.pathname]);
+  useEffect(() => {
     const resume = () => { if (document.visibilityState === 'visible') void controller.revalidate(selected.current); };
     window.addEventListener('focus', resume); document.addEventListener('visibilitychange', resume);
     return () => { window.removeEventListener('focus', resume); document.removeEventListener('visibilitychange', resume); controller.clear(); };
-  }, [controller, location.pathname]);
+  }, [controller]);
   useEffect(() => {
     if (state.context?.state === 'ready') {
       selected.current = state.context.active_franchise_id ?? undefined;

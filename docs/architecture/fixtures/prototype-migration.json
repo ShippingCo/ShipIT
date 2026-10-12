@@ -2175,6 +2175,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "clears every retained shipment operation on real scope abort and never allows replacing an unresolved command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "preserves navigation scope only for identical complete context and discards late navigation or explicit refresh authority",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+        "name": "recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/shipment-cost.test.tsx",
         "name": "rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money",
         "cases": null
@@ -2354,6 +2374,10 @@
         "kind": "signal?.addEventListener"
       },
       {
+        "file": "apps/web/src/data-access/shipment-cost-command.ts",
+        "kind": "scope.signal.addEventListener"
+      },
+      {
         "file": "apps/web/src/data/store.ts",
         "kind": "localStorage.setItem"
       },
@@ -2512,6 +2536,10 @@
       {
         "file": "apps/web/src/operations/Sales.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/ShipmentCosts.tsx",
+        "kind": "useSyncExternalStore"
       },
       {
         "file": "apps/web/src/operations/ShipmentCosts.tsx",
@@ -5323,6 +5351,38 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 reviewed history-navigation repair: exact in-memory scope-owned command recovery across actual OperatorApp remount and reauthorization; abort, explicit refresh, changed full authority and stale context results clear private state. Controlled router tests, not new native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "clears every retained shipment operation on real scope abort and never allows replacing an unresolved command",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 reviewed history-navigation repair: exact in-memory scope-owned command recovery across actual OperatorApp remount and reauthorization; abort, explicit refresh, changed full authority and stale context results clear private state. Controlled router tests, not new native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "preserves navigation scope only for identical complete context and discards late navigation or explicit refresh authority",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 reviewed history-navigation repair: exact in-memory scope-owned command recovery across actual OperatorApp remount and reauthorization; abort, explicit refresh, changed full authority and stale context results clear private state. Controlled router tests, not new native browser evidence."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
+      "name": "recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147 reviewed history-navigation repair: exact in-memory scope-owned command recovery across actual OperatorApp remount and reauthorization; abort, explicit refresh, changed full authority and stale context results clear private state. Controlled router tests, not new native browser evidence."
     },
     {
       "file": "apps/web/src/test/shipment-cost.test.tsx",

@@ -10,10 +10,12 @@ import * as r from './repository.ts';
 export function createShipmentCostService(database:DatabasePool,writesEnabled=false){
  async function mutate<T>(session:string,query:unknown,keyInput:unknown,headers:readonly string[],operation:'record'|'preview'|'apply',body:unknown,correlation:string,work:(scope:TenantAccess,id:string)=>Promise<T>):Promise<T>{
   const q=selection(query),key=r.digest(idempotencyKey(keyInput,headers)),fingerprint=r.digest(body);
-  return withShipmentCostScope(database,session,q.organizationId,q.franchiseId,correlation,async scope=>{
+  return withShipmentCostScope(database,session,q.organizationId,q.franchiseId,correlation,async(scope,lifecycle)=>{
    const c=assertTenantAccess(scope,['shipment_costs.write']);
    const prior=(await scopedQuery<{fingerprint:string;result:T}>(scope,['shipment_costs.write'],`SELECT fingerprint,result FROM shipit.shipment_cost_commands WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND operation=$2 AND key_digest=$3`,[c.actor.id,operation,key])).rows[0];
    if(prior){if(prior.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');return prior.result;}
+   if(!lifecycle.organizationActive)throw new HttpError('ORGANIZATION_DISABLED');
+   if(!lifecycle.franchiseActive)throw new HttpError('FRANCHISE_DISABLED');
    if(!writesEnabled)throw new HttpError('SHIPMENT_COST_DISABLED');
    const id=randomUUID();
    try {const result=await work(scope,id);await scopedQuery(scope,['shipment_costs.write'],`INSERT INTO shipit.shipment_cost_commands(id,organization_id,franchise_id,actor_id,operation,key_digest,fingerprint,result,correlation_id) SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,[id,q.franchiseId,c.actor.id,operation,key,fingerprint,JSON.stringify(result),correlation,q.organizationId]);return result;}

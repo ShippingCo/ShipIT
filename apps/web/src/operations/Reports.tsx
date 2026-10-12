@@ -1,3 +1,4 @@
+import {shipmentCostCommand} from '../data-access/shipment-cost-command';
 import {shipmentCosts} from '../data-access/shipment-cost';
 import {ShipmentCosts} from './ShipmentCosts';
 import {effectiveness} from '../data-access/effectiveness';
@@ -32,7 +33,7 @@ export default function Reports({controller,roles}:{controller:ScopeController;r
   const canFinance=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
   const canPerformance=roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only','delivery_agent'].includes(r));
   const [reportParams]=useSearchParams();
-  const [view,setView]=useState<'sales'|'bookings'|'ageing'|'performance'|'effectiveness'|'costs'>(reportParams.has('contribution_snapshot')?'costs':reportParams.has('effectiveness_snapshot')?'effectiveness':reportParams.has('performance_snapshot')||!canFinance?'performance':reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
+  const [view,setView]=useState<'sales'|'bookings'|'ageing'|'performance'|'effectiveness'|'costs'>(shipmentCostCommand(costSource).snapshot().phase!=='idle'||reportParams.has('contribution_snapshot')?'costs':reportParams.has('effectiveness_snapshot')?'effectiveness':reportParams.has('performance_snapshot')||!canFinance?'performance':reportParams.has('ageing_snapshot')?'ageing':reportParams.has('snapshot')?'bookings':'sales');
   if(!canFinance&&!canPerformance)return <p role="alert">Reports are unavailable for this role.</p>;
   const canExport=roles.some(r=>['franchise_admin','accountant'].includes(r));
   const context=controller.snapshot().context;

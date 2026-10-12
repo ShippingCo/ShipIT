@@ -9,10 +9,11 @@ export type ScopeState = { status: 'loading' | 'signed_out' | 'error' | 'loaded'
 export function createScopeController(source: OperatorDataSource = createOperatorDataSource()) {
   const runtime = createScopeRuntime(error => clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error'));
   let state: ScopeState = { status: 'loading', context: null, path: '' };
+  let navigation=0;
   const listeners = new Set<() => void>();
   const set = (next: ScopeState) => { state = next; listeners.forEach(listener => listener()); };
   function clear(status: ScopeState['status'] = 'loading', path = state.path) {
-    runtime.invalidate(); set({ status, context: null, path });
+    navigation++; runtime.invalidate(); set({ status, context: null, path });
   }
   function denied(error: unknown) {
     if (error instanceof ApiFailure && ['UNAUTHENTICATED', 'ACTION_FORBIDDEN', 'RESOURCE_NOT_FOUND'].includes(error.code)) {
@@ -37,6 +38,25 @@ export function createScopeController(source: OperatorDataSource = createOperato
         }
       } catch (error) {
         if (runtime.isCurrent(current)) clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error', path);
+      }
+    },
+    // Route changes hide private UI while checking current authority, but are not
+    // themselves revocations. Explicit loads and every changed/failed context still clear.
+    async navigate(selected: string | undefined, path: string) {
+      if (!state.context || !runtime.ticket().authority) return this.load(selected,path);
+      const previous=state.context,current=runtime.ticket(),request=++navigation;
+      set({...state,status:'loading',path});
+      try {
+        const context=await source.loadContext(selected,current.signal);
+        if(request!==navigation||!runtime.isCurrent(current))return;
+        if(JSON.stringify(context)!==JSON.stringify(previous)){
+          clear('loading',path);
+          const active=context.franchises.find(f=>f.id===context.active_franchise_id);
+          runtime.bind({userId:context.user_id,organizationId:active?.organization.id??null,franchiseId:active?.id??null,permissions:JSON.stringify(active?.roles??[])});
+        }
+        set({status:'loaded',context,path});
+      } catch(error) {
+        if(request===navigation&&runtime.isCurrent(current))clear(error instanceof ApiFailure&&error.code==='UNAUTHENTICATED'?'signed_out':'error',path);
       }
     },
     async revalidate(selected?: string) {

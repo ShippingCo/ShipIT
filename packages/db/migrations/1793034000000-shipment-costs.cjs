@@ -110,10 +110,16 @@ BEGIN
  RETURN NEW;
 END $fn$;
 CREATE TRIGGER shipment_cost_revision_complete AFTER INSERT ON shipit.shipment_cost_revisions FOR EACH ROW EXECUTE FUNCTION shipit.complete_shipment_cost_revision();
-CREATE FUNCTION shipit.guard_shipment_cost_command() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fn$
+CREATE FUNCTION shipit.guard_shipment_cost_command() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $fn$
 BEGIN
  IF NEW.recorded_at IS NOT NULL THEN RAISE EXCEPTION 'SHIPMENT_COST_GENERATED' USING ERRCODE='23514';END IF;
- IF NEW.operation IN ('record','preview','apply') AND NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id WHERE s.organization_id=NEW.organization_id AND s.franchise_id=NEW.franchise_id AND m.user_id=NEW.actor_id AND m.role='franchise_admin' AND m.lifecycle='active') THEN RAISE EXCEPTION 'SHIPMENT_COST_ACTOR' USING ERRCODE='42501';END IF;
+ IF NEW.operation IN ('record','preview','apply') THEN
+  PERFORM id FROM shipit.organizations WHERE id=NEW.organization_id AND lifecycle='active' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SHIPMENT_COST_SCOPE' USING ERRCODE='42501';END IF;
+  PERFORM id FROM shipit.franchises WHERE organization_id=NEW.organization_id AND id=NEW.franchise_id AND lifecycle='active' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SHIPMENT_COST_SCOPE' USING ERRCODE='42501';END IF;
+  IF NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE s.organization_id=NEW.organization_id AND s.franchise_id=NEW.franchise_id AND m.user_id=NEW.actor_id AND m.role='franchise_admin' AND m.lifecycle='active') THEN RAISE EXCEPTION 'SHIPMENT_COST_ACTOR' USING ERRCODE='42501';END IF;
+ END IF;
  NEW.recorded_at:=clock_timestamp();RETURN NEW;
 END $fn$;
 CREATE TRIGGER shipment_cost_command_insert BEFORE INSERT ON shipit.shipment_cost_commands FOR EACH ROW EXECUTE FUNCTION shipit.guard_shipment_cost_command();

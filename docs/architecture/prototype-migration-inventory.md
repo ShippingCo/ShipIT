@@ -957,3 +957,26 @@ those separate results and the native datetime-entry qualification limit are rec
 | apps/web/src/test/shipment-cost.test.tsx: discards a delayed old report page after saved-report navigation | preserve | reports |
 | apps/web/src/test/shipment-cost.test.tsx: downloads only the selected private snapshot through an attached anchor | preserve | reports |
 | apps/web/src/test/shipment-cost.test.tsx: retains a corrected zero native expense as actual evidence with explicit zero allocations, never a manual free cost | preserve | reports |
+
+## Issue #147 reviewed history-navigation recovery
+
+The cost command owner now lives in an ephemeral WeakMap keyed by the exact authorized
+scope ticket. Its one-shot abort listener clears the intent and result, and the workspace
+subscribes with `useSyncExternalStore`. No local/session storage, private-body persistence,
+prototype dependency, route declaration or existing fingerprint changes are introduced.
+Record/revision, preview, apply and report capture share exact-key recovery. A result completed
+while its view is unmounted remains available in the same live scope.
+
+OperatorApp checks the complete current authorization context during pathname navigation;
+only identical context retains the scope ticket. Changed actors, roles or permitted scopes,
+authorization errors, explicit reload and scope loss still invalidate it. Pending navigation
+responses cannot supersede newer loads. Existing operator lifecycle regressions remain intact.
+The new controlled-router tests use the actual OperatorApp lifecycle for capture and import
+Back/Forward, and distinguish that evidence from native browser qualification.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: clears every retained shipment operation on real scope abort and never allows replacing an unresolved command | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: preserves navigation scope only for identical complete context and discards late navigation or explicit refresh authority | preserve | reports |
+| apps/web/src/test/shipment-cost-navigation.test.tsx: recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file | preserve | reports |
