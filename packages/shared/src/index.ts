@@ -175,3 +175,4 @@ export * from './agent-statement-export.ts';
 
 export * from './agent-money.ts';
 export * from './cash-close.ts';
+export * from './shipment-cost.ts';

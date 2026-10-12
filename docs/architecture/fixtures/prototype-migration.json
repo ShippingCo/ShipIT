@@ -2175,6 +2175,76 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "retains precise preview row errors without asserting success or fabricating native evidence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "records manual costs with explicit whole-booking or parcel allocations and rejects over-allocation before dispatch",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "previews a genuine native rate selection before applying its exact immutable batch",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "retains exact uncertain report keys, blocks replacement/navigation and clears private evidence on scope invalidation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "pages every retained booking, switches all dimension groups and exposes actual native source drill-through",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "revises full allocations under the current source version and keeps original effective precision when retained",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "keeps estimated and incomplete coverage honest without turning unknown costs into zero contribution",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "maps disabled and conflicting cost responses to authoritative failures without uncertain replacement",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "previews a manual CSV with exact bytes and rejects an oversized file before sending",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "uses the applied expense amount and exact occurrence instant without letting an attribution create another expense",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "discards a delayed old report page after saved-report navigation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "downloads only the selected private snapshot through an attached anchor",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "retains a corrected zero native expense as actual evidence with explicit zero allocations, never a manual free cost",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
         "cases": null
@@ -2376,6 +2446,10 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/Contribution.tsx",
+        "kind": "window.setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Custody.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2438,6 +2512,22 @@
       {
         "file": "apps/web/src/operations/Sales.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/ShipmentCosts.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ShipmentCosts.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ShipmentCosts.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ShipmentCosts.tsx",
+        "kind": "source.api.scope.signal.addEventListener"
       },
       {
         "file": "apps/web/src/operator/Onboarding.tsx",
@@ -5233,6 +5323,118 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "retains precise preview row errors without asserting success or fabricating native evidence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "records manual costs with explicit whole-booking or parcel allocations and rejects over-allocation before dispatch",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "previews a genuine native rate selection before applying its exact immutable batch",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "retains exact uncertain report keys, blocks replacement/navigation and clears private evidence on scope invalidation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "pages every retained booking, switches all dimension groups and exposes actual native source drill-through",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "revises full allocations under the current source version and keeps original effective precision when retained",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "keeps estimated and incomplete coverage honest without turning unknown costs into zero contribution",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "maps disabled and conflicting cost responses to authoritative failures without uncertain replacement",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "previews a manual CSV with exact bytes and rejects an oversized file before sending",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "uses the applied expense amount and exact occurrence instant without letting an attribution create another expense",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "discards a delayed old report page after saved-report navigation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "downloads only the selected private snapshot through an attached anchor",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "retains a corrected zero native expense as actual evidence with explicit zero allocations, never a manual free cost",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",

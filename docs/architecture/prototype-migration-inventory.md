@@ -923,3 +923,37 @@ opening approval remains pending. No timer/listener or human attestation is adde
 | Regression | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/cash-close.test.tsx: permits an opening author to reject another counter without granting approval to that opening | preserve | reports |
+
+## Issue #147 shipment cost and contribution regression disposition
+
+The production Reports entry uses the scoped shipment-cost adapter, `ShipmentCostEditor`,
+`ShipmentCosts` and `Contribution`. These files do not import the prototype store;
+existing exports, transitive callers, imports, routes and dependency fingerprints are unchanged.
+The before-unload/click/franchise-change listeners prevent replacing unresolved commands,
+and the scope-abort listener clears private drafts and evidence. All listeners are removed
+on cleanup. The one-second CSV object-URL timer releases the explicitly prepared download.
+No persistent browser data, automatic import, purchase verification or payment authority is added.
+
+Fourteen controlled-transport regressions preserve exact source/allocation and report arithmetic,
+native rate and expense selection (including corrected actual zero expense), immutable import
+preview/apply, historical precision, private export, scope clearing, report-navigation response
+invalidation and keyboard focus. These tests do not claim actual browser or PostgreSQL execution;
+those separate results and the native datetime-entry qualification limit are recorded in
+[Issue #147 verification](issue-147-verification.md).
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/shipment-cost.test.tsx: rejects malformed allocation arithmetic, source identity, coverage and contribution controls without rounding money | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains precise preview row errors without asserting success or fabricating native evidence | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: records manual costs with explicit whole-booking or parcel allocations and rejects over-allocation before dispatch | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: previews a genuine native rate selection before applying its exact immutable batch | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains exact uncertain report keys, blocks replacement/navigation and clears private evidence on scope invalidation | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: pages every retained booking, switches all dimension groups and exposes actual native source drill-through | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: revises full allocations under the current source version and keeps original effective precision when retained | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: keeps estimated and incomplete coverage honest without turning unknown costs into zero contribution | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: maps disabled and conflicting cost responses to authoritative failures without uncertain replacement | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: previews a manual CSV with exact bytes and rejects an oversized file before sending | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: uses the applied expense amount and exact occurrence instant without letting an attribution create another expense | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: discards a delayed old report page after saved-report navigation | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: downloads only the selected private snapshot through an attached anchor | preserve | reports |
+| apps/web/src/test/shipment-cost.test.tsx: retains a corrected zero native expense as actual evidence with explicit zero allocations, never a manual free cost | preserve | reports |

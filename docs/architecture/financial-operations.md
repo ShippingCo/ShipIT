@@ -2208,3 +2208,60 @@ A reopened session shows its replacement count/submission/review as pending whil
 retaining the old approval. Late source/opening changes label reconciliation work
 without revoking or overwriting the historical approved evidence. Checklist states
 come from the current server detail; no new attestation policy or stored checkbox exists.
+
+### Shipment cost evidence and direct contribution (#147)
+
+`shipment_contribution_v1` measures adjusted tax-exclusive booking revenue less explicitly
+attributed courier, packing, agent and payment costs. All four categories require actual
+or reasoned not-applicable evidence for an actual contribution. Estimates yield a separately
+labelled estimate; missing evidence yields null contribution and visible known partial
+cost. Packing charges are revenue, fee payments/advances are settlement, and physical
+cash counts/variance/carry are observations: none is a second attributable purchase cost.
+No net shop profit is calculated.
+
+Costs have immutable source identity, append-only observations and complete replacement
+allocation snapshots. Allocations are manual-declared integer paise with a reason; no
+weight/equal/value division is inferred. Unallocated source remainder stays visible.
+Revisions atomically replace amount and allocations, require the current expected version,
+and cannot exceed source capacity. Not-applicable declarations have zero amount and zero
+allocations to explicitly named bookings; their reason and actor are evidence, not a payment
+or independent verification. Existing applicable evidence takes precedence over declarations.
+
+Manual invoice identities are the normalized supplier/document/line tuple, unique across
+categories and keys. An estimate may be corrected on the same source to actual evidence;
+all prior aliases remain reserved. An applied expense's correction root is a second unique
+alias of the same source. Linking an invoice to an expense enriches that source and must
+match the applied amount; it never adds another cost. Linking retains prior invoice identity
+when no replacement invoice identity is supplied. Native expense heads replace linked
+manual amounts under the common cutoff. Agent per-delivery expenses are attributed using
+the immutable earning/proof/parcel link and cannot be registered again. Agreed-period fees
+require declared allocations. Approval without application contributes no native cost.
+Repeated file imports with new request keys resolve the same canonical source and exact
+initial input, or conflict when meaning differs. A changed source requires an explicit
+revision, never an import-key alias. Rate estimates freeze an approved purchase import,
+row, mapping IDs, normalization version and original booking inputs; their freight plus
+packing purchase estimate is attributed as courier cost and never changes the selling price.
+This native format does not claim compatibility with a third-party invoice format.
+
+Effective E and recorded-evidence K are canonical UTC microsecond instants at or before
+capture time. One statement snapshot selects booking confirmation <= E and booking command
+commit <= K; applied charge reductions qualify by their server posting instant <= E and K.
+Native applied expense requests qualify by occurrence <= E and effect recording <= K before
+correction heads are selected. Earnings qualify by their recorded instant; per-delivery
+proofs qualify by completion <= E and their committed delivery-command instant <= K. New cost revisions
+qualify under both cutoffs before eligible heads are selected. Dispatch command/manifest
+lineage uses the same cutoffs; frozen booking dimensions avoid current directory repricing.
+This reconstructs retained evidence by timestamps, not past MVCC visibility. Issued snapshots
+remain authoritative for what was actually captured and expire after 24 hours.
+
+Revenue appears once per booking irrespective of parcel/cost count. Courier grouping is
+`unknown` for missing provenance and `mixed` for different eligible parcel couriers; no
+invented revenue allocation across couriers. Customer, service, destination and IST booking
+day groups each reconcile to the total. Period shop expenses have their own occurrence
+cohort, show attributed/unallocated amounts separately, and are never added blindly to the
+booking cohort costs. Refund cash movements do not reduce charge revenue a second time.
+
+A native applied expense corrected to zero may be reconciled with explicit zero allocations
+while retaining actual evidence. Manual monetary sources and rate estimates remain positive.
+Missing cost is never inferred as zero. SQL guards enforce normalized invoice identities,
+native source matching and exact rate evidence independently of the HTTP boundary.

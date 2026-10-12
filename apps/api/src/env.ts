@@ -22,6 +22,7 @@ export interface RuntimeConfig {
   readonly financialWorkflowWritesEnabled?: boolean;
   readonly cashbookWritesEnabled?: boolean;
   readonly cashCloseWritesEnabled?: boolean;
+  readonly shipmentCostWritesEnabled?: boolean;
   readonly custodyWritesEnabled?: boolean;
   readonly agentMoneyWritesEnabled?: boolean;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
@@ -122,6 +123,9 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const agentMoneyWritesEnabled=env.AGENT_MONEY_ENABLED==='true';
   if(env.AGENT_MONEY_ENABLED!==undefined&&!['true','false'].includes(env.AGENT_MONEY_ENABLED))issue('AGENT_MONEY_ENABLED','INVALID_FORMAT');
   if(agentMoneyWritesEnabled&&environment==='demo')issue('AGENT_MONEY_ENABLED','INCONSISTENT');
+  const shipmentCostWritesEnabled=env.SHIPMENT_COST_WRITES_ENABLED==='true';
+  if(env.SHIPMENT_COST_WRITES_ENABLED!==undefined&&!['true','false'].includes(env.SHIPMENT_COST_WRITES_ENABLED))issue('SHIPMENT_COST_WRITES_ENABLED','INVALID_FORMAT');
+  if(shipmentCostWritesEnabled&&environment==='demo')issue('SHIPMENT_COST_WRITES_ENABLED','INCONSISTENT');
   const cashCloseWritesEnabled=env.CASH_CLOSE_ENABLED==='true';
   if(env.CASH_CLOSE_ENABLED!==undefined&&!['true','false'].includes(env.CASH_CLOSE_ENABLED))issue('CASH_CLOSE_ENABLED','INVALID_FORMAT');
   if(cashCloseWritesEnabled&&environment==='demo')issue('CASH_CLOSE_ENABLED','INCONSISTENT');
@@ -155,6 +159,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     financialWorkflowWritesEnabled,
     cashbookWritesEnabled,
     cashCloseWritesEnabled,
+    shipmentCostWritesEnabled,
     custodyWritesEnabled,
     agentMoneyWritesEnabled,
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),

@@ -43,6 +43,7 @@ import {createReceivingAccountService} from './modules/payments/account-service.
 import {registerMoneyReceipts} from './modules/payments/routes.ts';
 import { createReportService } from './modules/reports/service.ts';
 import { createAgeingService } from './modules/reports/ageing-service.ts';
+import {registerShipmentCosts} from './modules/shipment-costs/routes.ts';
 import { createSalesService } from './modules/reports/sales-service.ts';
 import { createFinanceService } from './modules/reports/finance-service.ts';
 import { registerReports } from './modules/reports/routes.ts';
@@ -160,6 +161,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true,config.agentMoneyWritesEnabled===true&&config.environment!=='demo'),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
+      registerShipmentCosts(instance,database,config.environment!=='developer',config.shipmentCostWritesEnabled===true&&config.environment!=='demo');
       registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');

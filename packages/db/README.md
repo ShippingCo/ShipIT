@@ -926,3 +926,30 @@ capture and submission use the exact selected revision. Review permits a distinc
 admin or explicitly acknowledged sole-admin self review, separately or in a combined close.
 Final decisions retain the exact approval reference used; old captures and exports remain
 unchanged. No new table, runtime privilege, source movement or released migration changes.
+
+### Migration50: shipment cost evidence
+
+`1793034000000-shipment-costs.cjs` adds empty source, command, revision, allocation and
+canonical-alias tables. Existing financial evidence is not rewritten and no historical
+zero costs are invented. Scoped foreign keys bind bookings/parcels to the same franchise;
+immutable revisions retain explicit allocations and source provenance. The revision guard
+owns derived allocation and alias insertion. Use the actual runtime role identifier:
+
+```sql
+GRANT SELECT,INSERT ON shipit.shipment_cost_sources,
+  shipit.shipment_cost_revisions,shipit.shipment_cost_commands TO runtime_role;
+GRANT SELECT ON shipit.shipment_cost_allocations,shipit.shipment_cost_aliases TO runtime_role;
+GRANT UPDATE(id) ON shipit.shipment_cost_sources TO runtime_role;
+```
+
+The narrow source-column privilege supports row locking; it does not grant general source
+editing. Do not grant direct allocation/alias writes, revision mutation, DELETE, TRUNCATE
+or schema ownership. Existing source-reading and private report-snapshot grants remain
+required for projection and export. Test setup `prepareShipmentCosts` composes those
+existing grants with this exact addition under a limited runtime role.
+
+Enable new commands only after migration and grant verification through
+`SHIPMENT_COST_WRITES_ENABLED`. Disable that flag for operational rollback, retain all
+recorded evidence and repair forward. Native cashbook expenses retain their own correction
+authority; conflicting allocations need explicit reconciliation, never silent proportional
+redistribution. See the [operator guide](../../docs/architecture/shipment-cost-operations.md).

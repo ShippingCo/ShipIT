@@ -170,6 +170,7 @@ export interface DisposableDatabase {
   prepareCashbook(): Promise<void>;
   prepareAgentMoney(): Promise<void>;
   prepareCashClose(): Promise<void>;
+  prepareShipmentCosts(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
@@ -377,6 +378,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.custody_access_events,shipit.custody_commands,shipit.custody_assignment_instructions,shipit.custody_manifests,shipit.custody_manifest_items,shipit.custody_receipts,
           shipit.custody_discrepancies,shipit.custody_transfer_grants,shipit.custody_grant_revocations,shipit.custody_releases,shipit.custody_manifest_cancellations,shipit.custody_events
           TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareShipmentCosts() {
+      await handle.prepareAgentMoney();await handle.prepareReports();await handle.prepareRoutes();await handle.prepareCarriers();await handle.prepareDeliveries();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.shipment_cost_sources,shipit.shipment_cost_revisions,shipit.shipment_cost_commands TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.shipment_cost_allocations,shipit.shipment_cost_aliases TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(id) ON shipit.shipment_cost_sources TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareCashClose() {

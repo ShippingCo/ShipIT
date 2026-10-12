@@ -1,0 +1,132 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {setupShipmentCosts,costQuery as q,costHeaders as headers} from '../shipment-cost-support.ts';
+import {createShipmentCostService} from '../../src/modules/shipment-costs/service.ts';
+import {paymentFault} from '../payment-support.ts';
+import {org,A,B,C,otherOrg} from '../audit-support.ts';
+await test('shipment costs use genuine adjusted booking and applied gross fee once, with honest missing coverage',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),fee=await s.agentFee(),missing=await s.book();
+ const before=(await s.db.adminQuery('SELECT * FROM shipit.booking_obligations ORDER BY id')).rows;
+ const source=await s.record(s.input());await s.na('packing');await s.na('payment');
+ const report=await s.capture(),row=report.rows.find(r=>r.id===s.booked.id)!;
+ assert.equal(row.revenue_paise,'10000');assert.equal(row.actual_cost_paise,'7000');assert.equal(row.contribution_paise,'3000');assert.equal(row.costs.filter(c=>c.expense_head_id===fee.request.id).length,1);assert.equal(row.costs.find(c=>c.expense_head_id===fee.request.id)!.earning_id,fee.earning.resource_id);
+ assert.equal(report.rows.find(r=>r.id===missing.id)!.contribution_paise,null);assert.equal(report.snapshot.totals.revenue_paise,'20000');assert.equal(report.snapshot.totals.contribution_paise,null);
+ assert.equal(report.snapshot.shop_expenses[0]!.amount_paise,'1000');assert.equal(report.snapshot.shop_expenses[0]!.unallocated_paise,'0');
+ for(const dimension of ['courier','service','customer','destination','period'])assert.equal(report.snapshot.groups.filter(g=>g.dimension===dimension).reduce((n,g)=>n+BigInt(g.revenue_paise),0n),20000n);
+ assert.deepEqual((await s.db.adminQuery('SELECT * FROM shipit.booking_obligations ORDER BY id')).rows,before);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.cashbook_effects')).rows[0]!.n,1);
+ const exported=await s.contribution.read(s.local.token,report.snapshot.id,q,randomUUID(),true);assert.ok('csv' in exported&&exported.csv.includes(source.source_id));
+ await assert.rejects(s.record({...s.input('agent',1000),expense_id:fee.request.id,effective_at:fee.request.occurred_at}),{code:'SHIPMENT_COST_CONFLICT'});
+});
+await test('immutable estimated then actual revisions reproduce requested historical K without saved snapshot dependence',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t);await s.na('packing');await s.na('agent');await s.na('payment');
+ const initial={...s.input(),state:'estimated' as const},estimated=await s.record(initial),first=await s.capture();assert.equal(first.rows[0]!.estimated_contribution_paise,'4000');
+ const actual=await s.record({...initial,source_id:estimated.source_id,expected_version:1,state:'actual',amount_paise:6500,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:6500}]});
+ const current=await s.capture();assert.equal(current.rows[0]!.contribution_paise,'3500');assert.equal(current.rows[0]!.costs.find(c=>c.category==='courier')!.revision_id,actual.id);
+ const historical=await s.capture({...s.filter,effective_at:first.snapshot.effective_at,recorded_at:first.snapshot.recorded_at});assert.deepEqual(historical.rows,first.rows);
+ const detail=await s.costs.read(s.local.token,q,estimated.source_id,randomUUID());assert.deepEqual(detail.revisions.map(r=>r.amount_paise),['6500','6000']);
+ assert.deepEqual(await s.contribution.read(s.local.token,first.snapshot.id,q,randomUUID()),first);
+ await assert.rejects(s.record({...initial,source_id:estimated.source_id,expected_version:1}),{code:'VERSION_CONFLICT'});
+});
+await test('source identity deduplicates keys, overlapping allocation races and lost commit preserve one immutable effect',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),body=s.input(),key=randomUUID(),result=await s.record(body,key);
+ assert.deepEqual(await s.record(body),result);assert.deepEqual(await createShipmentCostService(s.pool).record(s.local.token,q,null,key,headers(key),body,randomUUID()),result);
+ await assert.rejects(s.record({...body,amount_paise:6001},key),{code:'IDEMPOTENCY_CONFLICT'});
+ await assert.rejects(s.record({...body,category:'packing'}),{code:'SHIPMENT_COST_CONFLICT'});
+ const next={...body,source_id:result.source_id,expected_version:1,amount_paise:6500,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:6500}]};
+ const races=await Promise.allSettled([s.record(next),s.record(next)]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1);
+ const lost=s.input('packing',100),lostKey=randomUUID();await assert.rejects(createShipmentCostService(paymentFault(s.pool,'COMMIT'),true).record(s.local.token,q,null,lostKey,headers(lostKey),lost,randomUUID()));
+ const recovered=await s.record(lost,lostKey);assert.equal(recovered.amount_paise,'100');
+ const failure=s.input('payment',50),failureKey=randomUUID(),before=(await s.db.adminQuery('SELECT count(*)::int n FROM shipit.shipment_cost_revisions')).rows;
+ await assert.rejects(createShipmentCostService(paymentFault(s.pool,'INSERT INTO shipit.shipment_cost_commands','before'),true).record(s.local.token,q,null,failureKey,headers(failureKey),failure,randomUUID()));
+ assert.deepEqual((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.shipment_cost_revisions')).rows,before);
+ const owner=s.db.ownerPool();t.after(()=>owner.close());for(const table of ['shipment_cost_sources','shipment_cost_revisions','shipment_cost_commands','shipment_cost_aliases','shipment_cost_allocations'])await assert.rejects(owner.query(`DELETE FROM shipit.${table}`),{sqlState:'23514'});
+});
+await test('current roles, foreign nested IDs, source previews and scope replay remain private',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),body=s.input(),source=await s.record(body),key=randomUUID(),preview=await s.costs.preview(s.local.token,q,key,headers(key),{rows:[body]},randomUUID()),apply=randomUUID();
+ assert.equal(preview.valid,true);assert.deepEqual((await s.costs.apply(s.local.token,q,preview.id,apply,headers(apply),{},randomUUID())).items,[source]);
+ for(const actor of [s.operator,s.admin,await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('delivery_agent',[A])])await assert.rejects(s.record(body,randomUUID(),actor),{code:'ACTION_FORBIDDEN'});
+ for(const scope of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])for(const id of [source.source_id,randomUUID()])await assert.rejects(s.costs.read(s.local.token,scope,id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ const bad=s.input();bad.allocations[0]!.booking_id=randomUUID();const invalidKey=randomUUID(),invalid=await s.costs.preview(s.local.token,q,invalidKey,headers(invalidKey),{rows:[bad]},randomUUID());assert.equal(invalid.rows[0]!.error,'RESOURCE_NOT_FOUND');
+ await assert.rejects(s.costs.apply(s.local.token,q,invalid.id,randomUUID(),headers(randomUUID()),{},randomUUID()),{code:'SHIPMENT_COST_CONFLICT'});
+ await s.memberships.revokeMembership(s.admin.token,s.local.member.id,{expected_version:1});await assert.rejects(s.costs.preview(s.local.token,q,key,headers(key),{rows:[body]},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+});
+await test('native expense alias enriches invoice once and eligible correction heads require capacity reconciliation',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t);await s.na('courier');await s.na('packing');await s.na('agent');
+ await s.expense(1000,{kind:'opening_float',payment_method:null,category:null,payee:null});const manual=s.input('payment',100),first=await s.record(manual),before=await s.capture(),native=await s.expense(100);
+ const linked=await s.record({...manual,source_id:first.source_id,expected_version:1,supplier:null,document:null,line:null,expense_id:native.request.id,effective_at:native.request.occurred_at});
+ assert.equal(linked.evidence.supplier,first.evidence.supplier);const captured=await s.capture();assert.equal(captured.rows[0]!.actual_cost_paise,'100');assert.equal(captured.rows[0]!.costs.find(c=>c.category==='payment')!.expense_head_id,native.request.id);assert.equal(captured.snapshot.shop_expenses[0]!.unallocated_paise,'0');
+ assert.deepEqual((await s.capture({...s.filter,effective_at:before.snapshot.effective_at,recorded_at:before.snapshot.recorded_at})).rows,before.rows);
+ await assert.rejects(s.record({...manual,document:'SECOND-ALIAS',expense_id:native.request.id,effective_at:native.request.occurred_at}),{code:'SHIPMENT_COST_CONFLICT'});
+ const corrected=await s.expense(80,{correction_of:native.request.id,occurred_at:native.request.occurred_at});
+ await assert.rejects(s.capture(),{code:'SHIPMENT_COST_CONFLICT'});
+ const old=await s.capture({...s.filter,effective_at:captured.snapshot.effective_at,recorded_at:captured.snapshot.recorded_at});assert.equal(old.rows[0]!.actual_cost_paise,'100');assert.equal(old.snapshot.shop_expenses[0]!.head_id,native.request.id);
+ await s.record({...manual,source_id:linked.source_id,expected_version:2,amount_paise:80,expense_id:corrected.request.id,effective_at:corrected.request.occurred_at,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:80}]});
+ const current=await s.capture();assert.equal(current.rows[0]!.contribution_paise,'9920');assert.equal(current.snapshot.shop_expenses[0]!.amount_paise,'80');
+ const zero=await s.expense(0,{correction_of:corrected.request.id,occurred_at:corrected.request.occurred_at});await assert.rejects(s.capture(),{code:'SHIPMENT_COST_CONFLICT'});await s.record({...manual,source_id:linked.source_id,expected_version:3,amount_paise:0,expense_id:zero.request.id,effective_at:zero.request.occurred_at,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:0}]});const reconciled=await s.capture();assert.equal(reconciled.rows[0]!.coverage.payment,'actual');assert.equal(reconciled.rows[0]!.contribution_paise,'10000');assert.equal((await s.capture({...s.filter,effective_at:current.snapshot.effective_at,recorded_at:current.snapshot.recorded_at})).rows[0]!.actual_cost_paise,'80');
+});
+await test('approved native purchase rate import freezes row inputs and converts to actual with cross-key import idempotency',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),{createCarrierService}=await import('../../src/modules/carriers/service.ts'),{createCarrierRateService}=await import('../../src/modules/carriers/rate-service.ts'),{rateFields}=await import('../../src/modules/carriers/rate-validation.ts');
+ const clock=()=>new Date(Date.parse(s.booked.charges.confirmed_at)-1000),carrier=createCarrierService(s.pool,s.keys.browser,clock),rates=createCarrierRateService(s.pool,clock);
+ const installation=await carrier.mutate('installation',s.local.token,null,randomUUID(),{label:'SYN-COST-CARRIER'},q,randomUUID());
+ const map=async(kind:string,source_code:string)=>carrier.mutate('mapping',s.local.token,installation.id,randomUUID(),{kind,source_code,normalized_id:null,expected_version:0,reason_code:'initial_mapping'},q,randomUUID());
+ const origin=await map('location','ORG'),destination=await map('location','DEST'),service=await map('service','STD');
+ const rate=await rates.create(s.local.token,installation.id,randomUUID(),{purpose:'courier_purchase_estimate',origin_mapping_id:origin.id,services:[{mapping_id:service.id,target:'standard'}],locations:[{mapping_id:destination.id,target:'SYN_DEST'}],expected_lanes:[{destination_key:'SYN_DEST',service:'standard'}],weight_unit:'g',amount_unit:'paise',policy:{effective_from:s.booked.charges.confirmed_at,effective_to:new Date(Date.parse(s.booked.charges.confirmed_at)+86400000).toISOString(),quote_validity_seconds:600,override_tolerance_paise:0,approval_ref:'SYN-RATE-APPROVAL'},content_base64:Buffer.from(rateFields.join(',')+'\nSTD,ORG,DEST,1,2000,g,6000,0,INR,paise\n').toString('base64')},q,randomUUID());
+ await rates.approve(s.local.token,rate.id,randomUUID(),{expected_version:1},q,randomUUID());
+ const input={...s.input(),supplier:null,document:null,line:null,state:'estimated' as const,amount_paise:0,rate_import_id:rate.id,rate_booking_id:s.booked.id,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:0}]},key=randomUUID(),preview=await s.costs.preview(s.local.token,q,key,headers(key),{rows:[input]},randomUUID());
+ assert.equal(preview.valid,true);assert.equal(preview.rows[0]!.amount_paise,'6000');const ak=randomUUID(),applied=await s.costs.apply(s.local.token,q,preview.id,ak,headers(ak),{},randomUUID()),estimate=applied.items[0]!;
+ assert.equal(estimate.evidence.rate_row,2);assert.deepEqual(estimate.evidence.rate_mapping_ids,[origin.id,service.id,destination.id]);assert.equal(estimate.evidence.rate_inputs!.weight_grams,999);
+ const otherKey=randomUUID(),other=await s.costs.preview(s.local.token,q,otherKey,headers(otherKey),{rows:[input]},randomUUID()),otherApply=randomUUID();assert.deepEqual((await s.costs.apply(s.local.token,q,other.id,otherApply,headers(otherApply),{},randomUUID())).items,[estimate]);
+ await s.na('packing');await s.na('agent');await s.na('payment');const before=await s.capture();
+ await s.record({...s.input(),source_id:estimate.source_id,expected_version:1,amount_paise:6500,allocations:[{booking_id:s.booked.id,parcel_id:null,amount_paise:6500}]});assert.equal((await s.capture()).rows[0]!.contribution_paise,'3500');assert.equal((await s.capture({...s.filter,recorded_at:before.snapshot.recorded_at})).rows[0]!.estimated_contribution_paise,'4000');
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.shipment_cost_sources WHERE category=\'courier\'')).rows[0]!.n,1);
+});
+await test('native microsecond source boundary and posted reductions/refunds share selected cutoffs',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t);await s.na('packing');await s.na('agent');await s.na('payment');const source=await s.record(s.input()),at=source.recorded_at;
+ const micros=BigInt(Date.parse(at))*1000n+BigInt(at.slice(23,26)),previous=micros-1n,previousTime=new Date(Number(previous/1000n)).toISOString().slice(0,23)+String(previous%1000n).padStart(3,'0')+'Z';
+ assert.equal((await s.capture({...s.filter,recorded_at:previousTime})).rows[0]!.coverage.courier,'missing');assert.equal((await s.capture({...s.filter,recorded_at:at})).rows[0]!.actual_cost_paise,'6000');
+ const {createPaymentService}=await import('../../src/modules/payments/service.ts'),payment=createPaymentService(s.pool),pk=randomUUID();await payment.execute(s.local.token,s.booked.id,null,q,pk,headers(pk),{amount_paise:s.booked.payment_obligation.total_paise,currency:'INR',context:'to_pay',method:'cash',collection_reference:randomUUID()},'payments.collect',randomUUID());
+ const initial=await s.capture(),{createFinanceService}=await import('../../src/modules/reports/finance-service.ts'),finance=createFinanceService(s.pool),key=randomUUID();
+ const correction=await finance.change(s.local.token,q,key,headers(key),{booking_id:s.booked.id,expected_version:0,payment_version:1,kind:'discount',reason:'customer_agreement',approval_ref:'SYN-COST-DISCOUNT',pre_tax:1000,taxable:1000,cgst:0,sgst:0,igst:0,rounding:0},randomUUID());
+ const current=await s.capture();assert.equal(current.rows[0]!.revenue_paise,'9000');assert.equal(current.rows[0]!.contribution_paise,'3000');assert.ok(current.rows[0]!.financial_change_ids.includes(correction.id));
+ const refundKey=randomUUID();await finance.change(s.local.token,q,refundKey,headers(refundKey),{booking_id:s.booked.id,expected_version:1,payment_version:1,kind:'refund',reason:'customer_refund',approval_ref:'SYN-COST-REFUND',returned_to_ref:'SYN-CUSTOMER-RETURN',refund:1000},randomUUID());const refunded=await s.capture();assert.equal(refunded.rows[0]!.revenue_paise,'9000');assert.equal(refunded.rows[0]!.actual_cost_paise,'6000');
+ assert.deepEqual((await s.capture({...s.filter,effective_at:initial.snapshot.effective_at,recorded_at:initial.snapshot.recorded_at})).rows,initial.rows);
+ const independent=(await s.db.adminQuery(`SELECT ((b.tax_snapshot->>'pre_tax_paise')::numeric-COALESCE((SELECT sum(c.pre_tax) FROM shipit.financial_changes c WHERE c.booking_id=b.id AND c.occurred_at<=$2::timestamptz AND c.occurred_at<=$3::timestamptz),0))::text revenue FROM shipit.bookings b WHERE b.id=$1`,[s.booked.id,current.snapshot.effective_at,current.snapshot.recorded_at])).rows[0]!;assert.equal(current.rows[0]!.revenue_paise,independent.revenue);
+});
+await test('real HTTP boundary enforces CSRF/current roles/no-store/disabled replay and selector queries',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),{buildServer}=await import('../../src/server.ts'),{parseEnvironment}=await import('../../src/env.ts');
+ const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3000',LOG_LEVEL:'info',ALLOWED_ORIGINS:'http://localhost:5173',TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable',SHIPMENT_COST_WRITES_ENABLED:'true'}),app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined}});t.after(()=>app.close());
+ const call=(path:string,body?:unknown,actor:{id:string;token:string}=s.local,key=randomUUID(),query=q)=>app.inject({method:body===undefined?'GET':'POST',url:'/api/v1/'+path+'?'+new URLSearchParams(query),headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(actor.token),...(body===undefined?{}:{payload:JSON.stringify(body)})});
+ const selectors=await call('shipment-costs/selectors');assert.equal(selectors.statusCode,200,selectors.body);assert.equal(selectors.json().bookings[0].id,s.booked.id);assert.equal(selectors.headers['cache-control'],'no-store');
+ const body=s.input(),key=randomUUID(),recorded=await call('shipment-costs',body,s.local,key);assert.equal(recorded.statusCode,200,recorded.body);assert.equal(recorded.headers['cache-control'],'no-store');
+ assert.equal((await call('shipment-costs/'+recorded.json().source_id)).statusCode,200);assert.equal((await call('shipment-costs')).json().items.length,1);
+ const disabled=await s.app.inject({method:'POST',url:'/api/v1/shipment-costs?'+new URLSearchParams(q),headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(s.local.token),payload:JSON.stringify(body)});assert.equal(disabled.statusCode,200,disabled.body);
+ const denied=await app.inject({method:'POST',url:'/api/v1/shipment-costs?'+new URLSearchParams(q),headers:{'content-type':'application/json','idempotency-key':randomUUID()},cookies:s.cookies(s.local.token),payload:JSON.stringify(body)});assert.equal(denied.statusCode,403);
+ for(const actor of [s.operator,await s.grant('read_only',[A]),await s.grant('delivery_agent',[A])])assert.equal((await call('shipment-costs/selectors',undefined,actor)).statusCode,403);
+ const accountant=await s.grant('accountant',[A]);assert.equal((await call('shipment-costs/selectors',undefined,accountant)).statusCode,200);assert.equal((await call('shipment-costs',body,accountant)).statusCode,403);
+ const captured=await call('reports/contribution',s.filter);assert.equal(captured.statusCode,200,captured.body);assert.equal((await call('reports/contribution/'+captured.json().snapshot.id+'/export')).statusCode,200);
+ for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])assert.equal((await call('reports/contribution/'+captured.json().snapshot.id+'/export',undefined,s.local,randomUUID(),query)).statusCode,404);
+ assert.equal((await call('shipment-costs',{...body,allocations:[{...body.allocations[0],amount_paise:6001}]})).statusCode,422);
+ await s.memberships.revokeMembership(s.admin.token,s.local.member.id,{expected_version:1});assert.equal((await call('reports/contribution/'+captured.json().snapshot.id+'/export')).statusCode,404);assert.equal((await call('shipment-costs',body,s.local,key)).statusCode,404);
+});
+await test('explicit partial and moved allocations retain capacity and eligible heads before cohort selection',{timeout:60000},async t=>{
+ const s=await setupShipmentCosts(t),other=await s.book(),body={...s.input(),allocations:[{booking_id:s.booked.id,parcel_id:s.booked.parcels[0]!.id,amount_paise:3000}]},first=await s.record(body),before=await s.capture();
+ assert.equal(before.rows.find(r=>r.id===s.booked.id)!.coverage.courier,'missing');assert.equal(before.rows.find(r=>r.id===s.booked.id)!.costs[0]!.remainder_paise,'3000');
+ await s.record({...body,source_id:first.source_id,expected_version:1,allocations:[{booking_id:other.id,parcel_id:null,amount_paise:6000}]});
+ const current=await s.capture();assert.equal(current.rows.find(r=>r.id===s.booked.id)!.costs.length,0);assert.equal(current.rows.find(r=>r.id===other.id)!.actual_cost_paise,'6000');assert.deepEqual((await s.capture({...s.filter,recorded_at:before.snapshot.recorded_at})).rows,before.rows);
+ const owner=s.db.ownerPool();t.after(()=>owner.close());const invalid=s.input(),forged=[{evidence:{...first.evidence,kind:'declaration'}},{evidence:{...first.evidence,supplier:'lower-case'}},{amount_paise:1}];
+ for(const change of forged)await assert.rejects(owner.query(`INSERT INTO shipit.shipment_cost_revisions(id,organization_id,franchise_id,source_id,command_id,version,state,amount_paise,effective_at,actor_id,reason,reference,evidence,allocations,input_fingerprint) SELECT $1,organization_id,franchise_id,source_id,command_id,3,state,COALESCE($2::bigint,amount_paise),effective_at,actor_id,reason,reference,COALESCE($3::jsonb,evidence),allocations,input_fingerprint FROM shipit.shipment_cost_revisions WHERE id=$4`,[randomUUID(),'amount_paise'in change?change.amount_paise:null,'evidence'in change?JSON.stringify(change.evidence):null,first.id]),{sqlState:'23514'});
+ const badPreview=randomUUID(),preview=await s.costs.preview(s.local.token,q,badPreview,headers(badPreview),{rows:[invalid,{...s.input(),allocations:[{booking_id:randomUUID(),parcel_id:null,amount_paise:6000}]}]},randomUUID());assert.equal(preview.valid,false);assert.equal(preview.rows[1]!.error,'RESOURCE_NOT_FOUND');const apply=randomUUID();await assert.rejects(s.costs.apply(s.local.token,q,preview.id,apply,headers(apply),{},randomUUID()),{code:'SHIPMENT_COST_CONFLICT'});assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.shipment_cost_sources')).rows[0]!.n,1);
+});
+await test('selector pages cover over100 genuine bookings without duplicates and source pages retain every source',{timeout:90000},async t=>{
+ const s=await setupShipmentCosts(t),ids=new Set([s.booked.id]);for(let i=0;i<101;i++)ids.add((await s.book()).id);
+ const first=await s.costs.list(s.local.token,q,randomUUID(),true);assert.ok('bookings'in first);if(!('bookings'in first))throw new Error('selectors expected');assert.equal(first.bookings.length,100);assert.ok(first.next_cursor);
+ const second=await s.costs.list(s.local.token,{...q,cursor:first.next_cursor},randomUUID(),true);assert.ok('bookings'in second);if(!('bookings'in second))throw new Error('selectors expected');assert.equal(second.bookings.length,2);assert.equal(second.next_cursor,null);assert.deepEqual(new Set([...first.bookings,...second.bookings].map(b=>b.id)),ids);
+});
+await test('5001 relevant sources fail closed while unrelated source history does not block an empty narrow cohort',{timeout:180000},async t=>{
+ const s=await setupShipmentCosts(t);for(let start=0;start<5001;start+=100){const pk=randomUUID(),preview=await s.costs.preview(s.local.token,q,pk,headers(pk),{rows:Array.from({length:Math.min(100,5001-start)},()=>s.input('courier',1))},randomUUID());assert.equal(preview.valid,true);const ak=randomUUID();await s.costs.apply(s.local.token,q,preview.id,ak,headers(ak),{},randomUUID());}
+ await assert.rejects(s.capture(),{code:'REPORT_LIMIT_EXCEEDED'});
+ const tomorrow=new Date(Date.parse(s.filter.from_day+'T00:00:00Z')+86400000).toISOString().slice(0,10),empty=await s.capture({...s.filter,from_day:tomorrow,to_day:tomorrow});assert.equal(empty.rows.length,0);assert.equal(empty.snapshot.totals.revenue_paise,'0');
+ const seen=new Set<string>();let cursor:string|null=null;do{const page=await s.costs.list(s.local.token,{...q,...cursor?{cursor}:{}},randomUUID());assert.ok('items'in page);if(!('items'in page))throw new Error('list expected');for(const item of page.items){assert.equal(seen.has(item.source_id),false);seen.add(item.source_id);}cursor=page.next_cursor;}while(cursor);assert.equal(seen.size,5001);
+});
