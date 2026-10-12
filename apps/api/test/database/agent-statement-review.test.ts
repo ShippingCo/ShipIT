@@ -103,6 +103,12 @@ await test('settlement list pages a fixed private cutoff completely and rechecks
  for(let attempt=0;;attempt++){const ready=(await owner.query<{ready:boolean}>("SELECT date_trunc('milliseconds',clock_timestamp())>=max(recorded_at) AS ready FROM shipit.agent_settlement_submissions")).rows[0]!.ready;if(ready)break;assert(attempt<100,'Database millisecond boundary did not advance');await new Promise(resolve=>setTimeout(resolve,2));}
  const first=await service.list(s.agent.token,q,randomUUID());assert.equal(first.items.length,100);assert.ok(first.next_cursor);const second=await service.list(s.agent.token,{...q,cursor:first.next_cursor},randomUUID());
  assert.equal(second.items.length,1);assert.equal(second.next_cursor,null);assert.equal(second.as_of,first.as_of);assert.deepEqual(new Set([...first.items,...second.items].map(r=>r.id)),ids);
+ // A database-issued cursor stays valid even when the application clock trails it.
+ const hostClock=t.mock.method(Date,'now',()=>Date.parse(first.as_of)-100);
+ try{assert.deepEqual(await service.list(s.agent.token,{...q,cursor:first.next_cursor},randomUUID()),second);}finally{hostClock.mock.restore();}
+ const future=JSON.parse(Buffer.from(first.next_cursor,'base64url').toString('utf8'));future.cutoff=new Date(Date.parse(first.as_of)+86400000).toISOString();
+ await assert.rejects(service.list(s.agent.token,{...q,cursor:Buffer.from(JSON.stringify(future)).toString('base64url')},randomUUID()),{code:'VALIDATION_FAILED'});
+
  await assert.rejects(service.list(s.second.token,{...q,cursor:first.next_cursor},randomUUID()),{code:'VALIDATION_FAILED'});
  assert.equal((await service.list(s.operator.token,q,randomUUID())).items.length,0);
  const key=randomUUID();await assert.rejects(service.submit(s.agent.token,q,key,headers(key),{capture_id:randomUUID(),previous_submission_id:null,expected_version:0,reason:'Unknown source denied'},randomUUID()),{code:'RESOURCE_NOT_FOUND'});

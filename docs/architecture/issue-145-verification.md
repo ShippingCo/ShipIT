@@ -101,3 +101,34 @@ The exact 45 affected registered upgrade cases passed together in 54.377 seconds
 with zero failures/skips/cancellations/todos and clean resource/container teardown.
 The earlier full gate remains a failed run; release qualification requires a new
 complete gate on the repaired commit.
+
+## Agent clock diagnostic and repair
+
+The second full gate at `35d939f` passed709 API tests,298 web tests, three object-store
+cases and84 schema cases across36 files, then failed the existing advance-history
+and101-row statement-pagination API database cases. Both files passed a direct
+five-case diagnostic; a bounded five-pair repetition of the two exact cases also
+passed10/10 with paired source/cutoff clock observations. The original aggregate
+cause therefore remains unproven; a passing retry was not treated as a repair.
+
+Deliberate100ms host-behind probes reproduced two concrete modes. A host-derived
+first advance cutoff preceded the actual native earning recorded time, correctly
+returning zero earned fees where the fixture expected4000paise. Separately, the
+production statement list rejected its own PostgreSQL-issued next-page cursor as
+`VALIDATION_FAILED` because it compared that cutoff to host `Date.now()`. Both
+diagnostics retained their original money, history and pagination assertions.
+
+The advance fixture now takes its before/equal/later occurrence boundaries from
+database time strictly after native earning chronology, preserving causal rejection
+and timezone-equal acceptance. The production cursor compares future cutoffs against
+the same owned database clock used to issue them. A real101-row regression forces
+the host clock100ms behind the issued cursor, verifies unchanged page2, and separately
+rejects a true-future cursor; existing foreign-actor denial remains intact. No source
+producer or released migration changed, and no timeout or assertion was weakened.
+
+The repaired two-file PostgreSQL run passed5/5 in8.559seconds with zero
+failures/skips/cancellations/todos and clean teardown. API typecheck and whole
+lint/tenant-query checks passed. The next complete gate must qualify this repair;
+these diagnostics do not establish a successful full run. Local diagnostic logs are
+`quality-agent-diagnostic.log`, `quality-agent-clocks.log`, `quality-agent-skew-red.log`
+and `quality-agent-clock-repair.log` under `.codex/logs`.

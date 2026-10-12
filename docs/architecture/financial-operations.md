@@ -2145,7 +2145,7 @@ Owner checklist and recovery:
 | Local operator | Own drawer sessions | Own drawer; submit own capture | No | No |
 | Local franchise admin | Selected franchise | Selected franchise; submit own capture | D137 current reviewer rules | Own captured export |
 | Accountant | Selected authorized franchise | No | No | Own captured export |
-| Org-admin-only | Selected authorized franchise | No | No | Own captured export |
+| Org-admin-only | Selected authorized franchise | No | No | No |
 | Agent-only or read-only | No | No | No | No |
 
 Combined roles retain their existing scoped grants; this table does not grant organization
@@ -2158,3 +2158,18 @@ remains active. This ownership restriction prevents laundering a counter's self-
 
 [Issue 145 verification](issue-145-verification.md) distinguishes automated transport,
 real source-backed PostgreSQL, actual browser and release-gate evidence.
+
+### #145 qualification: agent statement clock consistency
+
+An existing agent statement list issued a PostgreSQL cutoff but validated the next
+page against the application host clock. A deliberately trailing100ms host clock
+rejected its own valid cursor. Cursor generation and true-future validation now both
+use the owned database statement clock; actor/franchise binding and fixed pagination
+cutoff remain unchanged. The real101-row case explicitly covers this skew and still
+rejects a future-dated cursor. Existing advance-history fixture boundaries now follow
+native database earning chronology instead of assuming host time follows its commit.
+No financial producer, historical arithmetic, released migration or deadline changed.
+The original aggregate failures were not reproduced without deliberate skew; their
+exact original cause remains unproven. [Verification](issue-145-verification.md) keeps
+that distinction explicit. The role table above also clarifies existing E03 behavior:
+org-admin-only users can inspect closing history but cannot capture/download exports.
