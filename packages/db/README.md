@@ -888,3 +888,41 @@ continue; new receipt/allocation/correction/account-revision commands stop. Pres
 compatible ledger and schema-v2 issued-receipt readers; repair the schema forward.
 Do not rewrite historical receipts or invent missing legacy receiving evidence. See
 [receipt setup and recovery](../../docs/architecture/payments.md#receipt-rollout-and-rollback).
+
+### Migration49: immutable physical cash closing
+
+`1792947600000-cash-closing.cjs` adds empty session, immutable command/capture and
+upstream dependency tables, scoped FKs/indexes and SQL guards. It preserves all48 released
+migrations and existing source unions. Old financial writers remain compatible; physical
+opening/carry never insert monetary sources. Current organization→franchise locks serialize
+capture/review with source and membership writers. Session projection updates and dependency
+inserts are owned by the command trigger; runtime has no direct INSERT/UPDATE/DELETE on them.
+
+Grant only after migration with the actual runtime identifier:
+
+```sql
+GRANT SELECT ON shipit.cash_close_sessions,shipit.cash_close_dependencies TO runtime_role;
+GRANT SELECT,INSERT ON shipit.cash_close_commands TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.cash_close_instant(timestamptz),
+  shipit.cash_close_source_frame(uuid,uuid,uuid,timestamptz,timestamptz),
+  shipit.cash_close_source_identity(jsonb) TO runtime_role;
+```
+
+Existing report snapshot/access grants own E03 export capture/download. Do not grant
+TRUNCATE, schema ownership, direct session writes, source mutation or public function
+execution. Application scope remains mandatory for trusted runtime credentials, and SQL
+repeats actor, state, source, first-opening, reviewer and immutable-evidence checks.
+Disabling `CASH_CLOSE_ENABLED` retains current-authorized reads and exact committed replay.
+Rollback keeps applied schema and historical counts; repair forward, never delete evidence
+or backfill invented counts. The populated48→49 test compares actual cash source rows
+before/after and proves no closing history is fabricated.
+
+Initial opening corrections and reviews reuse the append-only command table. Sessions
+retain the original JSON observation plus same-session, deferred-FK pointers to the current
+opening revision and approval. Commands bind exact opening revision/approval IDs; neither
+pointer is client-writable. The guard restricts corrections to initial sessions, validates
+prior identity/version, attributes every replacement and clears current approval. Ending
+capture and submission use the exact selected revision. Review permits a distinct current
+admin or explicitly acknowledged sole-admin self review, separately or in a combined close.
+Final decisions retain the exact approval reference used; old captures and exports remain
+unchanged. No new table, runtime privilege, source movement or released migration changes.

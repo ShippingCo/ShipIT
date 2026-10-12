@@ -589,3 +589,61 @@ requests, expense and money receipt endpoints remain forbidden to agent-only use
 The handover workspace preserves its immutable uncertain request, blocks settlement
 and franchise navigation, and recovers the same key. Occurrence spelling is compared
 by identical instant, while source/target references and amounts remain exact.
+
+#### #145 physical closing
+
+All paths are under `/api/v1/cashbook`, with the normal organization/franchise selection,
+current cookie identity, origin/CSRF, private/no-store response and actor-owned versioned
+idempotency contract. `CASH_CLOSE_ENABLED=true` enables new mutations; default false,
+invalid flag values and demo activation are rejected. Saved history and exact committed
+replay remain available under current authority when disabled.
+
+| Route | Evidence / action |
+| --- | --- |
+| GET/POST `/sessions` | Bounded actor-bound cursor list / open exact drawer revision and business date |
+| GET `/locations/:id/closing-summary` | Minimum own-drawer latest accepted opening and current session eligibility |
+| GET `/sessions/:id` | Frozen current/accepted count, review and separate current-source/dependency comparisons |
+| POST `/sessions/:id/opening-revisions` | Append initial-only correction: exact `opening_id`, expected version, actual `counted_at`, integer `counted_paise`, denominations and evidence/reason; open/rejected only |
+| POST `/sessions/:id/opening-reviews` | Current admin approves exact `opening_id` with expected version, reason and explicit `sole_admin_acknowledged`; open/rejected/submitted only |
+| POST `/sessions/:id/counts` | Append immutable physical capture with expected version, actual time, paise, optional denominations and explanation |
+| POST `/sessions/:id/submissions` | Submit own exact `count_id` and expected session version |
+| POST `/sessions/:id/decisions` | Review exact `submission_id`, `approve`/`reject`, reason and explicit `sole_admin_acknowledged` |
+| POST `/sessions/:id/reopens` | Current-admin reasoned replacement; accepted evidence remains unchanged until replacement approval |
+| GET `/sessions/:id/sources?capture_id=…` | Retained complete frame in 100-row actor/scope/capture-bound pages |
+| GET `/sessions/:id/history` | Immutable commands/counts/submissions/decisions in 100-row actor-bound pages |
+| POST `/sessions/:id/exports` | E03 snapshot of exact `capture_id` under existing report quotas/expiry/audit |
+| GET `/close-exports/:id/download` | Current E03 authorization plus snapshot actor ownership; frozen formula-safe CSV |
+
+Mutations return an immutable command outcome (`command_id`, `session_id`, operation,
+version, state, recorded time and the applicable opening/opening-review/count/submission/decision DTO). Never
+mass-assign server ownership, sources, totals, clocks or review mode. Operational states
+are `open`, `submitted`, `approved`, `rejected`; every save advances the expected session
+version. Approved counts and old submissions do not change on reopen, source correction,
+deactivation or successor repair. Native microsecond boundaries are preserved. Captures
+and aggregate amounts use decimal-string paise; user amount inputs remain safe integers.
+
+`CASH_CLOSE_SOURCE_CHANGED` requires explicit recapture; `CASH_CLOSE_OPENING_CHANGED`
+requires refreshed initial or predecessor evidence; `CASH_CLOSE_REVIEW_REQUIRED` reports current
+D137 reviewer eligibility; `CASH_CLOSE_LIMIT_EXCEEDED` names the 5,000-record/8-MiB
+technical bound. Existing stale/idempotency/not-found/error envelopes apply. No error
+reveals foreign record counts or amounts. Operators see only assigned drawer evidence;
+no agent role or source reference grants customer directory access.
+
+Initial-only `revise_opening` and `review_opening` commands never replace predecessor carry.
+Session detail retains original `initial_opening`, exposes `current_initial_opening` and
+its exact `initial_opening_review`, and distinguishes current capture readiness from
+historical accepted evidence. Opening snapshots include `initial_revision_id` and
+`previous_initial_revision_id` (null for predecessor carry). Counts/submissions bind the
+selected revision; altered initial evidence requires fresh capture before submission.
+Closing decisions preserve `opening_revision_id` and `opening_review_id`; a combined
+approval returns its own opening-review DTO, while a rejection never establishes approval.
+Private CSV metadata includes those exact references for the exported capture and its
+saved decision; already-captured exports never change. Separate opening approval after
+count capture is attached to the final decision, not retroactively to that frozen count.
+
+The detail review block exposes separate `mode` (approval), `rejection_mode`, and
+`opening_mode`. Rejecting another counter requires no approval of the rejecter's own
+initial opening; the UI uses the selected decision's server eligibility. Neither rejection
+nor merely capturing an ending creates an opening approval. A combined closing's self-review
+label may differ from its opening-review label when only the ending is self-authored; each
+saved approval describes the evidence author it actually reviewed.

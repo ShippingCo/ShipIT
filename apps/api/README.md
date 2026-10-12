@@ -422,3 +422,22 @@ actor-private, immutable and expire after 24 hours. See the [custody contracts, 
 operator recovery and fictional browser runbook](../../docs/architecture/financial-operations.md#143-operator-and-development-runbook)
 and [API contract](../../docs/architecture/api-contract.md). Disable new physical commands
 through the flag while retaining historical reads and exact committed outcomes.
+
+### Cash closing (#145)
+
+`CASH_CLOSE_ENABLED` is a separately validated boolean, default `false`, forbidden in
+demo. Migration49 and the exact runtime grants in `packages/db/README.md` precede any
+independently authorized activation. This change does not authorize production activation.
+The Cashbook workspace implements first physical opening, count, submit, D137 review,
+physical carry, retained discrepancies, linked initial-opening correction, separate opening
+approval, linked reopen/history and private E03 CSV. Current recorders may end a drawer
+opened by someone else; exact counters submit and independently reviewed evidence is
+bound to its immutable opening revision/approval references.
+Late prior-window evidence cannot subtract twice from the next physical opening.
+
+Focused checks: `pnpm --filter @shippingco/api test test/integration/cash-close-rules.test.ts`,
+`pnpm --filter @shippingco/web test src/test/cash-close.test.tsx`; the default real-PG
+runner discovers both API and schema `cash-close.test.ts` files. Browser qualification
+must use actual loopback React/Fastify/runtime PostgreSQL synthetic fixtures separately
+from controlled transport UI tests. Disable new closing writes for rollback, retain
+schema/evidence/replay, and repair forward. Neither rollback nor correction moves money.

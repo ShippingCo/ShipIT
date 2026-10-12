@@ -2056,3 +2056,155 @@ The same five-case agent-cash file passed in53.210seconds versus59.858 previousl
 no deadlines, concurrency limits, assertions or registered cases were changed.
 DB/API type checks passed. Fresh complete verification and final PR gates remain
 required; neither earlier failed/cancelled aggregate is relabelled as passing.
+
+### #145 reviewed physical drawer closing
+
+`cash_close_sessions` form one linear sequence per owned cash location. Immutable
+`cash_close_commands` retain each open, count, submission, decision and reasoned
+reopen; SQL guards alone update the compact session projection. No closing command
+inserts a cashbook source, receipt, expense, debt, payroll deduction or spending grant.
+
+For a count window `(opening_at, counted_at]`, expected attributable cash equals
+accepted physical opening + actual cash inflows − actual cash outflows. Variance is
+counted − expected; shortage/excess remain separately visible explained discrepancies.
+For example, ₹1,000 opening + ₹5,000 receipt − ₹800 expense expects ₹5,200. An
+accepted ₹5,000 count carries ₹5,000, with the ₹200 shortage still linked. Source-ledger
+known position and unknown-custody coverage are separate controls; arithmetic agreement
+never proves all real activity was recorded. Pending handovers remain sender custody;
+only acknowledged legs move cash. Noncash sources do not enter a drawer's turnover.
+
+The first opening is an attributed physical observation, approved separately or together
+with the ending count. Current assigned operators and local admins may record the ending
+even when another active actor observed the opening. Initial amount/time corrections append
+a reasoned exact linked revision; they never overwrite the original observation.
+Each counter submits their own exact capture; an admin cannot approve their own count
+by having another actor submit it. Subsequent openings reference the exact accepted
+predecessor submission/count and counted instant, including overnight activity without
+a midnight gap. Integer paise and optional exact denomination sums include zero counts.
+
+One statement captures complete source identities, native occurrence/recording times,
+independent totals and historical pending-handover controls. Submission/approval
+rechecks that same interval under the organization→franchise locks shared by money and
+membership writers. Later-occurring facts do not invalidate earlier windows. A late
+expense occurring at/before the successor's physical opening changes prior reconciliation;
+it is excluded from successor turnover, avoiding a second deduction from observed cash.
+Capture storage is bounded to 5,000 source/pending records and 8 MiB; overflow fails
+without truncation. An oversized anchored interval needs a reviewed storage remedy,
+not a fabricated intermediate physical count.
+
+D137 review is `independent`, or `sole_admin_self` with explicit acknowledgment and a
+locked count of distinct current active local-admin users. Org-admin-only, sibling,
+invited, revoked and inactive grants do not count. This exception is specific to closing;
+expense and agent settlement review policies are unchanged. Approved predecessor authors
+and administrative reopen initiators do not create additional approval restrictions.
+
+Reopen preserves the accepted predecessor until replacement approval. Each replacement
+adds an indexed upstream dependency notice with old/new submissions and whether the
+physical amount/boundary changed. An immediate open/submitted successor must explicitly
+refresh and resubmit when its predecessor changes. Approved descendants remain immutable
+and show dependency warnings; repair proceeds one session at a time. Same-count corrections
+change source/dispute meaning, not physical carry. Prior discrepancies remain evidence,
+not new cash movements or automatically settled employee liability.
+
+Cashbook's production closing view exposes source controls/paging, count/review history,
+current late-evidence comparisons and actor-owned expiring E03 CSV exports. Explanations
+remain private authorized history and are excluded from CSV/audit payloads. Automated
+source-to-total evidence lives in `apps/api/test/database/cash-close.test.ts`; upgrade
+compatibility in `packages/db/test/integration/cash-close.test.ts`. These are synthetic
+checks, not bank verification or production deployment qualification.
+
+Owner checklist and recovery:
+
+1. Choose the correct named cash drawer and explicit business date. For its first
+   session, record an actual opening time/count; otherwise inspect the exact accepted
+   predecessor and its unresolved discrepancies. Count zero explicitly when appropriate.
+2. Count the physical notes/coins at the recorded ending time. Optional denomination
+   rows must total the observation. Inspect every retained source page, the occurrence
+   window, recorded cutoff, coverage and pending handovers. Explain differences before
+   submitting the exact saved count; saving a new capture does not edit earlier evidence.
+3. The reviewer checks both physical observations, source controls, pending custody and
+   shortage/excess reasons. Approve an opening separately when its author must later
+   independently review another actor's ending; retain both exact approval references. Another current local administrator reviews a counter's
+   own submission. Only when that counter is the sole eligible local admin may they use
+   the explicitly labelled self-approval acknowledgment. Rejection asks for a new count
+   capture/submission; it cannot alter the submitted one.
+4. Start the next session from the approved physical ending count. Keep prior shortage,
+   excess and dependency notices visible. Do not enter an expense or deduction merely
+   to clear the difference, and do not treat accepted physical cash as new source capacity.
+5. For late evidence or an incorrect opening, inspect the original interval. Correct
+   initial evidence while open/rejected; ask an administrator to reopen submitted or
+   approved sessions for a reasoned linked correction. Retain the actual ending time when still valid. Review and
+   approve its replacement, then reconcile each affected successor explicitly. Original
+   accepted submissions and exports remain available. A changed chronological boundary
+   may require a genuinely new observation; never invent one to make arithmetic fit.
+6. An uncertain command blocks navigation: retry the same saved request. A source/opening
+   conflict requires refreshed evidence and a new reviewed revision. A 5,000-record/8-MiB
+   error requires a reviewed storage remedy for that anchored interval. Disabled writes
+   preserve history and authorized exact replay. Lost membership stops access immediately.
+
+| Current authority | Inspect closing | Open/count/submit or correct initial evidence | Review/reopen | Private export |
+| --- | --- | --- | --- | --- |
+| Local operator | Own drawer sessions | Own drawer; submit own capture | No | No |
+| Local franchise admin | Selected franchise | Selected franchise; submit own capture | D137 current reviewer rules | Own captured export |
+| Accountant | Selected authorized franchise | No | No | Own captured export |
+| Org-admin-only | Selected authorized franchise | No | No | No |
+| Agent-only or read-only | No | No | No | No |
+
+Combined roles retain their existing scoped grants; this table does not grant organization
+administrators operational powers. Any currently authorized assigned operator or local
+admin can observe an ending, irrespective of who opened the session. The exact counter
+must submit that capture. Current source/evidence authors remain attributable; an opening
+approval is separate from an ending approval when needed. For two admins, A can observe
+the opening, B can approve that exact opening and observe/submit the ending, and A can
+independently approve B's ending. B's opening review does not approve B's ending. A combined
+first-close approval remains available to an admin distinct from both unreviewed observers,
+or with the explicit D137 acknowledgment when self-review is currently sole-admin eligible.
+An opener can independently reject another counter without approving their own opening;
+the review selector applies the eligibility of the selected decision. Each saved opening
+review has its own independent/self label even when a combined closing self-reviews the
+ending. A departed observer's evidence remains immutable; current authorized recorders can continue.
+
+Correct a mistaken initial amount/time using **Correct initial opening evidence** while
+open or rejected. Submitted/approved sessions first need an administrator's **Start linked
+correction**. Enter the actual amount/time, optional denominations and supporting reason;
+the command links the exact previous initial revision and advances the session version.
+Original observations, approved counts, signatures and exports remain unchanged. The new
+opening requires its own approval and a fresh capture of the ending against its amended
+source interval. A retained ending time is permitted only if still later than that actual
+opening. A reason explains evidence; it does not authorize a fabricated observation.
+
+A separate opening approval references the exact revision and is allowed before or after
+ending capture/submission. Final closing approval records the exact opening approval used
+for independence, even when that approval came after capture. Old count snapshots never
+acquire a later approval by mutation. Replacing an opening clears only current opening
+approval; the checklist marks its new approval pending and old capture stale. A predecessor
+carry cannot be client-corrected: reconcile its originating session instead. Replacement
+closing approval marks downstream physical carry changed only when the accepted ending
+amount or time changed; opening/source-only repairs still produce provenance notices.
+
+
+[Issue 145 verification](issue-145-verification.md) distinguishes automated transport,
+real source-backed PostgreSQL, actual browser and release-gate evidence.
+
+### #145 qualification: agent statement clock consistency
+
+An existing agent statement list issued a PostgreSQL cutoff but validated the next
+page against the application host clock. A deliberately trailing100ms host clock
+rejected its own valid cursor. Cursor generation and true-future validation now both
+use the owned database statement clock; actor/franchise binding and fixed pagination
+cutoff remain unchanged. The real101-row case explicitly covers this skew and still
+rejects a future-dated cursor. Existing advance-history fixture boundaries now follow
+native database earning chronology instead of assuming host time follows its commit.
+No financial producer, historical arithmetic, released migration or deadline changed.
+The original aggregate failures were not reproduced without deliberate skew; their
+exact original cause remains unproven. [Verification](issue-145-verification.md) keeps
+that distinction explicit. The role table above also clarifies existing E03 behavior:
+org-admin-only users can inspect closing history but cannot capture/download exports.
+
+The closing view includes a derived checklist for opening provenance, current physical
+count, source/coverage evidence, difference explanation, submission and approval.
+Captured rows are labelled available for inspection, never automatically reviewed.
+A reopened session shows its replacement count/submission/review as pending while
+retaining the old approval. Late source/opening changes label reconciliation work
+without revoking or overwriting the historical approved evidence. Checklist states
+come from the current server detail; no new attestation policy or stored checkbox exists.
