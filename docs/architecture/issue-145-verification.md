@@ -162,3 +162,82 @@ Prior actual-browser qualification remains valid for its recorded workflow; this
 checklist addition is qualified here by controlled React evidence, not a new browser
 claim. The first-opening observer restriction remains visible for independent policy
 review; this addition does not expand or reinterpret that rule.
+
+
+## Independent review repair of initial opening evidence
+
+At `1ad012a`, required local quality and all eleven PR174 CI checks passed. Independent
+review nevertheless reproduced two P2 acceptance defects: the initial observer monopoly
+blocked ordinary shifts, and incorrect initial amount/time had no correction path. The
+prior gate success does not qualify the repair. Saved specification section28B supersedes
+that earlier ownership restriction; the prior verification record above is historical.
+
+The grouped repair removes that monopoly while retaining counter=submitter. It adds
+initial-only append-only opening revisions and optional separate opening approval. A
+combined approval still checks both unreviewed observation authors. With two admins,
+B can approve A's opening, then A can approve B's ending; final decisions retain the exact
+opening approval used. Revised openings require fresh capture and approval, while old
+accepted counts, signatures, exports and descendant physical carry remain retained.
+Opening/source-only corrections flag provenance changes without inventing money.
+
+Three new real PostgreSQL cases passed together in3.452seconds, zero failures/skips,
+with registered resource and container cleanup. They cover admin opening/operator ending,
+two-admin cross-review, exact revision and approval binding, counter-laundering denial,
+before/after-approval amount/time repair against genuine receipt/expense boundary facts,
+stale input conflicts, frozen CSV/history, unchanged source capacity and downstream ending
+carry, current admin revocation, explicit sole-admin opening review, competing revisions
+and rejection without opening approval. Twelve controlled React/decoder tests passed,
+including both new actual-form command paths and stale/pending opening checklist state
+while prior accepted closing evidence remains retained. These are controlled transport
+checks, not actual-browser evidence. Changed-browser and final full-gate qualification
+remain pending at this stage; logs are retained under `.codex/logs/opening-repair-*`.
+
+
+Final grouped focused checks ran all12 closing PostgreSQL cases in one file, the populated
+48→49 upgrade and six migration-runner integration cases: **19/19 passed**,54.990seconds,
+with zero failures/skips/cancellations/todos and clean teardown. This includes a first-session
+A-opening/B-ending path with exactly two admins, disabled exact opening-review replay,
+cross-session opening-ID denial, and the approved predecessor author independently reviewing
+a different successor counter. The guard explicitly limits unapproved-opening author checks
+to initial sessions; historical predecessor authors add no review ban. Combined approval also
+labels its opening review according to that opening's author, separately from any ending
+self-review. The existing HTTP departure case verifies independent opening approval alongside
+explicit sole-admin ending self approval.
+
+A final eligibility check found the UI used approval eligibility for rejection too. The
+server now returns separate rejection eligibility based on the ending counter/submitter;
+the decision selector uses that mode. A fourth new PostgreSQL case confirms the opening
+author may reject another counter while combined approval remains forbidden and opening
+approval remains absent. The four changed repair cases then passed4/4 in4.915seconds with
+clean teardown. All13 closing React/decoder tests, six API rule tests and five workspace
+typechecks passed. Current role/scope, explicit acknowledgment, exact identity/version,
+frozen sources and money assertions were retained; no timeout or assertion was weakened.
+
+Actual Chrome qualification used loopback production React/Fastify and disposable runtime
+PostgreSQL, seeded with synthetic sources/actors but no closing sessions. A created the
+operator's opening; the operator counted/submitted₹5,000 and B independently approved
+₹5,200 expected with₹200 shortage. B reopened and corrected opening amount/time from
+₹1,000 to₹2,000, then recaptured the same ending:₹6,200 expected,₹1,200 shortage and
+unchanged₹4,200 source-ledger position. A approved the replacement. The original count CSV
+was downloaded before correction and again from history afterward: both files were exactly
+1,891bytes and byte-identical, retaining original source/count/approval references.
+
+In a separate two-admin drawer, A corrected an initial₹900 to₹1,000 before any count;
+B separately approved that opening and counted/submitted₹1,000, then A independently
+approved B's ending with B's exact opening-review reference. No third admin was required.
+At390×844 the expanded correction form had client/scroll widths380px, readable wrapped
+labels and a visible keyboard focus ring on its save button. The draft was not submitted.
+The root coordinator stopped both servers, removed the disposable container, closed the
+browser tab and restored its viewport; unrelated containers were preserved.
+
+This browser batch did not repeat sole-admin, rejection-selector, race, source-boundary
+or downstream-carry cases; those are automated coverage. Final guard/label refinements
+were qualified by the focused tests afterward. No screenshots, production activation or
+successful final full gate are claimed. Durable local browser notes are the coordinator's
+`.codex/verification/issue-145-browser-repairs.md`; required full quality, PR CI and fresh
+independent re-review must qualify the new committed head.
+
+Final lint/tenant-query and planning/contract/inventory checks passed, and all48 released
+migration files remain unchanged. The final inventory check initially reported the new
+rejection regression appended out of its required source order; the reviewed disposition
+was reordered to match the inventory and the gate passed. That local failure log is retained.

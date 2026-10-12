@@ -15,7 +15,7 @@ export function closeTimestamp(value:unknown):string {
  return normalized.replace(/\.\d{3}Z$/,'.'+fraction+'Z');
 }
 export function closeInput(operation:CashCloseOperation,value:unknown):CashCloseInput {
- const fields={open:['location_id','location_revision_id','day','predecessor_id','initial_opening'],count:['counted_at','counted_paise','denominations'],submit:['count_id'],decide:['submission_id','kind','sole_admin_acknowledged'],reopen:[]};
+ const fields={open:['location_id','location_revision_id','day','predecessor_id','initial_opening'],count:['counted_at','counted_paise','denominations'],submit:['count_id'],decide:['submission_id','kind','sole_admin_acknowledged'],revise_opening:['opening_id','counted_at','counted_paise','denominations'],review_opening:['opening_id','sole_admin_acknowledged'],reopen:[]};
  const b=object(value,['expected_version','reason',...fields[operation]]),base={expected_version:integer(b.expected_version,'expected_version',operation==='open'?0:1,operation==='open'?0:2147483646),reason:cashbookText(b.reason,500)};
  if(operation==='open'){
   const day=reportFilter({from_day:b.day,to_day:b.day}).from_day,predecessor=b.predecessor_id===null?null:uuid(b.predecessor_id,'$');let initial=null;
@@ -23,7 +23,8 @@ export function closeInput(operation:CashCloseOperation,value:unknown):CashClose
   if((predecessor===null)!==(initial!==null))throw new FieldValidationError('$','INVALID_FORMAT');
   return {...base,expected_version:0,location_id:uuid(b.location_id,'$'),location_revision_id:uuid(b.location_revision_id,'$'),day,predecessor_id:predecessor,initial_opening:initial};
  }
- if(operation==='count'){const amount=integer(b.counted_paise,'amount_paise');return {...base,counted_at:closeTimestamp(b.counted_at),counted_paise:amount,denominations:closeDenominations(b.denominations,amount)};}
+ if(operation==='review_opening'){if(typeof b.sole_admin_acknowledged!=='boolean')throw new FieldValidationError('$','INVALID_FORMAT');return {...base,opening_id:uuid(b.opening_id,'$'),sole_admin_acknowledged:b.sole_admin_acknowledged};}
+ if(operation==='count'||operation==='revise_opening'){const amount=integer(b.counted_paise,'amount_paise');return {...base,...operation==='revise_opening'?{opening_id:uuid(b.opening_id,'$')}:{},counted_at:closeTimestamp(b.counted_at),counted_paise:amount,denominations:closeDenominations(b.denominations,amount)};}
  if(operation==='submit')return {...base,count_id:uuid(b.count_id,'$')};
  if(operation==='decide'){if(!['approve','reject'].includes(b.kind as string)||typeof b.sole_admin_acknowledged!=='boolean')throw new FieldValidationError('$','INVALID_FORMAT');return {...base,submission_id:uuid(b.submission_id,'$'),kind:b.kind as 'approve'|'reject',sole_admin_acknowledged:b.sole_admin_acknowledged};}
  return base;

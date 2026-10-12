@@ -967,7 +967,7 @@ export async function withCashCloseScope<T>(database:DatabasePool,token:string,o
    const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[],local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
    const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
-   if(!(reading?(orgAdmin||admin||accountant||operator):(['cashbook.close.decide','cashbook.close.reopen'].includes(action)?admin:admin||operator)))throw new HttpError('ACTION_FORBIDDEN');
+   if(!(reading?(orgAdmin||admin||accountant||operator):(['cashbook.close.decide','cashbook.close.reopen','cashbook.close.review_opening'].includes(action)?admin:admin||operator)))throw new HttpError('ACTION_FORBIDDEN');
    const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    if(!reading&&franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');

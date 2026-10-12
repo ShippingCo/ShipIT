@@ -1226,7 +1226,7 @@
       },
       {
         "file": "apps/web/src/test/cash-close.test.tsx",
-        "name": "renders server-authorized administrator recovery while retaining the departed opening observer",
+        "name": "renders a current administrator ending count while retaining another active opening observer",
         "cases": null
       },
       {
@@ -1242,6 +1242,21 @@
       {
         "file": "apps/web/src/test/cash-close.test.tsx",
         "name": "finance readers inspect immutable counts without recording or approval forms",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cash-close.test.tsx",
+        "name": "saves actual initial amount and time correction with exact revision and shows pending opening despite retained approval",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cash-close.test.tsx",
+        "name": "approves only exact opening separately while preserving ending self-review restriction",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cash-close.test.tsx",
+        "name": "permits an opening author to reject another counter without granting approval to that opening",
         "cases": null
       },
       {
@@ -3701,11 +3716,11 @@
     },
     {
       "file": "apps/web/src/test/cash-close.test.tsx",
-      "name": "renders server-authorized administrator recovery while retaining the departed opening observer",
+      "name": "renders a current administrator ending count while retaining another active opening observer",
       "cases": null,
       "disposition": "preserve",
       "group": "reports",
-      "reason": "Issue 145 controlled transport checks reviewed physical closing, scoped commands and retained evidence; not database or actual browser proof."
+      "reason": "Issue 145 reviewed opening repair forms preserve exact current opening revision and independent review; controlled transport only."
     },
     {
       "file": "apps/web/src/test/cash-close.test.tsx",
@@ -3730,6 +3745,30 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue 145 controlled transport checks reviewed physical closing, scoped commands and retained evidence; not database or actual browser proof."
+    },
+    {
+      "file": "apps/web/src/test/cash-close.test.tsx",
+      "name": "saves actual initial amount and time correction with exact revision and shows pending opening despite retained approval",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue 145 reviewed opening repair forms preserve exact current opening revision and independent review; controlled transport only."
+    },
+    {
+      "file": "apps/web/src/test/cash-close.test.tsx",
+      "name": "approves only exact opening separately while preserving ending self-review restriction",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue 145 reviewed opening repair forms preserve exact current opening revision and independent review; controlled transport only."
+    },
+    {
+      "file": "apps/web/src/test/cash-close.test.tsx",
+      "name": "permits an opening author to reject another counter without granting approval to that opening",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue 145 server-derived rejection eligibility preserves counter independence and never approves the opening implicitly; controlled transport only."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",

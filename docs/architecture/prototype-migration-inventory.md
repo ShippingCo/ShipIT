@@ -890,7 +890,7 @@ These effects add no persistent browser data or prototype write authority.
 | apps/web/src/test/cash-close.test.tsx: prepares a real successor-open intent with version zero without the update-only guard | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: submits the actual successor opening form and shows the confirmed new session | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: allows the attached CSV download anchor through the command navigation guard | preserve | reports |
-| apps/web/src/test/cash-close.test.tsx: renders server-authorized administrator recovery while retaining the departed opening observer | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: renders a current administrator ending count while retaining another active opening observer | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: finance readers inspect immutable counts without recording or approval forms | preserve | reports |
 
 ## Issue #145 derived checklist regression disposition
@@ -903,3 +903,23 @@ review attestation. These regressions preserve that distinction through submissi
 | --- | --- | --- |
 | apps/web/src/test/cash-close.test.tsx: derives checklist capture, submission and stale states without claiming human source review | preserve | reports |
 | apps/web/src/test/cash-close.test.tsx: keeps prior approval separate from reopened checklist work and labels approved late evidence | preserve | reports |
+
+## Issue #145 opening repair regression disposition
+
+The two added forms have no new timers/listeners. Their controlled transport regressions
+check exact opening identity, corrected actual amount/time, separate opening approval and
+pending/stale checklist states without replacing prior approved evidence. The existing
+recorder regression now represents normal cross-actor shifts rather than observer departure.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cash-close.test.tsx: saves actual initial amount and time correction with exact revision and shows pending opening despite retained approval | preserve | reports |
+| apps/web/src/test/cash-close.test.tsx: approves only exact opening separately while preserving ending self-review restriction | preserve | reports |
+
+The rejection selector uses its separate server-derived eligibility. Its regression verifies
+an opening author can reject another counter while combined approval stays disabled and
+opening approval remains pending. No timer/listener or human attestation is added.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/cash-close.test.tsx: permits an opening author to reject another counter without granting approval to that opening | preserve | reports |

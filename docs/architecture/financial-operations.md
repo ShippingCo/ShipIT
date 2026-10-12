@@ -2073,10 +2073,10 @@ known position and unknown-custody coverage are separate controls; arithmetic ag
 never proves all real activity was recorded. Pending handovers remain sender custody;
 only acknowledged legs move cash. Noncash sources do not enter a drawer's turnover.
 
-The first opening is an attributed physical observation reviewed together with the
-ending count. Its observer captures/submits that first combined evidence. If that
-observer departs or loses every current local recording grant, a current admin may
-capture/submit the ending observation while retaining the original opening attribution.
+The first opening is an attributed physical observation, approved separately or together
+with the ending count. Current assigned operators and local admins may record the ending
+even when another active actor observed the opening. Initial amount/time corrections append
+a reasoned exact linked revision; they never overwrite the original observation.
 Each counter submits their own exact capture; an admin cannot approve their own count
 by having another actor submit it. Subsequent openings reference the exact accepted
 predecessor submission/count and counted instant, including overnight activity without
@@ -2123,15 +2123,17 @@ Owner checklist and recovery:
    window, recorded cutoff, coverage and pending handovers. Explain differences before
    submitting the exact saved count; saving a new capture does not edit earlier evidence.
 3. The reviewer checks both physical observations, source controls, pending custody and
-   shortage/excess reasons. Another current local administrator reviews a counter's
+   shortage/excess reasons. Approve an opening separately when its author must later
+   independently review another actor's ending; retain both exact approval references. Another current local administrator reviews a counter's
    own submission. Only when that counter is the sole eligible local admin may they use
    the explicitly labelled self-approval acknowledgment. Rejection asks for a new count
    capture/submission; it cannot alter the submitted one.
 4. Start the next session from the approved physical ending count. Keep prior shortage,
    excess and dependency notices visible. Do not enter an expense or deduction merely
    to clear the difference, and do not treat accepted physical cash as new source capacity.
-5. For late evidence, inspect the original interval and ask an administrator to start a
-   reasoned linked correction. Retain the actual ending time when still valid. Review and
+5. For late evidence or an incorrect opening, inspect the original interval. Correct
+   initial evidence while open/rejected; ask an administrator to reopen submitted or
+   approved sessions for a reasoned linked correction. Retain the actual ending time when still valid. Review and
    approve its replacement, then reconcile each affected successor explicitly. Original
    accepted submissions and exports remain available. A changed chronological boundary
    may require a genuinely new observation; never invent one to make arithmetic fit.
@@ -2140,7 +2142,7 @@ Owner checklist and recovery:
    error requires a reviewed storage remedy for that anchored interval. Disabled writes
    preserve history and authorized exact replay. Lost membership stops access immediately.
 
-| Current authority | Inspect closing | Open/count/submit | Review/reopen | Private export |
+| Current authority | Inspect closing | Open/count/submit or correct initial evidence | Review/reopen | Private export |
 | --- | --- | --- | --- | --- |
 | Local operator | Own drawer sessions | Own drawer; submit own capture | No | No |
 | Local franchise admin | Selected franchise | Selected franchise; submit own capture | D137 current reviewer rules | Own captured export |
@@ -2149,12 +2151,37 @@ Owner checklist and recovery:
 | Agent-only or read-only | No | No | No | No |
 
 Combined roles retain their existing scoped grants; this table does not grant organization
-administrators operational powers. When the original first-opening observer departs, a
-current local admin may capture the ending observation and submit the combined evidence;
-the original opening actor/time/amount stay unchanged. If another local admin exists, that
-other admin reviews it. The server exposes current count eligibility to the UI and rechecks
-it in the locked write. The original observer cannot be bypassed while their recording grant
-remains active. This ownership restriction prevents laundering a counter's self-review.
+administrators operational powers. Any currently authorized assigned operator or local
+admin can observe an ending, irrespective of who opened the session. The exact counter
+must submit that capture. Current source/evidence authors remain attributable; an opening
+approval is separate from an ending approval when needed. For two admins, A can observe
+the opening, B can approve that exact opening and observe/submit the ending, and A can
+independently approve B's ending. B's opening review does not approve B's ending. A combined
+first-close approval remains available to an admin distinct from both unreviewed observers,
+or with the explicit D137 acknowledgment when self-review is currently sole-admin eligible.
+An opener can independently reject another counter without approving their own opening;
+the review selector applies the eligibility of the selected decision. Each saved opening
+review has its own independent/self label even when a combined closing self-reviews the
+ending. A departed observer's evidence remains immutable; current authorized recorders can continue.
+
+Correct a mistaken initial amount/time using **Correct initial opening evidence** while
+open or rejected. Submitted/approved sessions first need an administrator's **Start linked
+correction**. Enter the actual amount/time, optional denominations and supporting reason;
+the command links the exact previous initial revision and advances the session version.
+Original observations, approved counts, signatures and exports remain unchanged. The new
+opening requires its own approval and a fresh capture of the ending against its amended
+source interval. A retained ending time is permitted only if still later than that actual
+opening. A reason explains evidence; it does not authorize a fabricated observation.
+
+A separate opening approval references the exact revision and is allowed before or after
+ending capture/submission. Final closing approval records the exact opening approval used
+for independence, even when that approval came after capture. Old count snapshots never
+acquire a later approval by mutation. Replacing an opening clears only current opening
+approval; the checklist marks its new approval pending and old capture stale. A predecessor
+carry cannot be client-corrected: reconcile its originating session instead. Replacement
+closing approval marks downstream physical carry changed only when the accepted ending
+amount or time changed; opening/source-only repairs still produce provenance notices.
+
 
 [Issue 145 verification](issue-145-verification.md) distinguishes automated transport,
 real source-backed PostgreSQL, actual browser and release-gate evidence.

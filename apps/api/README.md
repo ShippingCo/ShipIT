@@ -429,7 +429,10 @@ through the flag while retaining historical reads and exact committed outcomes.
 demo. Migration49 and the exact runtime grants in `packages/db/README.md` precede any
 independently authorized activation. This change does not authorize production activation.
 The Cashbook workspace implements first physical opening, count, submit, D137 review,
-physical carry, retained discrepancies, linked reopen/history and private E03 CSV.
+physical carry, retained discrepancies, linked initial-opening correction, separate opening
+approval, linked reopen/history and private E03 CSV. Current recorders may end a drawer
+opened by someone else; exact counters submit and independently reviewed evidence is
+bound to its immutable opening revision/approval references.
 Late prior-window evidence cannot subtract twice from the next physical opening.
 
 Focused checks: `pnpm --filter @shippingco/api test test/integration/cash-close-rules.test.ts`,

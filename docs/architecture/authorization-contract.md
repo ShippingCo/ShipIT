@@ -199,8 +199,8 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W66 | Approve/reject current agent settlement revision; different submitting actor, no self-approval exception | - | F | - | - | - | - | - |
 | W63 | Named receiving custodian acknowledgement or permitted cancellation (`cashbook.handover.acknowledge`); no acknowledgement for another recipient | - | F | F | - | S | - | - |
 
-| W67 | Open/count/submit physical drawer closing; operators assigned drawer only; exact counter submits own capture | - | F | F | - | - | - | - |
-| W68 | Review exact closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
+| W67 | Open/count/submit and revise initial opening evidence; operators assigned drawer only; exact counter submits own capture | - | F | F | - | - | - | - |
+| W68 | Review exact initial opening or closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
 | W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
 
 W36 is only scheduling an E01–E04-authorized export; accountant is limited to E03. W06
@@ -553,8 +553,15 @@ under organization/franchise locks; duplicated grants, invitations, disabled use
 admins and org-admin-only users do not change sole-admin eligibility. Exact replay retains
 its original mode after renewed current authority. This exception does not affect W59 or W66.
 
-For the jointly unapproved initial opening, its observer normally captures/submits both
-observations. A current admin may recover a departed observer's session while preserving
-that initial attribution; its exact new counter submits the recovery capture. The initial
-opening/counter cannot be laundered through another submitter to disguise self review.
+Any current local admin or assigned operator may capture an ending regardless of the
+initial observer. Only that exact counter submits it. Separate opening approval requires
+a current local admin distinct from the exact opening revision's author, or the explicitly
+acknowledged D137 sole-admin mode. Combined closing approval additionally checks any
+unapproved opening author, alongside ending counter/submitter. A separately approved
+opening contributes its exact approval reference, not a new ban on historical authors or
+reviewers. Thus A-opening/B-ending is feasible with B's independent opening approval and
+A's independent ending approval; no third admin is required. Rejection never approves an
+opening. An opening author may independently reject another counter without approving
+their own opening; approval and rejection eligibility are exposed separately. Initial correction uses the existing recording scope while open/rejected; only
+admins may reopen submitted/approved evidence. All decisions recheck current memberships.
 Approved predecessor authors and reopen initiators add no independent-review restriction.
