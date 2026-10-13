@@ -3,6 +3,7 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  SETTINGS_DISABLED:[409,'New settings writes are disabled. Saved configuration and exact completed-command replay remain available.'],
   AGENT_MONEY_DISABLED:[409,'New agent money and settlement writes are disabled. Saved evidence and exact completed-command replay remain available.'],
   CUSTODY_CONFLICT:[409,'Parcel custody evidence has changed. Refresh the handover and current assignment.'],
   CUSTODY_DISABLED:[409,'New parcel custody writes are disabled. Saved evidence remains available.'],
@@ -97,6 +98,10 @@ export class HttpError extends Error {
   readonly code: PublicErrorCode;
   constructor(code: PublicErrorCode) { super(code); this.code = code; }
 }
+export class SettingsVersionConflict extends HttpError {
+  readonly currentVersion:number;
+  constructor(currentVersion:number){super('VERSION_CONFLICT');this.currentVersion=currentVersion;}
+}
 export type ValidationField = 'methods'|'other_method_name'|'active'|'account_id'|'expected_account_version'|'receiver_id'|'custodian_id'|'occurred_at'|'external_reference'|'allocations'|'expected_payment_version'|'allocation_id'|'amount_paise'|'currency'|'context'|'method'|'collection_reference'|'receipt_id'|'payment_id'| 'event_id'|'kind'|'manifest_version'|'effective_at'|'base_eta_at'|'total_delay_minutes'| 'origin'|'destination'|'mode'|'carrier_code'|'scheduled_departure_at'| 'lot_id'|'target_lot_id'|'membership_id'|'expected_target_version'|'state'| 'action'|'items'| 'parcels'|'docket'|'status'|'from'|'to'|'sort'|'booking_id'|'parcel_id'|'expected_customer_version'|'tax_calculation_id'| 'tax' | 'tax.jurisdiction' | 'version_id' | 'quote_id' | 'destination_key' | 'service' | 'weight_grams' | 'min_weight_grams' | 'max_weight_grams' | 'freight_paise' | 'packing_paise' | 'effective_from' | 'effective_to' | 'quote_validity_seconds' | 'override_tolerance_paise' | 'approval_ref' | 'source_ref' | 'rules' | 'reason_code' | 'failure_subreason_code' | 'override_reason_code' | 'evidence_ref' | 'location_ref' | 'manifest_id' | 'route_id' | 'attempt_id' | 'return_plan_ref' | '$' | 'name' | 'phone' | 'address' | 'expected_version' | 'search_by' | 'q' | 'limit' | 'cursor' | 'organization_id' | 'franchise_id' | 'customer_id' | 'idempotency_key';
 export type ValidationCode = 'REQUIRED' | 'INVALID_TYPE' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'UNKNOWN_FIELD';
 export class FieldValidationError extends HttpError {
@@ -130,7 +135,7 @@ export function registerErrors(app: FastifyInstance) {
     if (code === 'INTERNAL_ERROR') request.log.error({ event: 'request_failed', code, request_id: request.id }, 'Request failed');
     const envelope = errorEnvelope(code, request.id);
     const response = code === 'VALIDATION_FAILED'
-      ? { error: { ...envelope.error, details: error instanceof FieldValidationError ? error.details : (e.validation ?? []).slice(0, 10).map(detail) } } : envelope;
+      ? { error: { ...envelope.error, details: error instanceof FieldValidationError ? error.details : (e.validation ?? []).slice(0, 10).map(detail) } } : error instanceof SettingsVersionConflict ? {error:{...envelope.error,current_version:error.currentVersion}} : envelope;
     return reply.code(errors[code][0]).send(response);
   });
 }

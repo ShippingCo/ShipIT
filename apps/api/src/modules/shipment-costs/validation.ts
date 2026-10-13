@@ -40,6 +40,6 @@ export function upload(value:unknown):ShipmentCostInput[]{
  return csv.records.map((row,n)=>{if(row.length!==headers.length)throw new CsvError('COLUMN_COUNT',n+2);const r=Object.fromEntries(headers.map((k,i)=>[k,row[i]!]));if(!/^(0|[1-9][0-9]{0,15})$/.test(r.amount_paise!))throw new CsvError('INVALID_AMOUNT',n+2);const {booking_id,parcel_id,...fields}=r;return input({...fields,source_id:null,expected_version:0,supplier:r.supplier||null,document:r.document||null,line:r.line||null,amount_paise:Number(r.amount_paise),allocations:[{booking_id,parcel_id:parcel_id||null,amount_paise:Number(r.amount_paise)}]});});
 }
 export function filter(value:unknown,franchise:string):ContributionFilter {
- const b=object(value,['from_day','to_day','sort','franchise_ids','effective_at','recorded_at']);const base=salesFilter({from_day:b.from_day,to_day:b.to_day,sort:b.sort,franchise_ids:b.franchise_ids},franchise);
- return {from_day:base.from_day,to_day:base.to_day,sort:base.sort,franchise_ids:base.franchise_ids,effective_at:b.effective_at==null?null:instant(b.effective_at),recorded_at:b.recorded_at==null?null:instant(b.recorded_at)};
+ const b=object(value,['from_day','to_day','sort','franchise_ids','effective_at','recorded_at','settings_version_id']);const base=salesFilter({from_day:b.from_day,to_day:b.to_day,sort:b.sort,franchise_ids:b.franchise_ids},franchise);
+ return {...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),from_day:base.from_day,to_day:base.to_day,sort:base.sort,franchise_ids:base.franchise_ids,effective_at:b.effective_at==null?null:instant(b.effective_at),recorded_at:b.recorded_at==null?null:instant(b.recorded_at)};
 }

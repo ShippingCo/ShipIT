@@ -13,7 +13,7 @@ export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 's
 interface State {
   draft: Draft; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
-  message: string; recoveryBlocked: boolean; busy: boolean;
+  settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean;
 }
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api);
@@ -58,9 +58,14 @@ export function createBookingWorkflow(controller: ScopeController) {
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     activate() { live = true; unsubscribe = controller.runtime.onInvalidate(purge); },
     dispose() { unsubscribe(); live = false; },
+    acceptServiceSuggestion(service: Draft['service'], version: string) {
+      if (locked() || state.quote) return;
+      set({draft:{...state.draft,service},settingsVersion:version,message:'Configured service accepted for this new booking draft.'});
+      invalidateCommercial();
+    },
     change(field: Field, value: string) {
       if (locked()) return;
-      set({ draft: { ...state.draft, [field]: value }, errors: { ...state.errors, [field]: undefined } });
+      set({ ...(field === 'service' ? {settingsVersion:undefined} : {}), draft: { ...state.draft, [field]: value }, errors: { ...state.errors, [field]: undefined } });
       if (commercialFields.includes(field)) invalidateCommercial();
       if (['name', 'phone', 'address'].includes(field)) { customerIntent = undefined; set({ customerPhase: 'editing' }); }
     },
@@ -100,10 +105,10 @@ export function createBookingWorkflow(controller: ScopeController) {
       set({ busy: true, message: 'Requesting server price and tax…' });
       let phase: 'pricingPhase' | 'taxPhase' = 'pricingPhase';
       try {
-        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote(pricingInput(state.draft));
+        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote({...pricingInput(state.draft),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})});
           const quote = await commercialApi.executeQuote(quoteIntent); if (!current()) return; set({ quote, pricingPhase: 'ready' }); }
         phase = 'taxPhase'; set({ taxPhase: 'loading' });
-        taxInput ??= { quote_id: state.quote!.id, pricing_input: pricingInput(state.draft), facts: taxFacts(state.draft) };
+        taxInput ??= { quote_id: state.quote!.id, pricing_input: {...pricingInput(state.draft),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})}, facts: taxFacts(state.draft) };
         if (!calculateIntent) {
           prepareIntent ??= commercialApi.prepare(taxInput);
           const preparation = await commercialApi.executePrepare(prepareIntent); if (!current()) return;

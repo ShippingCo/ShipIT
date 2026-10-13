@@ -2175,6 +2175,86 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "decodes absent, inherited, configured-empty and revoked scope without manufacturing values or leaking unknown properties",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "rejects invalid clock/calendar/reference values without choosing a working week or policy",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "checks exact owner on responses and authorized options, including pagination metadata",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "saves typed organization configuration with expected version and shows immutable history and honest availability",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "retains a conflicting draft, requires explicit rebasing, and clears an override with null rather than copied defaults",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "preserves exact lost-response retry across actual OperatorApp Back/Forward and warns before departure",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "purges draft and uncertain intent on scope abort and ignores pending old-context completion",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "operator display preference is separate from legal/franchise identity and operator role cannot write",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "booking suggestion requires acceptance, preserves provenance in quote and tax requests, and manual service clears it",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "does not substitute revoked configured report selection and requires explicit new-capture acceptance",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "Sales and contribution capture accepted scope source only until manual changes, and saved report selection disables suggestion",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "uses current authorized native receiving account choices and freezes the selected exact revision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "report options use authorized paginated API rather than all operator-context franchises",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "delivery-agent-only cannot resolve settings or protected financial references",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
+        "name": "retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",
         "name": "retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away",
         "cases": null
@@ -2389,6 +2469,10 @@
         "kind": "signal?.addEventListener"
       },
       {
+        "file": "apps/web/src/data-access/settings-session.ts",
+        "kind": "scope.signal.addEventListener"
+      },
+      {
         "file": "apps/web/src/data-access/shipment-cost-command.ts",
         "kind": "scope.signal.addEventListener"
       },
@@ -2553,6 +2637,14 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/Settings.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/SettingsPreferences.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
         "file": "apps/web/src/operations/ShipmentCosts.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2594,6 +2686,14 @@
       },
       {
         "file": "apps/web/src/operator/OperatorApp.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operator/SettingsNavigationGuard.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operator/SettingsNavigationGuard.tsx",
         "kind": "document.addEventListener"
       },
       {
@@ -5366,6 +5466,134 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "decodes absent, inherited, configured-empty and revoked scope without manufacturing values or leaking unknown properties",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "rejects invalid clock/calendar/reference values without choosing a working week or policy",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "checks exact owner on responses and authorized options, including pagination metadata",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "saves typed organization configuration with expected version and shows immutable history and honest availability",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "retains a conflicting draft, requires explicit rebasing, and clears an override with null rather than copied defaults",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "preserves exact lost-response retry across actual OperatorApp Back/Forward and warns before departure",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "purges draft and uncertain intent on scope abort and ignores pending old-context completion",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "operator display preference is separate from legal/franchise identity and operator role cannot write",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "booking suggestion requires acceptance, preserves provenance in quote and tax requests, and manual service clears it",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "does not substitute revoked configured report selection and requires explicit new-capture acceptance",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "Sales and contribution capture accepted scope source only until manual changes, and saved report selection disables suggestion",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "uses current authorized native receiving account choices and freezes the selected exact revision",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "report options use authorized paginated API rather than all operator-context franchises",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "delivery-agent-only cannot resolve settings or protected financial references",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
+      "name": "retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue 66 controlled transport and router evidence: typed settings, current authorization, retained exact intent and future-only accepted provenance; no production policy values."
     },
     {
       "file": "apps/web/src/test/shipment-cost-navigation.test.tsx",

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { TextField } from '../components/m3/Input';
 import BusinessShell from '../pages/business/BusinessShell';
+import {SettingsNavigationGuard} from './SettingsNavigationGuard';
+import {settingsDeparture} from '../data-access/settings-session';
 import SignIn from './SignIn';
 import Onboarding, { clearPending } from './Onboarding';
 import { connectInvalidation } from '../data-access/invalidation';
@@ -24,7 +26,7 @@ export default function OperatorApp() {
     return () => { crossTab.current?.close(); };
   }, [controller]);
   const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-  const refresh = () => controller.load(selected.current, latestPath.current);
+  const refresh = (resetSelection=false) => {if(!settingsDeparture(controller.runtime.ticket()))return Promise.resolve();if(resetSelection)selected.current=undefined;return controller.load(selected.current, latestPath.current);};
   useEffect(() => {
     latestPath.current = location.pathname;
     void controller.navigate(selected.current, location.pathname);
@@ -48,7 +50,7 @@ export default function OperatorApp() {
     }
   }, [state.status]);
   async function accept(event: React.FormEvent) {
-    event.preventDefault(); if (busy) return; setBusy(true); setMessage('');
+    event.preventDefault(); if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage('');
     const token = invitation; setInvitation(''); controller.clear();
     try {
       await controller.source.acceptInvitation(token);
@@ -61,7 +63,7 @@ export default function OperatorApp() {
     } finally { setBusy(false); }
   }
   async function logout() {
-    if (busy) return; setBusy(true); setMessage(''); setInvitation(''); controller.clear(); crossTab.current?.publish();
+    if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage(''); setInvitation(''); controller.clear(); crossTab.current?.publish();
     try { await controller.source.logout(); selected.current = undefined; controller.clear('signed_out', latestPath.current); crossTab.current?.publish(); }
     catch { controller.clear('error', latestPath.current); setMessage('Sign-out could not be confirmed. Retry when the connection returns.'); }
     finally { setBusy(false); }
@@ -69,13 +71,13 @@ export default function OperatorApp() {
   const context = state.context;
   // A changed route never renders data from the previous authorization check, even before effects run.
   const loading = state.status === 'loading' || state.path !== location.pathname;
-  return <div className="operator-root">
+  return <div className="operator-root"><SettingsNavigationGuard controller={controller}/>
     {loading ? <main className="operator-center" role="status">Checking workspace access…</main> : state.status === 'signed_out' ?
       <main className="operator-center"><SignIn source={controller.source} complete={async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); }} /></main> :
       state.status === 'error' ? <main className="operator-center"><section className="card operator-card">
         <h1 className="t-headline-sm">Workspace access unavailable</h1>
         <p role="alert">Your session or access may have changed, or the service is unavailable. Private workspace data has been cleared.</p>
-        <button className="btn btn-filled" disabled={busy} onClick={() => { selected.current = undefined; void refresh(); }}>Refresh workspace access</button>
+        <button className="btn btn-filled" disabled={busy} onClick={() => { void refresh(true); }}>Refresh workspace access</button>
       </section></main> : context?.state === 'ready' ? <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
       }} /> : <main className="operator-center">
@@ -84,7 +86,7 @@ export default function OperatorApp() {
       </main>}
     {state.notice && <p role="status" className="operator-message">{state.notice}</p>}
     {!loading && state.status !== 'signed_out' && <footer className="operator-actions">
-      <button className="btn btn-text" disabled={busy} onClick={() => { selected.current = undefined; void refresh(); }}>Refresh workspace access</button>
+      <button className="btn btn-text" disabled={busy} onClick={() => { void refresh(true); }}>Refresh workspace access</button>
       <button className="btn btn-text" disabled={busy} onClick={() => { void logout(); }}>Sign out</button>
       {context && <p>Verified account reference: {context.user_id}</p>}
       {context && <form onSubmit={event => { void accept(event); }} className="operator-invitation">

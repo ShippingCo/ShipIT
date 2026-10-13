@@ -1,3 +1,4 @@
+import {validateSettingSuggestion} from '../settings/consumer.ts';
 import {randomUUID} from 'node:crypto';
 import type {DatabasePool} from '@shippingco/db';
 import {shipmentCostCategories,contributionColumns,reportLimits,type ContributionRow,type ContributionSnapshot,type ContributionTotals,type ContributionGroup,type ContributionPage} from '@shippingco/shared';
@@ -36,6 +37,7 @@ export function createContributionService(database:DatabasePool){return {
   return withReportScope(database,session,q.organizationId,q.franchiseId,false,correlation,async scope=>{
    await reports.lock(scope);const prior=await reports.replay<ContributionSnapshot,ContributionRow>(scope,key);
    if(prior){if(prior.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');if(prior.expired)throw new HttpError('REPORT_EXPIRED');return page(prior.metadata,prior.rows);}
+   await validateSettingSuggestion(scope,'report_scope',filter.settings_version_id,{franchise_ids:filter.franchise_ids});
    const frame=await capture(scope,filter),rows=frame.rows.map(contributionRow);
    const snapshot:ContributionSnapshot={id:randomUUID(),schema_version:1,definition:'shipment_contribution_v1',organization_id:q.organizationId,franchise_id:q.franchiseId,timezone:'Asia/Kolkata',filter,as_of:frame.as_of,effective_at:frame.effective_at,recorded_at:frame.recorded_at,expires_at:new Date(Date.parse(frame.as_of)+86400000).toISOString().slice(0,23)+frame.as_of.slice(23),count:rows.length,totals:contributionTotals(rows),groups:contributionGroups(rows),shop_expenses:frame.expenses};
    if(Buffer.byteLength(JSON.stringify({snapshot,rows}))>reportLimits.bytes)throw new HttpError('REPORT_LIMIT_EXCEEDED');contributionCsv(snapshot,rows);await reports.save(scope,key,fingerprint,snapshot,rows);await reports.audit(scope,snapshot.id,'report.capture');return page(snapshot,rows);

@@ -1,12 +1,12 @@
 import { salesMeasures,type SalesAmounts,type SalesPage,type SalesExport,type SalesFilter } from '@shippingco/shared';
-import { object,uuid,text,instant,integer,choice,array,nullable,protocol,type Decoder } from './dto';
+import { object,uuid,text,instant,integer,choice,array,nullable,optional,protocol,type Decoder } from './dto';
 import type { ScopedApi } from './scoped-api';
 import type { CommandIntent } from './command-intent';
 const paise:Decoder<string>=v=>typeof v==='string'&&/^-?\d{1,24}$/.test(v)?v:protocol();
 const amounts:Decoder<SalesAmounts>=object(Object.fromEntries(salesMeasures.map(m=>[m,paise])) as Record<typeof salesMeasures[number],Decoder<string>>);
 const correction=object({id:uuid,kind:choice('discount','cancellation','correction','refund'),refund:paise,taxable:paise,occurred_at:instant,reason:text,approval_ref:text,pre_tax:paise,cgst:paise,sgst:paise,igst:paise,rounding:paise});
 const row=object({id:uuid,franchise_id:uuid,customer_id:uuid,confirmed_at:instant,booking_version:integer(1),payment_version:integer(),receipt_id:nullable(uuid),receipt_number:nullable(text),rate:text,treatment:text,jurisdiction:text,policy_id:uuid,original:amounts,amounts,corrections:array(correction,5000),statement_ids:array(uuid,100)});
-const snapshot=object({id:uuid,schema_version:choice(1),definition:choice('sales_gst_v1'),timezone:choice('Asia/Kolkata'),organization_id:uuid,franchise_id:uuid,filter:object({from_day:text,to_day:text,sort:choice('confirmed_asc','confirmed_desc'),rate:nullable(text),franchise_ids:array(uuid,50)}),as_of:instant,expires_at:instant,count:integer(),totals:amounts,groups:array(object({rate:text,treatment:text,jurisdiction:text,count:integer(),amounts}),5000)});
+const snapshot=object({id:uuid,schema_version:choice(1),definition:choice('sales_gst_v1'),timezone:choice('Asia/Kolkata'),organization_id:uuid,franchise_id:uuid,filter:object({from_day:text,to_day:text,sort:choice('confirmed_asc','confirmed_desc'),rate:nullable(text),franchise_ids:array(uuid,50),settings_version_id:optional(uuid)}),as_of:instant,expires_at:instant,count:integer(),totals:amounts,groups:array(object({rate:text,treatment:text,jurisdiction:text,count:integer(),amounts}),5000)});
 export const salesPage:Decoder<SalesPage>=object({snapshot,rows:array(row,100),next_offset:nullable(integer())});
 const exported:Decoder<SalesExport>=object({snapshot,columns:array(text,50),csv:text});
 export const financeState=object({version:integer(),payment_version:integer(),gross:paise,collections:paise,refunds:paise,pre_tax:paise,taxable:paise,cgst:paise,sgst:paise,igst:paise,rounding:paise,changes:array(object({id:uuid,version:integer(1),kind:choice('discount','cancellation','correction','refund'),reason:text,approval_ref:text,occurred_at:instant,refund:paise}),5000)});

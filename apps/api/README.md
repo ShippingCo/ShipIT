@@ -464,3 +464,25 @@ PostgreSQL runner discovers `apps/api/test/database/shipment-costs.test.ts`; use
 repository quality gate before rollout and qualify the actual browser separately.
 Recorded [qualification evidence and limits](../../docs/architecture/issue-147-verification.md)
 separate browser observations from the required release gates.
+
+### Versioned settings (#66)
+
+Apply migration51 and its narrow [runtime grants](../../packages/db/README.md) before
+separately authorizing `SETTINGS_WRITES_ENABLED=true`. This server-only switch defaults
+to `false`, accepts only boolean strings and is rejected in demo. Disabling it stops new
+updates while retaining current-authorized reads and exact completed-command replay.
+
+Organization settings and franchise overrides use distinct read/update capabilities.
+Organization administrators own organization defaults; franchise administrators own
+permitted local overrides. Financial references retain their narrower owning-domain
+permissions, and report options do not grant access or export rights. Updates require an
+expected version, reason and idempotency key; the server commits immutable configuration,
+command receipt and event together. Unknown keys and ownership mass assignment are rejected.
+
+GET/POST `/api/v1/settings/organization` and `/api/v1/settings/franchise` expose current
+values and updates, with corresponding GET `/history` endpoints. GET
+`/api/v1/reports/scopes` returns paginated currently permitted options. Use the exact query,
+DTO and authorization definitions in [API contracts](../../docs/architecture/api-contract.md).
+The [operator guide](../../docs/architecture/settings-operations.md) explains inheritance,
+consumer availability, conflicts and rollback. General settings contain no provider
+credentials, OTP secrets, deployment flags or invented financial/calendar policy.

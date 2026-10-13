@@ -51,7 +51,7 @@ export function bookingDto(value: BookingDto): BookingDto {
     charges:{confirmed_at:value.charges.confirmed_at,
       pricing:{...pick(pricing,['id','proposal','card_id','rate_version_id','rate_version_number','rule_id','freight_suggestion_paise','packing_paise','freight_paise','variance_paise','override_status','approval_actor_id','subtotal_paise','created_at','expires_at']),
         policy:pick(pricing.policy,['effective_from','effective_to','quote_validity_seconds','override_tolerance_paise','approval_ref','source_ref']),
-        inputs:{...pick(pricing.inputs,['destination_key','service','weight_grams']),...(pricing.inputs.override?{override:pick(pricing.inputs.override,['freight_paise','reason_code'])}:{})},
+        inputs:{...pick(pricing.inputs,['destination_key','service','weight_grams']),...(pricing.inputs.settings_version_id?{settings_version_id:pricing.inputs.settings_version_id}:{}),...(pricing.inputs.override?{override:pick(pricing.inputs.override,['freight_paise','reason_code'])}:{})},
         breakdown:pick(pricing.breakdown,['calculation','min_weight_grams','max_weight_grams','excluded'])},
       tax:{...pick(tax,['id','intent_id','quote_id','policy_id','policy_version','rule_id','resolution_id','supplier_state','place_of_supply','jurisdiction','registration','classification','treatment','pre_tax_paise','taxable_basis_paise','cgst_paise','sgst_paise','igst_paise','tax_total_paise','unrounded_payable_paise','rounding_adjustment_paise','final_payable_paise','approval_ref','source_ref','rule_evidence_ref','allocation','time_rule','proposed_tax_point_at','created_at','expires_at']),
         components:tax.components.map(c=>pick(c,['id','kind','numerator','denominator','exact_numerator','exact_denominator','amount_paise']))}},

@@ -31,7 +31,7 @@ export interface ShipmentCostSelectors {
  rates:{id:string;approval_id:string;courier_id:string;effective_from:string;effective_to:string}[];
  next_cursor:string|null;
 }
-export interface ContributionFilter extends ReportFilter {effective_at:string|null;recorded_at:string|null;franchise_ids:string[]}
+export interface ContributionFilter extends ReportFilter {settings_version_id?:string;effective_at:string|null;recorded_at:string|null;franchise_ids:string[]}
 export interface ContributionCost {
  source_id:string;revision_id:string|null;version:number;category:ShipmentCostCategory;state:ShipmentCostState;
  amount_paise:string;source_amount_paise:string;remainder_paise:string;effective_at:string;recorded_at:string;

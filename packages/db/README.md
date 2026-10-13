@@ -953,3 +953,27 @@ Enable new commands only after migration and grant verification through
 recorded evidence and repair forward. Native cashbook expenses retain their own correction
 authority; conflicting allocations need explicit reconciliation, never silent proportional
 redistribution. See the [operator guide](../../docs/architecture/shipment-cost-operations.md).
+
+### Migration51: versioned organization and franchise settings
+
+`1793120400000-versioned-settings.cjs` adds empty `settings_versions`,
+`settings_commands` and `settings_events`. It does not copy prototype preferences,
+invent a working calendar or rewrite historical financial/profile facts. Scoped immutable
+versions retain per-key provenance; current actor/lifecycle checks and sequential versions
+guard inserts. The trigger generates the durable event, and deferred receipt checks keep
+version and command evidence atomic.
+
+Grant only the additional privileges below to the actual runtime role, alongside the
+existing authentication, membership and owning-domain read grants composed by
+`prepareSettings` in tests:
+
+```sql
+GRANT SELECT,INSERT ON shipit.settings_versions,shipit.settings_commands TO runtime_role;
+GRANT SELECT ON shipit.settings_events TO runtime_role;
+```
+
+Do not grant direct event insertion, UPDATE, DELETE, TRUNCATE or schema ownership.
+Server-issued capabilities and current per-key permissions remain mandatory. New writes
+also require `SETTINGS_WRITES_ENABLED`; disable it for rollback while retaining schema,
+history and authorized completed replay. Apply corrections through new versions and
+future migrations. See [settings operations](../../docs/architecture/settings-operations.md).

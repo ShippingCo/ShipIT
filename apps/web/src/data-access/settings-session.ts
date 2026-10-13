@@ -1,0 +1,17 @@
+import type {SettingKey,SettingsDto,SettingsOwner} from '@shippingco/shared';
+import type {ScopeTicket} from './scope-runtime';
+import type {CommandIntent} from './command-intent';
+import type {SettingsSource} from './settings';
+import {ApiFailure,recoveryFor} from './errors';
+export type SettingsDraft={owner:SettingsOwner;key:SettingKey;expected_version:number;fields:Record<string,string>;reason:string;clear:boolean;confirmed:boolean;dirty:boolean};
+type State={draft:SettingsDraft|null;phase:'idle'|'pending'|'confirmed'|'error'|'uncertain';error:ApiFailure|null;result:SettingsDto|null;canRetry:boolean};
+const empty=():State=>({draft:null,phase:'idle',error:null,result:null,canRetry:false});
+const sessions=new WeakMap<ScopeTicket,ReturnType<typeof create>>();
+function create(source:SettingsSource){const scope=source.api.scope,listeners=new Set<()=>void>();let state=empty(),intent:CommandIntent|null=null;const set=(s:State)=>{state=s;listeners.forEach(fn=>fn());},current=()=>{if(scope.signal.aborted)throw new ApiFailure('SCOPE_CHANGED',{kind:'scope'});};
+ const send=async(command:CommandIntent)=>{current();intent=command;set({...state,phase:'pending',error:null,result:null,canRetry:true});try{const result=await source.execute(command);current();intent=null;set({...state,draft:null,phase:'confirmed',error:null,result,canRetry:false});return result;}catch(error){if(scope.signal.aborted)throw error;const safe=error instanceof ApiFailure?error:new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network',dispatched:true}),recovery=recoveryFor(safe,true);if(!['uncertain','pending','conflict'].includes(recovery))intent=null;set({...state,phase:recovery==='uncertain'||recovery==='pending'?'uncertain':'error',error:safe,result:null,canRetry:intent!==null});throw safe;}};
+ scope.signal.addEventListener('abort',()=>{intent=null;sessions.delete(scope);set(empty());listeners.clear();},{once:true});
+ return {snapshot:()=>state,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};},draft:(draft:SettingsDraft|null)=>{current();if(intent)throw new ApiFailure('IDEMPOTENCY_IN_PROGRESS');set({...state,draft});},run:(command:CommandIntent)=>{current();if(intent)throw new ApiFailure('IDEMPOTENCY_IN_PROGRESS');if(command.scope!==scope)throw new ApiFailure('SCOPE_CHANGED');return send(command);},retry:()=>{current();return intent&&state.phase!=='pending'?send(intent):Promise.resolve(null);},reset:()=>{current();if(state.phase==='pending'||state.phase==='uncertain')return;intent=null;set({...state,phase:'idle',error:null,result:null,canRetry:false});},acknowledge:(result:SettingsDto)=>{current();if(state.result===result)set({...state,result:null});}};
+}
+export function settingsSession(source:SettingsSource){let session=sessions.get(source.api.scope);if(!session){session=create(source);if(!source.api.scope.signal.aborted)sessions.set(source.api.scope,session);}return session;}
+export function settingsDeparture(scope:ScopeTicket){const s=sessions.get(scope)?.snapshot();if(!s||!s.draft?.dirty&&!s.canRetry)return true;return window.confirm(s.canRetry?'A settings request is unresolved. Leave this view? Its exact retry is retained only while your current access remains unchanged.':'You have unsaved settings. Leave this view? Your draft is retained only while your current access remains unchanged.');}
+export function settingsPending(scope:ScopeTicket){const s=sessions.get(scope)?.snapshot();return !!(s?.draft?.dirty||s?.canRetry);}

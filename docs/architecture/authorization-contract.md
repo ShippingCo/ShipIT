@@ -82,6 +82,7 @@ The rows cover every private concept in #2's module/data ownership table.
 | R34 | Cashbook scoped financial source/detail/captured totals (`cashbook.read`); current authority applies to private expense evidence and downloads | O | F | - | - | - | F | - |
 | R36 | Immutable agent cash capture and settlement evidence (`agent_statement.read`); operators see evidence they prepared, agents see only their own agent identity; minimum source evidence only | O | F | F | - | S | F | - |
 | R37 | Cash closing/session/source/history reads (`cashbook.close.read`); operator restricted to assigned drawer; current own-organization finance projections only | O | F | F | - | - | F | - |
+| R38 | Administrative settings defaults/history (`settings.organization.read`; local history under `settings.franchise.read`); organization endpoint org_admin only | O | F | - | - | - | - | - |
 | R35 | Dedicated cash handover selection/detail/history (`cashbook.handover.select`); delivery agents see only their immutable source/target participation and permitted minimum recipient choices in their currently granted franchise | O | F | F | - | S | F | - |
 
 R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
@@ -202,6 +203,7 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W68 | Review exact initial opening or closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
 | W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
 | W70 | Record/revise shipment cost evidence and preview/apply cost imports; exact owned source/version and explicit allocations | - | F | - | - | - | - | - |
+| W71 | Version organization settings defaults (`settings.organization.update`); safe common keys only, no W52/W56/agent-money financial configuration | O | - | - | - | - | - | - |
 
 W70 is the #147 cost-evidence command ceiling. Neither organization administration nor
 accountant financial read access grants this write capability. Current membership is
@@ -575,3 +577,26 @@ opening. An opening author may independently reject another counter without appr
 their own opening; approval and rejection eligibility are exposed separately. Initial correction uses the existing recording scope while open/rejected; only
 admins may reopen submitted/approved evidence. All decisions recheck current memberships.
 Approved predecessor authors and reopen initiators add no independent-review restriction.
+
+
+## Versioned settings (#66)
+
+R20 resolves safe effective preferences through `settings.franchise.read` only for the
+currently selected permitted franchise; an agent-only grant has no settings read.
+R38 exposes organization defaults to its own org_admin and version history to org_admin
+or the local franchise_admin. W71 owns organization defaults. W29 remains own-franchise
+`settings.franchise.update`; neither org_admin nor accountant can use it without an
+explicit local franchise_admin grant. Current authorization precedes completed replay.
+
+Receiving-account, financial-approval-policy and agent-fee revision selections are local
+financial keys, never organization defaults. Their effective values require existing
+org_admin/franchise_admin/accountant finance read; other R20 readers receive no private
+financial reference. W52/W56/agent-money authority remains unchanged. References are
+validated as exact current owned active revisions, with the owner's supported policy
+(null discount threshold, no self approval) retained. No settings command grants a role,
+issues a refund, records money, closes cash, reviews evidence or sends a report.
+
+Report options reuse R25 current financial reads and E03 export hints. The option API
+is a paginated projection, not a stored allowlist or an authorization grant. Actual
+capture/read/export independently reauthorizes every selected saved franchise. Unavailable
+saved scope preferences do not expose revoked IDs or silently select replacements.

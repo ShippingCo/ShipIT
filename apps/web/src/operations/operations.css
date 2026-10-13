@@ -52,3 +52,15 @@
 .shipment-cost-workspace input[type="file"] { display: block; max-width: 100%; margin-top: 8px; }
 .shipment-cost-workspace .ops-facts > div { min-width: 0; }
 .shipment-cost-workspace .btn { white-space: normal; }
+
+/* Settings provenance and typed controls stay readable at counter widths. */
+.settings-workspace { min-width: 0; }
+.settings-workspace .ops-card,.settings-workspace p,.settings-workspace li { overflow-wrap: anywhere; }
+.settings-workspace nav,.settings-workspace .ops-form { display: flex; flex-wrap: wrap; gap: 12px; }
+.settings-workspace .ops-form { flex-direction: column; }
+.settings-workspace fieldset { min-width: 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; padding: 12px; }
+.settings-workspace fieldset label { display: block; padding: 6px 0; }
+.settings-workspace input,.settings-workspace select,.settings-workspace textarea { max-width: 100%; }
+.settings-workspace input[type="checkbox"] { margin-right: 8px; }
+.settings-workspace :focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.settings-workspace button { max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; height: auto; min-height: 40px; }
