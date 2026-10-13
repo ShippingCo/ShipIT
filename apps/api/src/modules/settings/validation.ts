@@ -1,9 +1,9 @@
-import {settingKeys,type SettingKey,type SettingsPatch,type SettingsUpdateInput,type SettingsValues} from '@shippingco/shared';
+import {parseSettingsTimezone,settingKeys,type SettingKey,type SettingsPatch,type SettingsUpdateInput,type SettingsValues} from '@shippingco/shared';
 import {FieldValidationError} from '../../plugins/errors.ts';
 import {object,integer,uuid} from '../pricing/validation.ts';
 export function fail():never {throw new FieldValidationError('$','INVALID_FORMAT');}
 function text(value:unknown,max:number){if(typeof value!=='string'||!value.trim()||value.length>max||[...value].some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127))fail();return value.trim();}
-function timezone(value:unknown){const zone=text(value,64);if(!zone.includes('/')&&zone!=='UTC')fail();try{new Intl.DateTimeFormat('en',{timeZone:zone}).format();}catch{fail();}return zone;}
+function timezone(value:unknown){const zone=parseSettingsTimezone(value);if(zone===null)fail();return zone;}
 function list(value:unknown,max:number){if(!Array.isArray(value)||value.length>max)fail();return value;}
 function weekdays(value:unknown){const days=list(value,7).map(v=>integer(v,'$',0,6));if(!days.length||new Set(days).size!==days.length)fail();return days.sort((a,b)=>a-b);}
 function date(value:unknown){if(typeof value!=='string'||!/^\d{4}-\d\d-\d\d$/.test(value)||value.startsWith('0000'))fail();const d=new Date(value+'T00:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==value)fail();return value;}

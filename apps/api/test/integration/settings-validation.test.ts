@@ -1,3 +1,4 @@
+import {parseSettingsTimezone} from '@shippingco/shared';
 import {filterInput} from '../../src/modules/audit/validation.ts';
 import {describe,it,expect} from 'vitest';
 import {update,value} from '../../src/modules/settings/validation.ts';
@@ -34,5 +35,21 @@ describe('strict versioned configuration and rollout contract',()=>{
   const dates={from_day:'2026-10-12',to_day:'2026-10-12'},sale=salesFilter(dates,id),contribution=filter(dates,id);
   expect(Object.hasOwn(sale,'settings_version_id')).toBe(false);expect(Object.hasOwn(contribution,'settings_version_id')).toBe(false);
   expect(salesFilter({...dates,settings_version_id:id},id)).toEqual({...sale,settings_version_id:id});expect(filter({...dates,settings_version_id:id},id)).toEqual({...contribution,settings_version_id:id});
+ });
+});
+
+describe('timezone settings preserve intent spelling across ICU aliases and casing',()=>{
+ it.each(['Asia/Kolkata','asia/kolkata','ASIA/KOLKATA','Asia/Calcutta','US/Eastern','utc','UTC',' Etc/UTC '])('accepts %s consistently for every timezone family',timezone=>{
+  const expected=timezone.trim();expect(parseSettingsTimezone(timezone)).toBe(expected);
+  expect(value('operating_hours',{timezone,days:[]}).timezone).toBe(expected);
+  expect(value('close_cutoff',{timezone,minute:0}).timezone).toBe(expected);
+  expect(value('reporting_schedule',{timezone,report:'sales',franchise_ids:[id],weekday:1,minute:0}).timezone).toBe(expected);
+ });
+ it.each(['Browser/Local','+05:30','EST','',null,123,'UTC\n','A'.repeat(65)])('rejects unsupported or malformed %j consistently',timezone=>{
+  expect(parseSettingsTimezone(timezone)).toBeNull();
+  for(const [key,input] of [['operating_hours',{timezone,days:[]}],['close_cutoff',{timezone,minute:0}],['reporting_schedule',{timezone,report:'sales',franchise_ids:[id],weekday:1,minute:0}]] as const)expect(()=>value(key,input)).toThrow('VALIDATION_FAILED');
+ });
+ it('does not expand the fixed collection calendar zone contract',()=>{
+  for(const timezone of ['asia/kolkata','Asia/Calcutta','UTC'])expect(()=>value('collection_calendar',{timezone,weekdays:[1],holidays:[]})).toThrow('VALIDATION_FAILED');
  });
 });

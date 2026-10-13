@@ -57,7 +57,7 @@ BEGIN
  IF k='language' THEN RETURN v->>'locale' IN ('en','hi');END IF;
  IF k='booking_defaults' THEN RETURN v->>'service' IN ('standard','express','same_city');END IF;
  IF v ? 'timezone' THEN
-  IF jsonb_typeof(v->'timezone')<>'string' OR length(v->>'timezone')>64 OR NOT((v->>'timezone')='UTC' OR strpos(v->>'timezone','/')>0) OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=v->>'timezone') THEN RETURN false;END IF;
+  IF jsonb_typeof(v->'timezone')<>'string' OR length(v->>'timezone')>64 OR NOT(upper(v->>'timezone')='UTC' OR strpos(v->>'timezone','/')>0) OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_timezone_names WHERE lower(name)=lower(v->>'timezone')) THEN RETURN false;END IF;
  END IF;
  IF k='collection_calendar' THEN
   IF v->>'timezone'<>'Asia/Kolkata' OR jsonb_typeof(v->'weekdays')<>'array' OR jsonb_typeof(v->'holidays')<>'array' THEN RETURN false;END IF;

@@ -34,3 +34,12 @@ export interface SettingsDto {
 }
 export interface SettingsHistoryDto {items:{id:string;version:number;effective_at:string;recorded_at:string;actor_id:string;reason:string;changed_keys:SettingKey[]}[];next_before:number|null}
 export interface ReportScopeOptions {organization_id:string;active_franchise_id:string;items:{id:string;name:string;can_export:boolean}[];next_cursor:string|null;maximum_selection:50}
+
+/** Keep accepted spelling stable for immutable intents; PostgreSQL catalog support is checked by the API. */
+export function parseSettingsTimezone(value:unknown):string|null {
+ if(typeof value!=='string'||value.length>64||[...value].some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127))return null;
+ const zone=value.trim();
+ if(!zone||(!zone.includes('/')&&zone.toUpperCase()!=='UTC'))return null;
+ try {new Intl.DateTimeFormat('en',{timeZone:zone}).format();}catch{return null;}
+ return zone;
+}

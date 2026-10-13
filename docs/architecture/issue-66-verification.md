@@ -2,8 +2,10 @@
 
 Implementation base: `00c4208c950a0c166ef94687cec0c35d3126dd15`, after #147.
 Branch: `issue-66-versioned-settings`. Qualification uses pinned Node 22.23.2,
-pnpm 10.34.5 and Python 3.12.14. Final commit, full quality gate, independent
-review and CI are pending; this record does not authorize production activation.
+pnpm 10.34.5 and Python 3.12.14. The initial implementation commit
+`f6c24a4f098d86747d223911c0c8647816a17208` passed full quality and PR CI.
+Independent review requested two repairs; final repaired-head qualification remains
+pending. This record does not authorize production activation.
 
 ## Focused backend qualification
 
@@ -83,10 +85,51 @@ disposable tab/group was closed; cleanup of the stalled in-app tabs could not be
 confirmed. Live lost-response injection was not browser-qualified; focused React
 and PostgreSQL tests cover exact retry and authority invalidation.
 
+## Full gate and independent review
+
+At initial head `f6c24a4f098d86747d223911c0c8647816a17208`, both
+`pnpm check:migrations` and `pnpm db:local quality` completed successfully. The gate
+passed 40 tooling, 22 testkit, 12 DB-unit, 731 API-unit, 340 web and 3 actual-S3 tests.
+PostgreSQL passed 87 schema tests across 38 files and 568 API tests across 74 files:
+655 integration cases, with zero failures, skips, cancellations or todo cases.
+Planning, lint, tenant AST, typechecks and both production builds passed. Owned
+PostgreSQL and object-store containers were removed. Logs are retained locally as
+`.codex/logs/final-migrations-f6c24a4.log` and `final-quality-f6c24a4.log`.
+All 11 jobs in [PR CI run 38356120793](https://github.com/ShippingCo/ShipIT/actions/runs/38356120793)
+also passed at that head.
+
+Independent review of all 104 changed paths requested changes after reproducing
+two P2 defects: cancelling a settings departure overwrote the destination history
+entry, and noncanonical timezone spelling passed API validation but failed the
+SQL guard as a repeatedly uncertain HTTP503. The original independent probes and
+report remain under `.codex/reviews/`. Separate concurrency, option pagination,
+current authority and late-result purge probes passed; a focused frontend cohort
+passed 43/43. The repairs use React Router's data-router navigation blocker to preserve history
+entries and a shared timezone parser plus a case-insensitive PostgreSQL catalog
+preflight before any settings writes. Accepted spelling and completed command results
+remain stable; unsupported catalog values return a correctable validation error.
+The collection-calendar policy boundary remains exact Asia/Kolkata.
+
+Repair qualification passed 32 API unit tests, 12 PostgreSQL tests and 78 focused web
+tests. Web/API types, targeted lint, tenant AST, migration history and planning passed
+(298 declarations, 17 negative controls). Permanent regressions cover cancelled
+Back/Forward, saved URL/key/state and history index, cancelled push/replace, retained
+uncertain retries, all three editable timezone families, aliases/casing and correctable
+422 recovery without partial state.
+
+Actual Chrome verification repeated native Back and Forward cancellation, subsequent
+acceptance, the exact saved Sales snapshot URL and totals, and retained settings draft
+and reason. Invalid timezone input remained editable; corrected `asia/kolkata` saved
+as version 1 and survived reload. Historical quote/booking/receipt/report rows retained
+SHA-256 `141a3da97ff03bb5715549b2151c13253695a13ca617404d9d186a5d4e1b27b4`.
+The repair browser tab was closed and its fixture/server resources were stopped and
+cleaned. Detailed evidence is retained as `.codex/verification/browser-repair-results.md`.
+Focused independent revalidation and the final repaired-head full gate remain pending.
+
 ## Completion gates and limits
 
-Full pinned quality checks, final-head independent review, required PR CI, branch
-protection verification, protected merge and main verification remain pending.
+Final repaired-head full quality, independent approval, required PR CI, protected
+merge and main verification remain pending.
 Collection-clock activation, production operating-calendar approval, downstream
 report sending and unresolved account-terms policy remain outside this change.
 See [operator guidance](settings-operations.md) for consumer boundaries and rollback.

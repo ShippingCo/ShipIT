@@ -1053,3 +1053,31 @@ browser or database verification.
 | apps/web/src/test/settings.test.tsx: report options use authorized paginated API rather than all operator-context franchises | preserve | seam |
 | apps/web/src/test/settings.test.tsx: delivery-agent-only cannot resolve settings or protected financial references | preserve | seam |
 | apps/web/src/test/settings.test.tsx: retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority | preserve | seam |
+
+
+## Issue #66 review repair: history and timezone recovery
+
+Production now uses the installed React Router data-router API with the same hash URLs
+and existing nested operator routes. Its blocker restores a cancelled native POP's index
+and leaves PUSH/REPLACE entries untouched. Demo routing remains unchanged. The reviewed
+App.tsx fingerprint changes for the router lifecycle; no prototype exports, Store members,
+callers, import graph, route declarations or effect inventory change. Existing regression
+dispositions remain unchanged. OperatorApp settings and shipment navigation harnesses now
+use createMemoryRouter so their existing assertions exercise the production blocker contract.
+
+New regression declarations cover both history directions, repeated cancellation and accepted
+round trips, exact query/hash/key/state preservation, rejected PUSH/REPLACE, and native
+createHashRouter history index restoration. The existing lost-response test additionally
+cancels twice before navigating and recovering the exact request. Shared timezone parsing
+now governs browser and API inputs. Each timezone editor rejects unsupported local input
+without dispatch, accepts supported casing/aliases, and retains editable state after a
+server catalog rejection; a correction creates a fresh command. Controlled transports and
+jsdom history do not substitute for actual-browser or PostgreSQL verification.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/settings.test.tsx: preserves both saved report entries and settings identity through repeated cancelled POPs then accepted round trips | preserve | seam |
+| apps/web/src/test/settings.test.tsx: cancelled PUSH and REPLACE neither create duplicates nor truncate the existing Forward destination | preserve | seam |
+| apps/web/src/test/settings.test.tsx: hash router restores the native history index after cancelled Back and Forward without replacing keys or state | preserve | seam |
+| apps/web/src/test/settings.test.tsx: timezone editor $key rejects unsupported input locally and saves accepted casing or aliases without uncertain recovery | preserve | seam |
+| apps/web/src/test/settings.test.tsx: a server timezone validation rejection retains an editable draft and allows a corrected new command with a fresh key | preserve | seam |

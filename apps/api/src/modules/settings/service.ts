@@ -21,6 +21,13 @@ export function createSettingsService(database:DatabasePool,writesEnabled=false)
     if(prior){if(prior.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');for(const k of ['report_scope','reporting_schedule'] as const){const value=prior.result.values[k].value;if(value!==null&&!await r.referenceAvailable(context,k,value))throw new HttpError('RESOURCE_NOT_FOUND');}return prior.result;}
     if(!context.organizationActive)throw new HttpError('ORGANIZATION_DISABLED');if(!context.franchiseActive)throw new HttpError('FRANCHISE_DISABLED');
     if(!writesEnabled)throw new HttpError('SETTINGS_DISABLED');
+    // Catalog checks happen after exact replay and current authority, but before any settings writes.
+    // ICU and PostgreSQL may ship different tzdata; unsupported values are a correctable 422.
+    const zones=[...new Set(Object.values(input.changes).flatMap(value=>value&&'timezone' in value?[value.timezone]:[]))];
+    if(zones.length){
+     const supported=await scopedQuery(s,['settings.organization.update','settings.franchise.update'],`SELECT requested.zone FROM unnest($1::text[]) requested(zone) WHERE {{organization:$2}} AND EXISTS(SELECT 1 FROM pg_catalog.pg_timezone_names z WHERE lower(z.name)=lower(requested.zone))`,[zones,q.organizationId]);
+     if(supported.rows.length!==zones.length)v.fail();
+    }
     for(const k of Object.keys(input.changes) as SettingKey[]){const value=input.changes[k];if(value!=null&&!await r.referenceAvailable(context,k,value))throw new HttpError('RESOURCE_NOT_FOUND');}
     try{
      const version=await r.append(context,q.franchiseId,input.changes,input.reason,input.expected_version),result=await r.resolve(context,owner);

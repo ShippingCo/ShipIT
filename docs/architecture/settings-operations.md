@@ -54,6 +54,13 @@ is no longer eligible. Do not silently substitute a newer account, policy, agent
 franchise. Refresh and choose valid evidence explicitly. Provider tokens, OTP policy
 secrets, deployment flags, GST rules and raw payment evidence are not general settings.
 
+Operating-hour, close-cutoff and reporting-schedule timezones accept supported slash
+identifiers or UTC, including recognized aliases and casing. Their trimmed spelling is
+retained in the immutable command and stored value. The API also checks the database's
+timezone catalog before writing; an unsupported value returns a correctable validation
+error without creating a version. Collection calendars keep the exact `Asia/Kolkata`
+policy boundary. Completed retries preserve their original result.
+
 ## Save, conflict and recovery
 
 Review the owner and current version before saving. Every update contains a reason,

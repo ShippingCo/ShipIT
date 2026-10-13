@@ -106,3 +106,26 @@ await test('exact completed settings replay rechecks saved report scope after a 
  const current=await s.read();assert.equal(current.values.report_scope.availability,'unavailable');assert.equal(current.values.report_scope.value,null);
  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.settings_versions')).rows[0]!.n,1);
 });
+
+await test('HTTP timezone families accept casing and aliases, reject catalog mismatches without writes, and replay exact immutable intent',{timeout:60000},async t=>{
+ const s=await settingsSetup(t),{buildServer}=await import('../../src/server.ts'),{parseEnvironment}=await import('../../src/env.ts'),config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3000',LOG_LEVEL:'info',ALLOWED_ORIGINS:'http://localhost:5173',TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable',SETTINGS_WRITES_ENABLED:'true'}),app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},logSink:{write:x=>s.logs.push(x)}});t.after(()=>app.close());
+ const boot=await app.inject('/auth/bootstrap'),browser=boot.cookies[0]!,cookies={shipit_session:s.local.token,[browser.name]:browser.value},httpHeaders={'content-type':'application/json',origin:'http://localhost:5173','x-csrf-token':boot.json().csrf_token},url='/api/v1/settings/franchise?'+new URLSearchParams(q);
+ const post=(body:unknown,key=randomUUID())=>app.inject({method:'POST',url,cookies,headers:{...httpHeaders,'idempotency-key':key},payload:JSON.stringify(body)});
+ const families=(timezone:string)=>({operating_hours:{timezone,days:[]},close_cutoff:{timezone,minute:0},reporting_schedule:{timezone,report:'sales' as const,franchise_ids:[A],weekday:1,minute:0}});
+ const counts=async()=>{for(const table of ['settings_versions','settings_commands','settings_events'])assert.equal((await s.db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);};
+ for(const [key,value] of Object.entries(families('Browser/Local'))){const bad=await post(input({language:{locale:'hi'},[key]:value}));assert.equal(bad.statusCode,422,bad.body);assert.equal(bad.json().error.code,'VALIDATION_FAILED');await counts();}
+ // Model differing runtime tzdata without changing PostgreSQL's real catalog or bypassing its guard.
+ const runtimeOnly='Synthetic/Runtime_Only',native=Intl.DateTimeFormat;
+ const timezoneMock=t.mock.method(Intl,'DateTimeFormat',new Proxy(native,{construct(target,args){const [locale,options]=args;return Reflect.construct(target,[locale,options?.timeZone===runtimeOnly?{...options,timeZone:'UTC'}:options]);}}));
+ const retryKey=randomUUID();
+ try{for(const [key,value] of Object.entries(families(runtimeOnly))){const bad=await post(input({language:{locale:'hi'},[key]:value}),retryKey);assert.equal(bad.statusCode,422,bad.body);assert.equal(bad.json().error.code,'VALIDATION_FAILED');await counts();}}finally{timezoneMock.mock.restore();}
+ let version=0;const accepted=[];
+ for(const timezone of ['Asia/Kolkata','asia/kolkata','ASIA/KOLKATA','Asia/Calcutta','US/Eastern','utc','UTC','Etc/UTC']){
+  const body=input(families(timezone),version),key=version===0?retryKey:randomUUID(),saved=await post(body,key);assert.equal(saved.statusCode,200,saved.body);version++;
+  assert.equal(saved.json().version,version);for(const family of Object.keys(families(timezone)))assert.equal(saved.json().values[family].value.timezone,timezone);
+  const replay=await post(body,key);assert.equal(replay.statusCode,200,replay.body);assert.deepEqual(replay.json(),saved.json());accepted.push({body,key,result:saved.json()});
+ }
+ const first=accepted[0]!,replay=await post(first.body,first.key);assert.equal(replay.statusCode,200,replay.body);assert.deepEqual(replay.json(),first.result);
+ assert.equal((await post(input(families('asia/kolkata'),0),first.key)).statusCode,409);
+ for(const table of ['settings_versions','settings_commands','settings_events'])assert.equal((await s.db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,version);
+});
