@@ -1,7 +1,7 @@
 import type { NavigateOptions, To } from 'react-router-dom';
 
-// App.tsx uses declarative HashRouter, whose navigation returns void.
-// Revisit when migrating to RouterProvider/data mode, which returns a Promise.
+// Navigation is fire-and-forget throughout the operator and demo surfaces.
+// Data-router navigation may return a Promise; callers do not await it.
 // https://reactrouter.com/api/hooks/useNavigate#return-type-augmentation
 declare module 'react-router-dom' {
   interface NavigateFunction {

@@ -1,3 +1,4 @@
+import {validateSettingSuggestion} from '../settings/consumer.ts';
 import { createHash,randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { reportLimits,type SalesPage,type SalesSnapshot,type SalesRow,type SalesFilter } from '@shippingco/shared';
@@ -11,7 +12,7 @@ import * as repository from './repository.ts';
 const digest=(v:string)=>createHash('sha256').update(v).digest('hex');
 const page=(metadata:SalesSnapshot,rows:SalesRow[],offset=0):SalesPage=>({snapshot:metadata,rows:rows.slice(offset,offset+reportLimits.page),next_offset:offset+reportLimits.page<rows.length?offset+reportLimits.page:null});
 export function salesFilter(body:unknown,franchise:string):SalesFilter {
-  const b=object(body,['from_day','to_day','sort','rate','franchise_ids']);
+  const b=object(body,['from_day','to_day','sort','rate','franchise_ids','settings_version_id']);
   const base=reportFilter({from_day:b.from_day,to_day:b.to_day,sort:b.sort});
   let rate=b.rate??null;
   if(rate!==null&&(typeof rate!=='string'||!/^\d{1,9}\/\d{1,9}$/.test(rate)||BigInt(rate.split('/')[1]!)===0n))throw new FieldValidationError('$','INVALID_FORMAT');
@@ -20,7 +21,7 @@ export function salesFilter(body:unknown,franchise:string):SalesFilter {
   if(!Array.isArray(ids)||ids.length<1||ids.length>50)throw new FieldValidationError('$','OUT_OF_RANGE');
   const franchise_ids=[...new Set(ids.map(id=>uuid(id,'franchise_id')))].sort();
   if(franchise_ids.length!==ids.length||!franchise_ids.includes(franchise))throw new FieldValidationError('$','INVALID_FORMAT');
-  return {...base,rate:typeof rate==='string'?rate:null,franchise_ids};
+  return {...base,rate:typeof rate==='string'?rate:null,franchise_ids,...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')})};
 }
 export function createSalesService(database:DatabasePool) {
   return {
@@ -30,6 +31,7 @@ export function createSalesService(database:DatabasePool) {
         await repository.lock(scope);
         const previous=await repository.replay<SalesSnapshot,SalesRow>(scope,key);
         if(previous){if(previous.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');if(previous.expired)throw new HttpError('REPORT_EXPIRED');return page(previous.metadata,previous.rows);}
+        await validateSettingSuggestion(scope,'report_scope',filter.settings_version_id,{franchise_ids:filter.franchise_ids});
         const captured=await captureSales(scope,filter);
         const metadata:SalesSnapshot={id:randomUUID(),schema_version:1,definition:'sales_gst_v1',timezone:'Asia/Kolkata',organization_id:q.organizationId,franchise_id:q.franchiseId,filter,as_of:captured.as_of,
           expires_at:new Date(Date.parse(captured.as_of)+reportLimits.lifetimeSeconds*1000).toISOString(),count:captured.rows.length,totals:salesTotals(captured.rows),groups:salesGroups(captured.rows)};

@@ -1,3 +1,4 @@
+import {validateSettingSuggestion} from '../settings/consumer.ts';
 import { randomUUID } from 'node:crypto';
 import { DatabaseError, type DatabasePool } from '@shippingco/db';
 import type { PricingQuoteDto, PricingQuoteInput, PricingVersionDto } from '@shippingco/shared';
@@ -139,6 +140,7 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
       const body=validate.quote(input);
       return scoped(session,organization,franchise,body.override?'pricing.override':'pricing.quote',correlationId,false,scope=>
         command(scope,'api.v1.pricing.quote',key,null,body,async()=>{
+          await validateSettingSuggestion(scope,'booking_defaults',body.settings_version_id,{service:body.service});
           const now=clock(),version=await current(scope,now);
           const result=calculate(version,body,now,randomUUID(),scope.context.actor.id,scope.context.action==='pricing.override.approve');
           await repository.saveQuote(scope,result);

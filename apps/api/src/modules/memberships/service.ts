@@ -991,3 +991,46 @@ export async function withShipmentCostScope<T>(database:DatabasePool,token:strin
   return work(issueTenantAccess(tx,{action:'shipment_costs.write',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),{organizationActive:parent.lifecycle==='active',franchiseActive:franchise.lifecycle==='active'});
  });
 }
+
+/** #66 organization defaults and W29 local overrides are distinct actions. Financial keys remain local-admin only. */
+export async function withSettingsScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string|null,
+ writing:boolean,correlationId:string,work:(context:import('../settings/types.ts').SettingsAccess)=>Promise<T>):Promise<T>{
+ return membershipTransaction(database,async tx=>{
+  const session=await authenticated(tx,token);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),orgAdmin=memberships.some(m=>m.role==='org_admin');
+  const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+  const local=franchiseId===null?[]:memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+  if(franchiseId===null&&!orgAdmin)throw new HttpError('ACTION_FORBIDDEN');
+  if(franchiseId!==null&&!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+  if(franchiseId!==null&&!orgAdmin&&!local.some(m=>['franchise_admin','operator','dispatcher','accountant','read_only'].includes(m.role)))throw new HttpError('ACTION_FORBIDDEN');
+  const canUpdate=franchiseId===null?orgAdmin:local.some(m=>m.role==='franchise_admin');
+  if(writing&&!canUpdate)throw new HttpError('ACTION_FORBIDDEN');
+  const franchise=franchiseId===null?null:await authorityRepository.lockFranchise(tx,organizationId,franchiseId);
+  if(franchiseId!==null&&!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
+  const action=franchiseId===null?(writing?'settings.organization.update':'settings.organization.read'):(writing?'settings.franchise.update':'settings.franchise.read');
+  return work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:franchiseId?[franchiseId]:[],organizationWide:franchiseId===null,correlationId,provenance:'membership'}),
+   canUpdate,organizationActive:parent.lifecycle==='active',franchiseActive:franchiseId===null||franchise?.lifecycle==='active',canReadFinance:orgAdmin||local.some(m=>['franchise_admin','accountant'].includes(m.role)),canReadHistory:orgAdmin||local.some(m=>m.role==='franchise_admin'),
+   reportFranchiseIds:paymentScope('payments.read',memberships,all),exportFranchiseIds:memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds)});
+ });
+}
+
+/** R25/R28 options use the same current R11/E03 grants as withReportScope. Pagination grants no selection authority. */
+export async function withReportOptionsScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,cursor:string|null,
+ correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,exportIds:readonly string[],hasMore:boolean)=>Promise<T>):Promise<T>{
+ return membershipTransaction(database,async tx=>{
+  const session=await authenticated(tx,token);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+  if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
+  const permitted=[...new Set(paymentScope('payments.read',memberships,all))].sort();
+  if(!permitted.includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
+  if(cursor!==null&&!permitted.includes(cursor))throw new HttpError('RESOURCE_NOT_FOUND');
+  const remaining=permitted.filter(id=>cursor===null||id>cursor),page=remaining.slice(0,50);
+  // Empty pages still have a scoped anchor, but the repository receives the page IDs explicitly.
+  const scope=issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:page.length?page:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
+  return work(scope,memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds),remaining.length>50);
+ });
+}

@@ -2,7 +2,7 @@ import type { ReportFilter } from './report.ts';
 
 export const salesMeasures = ['pre_tax','taxable','non_taxable','cgst','sgst','igst','gst','rounding','gross','collections','refunds','outstanding','refundable_credit'] as const;
 export type SalesAmounts = Record<typeof salesMeasures[number], string>;
-export interface SalesFilter extends ReportFilter { rate: string | null; franchise_ids: string[] }
+export interface SalesFilter extends ReportFilter { settings_version_id?:string; rate: string | null; franchise_ids: string[] }
 export interface SalesEvidence {
   id: string; kind: 'discount'|'cancellation'|'correction'|'refund'|'refund_correction'; occurred_at: string;
   refund: string; taxable: string; reason: string; approval_ref: string; pre_tax: string; cgst: string; sgst: string; igst: string; rounding: string;

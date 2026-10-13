@@ -685,3 +685,48 @@ never implies cost mutation. Reauthorize current membership before every replay.
 `SHIPMENT_COST_WRITES_ENABLED=false` by default. Disabled entry retains history and
 exact completed-command replay. Uncertain results must retry the identical key/body;
 changed bodies conflict. There are no monetary side effects or external deliveries.
+
+## Versioned settings and authorized report scope (#66)
+
+`GET /api/v1/settings/organization?organization_id=…` returns own-org defaults to
+org_admin; `GET /api/v1/settings/franchise?organization_id=…&franchise_id=…` resolves
+R20 effective preferences. Both return `SettingsDto` schema 1 with owner version,
+organization version and each allowlisted key's value/state/source version and effective
+and recorded times, editability, consumer contract and current availability. An absent
+local key inherits the organization key, otherwise remains unconfigured. Empty explicit
+lists remain configured. Organization values say configured, not inherited.
+
+POST to the same URLs takes exactly `{expected_version,changes,reason}` plus the scoped
+`Idempotency-Key` header. Zero is the initial version; each `changes` key contains a typed
+value or null to clear (restore inheritance locally). Omitted keys are unchanged. A
+bounded reason is mandatory. No caller actor/owner/version ID/effective time is accepted.
+Versions become effective at their server-recorded instant until superseded, with no
+scheduled/future overlapping intervals. The immutable version, command receipt, safe
+version audit and durable `settings.versioned` event commit atomically. Event metadata
+contains keys/scope/version, not entire values or credentials.
+
+GET `/settings/{organization|franchise}/history` uses the same required scope query and
+optional positive integer `before`; it returns at most 50 administrative history items
+and `next_before`. R38 governs history. Reads use no-store. Standard cookie/session/CSRF,
+strict unknown-key rejection and a 64 KiB POST limit apply. Exact current-authorized
+key/body replay returns its original result; altered intent gives IDEMPOTENCY_CONFLICT.
+Stale expected version gives VERSION_CONFLICT; reload the effective endpoint without
+losing the local draft before explicitly replacing its expected version. New commands
+require active organization/franchise and default-off SETTINGS_WRITES_ENABLED. Disabled
+new commands return SETTINGS_DISABLED; completed replay stays available after authority
+checks. Foreign and unknown scope/reference IDs both return RESOURCE_NOT_FOUND. Known
+own-scope missing actions return ACTION_FORBIDDEN, malformed input VALIDATION_FAILED.
+
+`GET /api/v1/reports/scopes?organization_id=…&franchise_id=…[&cursor=…]` lists up to 50
+current permitted financial report franchise IDs/names and per-franchise E03 export
+hints, `next_cursor`, and `maximum_selection:50`. Unknown/unpermitted cursors are concealed.
+A capture must still include the active franchise and reauthorize its entire scope.
+
+The strict public key/value allowlist is `packages/shared/src/settings.ts`; see
+[settings operations](settings-operations.md) for each consumer. Optional
+`settings_version_id` in `PricingQuoteInput`, `SalesFilter` and `ContributionFilter`
+identifies an explicitly accepted service/report-scope suggestion. On a NEW quote/capture
+its current effective owned key must match both source ID and selected value. The
+immutable quote inputs (including booked quote evidence) or report filter pins this ID.
+Absent optional fields preserve legacy decoding and idempotency fingerprints. Old quote
+validation/replay and saved report reads never replace their source with newer defaults.

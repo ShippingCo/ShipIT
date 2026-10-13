@@ -2265,3 +2265,29 @@ A native applied expense corrected to zero may be reconciled with explicit zero 
 while retaining actual evidence. Manual monetary sources and rate estimates remain positive.
 Missing cost is never inferred as zero. SQL guards enforce normalized invoice identities,
 native source matching and exact rate evidence independently of the HTTP boundary.
+
+## Versioned financial configuration references (#66)
+
+Settings store future selection intent with immutable owner/version provenance. Receiving
+accounts reference an exact latest active owned account revision and supported method;
+financial approval references accept only the existing enabled W56 policy with null
+threshold and self approval false; agent fees reference an exact current active owned
+agent/term revision in its validity interval. References are checked on write and on
+current effective reads, which mark obsolete/deactivated references unavailable. Their
+owning financial services still validate every actual future command. Generic organization
+defaults cannot configure these local-only financial keys or bypass D137.
+
+Close cutoff is optional explicit timezone/minute configuration only: it changes no
+source window, counted_at, session, eligibility, close lockout, current reviewer mode or
+per-decision sole-admin acknowledgement. Account credit/overdue/billing references remain
+explicitly unconfigured under unavailable #141 ownership. Reporting schedules store
+explicit report/scope/timezone/weekday/minute intent for #149 with no execution or sends.
+Collection calendars store explicit Asia/Kolkata weekdays/holidays but automatic hold
+expiry/RTO remains gated by its lifecycle contract; missing calendars stay unconfigured.
+
+Accepted report-scope defaults pin `settings_version_id` inside each new Sales/contribution
+filter. Current R25/E03 scope checks are still authoritative at capture, read and export;
+settings never change a saved E/K cutoff or financial fact. Quote service suggestions pin
+the source ID in new quote inputs, retained by booked pricing snapshots. Old source IDs,
+receipts, quotes, closes, agent earnings, cost sources and held-parcel clocks are not backfilled
+or recalculated. Server feature switches and credentials are not settings keys.

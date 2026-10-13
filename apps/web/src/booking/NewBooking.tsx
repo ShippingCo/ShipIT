@@ -12,6 +12,7 @@ import { CustomerLookup } from './CustomerLookup';
 import { ReceiptPanel } from './ReceiptPanel';
 import { receiptMoney } from '../utils/receipt';
 import './counter.css';
+import {BookingPreference} from '../operations/SettingsPreferences';
 const stateOptions = [{ value: '', label: 'Not supplied' }, ...[
   ['02','Himachal Pradesh'],['03','Punjab'],['05','Uttarakhand'],['06','Haryana'],['08','Rajasthan'],['09','Uttar Pradesh'],['10','Bihar'],['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],['16','Tripura'],['17','Meghalaya'],['18','Assam'],['19','West Bengal'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],['23','Madhya Pradesh'],['24','Gujarat'],['27','Maharashtra'],['29','Karnataka'],['30','Goa'],['32','Kerala'],['33','Tamil Nadu'],['36','Telangana'],['37','Andhra Pradesh'],
 ].map(([value, label]) => ({ value, label }))];
@@ -67,7 +68,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
         {state.customer && <><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.newCustomer()}>Use as new customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => { void workflow.refreshCustomer(); }}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.useLatestCustomer()}>Use latest customer details</button></>}
       </div><p role="status">Customer: {state.customerPhase}</p>
     </section>
-    <section className="card counter-section"><h2 className="t-title-lg">2 · Parcel recipient and service</h2><div className="counter-grid">
+    <section className="card counter-section"><h2 className="t-title-lg">2 · Parcel recipient and service</h2><BookingPreference workflow={workflow}/><div className="counter-grid">
       {field('recipientName', 'Recipient name')}{field('recipientPhone', 'Recipient phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('recipientAddress', 'Recipient address')}
       {field('destination', 'Destination key', 'Use the franchise rate-card key, not a tax jurisdiction.')}
       {select('service', 'Service', [{ value: 'standard', label: 'Standard' }, { value: 'express', label: 'Express' }, { value: 'same_city', label: 'Same-city' }])}

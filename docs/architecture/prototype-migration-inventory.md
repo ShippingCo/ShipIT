@@ -1007,3 +1007,77 @@ Existing recovery/security declarations and effects/fingerprints are unchanged.
 | Regression | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/shipment-cost-navigation.test.tsx: keeps same-path history and replacement selections authoritative across capture and retry epochs, including round trips | preserve | reports |
+
+## Issue #66 typed settings and explicit consumer suggestions
+
+The production Settings route now uses strict scoped DTO projection and typed controls,
+with organization defaults, franchise overrides, explicit clear/inherit, immutable history
+and reviewed compare-and-swap updates. Native financial selectors retain their owning
+local-admin authority; they do not manufacture policies or move money. Calendar, language,
+schedule and unresolved account-term availability remains explicit. The demo is unchanged.
+
+The ephemeral settings session adds a one-shot scope-abort listener and Settings subscribes
+with useSyncExternalStore. Accepted same-authority navigation retains a draft or exact
+uncertain request; explicit reload and changed authority purge both. SettingsNavigationGuard
+adds before-unload and franchise-change listeners with cleanup, and checks committed router
+locations for Back/Forward/query warnings. Cancelling reload preserves selected scope.
+BookingPreference subscribes to its existing booking workflow, with no new browser storage.
+These are the five reviewed new effect entries; no existing effects are removed.
+
+Identity is operator display only. New booking and report suggestions require explicit
+acceptance and retain their source version in new requests; manual service/scope changes
+remove it. Report options come from the authorized paginated API. Saved report filters and
+E/K, previous quote facts, receipt issuer and the approved issue147 navigation epochs remain
+unchanged. No exports, store members, prototype callers, routes, imports or dependency
+fingerprints changed. All existing regression dispositions are retained.
+
+The sixteen controlled-transport tests below cover these contracts, including actual
+OperatorApp lifecycle, exact retry and current-role invalidation. They do not claim native
+browser or database verification.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/settings.test.tsx: decodes absent, inherited, configured-empty and revoked scope without manufacturing values or leaking unknown properties | preserve | seam |
+| apps/web/src/test/settings.test.tsx: rejects invalid clock/calendar/reference values without choosing a working week or policy | preserve | seam |
+| apps/web/src/test/settings.test.tsx: checks exact owner on responses and authorized options, including pagination metadata | preserve | seam |
+| apps/web/src/test/settings.test.tsx: saves typed organization configuration with expected version and shows immutable history and honest availability | preserve | seam |
+| apps/web/src/test/settings.test.tsx: retains a conflicting draft, requires explicit rebasing, and clears an override with null rather than copied defaults | preserve | seam |
+| apps/web/src/test/settings.test.tsx: preserves exact lost-response retry across actual OperatorApp Back/Forward and warns before departure | preserve | seam |
+| apps/web/src/test/settings.test.tsx: declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload | preserve | seam |
+| apps/web/src/test/settings.test.tsx: purges draft and uncertain intent on scope abort and ignores pending old-context completion | preserve | seam |
+| apps/web/src/test/settings.test.tsx: operator display preference is separate from legal/franchise identity and operator role cannot write | preserve | seam |
+| apps/web/src/test/settings.test.tsx: booking suggestion requires acceptance, preserves provenance in quote and tax requests, and manual service clears it | preserve | seam |
+| apps/web/src/test/settings.test.tsx: does not substitute revoked configured report selection and requires explicit new-capture acceptance | preserve | seam |
+| apps/web/src/test/settings.test.tsx: Sales and contribution capture accepted scope source only until manual changes, and saved report selection disables suggestion | preserve | seam |
+| apps/web/src/test/settings.test.tsx: uses current authorized native receiving account choices and freezes the selected exact revision | preserve | seam |
+| apps/web/src/test/settings.test.tsx: report options use authorized paginated API rather than all operator-context franchises | preserve | seam |
+| apps/web/src/test/settings.test.tsx: delivery-agent-only cannot resolve settings or protected financial references | preserve | seam |
+| apps/web/src/test/settings.test.tsx: retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority | preserve | seam |
+
+
+## Issue #66 review repair: history and timezone recovery
+
+Production now uses the installed React Router data-router API with the same hash URLs
+and existing nested operator routes. Its blocker restores a cancelled native POP's index
+and leaves PUSH/REPLACE entries untouched. Demo routing remains unchanged. The reviewed
+App.tsx fingerprint changes for the router lifecycle; no prototype exports, Store members,
+callers, import graph, route declarations or effect inventory change. Existing regression
+dispositions remain unchanged. OperatorApp settings and shipment navigation harnesses now
+use createMemoryRouter so their existing assertions exercise the production blocker contract.
+
+New regression declarations cover both history directions, repeated cancellation and accepted
+round trips, exact query/hash/key/state preservation, rejected PUSH/REPLACE, and native
+createHashRouter history index restoration. The existing lost-response test additionally
+cancels twice before navigating and recovering the exact request. Shared timezone parsing
+now governs browser and API inputs. Each timezone editor rejects unsupported local input
+without dispatch, accepts supported casing/aliases, and retains editable state after a
+server catalog rejection; a correction creates a fresh command. Controlled transports and
+jsdom history do not substitute for actual-browser or PostgreSQL verification.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/settings.test.tsx: preserves both saved report entries and settings identity through repeated cancelled POPs then accepted round trips | preserve | seam |
+| apps/web/src/test/settings.test.tsx: cancelled PUSH and REPLACE neither create duplicates nor truncate the existing Forward destination | preserve | seam |
+| apps/web/src/test/settings.test.tsx: hash router restores the native history index after cancelled Back and Forward without replacing keys or state | preserve | seam |
+| apps/web/src/test/settings.test.tsx: timezone editor $key rejects unsupported input locally and saves accepted casing or aliases without uncertain recovery | preserve | seam |
+| apps/web/src/test/settings.test.tsx: a server timezone validation rejection retains an editable draft and allows a corrected new command with a fresh key | preserve | seam |

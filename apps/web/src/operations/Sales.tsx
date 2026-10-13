@@ -1,3 +1,4 @@
+import {ReportPreferenceControl,type ReportPreference} from './SettingsPreferences';
 import React,{useEffect,useState} from 'react';
 
 import { useSearchParams } from 'react-router-dom';
@@ -22,12 +23,13 @@ function paise(value:string){if(!/^-?\d+(\.\d{1,2})?$/.test(value))throw new Err
 
 function rupees(value:string){const n=BigInt(value),a=n<0n?-n:n;return `${n<0n?'-':''}${a/100n}.${String(a%100n).padStart(2,'0')}`;}
 
-export function SalesView({source,canExport,canManage,franchises}:{source:SalesSource;canExport:boolean;canManage:boolean;franchises:{id:string;name:string}[]}){
+export function SalesView({source,canExport,canManage,franchises,preference}:{source:SalesSource;canExport:boolean;canManage:boolean;franchises:{id:string;name:string}[];preference?:ReportPreference}){
 
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
  const [params,setParams]=useSearchParams(),id=params.get('sales_snapshot'),[from,setFrom]=useState(today),[to,setTo]=useState(today),[rate,setRate]=useState(''),[selected,setSelected]=useState([source.franchise]);
 
+ const [settingsVersion,setSettingsVersion]=useState<string|undefined>();
  const [result,setResult]=useState<SalesPage|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[revision,setRevision]=useState(0),[detail,setDetail]=useState<SalesRow|null>(null);
 
  const [state,setState]=useState<Awaited<ReturnType<SalesSource['current']>>|null>(null),[kind,setKind]=useState('cancellation'),[approval,setApproval]=useState(''),[returned,setReturned]=useState(''),[refund,setRefund]=useState('0'),[values,setValues]=useState<Record<string,string>>({});
@@ -38,9 +40,9 @@ export function SalesView({source,canExport,canManage,franchises}:{source:SalesS
 
  const fail=(e:unknown)=>setNotice(e instanceof ApiFailure?e.code==='VERSION_CONFLICT'?'Financial evidence changed. Reload the booking before approving.':e.code==='STATEMENT_EMPTY'?'These shipments already appear on a statement, or none are eligible.':e.code==='FINANCIAL_CONFLICT'?'The correction or refund exceeds the remaining amount. Reload the booking.':e.code==='RESOURCE_NOT_FOUND'||e.code==='ACTION_FORBIDDEN'?'Saved evidence is unavailable. Check your franchise access.':'Could not complete this request. Retry or narrow the period.':e instanceof Error?e.message:'Could not complete this request.');
 
- useEffect(()=>{const abort=new AbortController();setResult(null);setDetail(null);setDocument(null);if(!id)return()=>abort.abort();setBusy(true);void source.page(id,0,abort.signal).then(p=>{if(!abort.signal.aborted){setResult(p);setFrom(p.snapshot.filter.from_day);setTo(p.snapshot.filter.to_day);setRate(p.snapshot.filter.rate??'');setSelected(p.snapshot.filter.franchise_ids);}}).catch(e=>{if(!abort.signal.aborted)fail(e);}).finally(()=>{if(!abort.signal.aborted)setBusy(false);});return()=>abort.abort();},[source,id,revision]);
+ useEffect(()=>{const abort=new AbortController();setResult(null);setSettingsVersion(undefined);setDetail(null);setDocument(null);if(!id)return()=>abort.abort();setBusy(true);void source.page(id,0,abort.signal).then(p=>{if(!abort.signal.aborted){setResult(p);setFrom(p.snapshot.filter.from_day);setTo(p.snapshot.filter.to_day);setRate(p.snapshot.filter.rate??'');setSelected(p.snapshot.filter.franchise_ids);}}).catch(e=>{if(!abort.signal.aborted)fail(e);}).finally(()=>{if(!abort.signal.aborted)setBusy(false);});return()=>abort.abort();},[source,id,revision]);
 
- async function create(retry=false){setNotice('');setDetail(null);try{const p=await(retry?command.retry():command.run(source.intent({from_day:from,to_day:to,sort:'confirmed_asc',rate:rate||null,franchise_ids:selected})));if(p){setParams({sales_snapshot:p.snapshot.id});setNotice('Sales report saved. Pages, totals and CSV use the same evidence.');}}catch(e){fail(e);}}
+ async function create(retry=false){setNotice('');setDetail(null);try{const p=await(retry?command.retry():command.run(source.intent({from_day:from,to_day:to,sort:'confirmed_asc',rate:rate||null,franchise_ids:selected,...(settingsVersion?{settings_version_id:settingsVersion}:{})})));if(p){setParams({sales_snapshot:p.snapshot.id});setNotice('Sales report saved. Pages, totals and CSV use the same evidence.');}}catch(e){fail(e);}}
 
  async function download(){if(!result)return;setBusy(true);try{const csv=await source.export(result.snapshot.id),url=URL.createObjectURL(new Blob([csv.csv],{type:'text/csv;charset=utf-8'})),link=window.document.createElement('a');link.href=url;link.download=`sales-${result.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
 
@@ -56,7 +58,7 @@ export function SalesView({source,canExport,canManage,franchises}:{source:SalesS
 
  <form onSubmit={e=>{e.preventDefault();void create();}}><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/><TextField label="Saved GST rate fraction (blank for all, e.g. 5/100)" value={rate} onChange={setRate}/>
 
- <fieldset disabled={pending||command.canRetry}><legend>Included franchises</legend>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>setSelected(ids=>e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id))}/>{f.name}</label>)}</fieldset><p>Asia/Kolkata dates. Up to 31 days and 5,000 bookings; saved reports expire after 24 hours.</p><button className="btn btn-filled" disabled={pending||command.canRetry||finance.canRetry}>Create sales snapshot</button></form>
+ <ReportPreferenceControl preference={preference} disabled={pending||command.canRetry||!!id} accept={(ids,version)=>{setSelected([...ids]);setSettingsVersion(version);}}/>{settingsVersion&&<p>Accepted settings source {settingsVersion}</p>}<fieldset disabled={pending||command.canRetry}><legend>Included franchises</legend><p>Selected scope: {selected.map(id=>franchises.find(f=>f.id===id)?.name??id).join(', ')}. Load more authorized options to inspect additional selections.</p>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>{setSettingsVersion(undefined);setSelected(ids=>e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id));}}/>{f.name}</label>)}</fieldset><p>Asia/Kolkata dates. Up to 31 days and 5,000 bookings; saved reports expire after 24 hours.</p><button className="btn btn-filled" disabled={pending||command.canRetry||finance.canRetry}>Create sales snapshot</button></form>
 
  {command.canRetry&&<button disabled={pending} onClick={()=>void create(true)}>Retry same report request</button>}<p role="status" aria-live="polite">{pending?'Loading…':notice}</p>{!pending&&id&&!result&&<button onClick={()=>setRevision(n=>n+1)}>Reload saved report</button>}
 
