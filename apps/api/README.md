@@ -496,3 +496,12 @@ negotiated quotes and credit bookings. Ordinary booking and money flows remain
 available. See [account contract and operator walkthrough](../../docs/architecture/customer-accounts.md)
 for endpoint schemas, current permissions, exact-intent recovery, credit source
 cutoffs, financial equations, additive upgrade and compatible rollback limitations.
+
+### Optional manual reconciliation (#146)
+
+`RECONCILIATION_ENABLED` accepts only `true`/`false`, defaults to `false`, and cannot
+be enabled in demo. Apply migration 53 and explicit service-role grants before
+allowing current franchise administrators to opt in individual franchises. Reads
+and committed exact-key recovery remain available after disabling; all ordinary
+money operations remain independent. See [manual reconciliation](../../docs/architecture/manual-reconciliation.md)
+for endpoint contracts, private CSV grammar, amounts, audit, expiry and recovery.

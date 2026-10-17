@@ -70,3 +70,13 @@
 .customer-accounts-workspace fieldset { min-width: 0; border: 1px solid var(--md-outline-variant); border-radius: 12px; padding: 12px; }
 .customer-accounts-workspace .ops-form fieldset { display: grid; gap: 12px; }
 .customer-accounts-workspace .btn, .account-credit-evidence .btn { max-width: 100%; height: auto; min-height: 40px; white-space: normal; overflow-wrap: anywhere; padding-top: 8px; padding-bottom: 8px; }
+
+/* Private reconciliation evidence stays readable at narrow counter widths. */
+.reconciliation-workspace { min-width: 0; }
+.reconciliation-workspace :is(p,li,dd,label,button) { overflow-wrap: anywhere; }
+.reconciliation-workspace .btn { max-width: 100%; height: auto; min-height: 40px; white-space: normal; padding-block: 8px; }
+.reconciliation-workspace .ops-list .btn { text-align: left; justify-content: flex-start; }
+.reconciliation-workspace fieldset { min-width: 0; }
+.reconciliation-workspace input[type="file"] { max-width: 100%; }
+.reconciliation-pick { padding-block: 12px; border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+.reconciliation-column { display: block; padding-block: 4px; }

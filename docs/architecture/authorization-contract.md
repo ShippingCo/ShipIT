@@ -87,6 +87,7 @@ The rows cover every private concept in #2's module/data ownership table.
 | R40 | Explicit shipping-customer account choices and credit/source amounts (`customer_accounts.select`); no contact directory | O | F | F | - | - | F | - |
 | R41 | Own credit exception request status (`customer_accounts.request`); exact actor only | - | - | F | - | - | - | - |
 | R42 | Pending credit exception review and exact requested shipment (`customer_accounts.approve`) | - | F | - | - | - | - | - |
+| R43 | Private statement imports, mappings, deterministic suggestions and reconciliation history (`reconciliation.read`); reports use R11 and E03 | O | F | - | - | - | F | - |
 | R35 | Dedicated cash handover selection/detail/history (`cashbook.handover.select`); delivery agents see only their immutable source/target participation and permitted minimum recipient choices in their currently granted franchise | O | F | F | - | S | F | - |
 
 R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
@@ -212,6 +213,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W73 | Publish an effective negotiated rate schedule (`customer_accounts.rates`) | - | F | - | - | - | - | - |
 | W74 | Request a limit exception for own exact unexpired booking (`customer_accounts.request`) | - | - | F | - | - | - | - |
 | W75 | Approve one exact credit-limit exception with a reason (`customer_accounts.approve`); cannot bypass holds or overdue debt | - | F | - | - | - | - | - |
+| W76 | Explicit franchise opt-in/out and versioned CSV mapping (`reconciliation.configure`) | - | F | - | - | - | - | - |
+| W77 | Inspect selected CSV, preview/import and resolve row identities (`reconciliation.import`) | - | F | - | - | - | F | - |
+| W78 | Confirm exact/manual matches, revise card batches, classify and review discrepancies (`reconciliation.reconcile`); no ledger grant | - | F | - | - | - | F | - |
+| W79 | Append destructive unmatch revision (`reconciliation.unmatch`); preserve prior evidence | - | F | - | - | - | - | - |
 
 W70 is the #147 cost-evidence command ceiling. Neither organization administration nor
 accountant financial read access grants this write capability. Current membership is
@@ -621,3 +626,17 @@ requested shipment is visible to its local approver under R42. Current grants ar
 rechecked on retry, approval consumption and every paged read. An approval grants
 no booking permission; the existing operator-only booking action still applies.
 No new export or public/channel grant is introduced.
+
+
+## Issue #146 optional evidence reconciliation
+
+R43/W76–W79 implement the D137 reconciliation grants. `reconciliation.audit` is an
+internal companion capability issued only after the corresponding current read or
+import grant; it appends access metadata and grants no ledger action. Organization
+admins can read within their organization, but need a local franchise-admin role
+to configure/unmatch, or a local accountant/admin role to import and reconcile.
+E03 exports require a current local accountant/admin grant, selected columns and a
+private actor-owned snapshot. Operator, dispatcher, delivery-agent and read_only
+roles acquire no statement access. Every nested ID and exact-key retry is scoped.
+See [manual reconciliation](manual-reconciliation.md) for optionality, evidence,
+private retention and recovery. New evidence is disabled by default per franchise.

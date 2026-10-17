@@ -2175,6 +2175,31 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "name": "shows disabled default and preserves the exact uncertain opt-in command across back navigation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "name": "requires explicit selection and reason before confirming an exact suggestion",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "name": "captures controls and drills into verifier/source evidence; external references default out of CSV",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "name": "read_only cannot mount private reconciliation requests",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "name": "uploads a local CSV, publishes its selected mapping and preserves that version through preview and import",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/reports.test.tsx",
         "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
         "cases": null
@@ -2699,6 +2724,18 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/Reconciliation.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Reconciliation.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Reconciliation.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
         "file": "apps/web/src/operations/Reports.tsx",
         "kind": "setTimeout"
       },
@@ -2733,6 +2770,10 @@
       {
         "file": "apps/web/src/operations/ShipmentCosts.tsx",
         "kind": "source.api.scope.signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/reconciliation/Review.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/operator/Onboarding.tsx",
@@ -3005,6 +3046,14 @@
       {
         "file": "apps/web/src/test/operator.test.tsx",
         "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
+        "file": "apps/web/src/test/reconciliation.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
       },
       {
         "file": "apps/web/src/test/setup.ts",
@@ -5540,6 +5589,46 @@
       "group": "receipts",
       "disposition": "preserve",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
+    },
+    {
+      "file": "apps/web/src/test/reconciliation.test.tsx",
+      "name": "shows disabled default and preserves the exact uncertain opt-in command across back navigation",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
+    },
+    {
+      "file": "apps/web/src/test/reconciliation.test.tsx",
+      "name": "requires explicit selection and reason before confirming an exact suggestion",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
+    },
+    {
+      "file": "apps/web/src/test/reconciliation.test.tsx",
+      "name": "captures controls and drills into verifier/source evidence; external references default out of CSV",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
+    },
+    {
+      "file": "apps/web/src/test/reconciliation.test.tsx",
+      "name": "read_only cannot mount private reconciliation requests",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
+    },
+    {
+      "file": "apps/web/src/test/reconciliation.test.tsx",
+      "name": "uploads a local CSV, publishes its selected mapping and preserves that version through preview and import",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
       "file": "apps/web/src/test/reports.test.tsx",

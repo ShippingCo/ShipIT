@@ -18,6 +18,7 @@ export interface RuntimeConfig {
   readonly storageSecretRef?: string;
   readonly whatsappConfigRef?: string;
   readonly deliveryProofSecretRef?: string;
+  readonly reconciliationWritesEnabled?: boolean;
   readonly customerAccountWritesEnabled?: boolean;
   readonly moneyReceiptWritesEnabled?: boolean;
   readonly financialWorkflowWritesEnabled?: boolean;
@@ -140,6 +141,9 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const financialWorkflowWritesEnabled=env.FINANCIAL_WORKFLOW_ENABLED==='true';
   if(env.FINANCIAL_WORKFLOW_ENABLED!==undefined&&!['true','false'].includes(env.FINANCIAL_WORKFLOW_ENABLED))issue('FINANCIAL_WORKFLOW_ENABLED','INVALID_FORMAT');
   if(financialWorkflowWritesEnabled&&environment==='demo')issue('FINANCIAL_WORKFLOW_ENABLED','INCONSISTENT');
+  const reconciliationWritesEnabled=env.RECONCILIATION_ENABLED==='true';
+  if(env.RECONCILIATION_ENABLED!==undefined&&!['true','false'].includes(env.RECONCILIATION_ENABLED))issue('RECONCILIATION_ENABLED','INVALID_FORMAT');
+  if(reconciliationWritesEnabled&&environment==='demo')issue('RECONCILIATION_ENABLED','INCONSISTENT');
   const customerAccountWritesEnabled=env.CUSTOMER_ACCOUNTS_ENABLED==='true';
   if(env.CUSTOMER_ACCOUNTS_ENABLED!==undefined&&!['true','false'].includes(env.CUSTOMER_ACCOUNTS_ENABLED))issue('CUSTOMER_ACCOUNTS_ENABLED','INVALID_FORMAT');
   if(customerAccountWritesEnabled&&environment==='demo')issue('CUSTOMER_ACCOUNTS_ENABLED','INCONSISTENT');
@@ -163,7 +167,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     ...(whatsappConfigRef ? {whatsappConfigRef} : {}),
     ...(deliveryProofSecretRef ? {deliveryProofSecretRef} : {}),
     // A closure prevents accidental config serialization from exposing the credential.
-    moneyReceiptWritesEnabled,customerAccountWritesEnabled,
+    moneyReceiptWritesEnabled,customerAccountWritesEnabled,reconciliationWritesEnabled,
     financialWorkflowWritesEnabled,
     cashbookWritesEnabled,
     cashCloseWritesEnabled,

@@ -184,3 +184,6 @@ export * from './shipment-cost.ts';
 export * from "./settings.ts";
 
 export type {CustomerAccountInput,CustomerAccountDto,AccountRateInput,AccountRateDto,AccountCredit,AccountBookingSnapshot} from './customer-accounts.ts';
+
+export type {ReconciliationDirection,ReconciliationDateFormat,ReconciliationAmountMapping,ReconciliationMappingInput,ReconciliationMapping,ReconciliationConfig,StatementCandidate,StatementRowError,StatementPreviewRow,ReconciliationClassification,ReconciliationSource,ReconciliationAllocation,ReconciliationMatchInput,ReconciliationBatchInput} from './reconciliation.ts';
+export type {ReconciliationStatus,ReconciliationReportFilter,ReconciliationReportRow,ReconciliationControl,ReconciliationReportSnapshot,ReconciliationReportPage} from './reconciliation.ts';

@@ -3,6 +3,8 @@ import type { Socket } from 'node:net';
 import type { FastifyBaseLogger, FastifyInstance, FastifySchemaValidationError } from 'fastify';
 
 const errors = {
+  RECONCILIATION_DISABLED:[409,'Reconciliation is disabled for this franchise. Ordinary financial operations remain available. Saved history and exact completed-command replay are retained.'],
+  RECONCILIATION_CONFLICT:[409,'Reconciliation identity, source version or available amount changed. Review the current evidence before submitting a new command.'],
   CUSTOMER_ACCOUNTS_DISABLED:[409,'New customer account writes are disabled. Saved evidence remains available.'],
   ACCOUNT_HELD:[409,'This account is held. A franchise admin must resolve the hold before a new credit booking.'],
   ACCOUNT_OVERDUE:[409,'This account has overdue debt. Resolve the overdue balance before a new credit booking.'],

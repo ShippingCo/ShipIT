@@ -173,6 +173,7 @@ export interface DisposableDatabase {
   prepareShipmentCosts(): Promise<void>;
   prepareSettings(): Promise<void>;
   prepareCustomerAccounts(): Promise<void>;
+  prepareReconciliation(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
@@ -380,6 +381,13 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.custody_access_events,shipit.custody_commands,shipit.custody_assignment_instructions,shipit.custody_manifests,shipit.custody_manifest_items,shipit.custody_receipts,
           shipit.custody_discrepancies,shipit.custody_transfer_grants,shipit.custody_grant_revocations,shipit.custody_releases,shipit.custody_manifest_cancellations,shipit.custody_events
           TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareReconciliation() {
+      await handle.prepareAgentMoney();await handle.prepareReports();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.reconciliation_commands,shipit.reconciliation_config_versions,shipit.reconciliation_mapping_versions,shipit.reconciliation_imports,shipit.reconciliation_transactions,shipit.reconciliation_row_outcomes,shipit.reconciliation_batches,shipit.reconciliation_matches,shipit.reconciliation_match_transactions,shipit.reconciliation_match_sources,shipit.reconciliation_unmatches,shipit.reconciliation_classifications,shipit.reconciliation_review_revisions,shipit.reconciliation_access_events TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.reconciliation_recorded_sources TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareCustomerAccounts() {
