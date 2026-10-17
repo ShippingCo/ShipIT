@@ -1081,3 +1081,14 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 | apps/web/src/test/settings.test.tsx: hash router restores the native history index after cancelled Back and Forward without replacing keys or state | preserve | seam |
 | apps/web/src/test/settings.test.tsx: timezone editor $key rejects unsupported input locally and saves accepted casing or aliases without uncertain recovery | preserve | seam |
 | apps/web/src/test/settings.test.tsx: a server timezone validation rejection retains an editable draft and allows a corrected new command with a fresh key | preserve | seam |
+
+
+## Issue #141 account regression ownership
+
+| Test | Disposition | Group | Reason |
+| --- | --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: shows source credit, retains an uncertain request identity and saves the exact approved debtor | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
+| apps/web/src/test/counter.test.tsx: invalidates approval after any shipment edit and gives a clear held-account denial | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
+| apps/web/src/test/customer-accounts.test.tsx: requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
+| apps/web/src/test/customer-accounts.test.tsx: reviews exact shipment evidence before approving and refreshes the pending queue | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
+| apps/web/src/test/customer-accounts.test.tsx: read-only cannot mount account directory reads or configuration | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |

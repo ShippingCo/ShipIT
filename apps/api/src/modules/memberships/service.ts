@@ -1034,3 +1034,28 @@ export async function withReportOptionsScope<T>(database:DatabasePool,token:stri
   return work(scope,memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds),remaining.length>50);
  });
 }
+
+/** #141: explicit local admin configuration; existing financial readers only. */
+export async function withCustomerAccountScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../customer-accounts/types.ts').CustomerAccountAction,correlationId:string,
+ work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+ const reading=action==='customer_accounts.read'||action==='customer_accounts.select';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);
+   if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const permitted=reading?(orgAdmin||local.some(m=>(['franchise_admin','accountant'].includes(m.role)||action==='customer_accounts.select'&&m.role==='operator'))):local.some(m=>m.role===(action==='customer_accounts.request'?'operator':'franchise_admin'));
+   if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
+   if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   return await work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+  } catch(error) {
+   if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;
+  }
+ });
+}

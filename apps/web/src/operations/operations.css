@@ -64,3 +64,9 @@
 .settings-workspace input[type="checkbox"] { margin-right: 8px; }
 .settings-workspace :focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 3px; }
 .settings-workspace button { max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; height: auto; min-height: 40px; }
+
+/* Monthly-account evidence and explicit commands remain readable on narrow screens. */
+.customer-accounts-workspace, .account-credit-evidence { min-width: 0; overflow-wrap: anywhere; }
+.customer-accounts-workspace fieldset { min-width: 0; border: 1px solid var(--md-outline-variant); border-radius: 12px; padding: 12px; }
+.customer-accounts-workspace .ops-form fieldset { display: grid; gap: 12px; }
+.customer-accounts-workspace .btn, .account-credit-evidence .btn { max-width: 100%; height: auto; min-height: 40px; white-space: normal; overflow-wrap: anywhere; padding-top: 8px; padding-bottom: 8px; }

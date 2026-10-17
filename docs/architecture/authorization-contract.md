@@ -83,6 +83,10 @@ The rows cover every private concept in #2's module/data ownership table.
 | R36 | Immutable agent cash capture and settlement evidence (`agent_statement.read`); operators see evidence they prepared, agents see only their own agent identity; minimum source evidence only | O | F | F | - | S | F | - |
 | R37 | Cash closing/session/source/history reads (`cashbook.close.read`); operator restricted to assigned drawer; current own-organization finance projections only | O | F | F | - | - | F | - |
 | R38 | Administrative settings defaults/history (`settings.organization.read`; local history under `settings.franchise.read`); organization endpoint org_admin only | O | F | - | - | - | - | - |
+| R39 | Monthly account profile, terms, contact attestation and negotiated-rate history (`customer_accounts.read`) | O | F | - | - | - | F | - |
+| R40 | Explicit shipping-customer account choices and credit/source amounts (`customer_accounts.select`); no contact directory | O | F | F | - | - | F | - |
+| R41 | Own credit exception request status (`customer_accounts.request`); exact actor only | - | - | F | - | - | - | - |
+| R42 | Pending credit exception review and exact requested shipment (`customer_accounts.approve`) | - | F | - | - | - | - | - |
 | R35 | Dedicated cash handover selection/detail/history (`cashbook.handover.select`); delivery agents see only their immutable source/target participation and permitted minimum recipient choices in their currently granted franchise | O | F | F | - | S | F | - |
 
 R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-customer/bill/account/receiver selectors, receipt balances and linked allocation history. Operators receive no private external reference, receiver/custody evidence or general ledger/directory grant. Receiver choices contain only eligible active own-franchise staff IDs and safe labels. Accountant selection does not grant R05 customer-directory browsing. R32 maps `money_receipts.read` to finance evidence for the selected owned receipt. Every nested lookup, page and completed-command replay rechecks current membership and ownership. W49–W52 implement the ratified D137-1/D137-5 extensions for #138; the receiver is also the initial custodian, and a correction restores unallocated funds without recording a refund. Later custody, reconciliation and refund actions require their own contracts.
@@ -204,6 +208,10 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 | W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
 | W70 | Record/revise shipment cost evidence and preview/apply cost imports; exact owned source/version and explicit allocations | - | F | - | - | - | - | - |
 | W71 | Version organization settings defaults (`settings.organization.update`); safe common keys only, no W52/W56/agent-money financial configuration | O | - | - | - | - | - | - |
+| W72 | Append monthly account terms, shipping links and contact-authority attestation (`customer_accounts.configure`) | - | F | - | - | - | - | - |
+| W73 | Publish an effective negotiated rate schedule (`customer_accounts.rates`) | - | F | - | - | - | - | - |
+| W74 | Request a limit exception for own exact unexpired booking (`customer_accounts.request`) | - | - | F | - | - | - | - |
+| W75 | Approve one exact credit-limit exception with a reason (`customer_accounts.approve`); cannot bypass holds or overdue debt | - | F | - | - | - | - | - |
 
 W70 is the #147 cost-evidence command ceiling. Neither organization administration nor
 accountant financial read access grants this write capability. Current membership is
@@ -600,3 +608,16 @@ Report options reuse R25 current financial reads and E03 export hints. The optio
 is a paginated projection, not a stored allowlist or an authorization grant. Actual
 capture/read/export independently reauthorizes every selected saved franchise. Unavailable
 saved scope preferences do not expose revoked IDs or silently select replacements.
+
+## Issue #141 monthly account permissions
+
+R39/R40 and W72–W75 implement D137 financial role constraints and the explicit
+[D141 product-owner decisions](customer-accounts.md). Organization administrators
+may read only within their own organization; configuration/approval requires a
+current franchise-admin grant for the selected franchise. Accountants gain reads,
+not writes. Operators see linked choices, amounts and their own request outcomes,
+not billing-contact history or another operator's private request. The exact
+requested shipment is visible to its local approver under R42. Current grants are
+rechecked on retry, approval consumption and every paged read. An approval grants
+no booking permission; the existing operator-only booking action still applies.
+No new export or public/channel grant is introduced.

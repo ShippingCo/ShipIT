@@ -1,3 +1,5 @@
+import {retainAccountNavigation} from '../data-access/account-navigation';
+import {AccountSelection} from './AccountSelection';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { TextField, SelectField } from '../components/m3/Input';
@@ -23,6 +25,9 @@ export default function NewBooking({ controller }: { controller: ScopeController
 function BookingForm({ controller, startAnother }: { controller: ScopeController; startAnother: () => void }) {
   const [workflow] = useState(() => createBookingWorkflow(controller));
   const state = useSyncExternalStore(workflow.subscribe, workflow.snapshot), d = state.draft;
+  const [creditNavigationBlocked,setCreditNavigationBlocked]=useState(false);
+  const creditPending=state.creditPhase==='loading'||state.creditPhase==='uncertain';
+  useEffect(()=>creditPending?retainAccountNavigation(workflow.api.scope,()=>setCreditNavigationBlocked(true)):undefined,[creditPending,workflow]);
   useEffect(() => { workflow.activate(); return () => workflow.dispose(); }, [workflow]);
   useEffect(() => {
     const first = Object.entries(state.errors).find(([, value]) => value)?.[0];
@@ -49,9 +54,10 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     <section className="card counter-section"><h1 className="t-headline-sm" tabIndex={-1}>Booking saved</h1>
       <p>{state.booking.parcels.map(p => p.docket).join(', ')}</p><p className="t-headline-sm">Booked total {receiptMoney(state.booking.charges.tax.final_payable_paise)}</p>
       <p role="status" aria-live="polite">{state.message}</p>
+      {state.booking.account&&<p>Bill to {state.booking.account.debtor.name} · Due {state.booking.account.due_date} · {state.booking.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate'}</p>}
       <p>Outstanding {receiptMoney(state.booking.payment_obligation.outstanding_paise)} at booking confirmation</p>
       <p>{d.paymentMode === 'to_pay' ? 'To Pay: no collection was recorded.' : 'Booking saved. Record the actual received money with its receiving account and source evidence.'}</p>
-      <Link className="btn btn-filled" to={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}>Record received money / apply advance</Link>
+      <Link className="btn btn-filled" to={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.account?.debtor.source_customer_id??state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}>Record received money / apply advance</Link>
       <div className="counter-actions"><button className="btn btn-outlined" disabled={state.busy} onClick={startAnother}>Start another booking</button><Link to="/business/receipts">Open Receipts</Link></div>
     </section>
     <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id} />
@@ -59,6 +65,8 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
   </div>;
   return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); void workflow.save(); }} aria-label="New booking">
     <h1 className="t-headline-sm">New Booking</h1>
+    {creditNavigationBlocked&&creditPending&&<p role="alert">Retry the retained credit request before leaving or changing franchise.</p>}
+    {state.quote?.account&&<p role="status">Price source: {state.quote.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate (no matching negotiated rule)'}</p>}
     <section className="card counter-section"><h2 className="t-title-lg">1 · Customer / sender</h2><p>The booking customer supplies the sender snapshot. Enter the parcel recipient separately.</p>
       <CustomerLookup workflow={workflow} disabled={disabled} />
       <div className="counter-grid">{field('name', 'Customer name')}{field('phone', 'Customer phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('address', 'Customer address', 'Optional single-line contact address.')}</div>
@@ -67,6 +75,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
         <button type="button" className="btn btn-outlined" disabled={state.busy || state.customerPhase === 'ready' || state.bookingPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} onClick={() => { void workflow.confirmCustomer(); }}>{state.customerPhase === 'uncertain' ? 'Retry same customer request' : state.customer ? 'Save customer changes' : 'Create customer'}</button>
         {state.customer && <><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.newCustomer()}>Use as new customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => { void workflow.refreshCustomer(); }}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.useLatestCustomer()}>Use latest customer details</button></>}
       </div><p role="status">Customer: {state.customerPhase}</p>
+      <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
     </section>
     <section className="card counter-section"><h2 className="t-title-lg">2 · Parcel recipient and service</h2><BookingPreference workflow={workflow}/><div className="counter-grid">
       {field('recipientName', 'Recipient name')}{field('recipientPhone', 'Recipient phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('recipientAddress', 'Recipient address')}

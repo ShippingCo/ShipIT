@@ -21,6 +21,7 @@ export interface TimelineRow { event_id:string;event_type:string;aggregate_seque
 export interface TimelineDto { event_id:string;sequence:number;occurred_at:string;code:string;status:ParcelStatus;label:string }
 export interface ParcelDto { id: string; version: 1; status: 'booked'; custody: 'awaiting_intake'; docket: string; weight_grams: number; sender: CustomerSnapshot; recipient: ParcelInput['recipient']; event_id: string }
 export interface BookingDto {
+  account?:import('@shippingco/shared').AccountBookingSnapshot;
   id: string; version: 1; state: 'active'; organization_id: string; franchise_id: string; customer: CustomerSnapshot;
   charges: { pricing: Omit<PricingQuoteDto,'fingerprint'>; tax: Omit<TaxCalculationDto,'fingerprint'|'proposal'>; confirmed_at: string };
   payment_obligation: { id: string; currency: 'INR'; total_paise: number; collected_paise: 0; outstanding_paise: number; state: 'uncollected' };
@@ -47,11 +48,11 @@ function party(value: CustomerSnapshot): CustomerSnapshot {
  * Adding private stored columns/JSON fields cannot expand the operator DTO. */
 export function bookingDto(value: BookingDto): BookingDto {
   const pricing=value.charges.pricing,tax=value.charges.tax;
-  return { ...pick(value,['id','version','state','organization_id','franchise_id','event_id']),customer:party(value.customer),
+  return { ...(value.account?{account:{...pick(value.account,['account_id','account_revision_id','account_version','closing_day','due_days','due_date','credit_limit_paise','exposure_before_paise','rate_source','rate_revision_id','approval_id']),debtor:party(value.account.debtor)}}:{}),...pick(value,['id','version','state','organization_id','franchise_id','event_id']),customer:party(value.customer),
     charges:{confirmed_at:value.charges.confirmed_at,
-      pricing:{...pick(pricing,['id','proposal','card_id','rate_version_id','rate_version_number','rule_id','freight_suggestion_paise','packing_paise','freight_paise','variance_paise','override_status','approval_actor_id','subtotal_paise','created_at','expires_at']),
+      pricing:{...(pricing.account?{account:pick(pricing.account,['id','revision_id','version','rate_source','rate_revision_id','rule_index'])}:{}),...pick(pricing,['id','proposal','card_id','rate_version_id','rate_version_number','rule_id','freight_suggestion_paise','packing_paise','freight_paise','variance_paise','override_status','approval_actor_id','subtotal_paise','created_at','expires_at']),
         policy:pick(pricing.policy,['effective_from','effective_to','quote_validity_seconds','override_tolerance_paise','approval_ref','source_ref']),
-        inputs:{...pick(pricing.inputs,['destination_key','service','weight_grams']),...(pricing.inputs.settings_version_id?{settings_version_id:pricing.inputs.settings_version_id}:{}),...(pricing.inputs.override?{override:pick(pricing.inputs.override,['freight_paise','reason_code'])}:{})},
+        inputs:{...(pricing.inputs.customer_account_id?{customer_account_id:pricing.inputs.customer_account_id}:{}),...pick(pricing.inputs,['destination_key','service','weight_grams']),...(pricing.inputs.settings_version_id?{settings_version_id:pricing.inputs.settings_version_id}:{}),...(pricing.inputs.override?{override:pick(pricing.inputs.override,['freight_paise','reason_code'])}:{})},
         breakdown:pick(pricing.breakdown,['calculation','min_weight_grams','max_weight_grams','excluded'])},
       tax:{...pick(tax,['id','intent_id','quote_id','policy_id','policy_version','rule_id','resolution_id','supplier_state','place_of_supply','jurisdiction','registration','classification','treatment','pre_tax_paise','taxable_basis_paise','cgst_paise','sgst_paise','igst_paise','tax_total_paise','unrounded_payable_paise','rounding_adjustment_paise','final_payable_paise','approval_ref','source_ref','rule_evidence_ref','allocation','time_rule','proposed_tax_point_at','created_at','expires_at']),
         components:tax.components.map(c=>pick(c,['id','kind','numerator','denominator','exact_numerator','exact_denominator','amount_paise']))}},

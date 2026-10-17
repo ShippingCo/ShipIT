@@ -486,3 +486,13 @@ DTO and authorization definitions in [API contracts](../../docs/architecture/api
 The [operator guide](../../docs/architecture/settings-operations.md) explains inheritance,
 consumer availability, conflicts and rollback. General settings contain no provider
 credentials, OTP secrets, deployment flags or invented financial/calendar policy.
+
+
+### Monthly customer accounts (#141)
+
+`CUSTOMER_ACCOUNTS_ENABLED` defaults to `false` and is forbidden in demo mode.
+Install migration and restricted runtime grants before enabling account commands,
+negotiated quotes and credit bookings. Ordinary booking and money flows remain
+available. See [account contract and operator walkthrough](../../docs/architecture/customer-accounts.md)
+for endpoint schemas, current permissions, exact-intent recovery, credit source
+cutoffs, financial equations, additive upgrade and compatible rollback limitations.

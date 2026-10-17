@@ -2291,3 +2291,9 @@ settings never change a saved E/K cutoff or financial fact. Quote service sugges
 the source ID in new quote inputs, retained by booked pricing snapshots. Old source IDs,
 receipts, quotes, closes, agent earnings, cost sources and held-parcel clocks are not backfilled
 or recalculated. Server feature switches and credentials are not settings keys.
+
+
+Issue #141 implements the monthly-account producer under these contracts. See
+[customer accounts](customer-accounts.md) for the six explicit product-owner
+decisions, exposure equation, version precedence, API/role boundaries and rollout.
+It introduces no monthly statement generation; #142 remains its own dependent scope.

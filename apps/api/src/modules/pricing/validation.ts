@@ -57,14 +57,14 @@ export function draft(value:unknown,replace=false):PricingDraftInput & {expected
 }
 export function publish(value:unknown) { const b=object(value,['expected_version']);return {expected_version:integer(b.expected_version,'expected_version',1,2147483646)}; }
 export function quote(value:unknown):PricingQuoteInput {
-  const b=object(value,['destination_key','service','weight_grams','override','settings_version_id']);
+  const b=object(value,['destination_key','service','weight_grams','override','settings_version_id','customer_account_id']);
   let override:PricingQuoteInput['override'];
   if(b.override!==undefined) {
     const o=object(b.override,['freight_paise','reason_code']);
     if(!['customer_agreement','service_recovery','commercial_exception'].includes(o.reason_code as string))fail('reason_code','REQUIRED');
     override={freight_paise:integer(o.freight_paise,'freight_paise'),reason_code:o.reason_code as PricingOverrideReason};
   }
-  return {...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),destination_key:key(b.destination_key,'destination_key'),service:service(b.service),weight_grams:integer(b.weight_grams,'weight_grams',1),...(override?{override}:{})};
+  return {...(b.customer_account_id===undefined?{}:{customer_account_id:uuid(b.customer_account_id,'account_id')}),...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),destination_key:key(b.destination_key,'destination_key'),service:service(b.service),weight_grams:integer(b.weight_grams,'weight_grams',1),...(override?{override}:{})};
 }
 export function selection(value:unknown) {
   const b=object(value,['organization_id','franchise_id']);

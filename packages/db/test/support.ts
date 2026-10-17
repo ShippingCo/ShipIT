@@ -172,6 +172,7 @@ export interface DisposableDatabase {
   prepareCashClose(): Promise<void>;
   prepareShipmentCosts(): Promise<void>;
   prepareSettings(): Promise<void>;
+  prepareCustomerAccounts(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
@@ -381,6 +382,14 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
           TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
+    async prepareCustomerAccounts() {
+      await handle.prepareMoneyReceipts();const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.customer_accounts,shipit.customer_account_revisions,shipit.customer_account_rates,shipit.customer_account_bookings,shipit.customer_credit_approvals,shipit.customer_credit_requests TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(id) ON shipit.customer_accounts,shipit.customer_credit_approvals,shipit.customer_credit_requests TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.customer_account_customer_links,shipit.customer_account_audit_events TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
     async prepareSettings() {
       await handle.prepareAgentMoney();const owner=handle.ownerPool();
       try {
@@ -423,6 +432,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.preparePayments();await handle.prepareReceivingAccounts();
       const owner=handle.ownerPool();
       try {
+        if((await owner.query("SELECT to_regclass('shipit.customer_account_bookings') present")).rows[0]?.present)await owner.query(`GRANT SELECT ON shipit.customer_account_bookings TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT ON shipit.money_receipts,shipit.money_receipt_commands,shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.cod_receipt_allocations') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT ON shipit.cod_receipt_allocations,shipit.cod_receipt_positions TO ${identifier(resource.runtimeRole)}`);

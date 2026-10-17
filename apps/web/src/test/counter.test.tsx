@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '../App';
 import { createScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
@@ -20,6 +20,7 @@ beforeEach(()=>{
   if(path==='/auth/bootstrap')return f.json({csrf_token:'synthetic-csrf'});
   if(path.startsWith('/api/v1/operator-context'))return f.json({...f.context,active_franchise_id:path.includes(f.B)?f.B:f.A});
   if(path.includes('/customers'))return f.json(options.method==='GET'&&path.includes('?')?{items:[f.customer],page:{has_more:false,next_cursor:null}}:f.customer,options.method==='POST'?201:200);
+  if(path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[],next_cursor:null});
   if(path.startsWith('/api/v1/pricing/quote'))return f.json(f.quote);
   if(path.startsWith('/api/v1/tax/intents'))return f.json(f.intent);
   if(path.startsWith('/api/v1/tax/calculations'))return f.json(f.tax);
@@ -156,4 +157,38 @@ describe('production counter API composition',()=>{
   fill('Franchise',f.A);await screen.findByRole('heading',{name:'Booking recovery required'});
  });
 
+});
+
+describe('monthly account booking',()=>{
+ const account=f.id(80),request=f.id(81),approval=f.id(82),debtor=f.id(83);
+ function accountResponses(c:Call){
+  if(c.path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[{id:account,name:'Synthetic Monthly',version:1,state:'active'}],next_cursor:null});
+  if(c.path.includes('/credit-sources'))return f.json({items:[{booking_id:f.id(84),due_date:'2099-01-01',gross_paise:'60000',reduction_paise:'0',collected_paise:'0',refund_paise:'0',outstanding_paise:'60000'}],next_cursor:null});
+  if(c.path.includes('/credit'))return f.json({outstanding_paise:'60000',available_paise:'40000',overdue_paise:'0',credit_limit_paise:100000,state:'active',as_of:f.now});
+  if(c.path.startsWith('/api/v1/pricing/quote'))return f.json({...f.quote,account:{id:account,revision_id:f.id(85),version:1,rate_source:'account',rate_revision_id:f.id(86),rule_index:0},rule_id:null});
+  if(c.path.startsWith('/api/v1/customer-credit-requests'))return f.json(c.options.method==='POST'?{id:request}:{id:request,approval_id:approval,expires_at:f.expiry,reason:'Owner reviewed this shipment'});
+  if(c.path.startsWith('/api/v1/bookings?'))return f.json({...f.booking,account:{account_id:account,debtor:{source_customer_id:debtor,name:'Separate Debtor'},due_date:'2099-02-10',rate_source:'account',approval_id:approval}},201);
+ }
+ async function selected(){
+  override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
+  await entered();fireEvent.change(screen.getByRole('combobox',{name:'Bill-to account'}),{target:{value:account}});await screen.findByText('₹400.00',{selector:'strong'});
+  fireEvent.click(screen.getByRole('button',{name:'Get server price and tax'}));await screen.findByText('Server payable ₹134.00');
+ }
+ it('shows source credit, retains an uncertain request identity and saves the exact approved debtor',async()=>{
+  await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));await screen.findByText(/Original ₹600.00/);
+  let first=true;override=c=>{if(c.path.startsWith('/api/v1/customer-credit-requests')&&c.options.method==='POST'&&first){first=false;return Promise.reject(new TypeError('SYN_ACK_LOST'));}const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
+  fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByText('Retry the retained credit request before leaving or changing franchise.');expect(screen.getByRole('heading',{name:'New Booking'})).toBeVisible();
+  const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
+  fireEvent.click(screen.getByRole('button',{name:'Retry same credit request'}));await screen.findByRole('button',{name:'Check owner approval'});
+  const attempts=posts('/api/v1/customer-credit-requests');expect(attempts).toHaveLength(2);expect([attempts[0].path,attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].path,attempts[1].options.body,key(attempts[1])]);
+  fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBe(approval);expect(body(posts('/api/v1/bookings?')[0]).tax_intent.pricing_input.customer_account_id).toBe(account);
+  expect(screen.getByText(/Bill to Separate Debtor/)).toBeVisible();expect(screen.getByRole('link',{name:/Record received money/})).toHaveAttribute('href',expect.stringContaining(debtor));
+ });
+ it('invalidates approval after any shipment edit and gives a clear held-account denial',async()=>{
+  await selected();fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Check owner approval'});fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking:/);
+  fill('Recipient name','Different Recipient');expect(screen.queryByText(/Owner approved this booking:/)).toBeNull();expect(screen.queryByRole('button',{name:'Check owner approval'})).toBeNull();
+  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;save();await screen.findByText(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();
+ });
 });
