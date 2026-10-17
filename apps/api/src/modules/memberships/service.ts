@@ -1059,3 +1059,27 @@ export async function withCustomerAccountScope<T>(database:DatabasePool,token:st
   }
  });
 }
+
+/** D137 reconciliation is a separate grant; it never issues a ledger capability. */
+export async function withReconciliationScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
+ action:import('../reconciliation/types.ts').ReconciliationAction,correlationId:string,
+ work:(scope:import('../security/scope.ts').TenantAccess,audit:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+ const reading=action==='reconciliation.read';
+ return membershipTransaction(database,async tx=>{
+  try {
+   const session=await authenticated(tx,token);
+   if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+   const parent=await authorityRepository.lockOrganization(tx,organizationId);
+   if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+   const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+   const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
+   if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
+   const adminOnly=action==='reconciliation.configure'||action==='reconciliation.unmatch';
+   if(!(reading&&orgAdmin)&&!local.some(m=>m.role==='franchise_admin'||!adminOnly&&m.role==='accountant'))throw new HttpError('ACTION_FORBIDDEN');
+   if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+   const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
+   return await work(issueTenantAccess(tx,{...context,action}),issueTenantAccess(tx,{...context,action:'reconciliation.audit'}));
+  }catch(error){if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;}
+ });
+}

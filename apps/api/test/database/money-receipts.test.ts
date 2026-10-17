@@ -121,6 +121,9 @@ await test('receipt service atomically pays 40000 and 50000 debt, holds 10000 ad
  const history=await service.history(operator.token,recorded.receipt_id,{...q,limit:'100'},randomUUID());assert.equal(history.items.length,4);assert.equal(history.next_cursor,null);
  const original=history.items.find(row=>row.id===target.id)!;assert.equal(original.released_paise,10000);assert.equal(original.amount_paise,40000);assert.equal(original.version,1);
  const release=history.items.find(row=>row.kind==='release')!;assert.equal(release.release_of,target.id);assert.equal(release.amount_paise,10000);assert.equal(release.version,3);assert.ok(!/external_reference|receiver_id|SYNTHETIC-BANK-REF/.test(JSON.stringify(history)));
+ // Reconciliation consumes the original bank inflow, not the reduced booking allocation.
+ const bankSource=(await s.db.adminQuery('SELECT amount_paise::text,direction,external_reference FROM shipit.reconciliation_recorded_sources WHERE id=$1',['receipt:'+recorded.receipt_id])).rows[0]!;
+ assert.deepEqual(bankSource,{amount_paise:'100000',direction:'credit',external_reference:'SYNTHETIC-BANK-REF'});
  const firstPage=await service.history(operator.token,recorded.receipt_id,{...q,limit:'1'},randomUUID());assert.equal(firstPage.items.length,1);assert.ok(firstPage.next_cursor);
  const nextPage=await service.history(operator.token,recorded.receipt_id,{...q,limit:'100',cursor:firstPage.next_cursor!},randomUUID());assert.equal(nextPage.items.length,3);assert.ok(!nextPage.items.some(row=>row.id===firstPage.items[0]!.id));
  await assert.rejects(service.history(s.admin.token,recorded.receipt_id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});

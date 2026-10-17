@@ -8,6 +8,9 @@ describe('fail-closed runtime configuration', () => {
   it('validates and freezes one mode mapping with synthetic input', () => {
     const config = parseEnvironment(syntheticEnv);
     expect(config.environment).toBe('developer'); expect(Object.isFrozen(config)).toBe(true);
+    expect(config.reconciliationWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,RECONCILIATION_ENABLED:'true'}).reconciliationWritesEnabled).toBe(true);
+    for(const value of ['', '1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,RECONCILIATION_ENABLED:value})).toThrow(ConfigurationError);
+    expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',RECONCILIATION_ENABLED:'true'})).toThrow(ConfigurationError);
     expect(config.moneyReceiptWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:'true'}).moneyReceiptWritesEnabled).toBe(true);
     for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,MONEY_RECEIPTS_ENABLED:value})).toThrow(ConfigurationError);
     expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',MONEY_RECEIPTS_ENABLED:'true'})).toThrow(ConfigurationError);

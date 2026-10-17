@@ -1,3 +1,6 @@
+import {registerReconciliation} from './modules/reconciliation/routes.ts';
+import {createReconciliationService} from './modules/reconciliation/service.ts';
+import {createReconciliationReportService} from './modules/reconciliation/report-service.ts';
 import {registerCustomerAccounts} from './modules/customer-accounts/routes.ts';
 import {createCustomerAccountService} from './modules/customer-accounts/service.ts';
 import {createEffectivenessService} from './modules/reports/effectiveness-service.ts';
@@ -164,6 +167,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true,config.agentMoneyWritesEnabled===true&&config.environment!=='demo'),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
+      registerReconciliation(instance,createReconciliationService(database,config.reconciliationWritesEnabled===true&&config.environment!=='demo'),createReconciliationReportService(database),config.environment!=='developer');
       registerCustomerAccounts(instance,createCustomerAccountService(database,config.customerAccountWritesEnabled===true&&config.environment!=='demo',pricingClock),config.environment!=='developer');
       registerSettings(instance,database,config.environment!=='developer',config.settingsWritesEnabled===true&&config.environment!=='demo');
       registerShipmentCosts(instance,database,config.environment!=='developer',config.shipmentCostWritesEnabled===true&&config.environment!=='demo');

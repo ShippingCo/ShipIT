@@ -288,6 +288,13 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
   await assert.rejects(apply(noncash,{expected_version:1,refund_evidence:{...noncashEvidence,cash_location_id:cashLocation.id,cash_location_revision_id:cashLocation.revision_id}},randomUUID(),s.local.token,custodyService),{code:'VALIDATION_FAILED'});
   await apply(noncash,{expected_version:1,refund_evidence:noncashEvidence},randomUUID(),s.local.token,custodyService);
   const finalCash=await cashbook.position(s.local.token,q,randomUUID());assert.equal(finalCash.locations.find(p=>p.location_id===cashLocation.id)!.known_recorded_paise,'100000');assert.equal(finalCash.locations.find(p=>p.location_id===bankLocation.id)!.known_recorded_paise,'-10000');
+  const bankRefund=(await owner.query("SELECT id,source_id,version,amount_paise::text,direction FROM shipit.reconciliation_recorded_sources WHERE external_reference='SYN_UPI_REFUND'")).rows[0]!;
+  assert.equal(bankRefund.amount_paise,'10000');assert.equal(bankRefund.direction,'debit');
+  const correction=await request({booking_id:booking,expected_version:9,payment_version:1,kind:'refund_correction',reason:'incorrect_refund_recording',refund:3000,refund_correction_of:bankRefund.source_id});await apply(correction,{expected_version:1});
+  const correctedBankRefund=(await owner.query('SELECT amount_paise::text,version FROM shipit.reconciliation_recorded_sources WHERE id=$1',[bankRefund.id])).rows[0]!;
+  assert.equal(correctedBankRefund.amount_paise,'7000');assert.notEqual(correctedBankRefund.version,bankRefund.version);
+  assert.equal((await owner.query('SELECT refund::text FROM shipit.financial_changes WHERE id=$1',[bankRefund.source_id])).rows[0]!.refund,'10000');
+
 
 
 

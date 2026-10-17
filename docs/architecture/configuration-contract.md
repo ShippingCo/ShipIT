@@ -187,3 +187,11 @@ false; true rejected in demo). It enables new receipt/account writes only after
 schema and scoped runtime grants are ready. Disabling it preserves saved reads and
 exact completed-command replay under current membership; it creates no new money
 effect and does not turn the browser into authority.
+
+
+Issue #146 adds server-only `RECONCILIATION_ENABLED` (strict `true`/`false`, default
+false, forbidden in demo). It gates new reconciliation evidence only; each franchise
+also defaults to disabled until an explicit versioned admin opt-in. There are no bank
+credentials, provider secrets or paid services. Ordinary bookings, money, receipts,
+refunds and reports are independent. Saved evidence and authorized exact committed
+replays remain available after opt-out. See [manual reconciliation](manual-reconciliation.md).

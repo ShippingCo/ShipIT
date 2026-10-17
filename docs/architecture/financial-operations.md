@@ -2297,3 +2297,7 @@ Issue #141 implements the monthly-account producer under these contracts. See
 [customer accounts](customer-accounts.md) for the six explicit product-owner
 decisions, exposure equation, version precedence, API/role boundaries and rollout.
 It introduces no monthly statement generation; #142 remains its own dependent scope.
+
+Issue #146 adds [optional manual statement reconciliation](manual-reconciliation.md)
+as a separate verification domain. Its configuration defaults to disabled for every
+franchise. It never becomes a prerequisite for recording operational money.
