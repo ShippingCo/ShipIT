@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
-      "apps/web/src/test/counter.test.tsx": "45c70f04300acc02299fbe312d858e6d0ddab91a8162b484afc61a99a916ba27",
+      "apps/web/src/test/counter.test.tsx": "4760d2fe84e852d110259ece7b44881e1df257cade59e45b14cb39d42f214cd5",
       "apps/web/src/test/operator.test.tsx": "6cef3119ea956062aaa286fd72541e6b9ef4bc303ea70f8171131c2385adccd3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1480,6 +1480,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "shows source credit, retains an uncertain request identity and saves the exact approved debtor",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/custody-actions.test.tsx",
         "name": "requires reassignment instruction and source-specific grant for mixed custody cohort",
         "cases": null
@@ -1552,6 +1562,21 @@
       {
         "file": "apps/web/src/test/custody.test.tsx",
         "name": "does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "name": "requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "name": "reviews exact shipment evidence before approving and refreshes the pending queue",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "name": "read-only cannot mount account directory reads or configuration",
         "cases": null
       },
       {
@@ -2422,6 +2447,10 @@
     ],
     "effects": [
       {
+        "file": "apps/web/src/booking/AccountSelection.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
         "file": "apps/web/src/booking/NewBooking.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -2476,6 +2505,10 @@
       {
         "file": "apps/web/src/context/AppContext.tsx",
         "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/data-access/account-navigation.ts",
+        "kind": "scope.signal.addEventListener"
       },
       {
         "file": "apps/web/src/data-access/attachments.ts",
@@ -2616,6 +2649,18 @@
       {
         "file": "apps/web/src/operations/Custody.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/CustomerAccounts.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/CustomerAccounts.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/CustomerAccounts.tsx",
+        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/operations/FinancialAudit.tsx",
@@ -2868,6 +2913,10 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "kind": "sessionStorage.key"
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
       },
       {
         "file": "apps/web/src/test/data-access.test.ts",
@@ -4381,6 +4430,22 @@
       "reason": "Issue #33: old-scope dispatched mutation retains opaque recovery and cannot replay under a new franchise."
     },
     {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "shows source credit, retains an uncertain request identity and saves the exact approved debtor",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
       "file": "apps/web/src/test/custody-actions.test.tsx",
       "name": "requires reassignment instruction and source-specific grant for mixed custody cohort",
       "cases": null,
@@ -4499,6 +4564,30 @@
       "group": "recovery",
       "disposition": "preserve",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/customer-accounts.test.tsx",
+      "name": "requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
+      "file": "apps/web/src/test/customer-accounts.test.tsx",
+      "name": "reviews exact shipment evidence before approving and refreshes the pending queue",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
+      "file": "apps/web/src/test/customer-accounts.test.tsx",
+      "name": "read-only cannot mount account directory reads or configuration",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",

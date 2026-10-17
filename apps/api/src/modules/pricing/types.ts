@@ -27,7 +27,7 @@ export function replayDto(value:PricingVersionDto|PricingQuoteDto):PricingVersio
   if('rate_version_id' in value) {
     const p=value.policy,b=value.breakdown,i=value.inputs;
     return {id:value.id,proposal:true,card_id:value.card_id,rate_version_id:value.rate_version_id,rate_version_number:value.rate_version_number,
-      rule_id:value.rule_id,inputs:{destination_key:i.destination_key,service:i.service,weight_grams:i.weight_grams,
+      rule_id:value.rule_id,...(value.account?{account:{id:value.account.id,revision_id:value.account.revision_id,version:value.account.version,rate_source:value.account.rate_source,rate_revision_id:value.account.rate_revision_id,rule_index:value.account.rule_index}}:{}),inputs:{...(i.customer_account_id?{customer_account_id:i.customer_account_id}:{}),...(i.settings_version_id?{settings_version_id:i.settings_version_id}:{}),destination_key:i.destination_key,service:i.service,weight_grams:i.weight_grams,
         ...(i.override?{override:{freight_paise:i.override.freight_paise,reason_code:i.override.reason_code}}:{})},
       policy:{effective_from:p.effective_from,effective_to:p.effective_to,quote_validity_seconds:p.quote_validity_seconds,
         override_tolerance_paise:p.override_tolerance_paise,approval_ref:p.approval_ref,source_ref:p.source_ref},

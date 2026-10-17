@@ -49,9 +49,10 @@ export async function appendReceipt(scope:TenantAccess,p:MoneyReceiptCommand,rev
  [p.receipt_id,c.permittedFranchiseIds[0],p.id,input.customer_id,input.account_id,revision,input.amount_paise,input.method,input.receiver_id,input.custodian_id,input.occurred_at,input.external_reference,c.organizationId]);
  if(result.rowCount!==1)throw new HttpError('TEMPORARILY_UNAVAILABLE');
 }
+/** Immutable command evidence is checked against the account binding at commit; ordinary pre-upgrade results have no account. */
 export async function bookingCustomer(scope:TenantAccess,id:string,customer:string) {
  if(!(await scopedQuery(scope,['money_receipts.record','money_receipts.allocate','money_receipts.correct'],`SELECT id FROM shipit.bookings
- WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND customer_id=$2`,[id,customer])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND COALESCE((SELECT (c.result->'account'->'debtor'->>'source_customer_id')::uuid FROM shipit.booking_commands c WHERE c.organization_id=shipit.bookings.organization_id AND c.franchise_id=shipit.bookings.franchise_id AND c.id=shipit.bookings.command_id AND c.state='committed'),customer_id)=$2`,[id,customer])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }
 export async function current(scope:TenantAccess,id:string) {
  const c=assertTenantAccess(scope,['money_receipts.allocate','money_receipts.correct','money_receipts.read','money_receipts.select']);
@@ -93,7 +94,7 @@ export async function customerReceiptIds(scope:TenantAccess,customer:string,curs
 export async function customerBookingIds(scope:TenantAccess,customer:string,cursor:string|null,limit:number) {
  return (await scopedQuery<{id:string}>(scope,['money_receipts.select'],`SELECT b.id FROM shipit.bookings b
  JOIN shipit.booking_obligations o ON o.organization_id=b.organization_id AND o.franchise_id=b.franchise_id AND o.booking_id=b.id
- WHERE {{franchise:b.organization_id:b.franchise_id}} AND b.customer_id=$1 AND ($2::uuid IS NULL OR b.id>$2) ORDER BY b.id LIMIT $3`,[customer,cursor,limit])).rows;
+ WHERE {{franchise:b.organization_id:b.franchise_id}} AND COALESCE((SELECT (c.result->'account'->'debtor'->>'source_customer_id')::uuid FROM shipit.booking_commands c WHERE c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.command_id AND c.state='committed'),b.customer_id)=$1 AND ($2::uuid IS NULL OR b.id>$2) ORDER BY b.id LIMIT $3`,[customer,cursor,limit])).rows;
 }
 
 export async function history(scope:TenantAccess,id:string,cursor:string|null,limit:number):Promise<MoneyReceiptHistoryEntry[]> {

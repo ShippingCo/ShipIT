@@ -1,3 +1,4 @@
+import {calculateAccountQuote} from '../customer-accounts/pricing.ts';
 import {validateSettingSuggestion} from '../settings/consumer.ts';
 import { randomUUID } from 'node:crypto';
 import { DatabaseError, type DatabasePool } from '@shippingco/db';
@@ -11,7 +12,7 @@ import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { versionDto, replayDto, type PricingAction, type PricingOperation } from './types.ts';
 import * as validate from './validation.ts';
 import * as repository from './repository.ts';
-import { assertRules, calculate } from './calculation.ts';
+import { assertRules } from './calculation.ts';
 import { digest, fingerprint, keyDigest } from './idempotency.ts';
 async function active(scope:TenantAccess) {
   const c=assertTenantAccess(scope);
@@ -45,7 +46,7 @@ export async function validatePricingSnapshot(scope:TenantAccess,quoteId:string,
   let version:PricingVersionDto;
   try {version=await current(scope,now);}catch(error) {if(error instanceof HttpError&&error.code==='NO_RATE')throw new HttpError('QUOTE_STALE');throw error;}
   if(version.id!==stored.rate_version_id)throw new HttpError('QUOTE_STALE');
-  const recalculated=calculate(version,input,new Date(stored.created_at),stored.id,scope.context.actor.id,scope.context.action==='pricing.override.approve');
+  const recalculated=await calculateAccountQuote(scope,version,input,new Date(stored.created_at),stored.id,scope.context.actor.id,scope.context.action==='pricing.override.approve',now);
   if(digest(recalculated)!==digest(stored))throw new HttpError('QUOTE_STALE');
   // Fresh independent value; caller may freeze/persist without aliasing the stored evidence.
   return structuredClone(recalculated);
@@ -74,7 +75,7 @@ async function publishPricingVersion(scope:TenantAccess,id:string,expected:numbe
   await appendPricing(scope,row.id,published.revision,null,'pricing.publish','policy_publication');
   return versionDto(published,await repository.rules(scope,row.id));
 }
-export function createPricingService(database:DatabasePool,clock:()=>Date=()=>new Date()) {
+export function createPricingService(database:DatabasePool,clock:()=>Date=()=>new Date(),customerAccountsEnabled=false) {
   function scoped<T>(session:string,organization:unknown,franchise:unknown,action:PricingAction,correlationId:string,object:boolean,
     work:(scope:TenantAccess)=>Promise<T>) {
     const org=validate.uuid(organization,'organization_id'),franchiseId=validate.uuid(franchise,'franchise_id');
@@ -140,9 +141,10 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
       const body=validate.quote(input);
       return scoped(session,organization,franchise,body.override?'pricing.override':'pricing.quote',correlationId,false,scope=>
         command(scope,'api.v1.pricing.quote',key,null,body,async()=>{
+          if(body.customer_account_id&&!customerAccountsEnabled)throw new HttpError('CUSTOMER_ACCOUNTS_DISABLED');
           await validateSettingSuggestion(scope,'booking_defaults',body.settings_version_id,{service:body.service});
           const now=clock(),version=await current(scope,now);
-          const result=calculate(version,body,now,randomUUID(),scope.context.actor.id,scope.context.action==='pricing.override.approve');
+          const result=await calculateAccountQuote(scope,version,body,now,randomUUID(),scope.context.actor.id,scope.context.action==='pricing.override.approve');
           await repository.saveQuote(scope,result);
           if(body.override)await appendPricing(scope,version.id,version.version,result.id,
             result.override_status==='privileged'?'pricing.override.approve':'pricing.override',body.override.reason_code);

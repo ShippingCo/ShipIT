@@ -1,3 +1,5 @@
+import {registerCustomerAccounts} from './modules/customer-accounts/routes.ts';
+import {createCustomerAccountService} from './modules/customer-accounts/service.ts';
 import {createEffectivenessService} from './modules/reports/effectiveness-service.ts';
 import {createPerformanceService} from './modules/reports/performance-service.ts';
 import { createCarrierService } from './modules/carriers/service.ts';
@@ -139,12 +141,12 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAudit(instance,createAuditService(database,auth.keys.browser),config.environment!=='developer');
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
-      registerPricing(instance,createPricingService(database,pricingClock),config.environment!=='developer');
+      registerPricing(instance,createPricingService(database,pricingClock,config.customerAccountWritesEnabled),config.environment!=='developer');
       if(whatsapp)registerSupport(instance,createSupportService(database,whatsapp),config.environment!=='developer');
       if(whatsapp)registerAssistantMetrics(instance,createAssistantMetrics(database),config.environment!=='developer');
       if(whatsapp)registerPickups(instance,createPickupService(database,whatsapp),config.environment!=='developer');
       registerQuotePolicies(instance,createQuotePolicyService(database),config.environment!=='developer');
-      registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
+      registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock,config.customerAccountWritesEnabled===true&&config.environment!=='demo'),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
@@ -162,6 +164,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
       registerMoneyReceipts(instance,createMoneyReceiptService(database,config.moneyReceiptWritesEnabled===true,config.agentMoneyWritesEnabled===true&&config.environment!=='demo'),createReceivingAccountService(database,config.moneyReceiptWritesEnabled===true),config.environment!=='developer');
+      registerCustomerAccounts(instance,createCustomerAccountService(database,config.customerAccountWritesEnabled===true&&config.environment!=='demo',pricingClock),config.environment!=='developer');
       registerSettings(instance,database,config.environment!=='developer',config.settingsWritesEnabled===true&&config.environment!=='demo');
       registerShipmentCosts(instance,database,config.environment!=='developer',config.shipmentCostWritesEnabled===true&&config.environment!=='demo');
       registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));

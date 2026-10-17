@@ -6,6 +6,11 @@ export function failureMessage(error: unknown): string {
   if (!(error instanceof ApiFailure)) return 'The request could not be sent. Your entered values are retained. Retry explicitly.';
   if (uncertain(error)) return 'Outcome uncertain: the server may have saved this request. Retry the same request to reconcile; do not enter it again.';
   const messages: Record<string, string> = {
+    CUSTOMER_ACCOUNTS_DISABLED:'New customer account bookings are disabled. Existing bookings and receipts remain available.',
+    ACCOUNT_HELD:'This account is held. Ask a franchise admin to resolve the hold before booking on credit.',
+    ACCOUNT_OVERDUE:'This account has overdue debt. Resolve that balance before booking on credit.',
+    ACCOUNT_CREDIT_EXCEEDED:'Available credit is insufficient. Request owner approval for this exact booking.',
+    ACCOUNT_APPROVAL_INVALID:'The approval is no longer valid for this booking. Refresh the price and request a new approval.',
     QUOTE_STALE: 'Pricing expired or changed. Get a fresh price and tax calculation, review the totals, then confirm again.',
     TAX_STALE: 'Tax evidence expired or changed. Get a fresh price and tax calculation, review the totals, then confirm again.',
     VERSION_CONFLICT: 'The customer changed. Refresh the customer, review the latest record alongside your entered values, then confirm your choice.',

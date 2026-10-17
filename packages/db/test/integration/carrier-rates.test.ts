@@ -12,7 +12,7 @@ await test('carrier rates additive migration preserves existing prices and booki
   const migrate=db.migrate;db.migrate=async()=>({applied:0});
   const s=await bookingSetup(t,db);assert.equal((await s.book()).statusCode,201);db.migrate=migrate;
   const snapshot=async()=>({bookings:(await db.adminQuery('SELECT * FROM shipit.bookings')).rows,
-    rates:(await db.adminQuery('SELECT * FROM shipit.pricing_versions')).rows,quotes:(await db.adminQuery('SELECT * FROM shipit.pricing_quotes')).rows});
+    rates:(await db.adminQuery('SELECT * FROM shipit.pricing_versions')).rows,quotes:(await db.adminQuery("SELECT to_jsonb(q)-'account_rate_id' AS evidence FROM shipit.pricing_quotes q ORDER BY id")).rows});
   const before=await snapshot(),dir=await mkdtemp(join(tmpdir(),'shipit-rate-upgrade-'));t.after(()=>rm(dir,{recursive:true,force:true}));
   await cp(fileURLToPath(new URL('../../migrations/',import.meta.url)),dir,{recursive:true});
   const file=join(dir,'1792170000000-carrier-rates.cjs');
@@ -20,7 +20,8 @@ await test('carrier rates additive migration preserves existing prices and booki
   await assert.rejects(db.migrate({dir}));
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_rate_imports') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:12});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.pricing_quotes WHERE account_rate_id IS NOT NULL')).rows[0]!.n,0);
   await db.prepareCarriers();
   for(const table of ['carrier_rate_imports','carrier_rate_approvals','carrier_rate_commands']){
     await assert.rejects(s.pool.query(`UPDATE shipit.${table} SET franchise_id=franchise_id`));

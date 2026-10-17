@@ -74,10 +74,16 @@ export async function publish(scope:TenantAccess,id:string,expected:number) {
 }
 export async function saveQuote(scope:TenantAccess,result:PricingQuoteDto) {
   const c=assertTenantAccess(scope,['pricing.quote','pricing.override','pricing.override.approve']);
+  if(!result.account?.rate_revision_id){
+    await scopedQuery(scope,['pricing.quote','pricing.override','pricing.override.approve'],`INSERT INTO shipit.pricing_quotes
+      (id,organization_id,franchise_id,actor_id,version_id,rule_id,result,created_at,expires_at)
+      SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,
+      [result.id,c.permittedFranchiseIds[0],c.actor.id,result.rate_version_id,result.rule_id,result,result.created_at,result.expires_at,c.organizationId]);return;
+  }
   await scopedQuery(scope,['pricing.quote','pricing.override','pricing.override.approve'],`INSERT INTO shipit.pricing_quotes
-    (id,organization_id,franchise_id,actor_id,version_id,rule_id,result,created_at,expires_at)
-    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,
-  [result.id,c.permittedFranchiseIds[0],c.actor.id,result.rate_version_id,result.rule_id,result,result.created_at,result.expires_at,c.organizationId]);
+    (id,organization_id,franchise_id,actor_id,version_id,rule_id,result,created_at,expires_at,account_rate_id)
+    SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$10 WHERE {{franchise:$9:$2}}`,
+  [result.id,c.permittedFranchiseIds[0],c.actor.id,result.rate_version_id,result.rule_id,result,result.created_at,result.expires_at,c.organizationId,result.account?.rate_revision_id??null]);
 }
 export async function quote(scope:TenantAccess,id:string) {
   const c=assertTenantAccess(scope,['pricing.quote','pricing.override','pricing.override.approve','pricing.validate']);

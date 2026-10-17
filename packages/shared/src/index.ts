@@ -72,13 +72,15 @@ export interface PricingVersionDto extends PricingDraftInput {
   rules:(PricingRuleInput & {id:string})[];
 }
 export interface PricingQuoteInput {
+  customer_account_id?:string;
   /** Source of an accepted booking service suggestion; omitted for manual/legacy intent. */
   settings_version_id?:string;
   destination_key:string; service:PricingService; weight_grams:number;
   override?:{freight_paise:number;reason_code:PricingOverrideReason};
 }
 export interface PricingQuoteDto {
-  id:string; proposal:true; card_id:string; rate_version_id:string; rate_version_number:number; rule_id:string;
+  id:string; proposal:true; card_id:string; rate_version_id:string; rate_version_number:number; rule_id:string|null;
+  account?:{id:string;revision_id:string;version:number;rate_source:'account'|'normal';rate_revision_id:string|null;rule_index:number|null};
   policy:{effective_from:string;effective_to:string;quote_validity_seconds:number;override_tolerance_paise:number;approval_ref:string;source_ref:string};
   inputs:PricingQuoteInput; freight_suggestion_paise:number; packing_paise:number; freight_paise:number;
   variance_paise:number; override_status:'none'|'within_tolerance'|'privileged'; approval_actor_id:string|null;
@@ -180,3 +182,5 @@ export * from './cash-close.ts';
 export * from './shipment-cost.ts';
 
 export * from "./settings.ts";
+
+export type {CustomerAccountInput,CustomerAccountDto,AccountRateInput,AccountRateDto,AccountCredit,AccountBookingSnapshot} from './customer-accounts.ts';
