@@ -60,7 +60,9 @@ export function issueTenantAccess(executor: QueryExecutor, input: PrivateContext
   if(input.action==='customer.tracking.read' && (input.provenance!=='trusted-event'||input.actor.type!=='service'||input.actor.id!=='customer-tracking'||input.organizationWide||input.permittedFranchiseIds.length!==1))throw new HttpError('ACTION_FORBIDDEN');
   if(input.action.startsWith('settings.')&&(input.provenance!=='membership'||input.actor.type!=='user'||(input.action.startsWith('settings.organization.')?(!input.organizationWide||input.permittedFranchiseIds.length!==0):(input.organizationWide||input.permittedFranchiseIds.length!==1))))throw new HttpError('ACTION_FORBIDDEN');
   if (transaction) assertActiveTransaction(executor);
-  if(input.action.startsWith('reports.')&&(input.provenance!=='membership'||input.actor.type!=='user'||input.organizationWide||input.permittedFranchiseIds.length<1||input.permittedFranchiseIds.length>50))throw new HttpError('ACTION_FORBIDDEN');
+  if(input.action.startsWith('reports.')&&((input.provenance!=='membership'||input.actor.type!=='user')&&
+    !(input.action==='reports.capture'&&input.provenance==='trusted-event'&&input.actor.type==='service'&&input.actor.id==='owner-report-worker'&&transaction)
+    ||input.organizationWide||input.permittedFranchiseIds.length<1||input.permittedFranchiseIds.length>50))throw new HttpError('ACTION_FORBIDDEN');
   const context = Object.freeze({ action:input.action, organizationId:input.organizationId,
     organizationWide:input.organizationWide, invitationId:input.invitationId, provenance:input.provenance, correlationId:input.correlationId,
     actor: Object.freeze({ type:input.actor.type,id:input.actor.id }),

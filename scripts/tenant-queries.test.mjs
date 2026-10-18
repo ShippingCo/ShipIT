@@ -6,6 +6,17 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { inspectSource, checkTenantQueries } from './check-tenant-queries.mjs';
 const file = 'apps/api/src/modules/example/repository.ts';
+test('owner report discovery remains restricted to its code-owned worker',()=>{
+ for(const method of ['withNextOwnerReportScope','withOwnerReportDeliveryScope','withOwnerReportScheduleScope']){
+  assert.deepEqual(inspectSource('apps/api/src/modules/reports/owner-summary-worker.ts',`import {${method}} from '../security/jobs.ts'`),[]);
+  assert.ok(inspectSource(file,`import {${method}} from '../security/jobs.ts'`).length);
+ }
+ for(const sql of ['SELECT organization_id,franchise_id,resource_id,franchise_ids,statement_timestamp() cutoff FROM shipit.owner_report_next($1)','SELECT organization_id,franchise_id,franchise_ids FROM shipit.owner_report_delivery_scope($1,$2)']){
+  assert.deepEqual(inspectSource('apps/api/src/modules/security/jobs.ts',`tx.query('${sql}')`),[]);
+  assert.ok(inspectSource(file,`tx.query('${sql}')`).length);
+  assert.ok(inspectSource('apps/api/src/modules/security/jobs.ts',`tx.query('${sql}; SELECT * FROM shipit.owner_report_runs')`).length);
+ }
+});
 
 test('outbox owner predicates and exact discovery exceptions cannot become raw SQL escapes',()=>{
  const path='apps/api/src/modules/outbox/repository.ts';

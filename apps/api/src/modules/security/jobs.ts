@@ -4,6 +4,36 @@ import { HttpError } from '../../plugins/errors.ts';
 import { issueTenantAccess, type TenantAccess } from './scope.ts';
 import type { InboxInput } from '../whatsapp/webhook-payload.ts';
 
+/** Only the code-owned owner-report worker discovers pending private reporting work. */
+export async function withNextOwnerReportScope<T>(database:DatabasePool,delivery:boolean,work:(scope:TenantAccess,id:string,cutoff:string)=>Promise<T>):Promise<T|null> {
+ return withTransaction(database,async tx=>{
+  if(!delivery)await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+  const row=(await tx.query<{organization_id:string;franchise_id:string;resource_id:string;franchise_ids:string[];cutoff:Date}>(
+   'SELECT organization_id,franchise_id,resource_id,franchise_ids,statement_timestamp() cutoff FROM shipit.owner_report_next($1)',[delivery])).rows[0];
+  if(!row)return null;
+  return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'service',id:'owner-report-worker'},organizationId:row.organization_id,
+   permittedFranchiseIds:[row.franchise_id,...row.franchise_ids.filter(id=>id!==row.franchise_id)],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}),row.resource_id,row.cutoff.toISOString());
+ });
+}
+export async function withOwnerReportScheduleScope<T>(database:DatabasePool,id:string,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {
+ return withTransaction(database,async tx=>{
+  const row=(await tx.query<{organization_id:string;franchise_id:string;resource_id:string;franchise_ids:string[]}>(
+   'SELECT organization_id,franchise_id,resource_id,franchise_ids FROM shipit.owner_report_schedule_scope($1)',[id])).rows[0];
+  if(!row)return null;
+  return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'service',id:'owner-report-worker'},organizationId:row.organization_id,
+   permittedFranchiseIds:[row.franchise_id,...row.franchise_ids.filter(f=>f!==row.franchise_id)],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}));
+ });
+}
+export async function withOwnerReportDeliveryScope<T>(database:DatabasePool,id:string,token:string,work:(scope:TenantAccess)=>Promise<T>):Promise<T|null> {
+ return withTransaction(database,async tx=>{
+  const row=(await tx.query<{organization_id:string;franchise_id:string;franchise_ids:string[]}>(
+   'SELECT organization_id,franchise_id,franchise_ids FROM shipit.owner_report_delivery_scope($1,$2)',[id,token])).rows[0];
+  if(!row)return null;
+  return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'service',id:'owner-report-worker'},organizationId:row.organization_id,
+   permittedFranchiseIds:[row.franchise_id,...row.franchise_ids.filter(f=>f!==row.franchise_id)],organizationWide:false,correlationId:randomUUID(),provenance:'trusted-event'}));
+ });
+}
+
 /** A hashed grant selects its persisted owner; a docket/phone never supplies scope. */
 export async function withCustomerTrackingScope<T>(database:DatabasePool,digest:string,work:(scope:TenantAccess)=>Promise<T>) {
   let domainError:HttpError|undefined;

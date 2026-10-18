@@ -3,6 +3,11 @@ import type { Invitation, InvitationState, Membership, MembershipLifecycle, Role
 import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 
+export async function beginReportCapture(tx:TransactionExecutor) {
+ assertActiveTransaction(tx);await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+ return (await tx.query<{cutoff:Date}>('SELECT statement_timestamp() cutoff')).rows[0]!.cutoff.toISOString();
+}
+
 // Organization-wide occupancy is a conflict fact, never permission to load the
 // conflicting grant. Only the authorized membership service may call this module.
 export async function activeRoleExists(tx:TransactionExecutor,scope:TenantAccess,userId:string,role:Role,exceptId?:string) {

@@ -1,2 +1,2 @@
 import { defineConfig } from 'vitest/config';
-export default defineConfig({ test: { environment: 'node', include: ['test/integration/**/*.test.ts'], testTimeout: 10_000 } });
+export default defineConfig({ test: { environment: 'node', include: ['test/integration/**/*.test.ts'], maxWorkers: 2, testTimeout: 10_000 } });

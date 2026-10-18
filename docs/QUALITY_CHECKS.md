@@ -51,6 +51,16 @@ within-test business races and `maxConcurrency`, scenario counts, assertions,
 timeouts and isolation remain unchanged. This trades some file parallelism for
 predictable DOM-runtime load; it does not exclude tests or raise deadlines.
 
+API tests also bound independent file workers to two in apps/api/vitest.config.ts.
+During #149 verification on the same Windows host, the default 60-file run passed
+766 cases but its startup-validation child exceeded the existing five-second bound
+(null exit status after 5.092s). The unchanged lifecycle file passed alone; three
+direct child measurements returned the expected redacted configuration error in
+2.692–3.079s. The complete two-worker API suite passed all 767 cases in 69.11s.
+This bounds competing imports/process startup while preserving every test, deadline,
+within-test race and isolation setting. The original aggregate failure is not counted
+as passing; the final quality run must exercise this configuration.
+
 `pnpm quality` runs, in order: toolchain verification, tooling tests, planning and
 domain validators, lint, all workspace typechecks, testkit/DB unit, API and prototype tests,
 required real PostgreSQL tests, and web build. It stops on a failed command and requires

@@ -10,7 +10,12 @@ export const providerIdPattern=/^[1-9][0-9]{0,31}$/;
 export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnvironment):WhatsappConfiguration {
   try {
     if(raw.length>262144||environment==='demo')throw new Error();
-    const input=object(parseStrictJson(raw),['graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled','customer_quotes_enabled','pickup_enabled','support_enabled','support_hours']);
+    const input=object(parseStrictJson(raw),['owner_reports','graph_version','bindings','webhook','outbound_enabled','automation','customer_access_enabled','conversation_enabled','customer_quotes_enabled','pickup_enabled','support_enabled','support_hours']);
+    let ownerReports:import('./types.ts').WhatsappConfiguration['owner_reports'];
+    if(input.owner_reports!==undefined){const owner=object(input.owner_reports,['template_name','template_language','app_origin']);
+      if(typeof owner.template_name!=='string'||!namePattern.test(owner.template_name)||typeof owner.template_language!=='string'||!languagePattern.test(owner.template_language)||typeof owner.app_origin!=='string')throw new Error();
+      const url=new URL(owner.app_origin);if(url.origin!==owner.app_origin||!['http:','https:'].includes(url.protocol)||environment!=='developer'&&url.protocol!=='https:')throw new Error();
+      ownerReports={template_name:owner.template_name,template_language:owner.template_language,app_origin:owner.app_origin};}
     if(input.support_enabled!==undefined&&(typeof input.support_enabled!=='boolean'||(input.support_enabled&&!input.conversation_enabled)))throw new Error();
     if(input.support_hours!==undefined&&(!Array.isArray(input.support_hours)||input.support_hours.length>1000))throw new Error();
     const supportHours=(input.support_hours as unknown[]|undefined)?.map(hoursInput);
@@ -64,6 +69,6 @@ export function parseWhatsappConfiguration(raw:string,environment:RuntimeEnviron
       automation=Object.freeze({policies:Object.freeze(policies)});
     }
     if(supportHours?.some(h=>!bindings.some(b=>b.franchise_id===h.franchise_id)))throw new Error();
-    return Object.freeze({...(input.support_enabled!==undefined?{support_enabled:input.support_enabled as boolean}:{}),...(supportHours?{support_hours:supportHours}:{}),graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(input.customer_quotes_enabled!==undefined?{customer_quotes_enabled:input.customer_quotes_enabled as boolean}:{}),...(input.pickup_enabled!==undefined?{pickup_enabled:input.pickup_enabled as boolean}:{}),...(automation?{automation}:{})});
+    return Object.freeze({...(input.support_enabled!==undefined?{support_enabled:input.support_enabled as boolean}:{}),...(supportHours?{support_hours:supportHours}:{}),graph_version:input.graph_version,bindings:Object.freeze(bindings),...(webhook?{webhook}:{}),...(input.outbound_enabled!==undefined?{outbound_enabled:input.outbound_enabled as boolean}:{}),...(input.customer_access_enabled!==undefined?{customer_access_enabled:input.customer_access_enabled as boolean}:{}),...(input.conversation_enabled!==undefined?{conversation_enabled:input.conversation_enabled as boolean}:{}),...(input.customer_quotes_enabled!==undefined?{customer_quotes_enabled:input.customer_quotes_enabled as boolean}:{}),...(input.pickup_enabled!==undefined?{pickup_enabled:input.pickup_enabled as boolean}:{}),...(ownerReports?{owner_reports:ownerReports}:{}),...(automation?{automation}:{})});
   }catch{throw new ConfigurationError([{field:'WHATSAPP_CONFIG_REF',code:'INVALID_FORMAT'}]);}
 }

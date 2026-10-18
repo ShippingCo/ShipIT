@@ -176,6 +176,7 @@ export interface DisposableDatabase {
   prepareReconciliation(): Promise<void>;
   prepareCustody(): Promise<void>;
   prepareReports(): Promise<void>;
+  prepareOwnerReports(): Promise<void>;
   prepareReceipts(): Promise<void>;
   prepareAttachments(): Promise<void>;
   prepareCarriers(): Promise<void>;
@@ -381,6 +382,18 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
         await owner.query(`GRANT SELECT,INSERT ON shipit.custody_access_events,shipit.custody_commands,shipit.custody_assignment_instructions,shipit.custody_manifests,shipit.custody_manifest_items,shipit.custody_receipts,
           shipit.custody_discrepancies,shipit.custody_transfer_grants,shipit.custody_grant_revocations,shipit.custody_releases,shipit.custody_manifest_cancellations,shipit.custody_events
           TO ${identifier(resource.runtimeRole)}`);
+      }finally {await owner.close();pools.delete(owner);}
+    },
+    async prepareOwnerReports() {
+      await handle.prepareReconciliation();await handle.prepareCashClose();await handle.prepareWhatsapp();
+      const owner=handle.ownerPool();
+      try {
+        await owner.query(`GRANT SELECT,INSERT ON shipit.owner_report_schedules,shipit.owner_report_franchises,shipit.owner_report_recipients,shipit.owner_report_consents,shipit.owner_report_commands,shipit.owner_report_runs,shipit.owner_report_deliveries,shipit.owner_report_alerts,shipit.owner_report_access_events TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.owner_report_delivery_history TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE ON shipit.owner_report_schedules,shipit.owner_report_consents,shipit.owner_report_deliveries,shipit.owner_report_alerts TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT DELETE ON shipit.owner_report_franchises,shipit.owner_report_recipients TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT UPDATE(payload) ON shipit.owner_report_runs TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT EXECUTE ON FUNCTION shipit.owner_report_next(boolean),shipit.owner_report_delivery_scope(uuid,uuid),shipit.owner_report_schedule_scope(uuid),shipit.owner_report_purge(uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareReconciliation() {

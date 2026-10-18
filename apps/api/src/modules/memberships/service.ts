@@ -643,8 +643,9 @@ export async function withFinancialScope<T>(database:DatabasePool,token:string,o
 
 /** Report evidence uses R11 financial reads and E03 exports; technical capture grants no money mutation. */
 export async function withReportScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
-  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>,franchiseIds:readonly string[]=[franchiseId]):Promise<T> {
+  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,captureCutoff?:string)=>Promise<T>,franchiseIds:readonly string[]=[franchiseId],consistent=false):Promise<T> {
   return membershipTransaction(database,async tx=>{
+    const captureCutoff=consistent?await authorityRepository.beginReportCapture(tx):undefined;
     const session=await authenticated(tx,token);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
     if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -655,7 +656,7 @@ export async function withReportScope<T>(database:DatabasePool,token:string,orga
     if(!permitted.includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
     if(!franchiseIds.length||franchiseIds.length>50||!franchiseIds.includes(franchiseId)||franchiseIds.some(id=>!permitted.includes(id)))throw new HttpError('RESOURCE_NOT_FOUND');
     return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,
-      permittedFranchiseIds:[franchiseId,...franchiseIds.filter(id=>id!==franchiseId)],organizationWide:false,correlationId,provenance:'membership'}));
+      permittedFranchiseIds:[franchiseId,...franchiseIds.filter(id=>id!==franchiseId)],organizationWide:false,correlationId,provenance:'membership'}),captureCutoff);
   });
 }
 

@@ -26,6 +26,7 @@ export interface RuntimeConfig {
   readonly cashCloseWritesEnabled?: boolean;
   readonly shipmentCostWritesEnabled?: boolean;
   readonly settingsWritesEnabled?: boolean;
+    readonly ownerSummariesEnabled?: boolean;
   readonly custodyWritesEnabled?: boolean;
   readonly agentMoneyWritesEnabled?: boolean;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
@@ -126,7 +127,10 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const agentMoneyWritesEnabled=env.AGENT_MONEY_ENABLED==='true';
   if(env.AGENT_MONEY_ENABLED!==undefined&&!['true','false'].includes(env.AGENT_MONEY_ENABLED))issue('AGENT_MONEY_ENABLED','INVALID_FORMAT');
   if(agentMoneyWritesEnabled&&environment==='demo')issue('AGENT_MONEY_ENABLED','INCONSISTENT');
-  const settingsWritesEnabled=env.SETTINGS_WRITES_ENABLED==='true';
+  const ownerSummariesEnabled=env.OWNER_SUMMARIES_ENABLED==='true';
+    if(env.OWNER_SUMMARIES_ENABLED!==undefined&&!['true','false'].includes(env.OWNER_SUMMARIES_ENABLED))issue('OWNER_SUMMARIES_ENABLED','INVALID_FORMAT');
+    if(ownerSummariesEnabled&&environment==='demo')issue('OWNER_SUMMARIES_ENABLED','INCONSISTENT');
+    const settingsWritesEnabled=env.SETTINGS_WRITES_ENABLED==='true';
   if(env.SETTINGS_WRITES_ENABLED!==undefined&&!['true','false'].includes(env.SETTINGS_WRITES_ENABLED))issue('SETTINGS_WRITES_ENABLED','INVALID_FORMAT');
   if(settingsWritesEnabled&&environment==='demo')issue('SETTINGS_WRITES_ENABLED','INCONSISTENT');
   const shipmentCostWritesEnabled=env.SHIPMENT_COST_WRITES_ENABLED==='true';
@@ -171,7 +175,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     financialWorkflowWritesEnabled,
     cashbookWritesEnabled,
     cashCloseWritesEnabled,
-    shipmentCostWritesEnabled,settingsWritesEnabled,
+    shipmentCostWritesEnabled,settingsWritesEnabled,ownerSummariesEnabled,
     custodyWritesEnabled,
     agentMoneyWritesEnabled,
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
