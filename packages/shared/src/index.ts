@@ -189,3 +189,4 @@ export type {ReconciliationDirection,ReconciliationDateFormat,ReconciliationAmou
 export type {ReconciliationStatus,ReconciliationReportFilter,ReconciliationReportRow,ReconciliationControl,ReconciliationReportSnapshot,ReconciliationReportPage} from './reconciliation.ts';
 
 export * from './account-statements.ts';
+export * from './daily-dashboard.ts';

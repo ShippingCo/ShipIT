@@ -78,3 +78,14 @@ franchise lock, following monetary command lock order. Downloads do not lock or 
 financial sources. Failure of snapshot/access-evidence insertion rolls back the capture.
 Expired same-key replay is a controlled 410; use a new key for an intentional new capture.
 See the report guide for retention and deployment grants.
+
+### Daily consumer (#148)
+
+`owner_daily_v1` reuses the private snapshot, bounded source rows, current R11/E03
+scope checks, exact retry and access-audit design. It has its own explicit
+booking-day sales, receipt-day inflow, historical debt and customer comparison
+semantics; it does not reinterpret saved `booking_cohort_v1` or `sales_gst_v1`
+reports. [The reporting guide](../architecture/reporting.md#owner-daily-dashboard-148)
+defines these equations and per-period effective cutoffs. Kolkata midnight is
+converted explicitly; duration arithmetic uses 24 hours so a database session's
+unrelated daylight-saving rules cannot shorten or extend a Kolkata day.

@@ -18,6 +18,14 @@ const cleanup:(()=>unknown)[]=[],t={after:(f:()=>unknown)=>cleanup.push(f)} as u
 let finish!:()=>void;const stop=new Promise<void>(resolve=>{finish=resolve;});process.once('SIGINT',finish);process.once('SIGTERM',finish);
 try {
   const s=await paymentSetup(t);await s.db.prepareReports();
+  if(process.env.REPORT_DEMO_DAILY==='1'){
+    await s.db.prepareRoutes();await s.db.prepareEway();
+    const owner=s.db.ownerPool();
+    await owner.query('ALTER TABLE shipit.bookings DISABLE TRIGGER USER');
+    await owner.query("UPDATE shipit.bookings SET confirmed_at=statement_timestamp()-interval '1 second' WHERE id=$1",[s.bookingId]);
+    await owner.query('ALTER TABLE shipit.bookings ENABLE TRIGGER USER');
+    const paid=await s.pay(collectionInput(6000));if(paid.statusCode!==200)throw new Error('SYNTHETIC_PAYMENT_FAILED');
+  }
   if(process.env.REPORT_DEMO_AGEING==='1'){
     const paid=await s.pay(collectionInput(1000));if(paid.statusCode!==200)throw new Error('SYNTHETIC_PAYMENT_FAILED');
     if((await s.reverse(paid.json().entry.id,400)).statusCode!==200)throw new Error('SYNTHETIC_REVERSAL_FAILED');
@@ -31,7 +39,7 @@ try {
   const webOrigin=process.env.REPORT_DEMO_WEB_PORT==='5174'?'http://localhost:5174':'http://localhost:5173';
   const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3061',LOG_LEVEL:'silent',ALLOWED_ORIGINS:webOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
   const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:s.clock});cleanup.push(()=>app.close());
-  app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${s.local.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(webOrigin+'/#/business/reports');});
+  app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${s.local.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(webOrigin+(process.env.REPORT_DEMO_DAILY==='1'?'/#/business':'/#/business/reports'));});
   app.get('/_fixture/stop',()=>{finish();return {stopping:true};});
   await app.listen({host:'127.0.0.1',port:3061});
   console.log('Synthetic Reports fixture: http://localhost:3061/_fixture/session; Vite proxy 3061. Booking day '+s.booked.charges.confirmed_at.slice(0,10)+'.');

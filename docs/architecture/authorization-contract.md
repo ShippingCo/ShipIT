@@ -653,3 +653,8 @@ accountant or owning organization administrator) may inspect private refund
 history; operators receive their submitted request outcome. Org-admin status
 alone, accountant, dispatcher, agent and read_only grant no refund write authority.
 Both ordinary calls and exact retries re-evaluate current scope/membership.
+
+Issue #148 owner daily metrics and source CSV reuse R11/E03, including current
+membership checks for every selected franchise and actor-owned saved snapshots.
+No dashboard role, financial mutation permission or customer-directory grant is added.
+See [daily definitions and rollout](reporting.md#owner-daily-dashboard-148).

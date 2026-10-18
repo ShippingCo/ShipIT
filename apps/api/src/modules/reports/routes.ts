@@ -1,3 +1,5 @@
+import type {DatabasePool} from '@shippingco/db';
+import {createDailyService} from './daily-service.ts';
 import type {createEffectivenessService} from './effectiveness-service.ts';
 import type {createPerformanceService} from './performance-service.ts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -49,4 +51,10 @@ export function registerReports(app:FastifyInstance,service:ReturnType<typeof cr
   app.get<{Params:{id:string}}>('/api/v1/reports/snapshots/:id/export',(request,reply)=>{
     reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id,true);
   });
+}
+export function registerDaily(app:FastifyInstance,database:DatabasePool,secure:boolean) {
+ const service=createDailyService(database),session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+ app.post('/api/v1/reports/daily',(request,reply)=>{reply.header('Cache-Control','no-store');return service.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id);});
+ app.get<{Params:{id:string}}>('/api/v1/reports/daily/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id);});
+ app.get<{Params:{id:string}}>('/api/v1/reports/daily/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id,true);});
 }
