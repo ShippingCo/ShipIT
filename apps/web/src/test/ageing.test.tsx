@@ -9,8 +9,18 @@ import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
 const id='00000000-0000-4000-8000-000000000063';
 const page:AgeingPage={snapshot:{id,schema_version:1,definition:'to_pay_ageing_v1',timezone:'Asia/Kolkata',organization_id:id,franchise_id:id,filter:{anchor:'due',status:null,customer_id:null,balances:'outstanding'},as_of:'2026-10-04T00:00:00.000Z',expires_at:'2026-10-05T00:00:00.000Z',count:0,totals:Object.fromEntries(ageingMeasures.map(k=>[k,'0'])) as AgeingAmounts,buckets:Object.fromEntries(ageingBuckets.map(k=>[k,'0'])) as AgeingSummary['buckets'],customers:[],due_date_source:'unavailable',advance_source:'unavailable'},rows:[],next_offset:null};
-function fixture():AgeingSource{return {intent:vi.fn(()=>({key:id} as CommandIntent)),execute:vi.fn(async()=>page),page:vi.fn(async()=>page),export:vi.fn(async()=>({snapshot:page.snapshot,columns:['booking_id'],csv:'"booking_id"\r\n'}))};}
+function fixture():AgeingSource{return {statement:vi.fn(async()=>{throw new Error('No statement');}),intent:vi.fn(()=>({key:id} as CommandIntent)),execute:vi.fn(async()=>page),page:vi.fn(async()=>page),export:vi.fn(async()=>({snapshot:page.snapshot,columns:['booking_id'],csv:'"booking_id"\r\n'}))};}
 describe('ageing report UI',()=>{
+  it('shows separate advances even without matching debt and sends an explicit overdue filter',async()=>{
+    const source=fixture(),withAdvance:AgeingPage={...page,snapshot:{...page.snapshot,advance_source:'receipt_ledger',due_date_source:'frozen_account_terms',unallocated_advance:'500',advances:[{customer_id:id,receipt_id:id,version:1,received:'1000',allocated:'300',cod_reserved:'100',returned:'100',unallocated:'500'}]}};
+    vi.mocked(source.execute).mockResolvedValue(withAdvance);vi.mocked(source.page).mockResolvedValue(withAdvance);
+    render(<MemoryRouter><AgeingView source={source} canExport={true}/></MemoryRouter>);
+    fireEvent.click(screen.getByRole('checkbox',{name:'Overdue only'}));fireEvent.click(screen.getByRole('button',{name:'Create ageing snapshot'}));
+    await waitFor(()=>expect(screen.getByText('Unallocated advances: ₹5.00')).toBeVisible());
+    expect(source.intent).toHaveBeenCalledWith(expect.objectContaining({overdue_only:true}));
+    fireEvent.click(screen.getByText('Unallocated advances: ₹5.00'));
+    expect(screen.getByText(/Seller COD reservations and actual returns are excluded/)).toBeVisible();
+  });
   it('uses explicit age and status filters, restores saved evidence and exports the saved ID',async()=>{
     const source=fixture();render(<MemoryRouter><AgeingView source={source} canExport={true}/></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Age from'),{target:{value:'due'}});fireEvent.change(screen.getByLabelText('Parcel status'),{target:{value:'delivered'}});

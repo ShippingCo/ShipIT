@@ -169,6 +169,14 @@ reuse it without treating #139/#142 or #138/#139/#142, respectively, as complete
 #137 ratifies finance policy before the remaining producer work. The finance modules
 remain required for #67 and the #76 pilot release gate.
 
+### #63 completion follow-up — 2026-10-18
+
+#138, #139, #141 and #142 are now merged. The follow-up extends PR #163 with
+frozen account due dates, overdue source filtering, responsible-debtor grouping,
+combined receipt provenance, separate advances and issued-statement drill-through.
+The earlier blocked snapshot above is historical; completion still requires the
+current implementation checks and merged follow-up PR.
+
 ## M7 — Production Readiness & Pilot
 
 | Issue | Implementation scope | Prerequisites | Initial status |

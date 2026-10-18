@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ageingBuckets,ageingStatuses,type AgeingPage,type AgeingFilter } from '@shippingco/shared';
+import { ageingBuckets,ageingStatuses,type AgeingPage,type AgeingFilter,type AccountStatement,statementMeasures } from '@shippingco/shared';
 import type { AgeingSource } from '../data-access/ageing';
 import { ApiFailure } from '../data-access/errors';
 import { useCommand } from './hooks';
@@ -9,7 +9,7 @@ import { salesAmount } from './Sales';
 const bucketLabels={ '0_30':'0–30 days','31_60':'31–60 days', '61_plus':'61+ days',unknown:'Unknown date',future:'Future date' };
 export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boolean}) {
   const [params,setParams]=useSearchParams(),id=params.get('ageing_snapshot');
-  const [anchor,setAnchor]=useState<AgeingFilter['anchor']>('booking'),[status,setStatus]=useState(''),[customer,setCustomer]=useState(''),[balances,setBalances]=useState<AgeingFilter['balances']>('outstanding');
+  const [anchor,setAnchor]=useState<AgeingFilter['anchor']>('booking'),[status,setStatus]=useState(''),[customer,setCustomer]=useState(''),[balances,setBalances]=useState<AgeingFilter['balances']>('outstanding'),[overdueOnly,setOverdueOnly]=useState(false);
   const [result,setResult]=useState<AgeingPage|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[revision,setRevision]=useState(0);
   const command=useCommand(source.execute),pending=busy||command.phase==='pending';
   const fail=(e:unknown)=>setNotice(e instanceof ApiFailure&&e.code==='REPORT_LIMIT_EXCEEDED'?'Report is too large. Filter by customer or parcel status.':
@@ -17,26 +17,28 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
     e instanceof ApiFailure&&['RESOURCE_NOT_FOUND','ACTION_FORBIDDEN','REPORT_EXPIRED'].includes(e.code)?'Report or customer unavailable. Check access, or create a new snapshot.':'Could not load the report. Check the filters and retry.');
   useEffect(()=>{
     const abort=new AbortController();setResult(null);setBusy(false);if(!id)return()=>abort.abort();setBusy(true);
-    void source.page(id,0,abort.signal).then(p=>{if(!abort.signal.aborted){setResult(p);setAnchor(p.snapshot.filter.anchor);setStatus(p.snapshot.filter.status??'');setCustomer(p.snapshot.filter.customer_id??'');setBalances(p.snapshot.filter.balances);}})
+    void source.page(id,0,abort.signal).then(p=>{if(!abort.signal.aborted){setResult(p);setAnchor(p.snapshot.filter.anchor);setStatus(p.snapshot.filter.status??'');setCustomer(p.snapshot.filter.customer_id??'');setBalances(p.snapshot.filter.balances);setOverdueOnly(p.snapshot.filter.overdue_only??false);}})
       .catch(e=>{if(!abort.signal.aborted)fail(e);}).finally(()=>{if(!abort.signal.aborted)setBusy(false);});
     return()=>abort.abort();
   },[id,source,revision]);
   async function create(retry=false) {
     if(pending)return;setNotice('');
-    try {const p=await(retry?command.retry():command.run(source.intent({anchor,status:(status||null) as AgeingFilter['status'],customer_id:customer.trim()||null,balances})));
+    try {const p=await(retry?command.retry():command.run(source.intent({anchor,status:(status||null) as AgeingFilter['status'],customer_id:customer.trim()||null,balances,...(overdueOnly?{overdue_only:true}:{})})));
       if(p){setResult(p);setParams({ageing_snapshot:p.snapshot.id});setNotice('Ageing snapshot saved. Reload and CSV use the same evidence.');}
     }catch(e){fail(e);}
   }
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const exported=await source.export(result.snapshot.id),url=URL.createObjectURL(new Blob([exported.csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=`ageing-${exported.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">To-Pay ageing</h1>
-    <p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Customer advances stay in Money receipts. Delivery does not settle payment.</p>
-    <p>Booking age is not days overdue. Due dates, monthly terms, advances and combined allocations are not yet available; missing dates remain unknown.</p>
+    <p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Unallocated advances are shown separately and do not settle debt. Delivery does not settle payment.</p>
+    <p>Booking age is not days overdue. Due dates use the terms frozen when the booking was confirmed. Missing dates remain unknown. Overdue means unpaid after the due date in Kolkata.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}>
       <SelectField aria-label="Age from" label="Age from" value={anchor} onChange={v=>setAnchor(v as AgeingFilter['anchor'])} options={[{value:'booking',label:'Booking date'},{value:'due',label:'Due date (unknown without terms)'}]}/>
       <SelectField aria-label="Parcel status" label="Parcel status" value={status} onChange={setStatus} options={[{value:'',label:'All statuses'},...ageingStatuses.map(value=>({value,label:value.replaceAll('_',' ')}))]}/>
+      <label><input type="checkbox" checked={overdueOnly} onChange={e=>setOverdueOnly(e.target.checked)}/>Overdue only</label>
       <TextField label="Customer ID (optional)" value={customer} onChange={setCustomer}/>
       <SelectField aria-label="Balances" label="Balances" value={balances} onChange={v=>setBalances(v as AgeingFilter['balances'])} options={[{value:'outstanding',label:'Outstanding only'},{value:'all',label:'All, including settled and credit'}]}/>
+      <p>Customer ID selects the responsible debtor, which may differ from the shipping customer.</p>
       <p>All booking dates, up to 5,000 matching bookings. A status match includes the whole booking once. Snapshots expire after 24 hours.</p>
       <button className="btn btn-filled" disabled={pending||command.canRetry}>Create ageing snapshot</button>
     </form>
@@ -50,18 +52,28 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
       <ul>{ageingBuckets.map(k=><li key={k}>{bucketLabels[k]}: {salesAmount(result.snapshot.buckets[k])} outstanding</li>)}</ul>
       <button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching ageing CSV</button>
       {!canExport&&<p>Your role can read reports but cannot export them.</p>}
+      {result.snapshot.advance_source==='receipt_ledger'?<details><summary>Unallocated advances: {salesAmount(result.snapshot.unallocated_advance??'0')}</summary><p>For the selected debtor or whole franchise, regardless of parcel status, overdue or balance filters. Never deducted from outstanding until allocated. Seller COD reservations and actual returns are excluded.</p><ul>{result.snapshot.advances?.map(a=><li key={a.receipt_id}>Debtor {a.customer_id} · Receipt {a.receipt_id}: received {salesAmount(a.received)} − allocated {salesAmount(a.allocated)} − seller COD {salesAmount(a.cod_reserved)} − returned {salesAmount(a.returned)} = available {salesAmount(a.unallocated)}</li>)}</ul></details>:<p>Advance evidence unavailable in this older snapshot.</p>}
       <details><summary>Customer totals ({result.snapshot.customers.length})</summary><ul>{result.snapshot.customers.map(c=><li key={c.customer_id}>Customer {c.customer_id}: {salesAmount(c.totals.outstanding)} outstanding · {c.count} bookings</li>)}</ul></details>
-      {result.snapshot.count===0?<p role="status">No matching balances. CSV contains headers.</p>:<ul className="ops-list">{result.rows.map(r=><li className="ops-row" key={r.id}><div style={{minWidth:0,overflowWrap:'anywhere'}}>
-        <b>Booking {r.id}</b><p>Customer {r.customer_id}</p><p>{salesAmount(r.outstanding)} outstanding · {bucketLabels[r.bucket]} · Due date: {r.due_at??'Unknown'}</p>
+      {result.snapshot.count===0?<p role="status">{(result.snapshot.advances?.length??0)>0?'No matching balances. CSV contains separate advance evidence.':'No matching balances. CSV contains headers.'}</p>:<ul className="ops-list">{result.rows.map(r=><li className="ops-row" key={r.id}><div style={{minWidth:0,overflowWrap:'anywhere'}}>
+        <b>Booking {r.id}</b><p>Debtor {r.customer_id} · Shipping customer {r.shipping_customer_id??r.customer_id}</p><p>{salesAmount(r.outstanding)} outstanding · {bucketLabels[r.bucket]} · Due date: {r.due_at?new Date(r.due_at).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'Unknown'} · Overdue: {r.overdue===null?'Unknown':r.overdue?'Yes':'No'}</p>
+        {r.account_id&&<p>Account {r.account_id} · Terms revision {r.account_revision_id}</p>}
+        {r.statement_id&&<StatementEvidence key={r.statement_id} source={source} id={r.statement_id}/>}
+        {r.account_id&&!r.statement_id&&<p>No issued statement yet.</p>}
         <details><summary>Collection history and parcels</summary>
           <p>Original gross {salesAmount(r.original_gross)} − reductions {salesAmount(r.reductions)} = {salesAmount(r.gross)}. Collections {salesAmount(r.collections)} − reversals {salesAmount(r.reversals)} − refunds {salesAmount(r.refunds)} = net {salesAmount(r.net_collections)}.</p>
           <p>Obligation {r.obligation_id} · Payment version {r.payment_version} · Financial version {r.financial_version}</p>
           <ul>{r.parcels.map(p=><li key={p.id}>Parcel {p.id}: {p.status.replaceAll('_',' ')}</li>)}</ul>
-          {r.entries.length===0?<p>No recorded collections.</p>:<ol>{r.entries.map(e=><li key={e.id}>{e.kind}: {salesAmount(e.amount)} · {e.occurred_at} · Entry {e.id}{e.reversal_of&&<> · Reverses {e.reversal_of}</>}</li>)}</ol>}
+          {r.entries.length===0?<p>No recorded collections.</p>:<ol>{r.entries.map(e=><li key={e.id}>{e.kind}: {salesAmount(e.amount)} · {e.occurred_at} · Entry {e.id}{e.receipt_id&&<> · Receipt {e.receipt_id} · Allocation {e.allocation_id}</>}{e.reversal_of&&<> · Reverses {e.reversal_of}</>}</li>)}</ol>}
           <ul>{r.changes.map(c=><li key={c.id}>{c.kind}: reduction {salesAmount(c.reduction)}, refund {salesAmount(c.refund)} · {c.occurred_at} · Source {c.id}</li>)}</ul>
         </details>
       </div></li>)}</ul>}
       {result.next_offset!==null&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void more()}>Load more bookings</button>}
     </>}
   </section>;
+}
+
+function StatementEvidence({source,id}:{source:AgeingSource;id:string}) {
+ const [opened,setOpened]=useState(false),[document,setDocument]=useState<AccountStatement|null>(null),[error,setError]=useState(false),[revision,setRevision]=useState(0);
+ useEffect(()=>{if(!opened)return;const abort=new AbortController();setDocument(null);setError(false);void source.statement(id,abort.signal).then(s=>{if(!abort.signal.aborted)setDocument(s);}).catch(()=>{if(!abort.signal.aborted)setError(true);});return()=>abort.abort();},[opened,id,source,revision]);
+ return <details onToggle={e=>setOpened(e.currentTarget.open)}><summary>Issued account statement {id}</summary>{opened&&(document?<><p>Immutable statement as of {document.as_of}; this may precede the ageing snapshot. Period {document.from_day} to {document.to_day}. Not a tax invoice.</p><p>Opening + charges − credits − allocated payments + refunds = closing.</p><ul>{statementMeasures.map(k=><li key={k}>{k.replaceAll('_',' ')}: {salesAmount(document.totals[k])}</li>)}</ul><p>Separate unallocated advance: {salesAmount(document.unallocated_advance)}</p><ul>{document.lines.map(l=><li key={l.booking_id}>Booking {l.booking_id}: closing {salesAmount(l.amounts.closing)} · Payments {l.payment_ids.join(', ')||'None'} · Adjustments {l.adjustment_ids.join(', ')||'None'}</li>)}</ul></>:error?<><p role="alert">Statement unavailable. Check current access and retry.</p><button type="button" onClick={()=>setRevision(n=>n+1)}>Retry statement</button></>:<p role="status">Loading statement…</p>)}</details>;
 }
