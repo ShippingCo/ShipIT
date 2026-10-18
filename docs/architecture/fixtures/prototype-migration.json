@@ -930,6 +930,21 @@
     ],
     "tests": [
       {
+        "file": "apps/web/src/test/account-statements.test.tsx",
+        "name": "shows independently checked balances, source debt, private history and exact uncertain issue recovery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/account-statements.test.tsx",
+        "name": "allows accountant preview with no issuing action and rejects unreconciled DTO totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/advance-refunds.test.tsx",
+        "name": "requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/ageing.test.tsx",
         "name": "uses explicit age and status filters, restores saved evidence and exports the saved ID",
         "cases": null
@@ -2580,6 +2595,10 @@
         "kind": "localStorage.removeItem"
       },
       {
+        "file": "apps/web/src/operations/AccountStatements.tsx",
+        "kind": "setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Ageing.tsx",
         "kind": "setTimeout"
       },
@@ -3598,6 +3617,30 @@
     ]
   },
   "regressions": [
+    {
+      "file": "apps/web/src/test/account-statements.test.tsx",
+      "name": "shows independently checked balances, source debt, private history and exact uncertain issue recovery",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #142: source-reconciled account statements, explicit issuance permissions and exact uncertain-command recovery."
+    },
+    {
+      "file": "apps/web/src/test/account-statements.test.tsx",
+      "name": "allows accountant preview with no issuing action and rejects unreconciled DTO totals",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue #142: source-reconciled account statements, explicit issuance permissions and exact uncertain-command recovery."
+    },
+    {
+      "file": "apps/web/src/test/advance-refunds.test.tsx",
+      "name": "requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #142 approved unused-advance return scope: independent review, actual evidence, private finance roles and exact uncertain intent; no prototype writes."
+    },
     {
       "file": "apps/web/src/test/ageing.test.tsx",
       "name": "uses explicit age and status filters, restores saved evidence and exports the saved ID",

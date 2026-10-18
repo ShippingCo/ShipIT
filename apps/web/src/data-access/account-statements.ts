@@ -1,0 +1,28 @@
+import {statementMeasures,type AccountStatement,type StatementAmounts} from '@shippingco/shared';
+import {object,uuid,text,integer,instant,choice,nullable,array,optional,protocol,type Decoder} from './dto';
+import type {ScopedApi} from './scoped-api';
+const paise:Decoder<string>=value=>typeof value==='string'&&/^-?\d{1,32}$/.test(value)?value:protocol();
+const amounts=object(Object.fromEntries(statementMeasures.map(k=>[k,paise])));
+const paymentEvidence=object({id:uuid,kind:choice('collection','reversal'),amount:paise,recorded_at:instant}),adjustmentEvidence=object({id:uuid,kind:text,reason:text,credit:paise,refund:paise,recorded_at:instant});
+const advance=object({receipt_id:uuid,version:integer(1),received:paise,allocated:paise,cod_reserved:paise,returned:optional(paise),unallocated:paise});
+const line=object({booking_id:uuid,due_date:text,confirmed_at:instant,source_statement_id:nullable(uuid),payment_version:integer(),financial_version:integer(),receipt_id:nullable(uuid),original_gross:paise,pre_tax:paise,cgst:paise,sgst:paise,igst:paise,rounding:paise,payment_ids:array(uuid,5000),adjustment_ids:array(uuid,100),payment_evidence:array(paymentEvidence,5000),adjustment_evidence:array(adjustmentEvidence,100),amounts});
+export function accountStatement(value:unknown):AccountStatement {
+ const result=object({id:nullable(uuid),kind:choice('account_statement_v2'),account_id:uuid,account_revision_id:uuid,account_name:text,customer_id:uuid,from_day:text,to_day:text,as_of:instant,version:integer(1),previous_statement_id:nullable(uuid),source_digest:text,totals:amounts,unallocated_advance:paise,advance_sources:array(advance,5000),lines:array(line,5000)})(value);
+ for(const r of [...result.lines.map(l=>l.amounts),result.totals]){if(statementMeasures.some(k=>!(/^-?\d+$/).test(r[k]!)))return protocol();if(BigInt(r.opening!)+BigInt(r.charges!)-BigInt(r.credits!)-BigInt(r.payments!)+BigInt(r.refunds!)!==BigInt(r.closing!))return protocol();}
+ if(statementMeasures.some(k=>result.lines.reduce((sum,l)=>sum+BigInt(l.amounts[k]!),0n)!==BigInt(result.totals[k]!)))return protocol();
+ if(!/^[a-f0-9]{64}$/.test(result.source_digest)||BigInt(result.unallocated_advance)<0n||new Set(result.lines.map(l=>l.booking_id)).size!==result.lines.length)return protocol();
+ if(result.advance_sources.reduce((n,a)=>n+BigInt(a.unallocated),0n)!==BigInt(result.unallocated_advance)||result.advance_sources.some(a=>BigInt(a.received)-BigInt(a.allocated)-BigInt(a.cod_reserved)-BigInt(a.returned??0)!==BigInt(a.unallocated)||BigInt(a.received)<=0n||BigInt(a.allocated)<0n||BigInt(a.cod_reserved)<0n||BigInt(a.returned??0)<0n||BigInt(a.unallocated)<0n||BigInt(a.unallocated)===0n&&BigInt(a.returned??0)===0n))return protocol();
+ for(const l of result.lines){const paid=l.payment_evidence.reduce((n,p)=>n+(p.kind==='collection'?1n:-1n)*BigInt(p.amount),0n),credits=l.adjustment_evidence.reduce((n,a)=>n+BigInt(a.credit),0n),refunds=l.adjustment_evidence.reduce((n,a)=>n+BigInt(a.refund),0n);if(BigInt(l.amounts.closing!)!==BigInt(l.original_gross)-paid-credits+refunds||JSON.stringify(l.payment_ids)!==JSON.stringify(l.payment_evidence.map(p=>p.id))||JSON.stringify(l.adjustment_ids)!==JSON.stringify(l.adjustment_evidence.map(a=>a.id)))return protocol();const closing=BigInt(l.amounts.closing!);if(BigInt(l.amounts.outstanding!)!==(closing>0n?closing:0n)||BigInt(l.amounts.refundable_credit!)!==(closing<0n?-closing:0n)||BigInt(l.original_gross)!==BigInt(l.pre_tax)+BigInt(l.cgst)+BigInt(l.sgst)+BigInt(l.igst)+BigInt(l.rounding))return protocol();}
+ return {...result,totals:result.totals as StatementAmounts,lines:result.lines.map(l=>({...l,amounts:l.amounts as StatementAmounts}))};
+}
+export function accountStatements(api:ScopedApi){const root='/api/v1/account-statements';return {
+ preview:(body:{account_id:string;from_day:string;to_day:string})=>api.intent('api.v1.account_statements.preview',api.path(root+'/preview'),body),
+ executePreview:(intent:Parameters<ScopedApi['execute']>[0])=>api.execute(intent,v=>{const s=accountStatement(v),b=JSON.parse(intent.bodyJson) as {account_id:string;from_day:string;to_day:string};if(s.id!==null||s.account_id!==b.account_id||s.from_day!==b.from_day||s.to_day!==b.to_day)return protocol();return s;}),
+ issue:(s:AccountStatement)=>api.intent('api.v1.account_statements.issue',api.path(root),{account_id:s.account_id,from_day:s.from_day,to_day:s.to_day,expected_version:s.version-1,source_digest:s.source_digest}),
+ executeIssue:(intent:Parameters<ScopedApi['execute']>[0])=>api.execute(intent,v=>{const s=accountStatement(v),b=JSON.parse(intent.bodyJson) as {account_id:string;from_day:string;to_day:string;expected_version:number;source_digest:string};if(s.id===null||s.account_id!==b.account_id||s.from_day!==b.from_day||s.to_day!==b.to_day||s.version!==b.expected_version+1||s.source_digest!==b.source_digest)return protocol();return s;}),
+ read:(id:string,signal?:AbortSignal)=>api.read(api.path(root+'/'+uuid(id)),accountStatement,signal),
+ history:(id:string,cursor?:string,signal?:AbortSignal)=>api.read(api.path('/api/v1/customer-accounts/'+uuid(id)+'/statements')+(cursor?'&cursor='+encodeURIComponent(cursor):''),object({items:array(object({id:uuid,version:integer(1),from_day:text,to_day:text,as_of:instant})),next_cursor:nullable(text)}),signal),
+ capture:(id:string)=>api.intent('api.v1.account_statements.export',api.path(root+'/'+uuid(id)+'/exports'),{}),
+ executeCapture:(intent:Parameters<ScopedApi['execute']>[0])=>api.execute(intent,object({id:uuid})),
+ download:(id:string)=>api.read(api.path('/api/v1/account-statement-exports/'+uuid(id)),object({csv:text,columns:array(text),statement:accountStatement})),
+};}

@@ -1,3 +1,4 @@
+import {AccountStatements} from './AccountStatements';
 import {retainAccountNavigation} from '../data-access/account-navigation';
 import {AccountCreditEvidence} from './AccountCreditEvidence';
 import {useEffect,useMemo,useState} from 'react';
@@ -35,6 +36,7 @@ function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:r
  {blocked&&locked&&<p role="alert">Resolve the retained command before leaving or changing accounts.</p>}
  {editing&&admin?<AccountEditor key={selected?.revision_id??'new'} busyChanged={setLocked} controller={controller} source={source} selected={selected} saved={saved} cancel={()=>{setEditing(false);setSelected(null);list.reload();}}/>:selected&&<>
   <AccountDetails key={selected.revision_id+revision} source={source} account={selected}/>
+  <AccountStatements key={selected.id} api={api} controller={controller} account={selected} admin={admin} canExport={admin||roles.includes('accountant')} busyChanged={setLocked}/>
   {admin&&<section className="card ops-card"><button className="btn btn-outlined" disabled={locked} onClick={()=>setEditing(true)}>Revise terms, links or hold</button><RateEditor key={selected.id} source={source} account={selected} parentLocked={locked} busyChanged={setLocked} refreshed={()=>setRevision(n=>n+1)}/></section>}
  </>}
  {admin&&<CreditApprovals source={source} parentLocked={locked} busyChanged={setLocked}/>}

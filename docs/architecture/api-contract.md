@@ -730,3 +730,13 @@ its current effective owned key must match both source ID and selected value. Th
 immutable quote inputs (including booked quote evidence) or report filter pins this ID.
 Absent optional fields preserve legacy decoding and idempotency fingerprints. Old quote
 validation/replay and saved report reads never replace their source with newer defaults.
+
+### #142 account statements
+
+See [account statement API and recovery](account-statements.md). Version-checked previews/issues, immutable reads, bounded history and actor-owned 24-hour private CSV captures reuse existing session/CSRF/scoped retry contracts.
+
+The same runbook specifies receipt-bound unused-advance request, independent
+review and actual-return endpoints. Approval alone posts no movement. Actual
+returns use immutable manually recorded evidence, a current configured source
+location and shared receipt/COD capacity; noncash returns feed optional manual
+reconciliation without duplicate financial posting.

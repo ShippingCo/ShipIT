@@ -1,3 +1,4 @@
+import {createAccountStatementService} from './account-statement-service.ts';
 import { createHash,randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { withFinancialScope,withReportScope } from '../memberships/service.ts';
@@ -19,8 +20,9 @@ export function changeInput(value:unknown) {
  return {booking_id:uuid(b.booking_id,'booking_id'),expected_version:integer(b.expected_version,'expected_version'),payment_version:integer(b.payment_version,'expected_version'),kind:String(b.kind),reason:String(b.reason),approval_ref:reference(b.approval_ref),
  pre_tax:integer(b.pre_tax??0,'$'),taxable:integer(b.taxable??0,'$'),cgst:integer(b.cgst??0,'$'),sgst:integer(b.sgst??0,'$'),igst:integer(b.igst??0,'$'),rounding:integer(b.rounding??0,'$',-99,99),refund:integer(b.refund??0,'$'),returned_to_ref:b.kind==='refund'?reference(b.returned_to_ref):null};
 }
-export function createFinanceService(database:DatabasePool,workflowWritesEnabled=false,cashbookWritesEnabled=false) {
+export function createFinanceService(database:DatabasePool,workflowWritesEnabled=false,cashbookWritesEnabled=false,accountWritesEnabled=false) {
  return {
+  ...createAccountStatementService(database,accountWritesEnabled),
   ...createFinancialWorkflowService(database,workflowWritesEnabled,cashbookWritesEnabled),
   ...createFinancialAuditService(database),
   async change(session:string,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string) {
@@ -47,6 +49,8 @@ export function createFinanceService(database:DatabasePool,workflowWritesEnabled
     await finance.customer(scope,customer);
     const captured=await captureSales(scope,{...filter,rate:null,franchise_ids:[q.franchiseId]},customer);
     const rows=captured.rows.filter(r=>r.statement_ids.length===0);
+    // Account debtors/terms must use the account-aware statement path, even through legacy callers.
+    if(await finance.accountSources(scope,rows.map(row=>row.id)))throw new HttpError('FINANCIAL_CONFLICT');
     if(!rows.length)throw new HttpError('STATEMENT_EMPTY');
     const id=randomUUID(),snapshot={id,kind:'account_statement' as const,customer_id:customer,from_day:filter.from_day,to_day:filter.to_day,as_of:captured.as_of,rows,totals:salesTotals(rows)};
     await finance.issue(scope,key,fingerprint,snapshot);return snapshot;

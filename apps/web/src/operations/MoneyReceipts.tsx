@@ -5,6 +5,7 @@ import type {ScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
 import {moneyReceipts,receivingAccounts} from '../data-access/money-receipts';
 import {customers} from '../data-access/customers';
+import {AdvanceRefunds} from './AdvanceRefunds';
 import {useCommand,usePagedResource,useResource} from './hooks';
 import {CommandNotice,Empty,Failure,Loading} from './AsyncState';
 import {TextField,SelectField} from '../components/m3/Input';
@@ -26,7 +27,8 @@ function ReceiptWorkspace({controller,roles}:{controller:ScopeController;roles:r
  const canChooseCustomer=has(roles,'operator','franchise_admin');
  const [receiptReference,setReceiptReference]=useState(''),[requestedReceipt,setRequestedReceipt]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[customer,setCustomer]=useState<ReceiptCustomer|null>(null),[selected,setSelected]=useState<string|null>(null),[revision,setRevision]=useState(0),[accountLocked,setAccountLocked]=useState(false),[navigationBlocked,setNavigationBlocked]=useState(false);
- const command=useCommand(intent=>source.execute(intent)),locked=command.phase==='pending'||command.phase==='uncertain'||accountLocked;
+ const [refundLocked,setRefundLocked]=useState(false);
+ const command=useCommand(intent=>source.execute(intent)),locked=command.phase==='pending'||command.phase==='uncertain'||accountLocked||refundLocked;
  const preselected=useResource(linkedCustomer??'none',signal=>canChooseCustomer&&linkedCustomer&&/^[0-9a-f-]{36}$/.test(linkedCustomer)?customerSource.read(linkedCustomer,signal):Promise.resolve(null));
  useEffect(()=>{if(preselected.value)setCustomer(preselected.value);},[preselected.value]);
  const referenced=useResource('reference-'+requestedReceipt,signal=>requestedReceipt?source.read(requestedReceipt,signal):Promise.resolve(null));
@@ -53,6 +55,7 @@ function ReceiptWorkspace({controller,roles}:{controller:ScopeController;roles:r
  {accountList.page.has_more&&<button className="btn btn-text" onClick={accountList.loadMore} disabled={accountList.phase==='more'}>More receiving accounts</button>}
  {canChooseCustomer&&linkedCustomer&&preselected.phase==='error'&&<Failure retry={preselected.reload} label="The linked customer is unavailable in this franchise."/>}
  {customer&&<CustomerReceipts key={customer.id} source={source} customer={customer} accounts={accountList.items} roles={roles} selected={selected} select={setSelected} revision={revision} locked={locked} run={run} self={api.scope.authority!.userId} initialContext={linkedContext}/>}
+ {selected&&<AdvanceRefunds key={selected} api={api} receipt={selected} roles={roles} self={api.scope.authority!.userId} parentLocked={command.phase==='pending'||command.phase==='uncertain'||accountLocked} busyChanged={setRefundLocked} refreshed={refresh}/>}
  </div>;
 }
 function CustomerReceipts({source,customer,accounts,roles,selected,select,revision,locked,run,self,initialContext}:{source:Source;customer:ReceiptCustomer;accounts:ReceivingAccountDto[];roles:readonly OperatorRole[];selected:string|null;select:(id:string)=>void;revision:number;locked:boolean;run:(intent:Parameters<Source['execute']>[0])=>Promise<MoneyReceiptResult>;self:string;initialContext:'paid_counter'|'to_pay'}){

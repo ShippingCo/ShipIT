@@ -868,6 +868,12 @@ GRANT INSERT(id,organization_id,franchise_id,command_id,customer_id,account_id,
 GRANT INSERT ON shipit.money_receipt_allocations TO runtime_role;
 GRANT UPDATE(state,result,committed_at) ON shipit.money_receipt_commands TO runtime_role;
 GRANT UPDATE(id) ON shipit.money_receipts TO runtime_role;
+-- #142: after applying the monthly-account-statements migration:
+GRANT SELECT ON shipit.advance_refund_commands TO runtime_role;
+GRANT INSERT(id,organization_id,franchise_id,receipt_id,request_id,version,operation,
+  actor_id,correlation_id,key_digest,fingerprint,input,amount_paise,receipt_version)
+  ON shipit.advance_refund_commands TO runtime_role;
+-- #142 preserves the existing receipt-result function identity and execute grants.
 GRANT EXECUTE ON FUNCTION shipit.valid_receiving_methods(text[]),
   shipit.money_receipt_result(uuid,uuid,uuid) TO runtime_role;
 ```
@@ -977,3 +983,7 @@ Server-issued capabilities and current per-key permissions remain mandatory. New
 also require `SETTINGS_WRITES_ENABLED`; disable it for rollback while retaining schema,
 history and authorized completed replay. Apply corrections through new versions and
 future migrations. See [settings operations](../../docs/architecture/settings-operations.md).
+
+## Monthly account statements (#142)
+
+Forward migration `1793379600000-monthly-account-statements.cjs` adds nullable account/lineage metadata to existing immutable statements and preserves all released migrations and legacy JSON. No sale, debt, receipt or historical account is backfilled. Runtime readers also need SELECT on account identities/revisions/bookings, receipt commands/receipts and `cod_receipt_positions`, alongside existing finance/report grants. See [rollout, equations and private export recovery](../../docs/architecture/account-statements.md).

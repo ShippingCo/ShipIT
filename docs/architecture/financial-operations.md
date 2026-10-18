@@ -2301,3 +2301,7 @@ It introduces no monthly statement generation; #142 remains its own dependent sc
 Issue #146 adds [optional manual statement reconciliation](manual-reconciliation.md)
 as a separate verification domain. Its configuration defaults to disabled for every
 franchise. It never becomes a prerequisite for recording operational money.
+
+## #142 monthly account statements
+
+[Statement ownership, equations, API, private exports and operator runbook](account-statements.md) extend the approved statement policy using existing obligations, account terms and #138 allocation. No new sale or debt is created.

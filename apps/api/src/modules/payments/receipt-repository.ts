@@ -56,7 +56,8 @@ export async function bookingCustomer(scope:TenantAccess,id:string,customer:stri
 }
 export async function current(scope:TenantAccess,id:string) {
  const c=assertTenantAccess(scope,['money_receipts.allocate','money_receipts.correct','money_receipts.read','money_receipts.select']);
- const row=(await scopedQuery<{result:MoneyReceiptResult}>(scope,[c.action],`SELECT result FROM shipit.money_receipt_commands
+ const row=(await scopedQuery<{result:MoneyReceiptResult}>(scope,[c.action],`SELECT result||CASE WHEN returned.amount=0 THEN '{}'::jsonb ELSE jsonb_build_object('returned_paise',returned.amount,'unallocated_paise',(result->>'received_paise')::numeric-(result->>'allocated_paise')::numeric-returned.amount) END result FROM shipit.money_receipt_commands
+ CROSS JOIN LATERAL(SELECT COALESCE(sum(f.amount_paise::numeric),0) amount FROM shipit.advance_refund_commands f WHERE f.organization_id=money_receipt_commands.organization_id AND f.franchise_id=money_receipt_commands.franchise_id AND f.receipt_id=money_receipt_commands.receipt_id AND f.operation='return') returned
  WHERE {{franchise:organization_id:franchise_id}} AND receipt_id=$1 AND state='committed' ORDER BY version DESC LIMIT 1`,[id])).rows[0];
  if(!row)throw new HttpError('TEMPORARILY_UNAVAILABLE');return row.result;
 }

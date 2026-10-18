@@ -12,6 +12,7 @@ import * as receipts from './receipt-repository.ts';
 import * as payments from './repository.ts';
 import {allocate,releaseAllocation} from './allocation-rules.ts';
 import type {MoneyReceiptScopes,MoneyReceiptCommand,MoneyReceiptRow} from './receipt-types.ts';
+import {createAdvanceRefundService} from './advance-refund-service.ts';
 async function apply(s:MoneyReceiptScopes,p:MoneyReceiptCommand,receipt:Pick<MoneyReceiptRow,'customer_id'|'method'|'amount_paise'>,items:ReceiptAllocationInput[],allocated:number,codReserved=0n) {
  let net=BigInt(allocated)+codReserved;const time=instant(p.recorded_at);
  for(const item of items){
@@ -59,7 +60,7 @@ export function createMoneyReceiptService(database:DatabasePool,writesEnabled=tr
    if(!writesEnabled)throw new HttpError('MONEY_RECEIPTS_DISABLED');
    const balance=await receipts.current(s.command,id);if(balance.version!==input.expected_version)throw new HttpError('VERSION_CONFLICT');
    const p=await receipts.reserve(s.command,randomUUID(),id,input.expected_version+1,key,intent,input);
-   await apply(s,p,source,input.allocations,balance.allocated_paise,await receipts.codReserved(s.command,id));return receipts.finish(s.command,p);
+   await apply(s,p,source,input.allocations,balance.allocated_paise,(await receipts.codReserved(s.command,id))+BigInt(balance.returned_paise??0));return receipts.finish(s.command,p);
   });
  }
  async function correct(token:string,idInput:unknown,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string):Promise<MoneyReceiptResult> {
@@ -124,5 +125,5 @@ export function createMoneyReceiptService(database:DatabasePool,writesEnabled=tr
    return {items:rows.slice(0,q.limit),next_cursor:rows.length>q.limit?rows[q.limit-1]!.id:null};
   });
  }
- return {record,allocate:allocateReceipt,correct,read,summary,list,bills,history,receivers};
+ return {record,allocate:allocateReceipt,correct,read,summary,list,bills,history,receivers,...createAdvanceRefundService(database,writesEnabled)};
 }

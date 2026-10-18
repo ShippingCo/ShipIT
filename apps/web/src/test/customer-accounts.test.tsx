@@ -17,6 +17,7 @@ beforeEach(()=>{
   if(path.includes('/customer-credit-requests/')&&path.includes('/review'))return f.json({id:f.id(90),account,credit:{outstanding_paise:'0',available_paise:'100000',overdue_paise:'0',credit_limit_paise:100000,state:'active',as_of:f.now},customer_id:f.customerId,customer_version:1,parcels:[{recipient_name:'Fictional Recipient',weight_grams:500,docket:null}],destination_key:'SYN_DEST',service:'standard',quote_id:f.id(7),tax_calculation_id:f.id(12),approval_id:null});
   if(path.includes('/customer-credit-requests/')&&path.includes('/approval')){pending=false;return f.json({id:f.id(91),expires_at:f.expiry});}
   if(path.includes('/customer-credit-requests'))return f.json({items:pending?[{id:f.id(90),account_id:account.id,name:account.name,operator_id:f.id(6),total_paise:13400,expires_at:f.expiry}]:[],next_cursor:null});
+  if(path.includes('/statements?'))return f.json({items:[],next_cursor:null});
   if(path.includes('/history'))return f.json({items:[{...account,attested_by:f.id(6),reason:'Approved original terms'}],next_cursor:null});
   if(path.includes('/credit'))return f.json({outstanding_paise:'0',available_paise:'100000',overdue_paise:'0',credit_limit_paise:100000,state:'active',as_of:f.now});
   if(path.includes('/rates'))return f.json({items:[],next_cursor:null});

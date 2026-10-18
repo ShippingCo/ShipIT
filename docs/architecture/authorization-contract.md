@@ -640,3 +640,16 @@ private actor-owned snapshot. Operator, dispatcher, delivery-agent and read_only
 roles acquire no statement access. Every nested ID and exact-key retry is scoped.
 See [manual reconciliation](manual-reconciliation.md) for optionality, evidence,
 private retention and recovery. New evidence is disabled by default per franchise.
+
+### #142 statement implementation
+
+W48 remains local franchise-admin-only for account statement issuance. Account reads/previews follow #141 account-profile read authority; E03 remains local franchise admin/accountant for every export capture/download. No operator/read_only/agent access or automatic org-admin financial write/export is added. See [statement permission details](account-statements.md).
+
+For #142 unused-advance refunds, local operators/franchise administrators may
+request. Only a different current franchise administrator may approve/reject;
+only a current franchise administrator may record the actual return. There is
+no sole-admin self-review exception. Finance receipt readers (local administrator,
+accountant or owning organization administrator) may inspect private refund
+history; operators receive their submitted request outcome. Org-admin status
+alone, accountant, dispatcher, agent and read_only grant no refund write authority.
+Both ordinary calls and exact retries re-evaluate current scope/membership.
