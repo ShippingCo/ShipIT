@@ -20,7 +20,7 @@ await test('carrier rates additive migration preserves existing prices and booki
   await assert.rejects(db.migrate({dir}));
   assert.equal((await db.adminQuery("SELECT to_regclass('shipit.carrier_rate_imports') AS relation")).rows[0]!.relation,null);
   assert.deepEqual(await snapshot(),before);
-  assert.deepEqual(await db.migrate(),{applied:15});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:16});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.pricing_quotes WHERE account_rate_id IS NOT NULL')).rows[0]!.n,0);
   await db.prepareCarriers();
   for(const table of ['carrier_rate_imports','carrier_rate_approvals','carrier_rate_commands']){

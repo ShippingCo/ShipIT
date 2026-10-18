@@ -658,3 +658,24 @@ Issue #148 owner daily metrics and source CSV reuse R11/E03, including current
 membership checks for every selected franchise and actor-owned saved snapshots.
 No dashboard role, financial mutation permission or customer-directory grant is added.
 See [daily definitions and rollout](reporting.md#owner-daily-dashboard-148).
+
+## Owner reporting actions (#149)
+
+The product owner selected in-app reports plus optional WhatsApp on 18 October 2026.
+These extensions preserve existing roles and R11/E03 financial ceilings:
+
+| Action | Permission and scope |
+| --- | --- |
+| Read saved owner report/history/evidence | Current R11 in every saved franchise; current recipient or full selected-scope franchise admin |
+| Configure/disable schedule, recipients, thresholds, repeats, corrected versions; retry confirmed failed delivery | Franchise admin in every selected franchise; no org-admin/accountant inheritance |
+| Enable/revoke own WhatsApp permission | Current R11 reader, own verified WhatsApp login identifier only, selected owning franchise |
+| Acknowledge alert | Current permitted recipient or full selected-scope franchise admin; version checked |
+| Export saved owner evidence | E03 in every saved franchise plus the same report visibility checks |
+| Reserve/generate background work | Exact owner-report-worker trusted identity, active transaction, persisted owner/selection; current configuring admin and recipient grants rechecked |
+
+No read_only/operator/delivery_agent mutation or general financial access is added.
+Foreign and unknown IDs have the same controlled not-found behavior. Forwarding a
+notification link grants no access. Worker scope discovery is restricted by the AST
+gate to its code-owned worker. The reservation commit is the send-time authorization
+point; an unknown provider outcome cannot be redriven as an ordinary retry.
+See [definitions and rollout](reporting.md#scheduled-owner-summaries-and-overdue-alerts-149).

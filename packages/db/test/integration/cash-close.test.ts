@@ -7,7 +7,7 @@ await test('populated migration48 upgrades additively through50 without changing
  const s=await setupCashClose(t,{database:db,closing:false});await s.receipt();await s.expense(80000,new Date(Date.parse(s.counted)-1000).toISOString());
  const before=(await db.adminQuery("SELECT jsonb_agg(to_jsonb(f) ORDER BY source_kind,source_id,location_id,direction) sources FROM shipit.cashbook_source_facts f")).rows[0]!.sources;
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,48);
- db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual((await db.adminQuery("SELECT jsonb_agg(to_jsonb(f) ORDER BY source_kind,source_id,location_id,direction) sources FROM shipit.cashbook_source_facts f")).rows[0]!.sources,before);
+ db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual((await db.adminQuery("SELECT jsonb_agg(to_jsonb(f) ORDER BY source_kind,source_id,location_id,direction) sources FROM shipit.cashbook_source_facts f")).rows[0]!.sources,before);
  for(const table of ['cash_close_sessions','cash_close_commands','cash_close_dependencies']){assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);assert.equal((await db.adminQuery('SELECT has_table_privilege($1,$2,\'INSERT\') allowed',[db.runtimeRole,'shipit.'+table])).rows[0]!.allowed,false);}
  assert.deepEqual(await db.migrate(),{applied:0});
 });

@@ -5,10 +5,22 @@ import { withTrustedJobScope, type TrustedJobRecord } from '../../src/modules/se
 import { findOrganization } from '../../src/modules/tenancy/repository.ts';
 import { listMemberships, insertInvitation } from '../../src/modules/memberships/repository.ts';
 import { fakeDatabase } from '../support.ts';
+import {withTransaction} from '@shippingco/db';
 
 const context:PrivateContext = {action:'franchise.profile.read',actor:{type:'user',id:fixtureId(101)},
   organizationId:fixtureId(1),permittedFranchiseIds:[fixtureId(11)],organizationWide:false,
   provenance:'membership',correlationId:'synthetic-scope'};
+it('owner report workers require their exact trusted identity and an active transaction',async()=>{
+ const db=fakeDatabase(),worker:PrivateContext={...context,action:'reports.capture',actor:{type:'service',id:'owner-report-worker'},provenance:'trusted-event'};
+ expect(()=>issueTenantAccess(db,worker,false)).toThrow('ACTION_FORBIDDEN');
+ const client={query:async(sql:string)=>({rows:[],rowCount:0,command:sql,oid:0,fields:[]}),release:()=>{}},pool={...db,connect:vi.fn(async()=>client)};
+ let retained:TenantAccess|undefined;
+ await withTransaction(pool,async tx=>{
+  for(const invalid of [{...worker,actor:{type:'service',id:'other-worker'}},{...worker,provenance:'internal-service'},{...worker,organizationWide:true}])expect(()=>issueTenantAccess(tx,invalid as PrivateContext)).toThrow('ACTION_FORBIDDEN');
+  retained=issueTenantAccess(tx,worker);await scopedQuery(retained,['reports.capture'],'SELECT id FROM shipit.bookings WHERE {{franchise:organization_id:franchise_id}}');
+ });
+ expect(()=>scopedQuery(retained!,['reports.capture'],'SELECT id FROM shipit.bookings WHERE {{franchise:organization_id:franchise_id}}')).toThrow('ACTION_FORBIDDEN');
+});
 it('missing, forged and cloned repository capabilities fail before SQL: exactly zero queries', async () => {
   const db=fakeDatabase();
   const valid=issueTenantAccess(db,context,false);

@@ -25,7 +25,7 @@ await test('statement migration preserves populated legacy evidence, rolls back 
  const before=await snapshot(),bad=join(broken,'1793379600000-monthly-account-statements.cjs');await writeFile(bad,(await readFile(bad,'utf8'))+"\nconst original=exports.up;exports.up=p=>{original(p);p.sql('SELECT 1/0');};\n");
  db.migrate=migrate;await assert.rejects(db.migrate({dir:broken}),{code:'DB_MIGRATION_FAILED'});assert.deepEqual(await snapshot(),before);
  assert.equal((await db.adminQuery("SELECT count(*)::int n FROM information_schema.columns WHERE table_schema='shipit' AND table_name='account_statements' AND column_name='account_id'")).rows[0]!.n,0);
- assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+ assert.deepEqual(await db.migrate(),{applied:2});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
  assert.deepEqual(await finance.readStatement(s.local.token,q,statement.id,randomUUID()),statement);
  assert.equal((await db.adminQuery('SELECT account_id FROM shipit.account_statements WHERE id=$1',[statement.id])).rows[0]!.account_id,null);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.customer_accounts')).rows[0]!.n,0);

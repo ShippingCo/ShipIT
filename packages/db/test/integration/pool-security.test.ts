@@ -127,8 +127,15 @@ await test('database outage returns only safe readiness data and recovers after 
 await test('separate disposable databases cannot see each other and registered cleanup removes exact resources', { timeout: 25000 }, async (t) => {
   const first = await provisionDatabase(t);
   const second = await provisionDatabase(t);
-  await first.prepareFixtures();
-  await second.prepareFixtures();
+  // This case tests database/role isolation and exact cleanup, not domain upgrades.
+  // Keep its two synthetic databases at the infrastructure schema; complete
+  // fresh/populated business migrations are exercised by their owning suites.
+  for (const database of [first, second]) {
+    const migrate = database.migrate;
+    database.migrate = options => migrate(options ?? { count: 1 });
+    try { await database.prepareFixtures(); }
+    finally { database.migrate = migrate; }
+  }
   assert.notEqual(first.database, second.database);
   const firstPool = first.runtimePool();
   const secondPool = second.runtimePool();

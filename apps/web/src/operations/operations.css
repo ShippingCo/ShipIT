@@ -1,5 +1,11 @@
 .operator-workspace.ops-workspace { max-width: 1280px; align-content: start; }
 .ops-page { display: grid; gap: 20px; min-width: 0; }
+.owner-summary-workspace { min-width: 0; overflow-wrap: anywhere; }
+.owner-summary-workspace fieldset { min-width: 0; border: 1px solid var(--md-outline-variant); border-radius: 12px; padding: 12px; }
+.owner-summary-workspace form > fieldset { display: grid; gap: 12px; }
+.owner-summary-workspace .ops-row { flex-wrap: wrap; }
+.owner-summary-workspace .ops-row > div { min-width: 0; max-width: 100%; }
+.owner-summary-workspace .btn { max-width: 100%; height: auto; min-height: 40px; white-space: normal; }
 .ops-toolbar, .ops-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .ops-toolbar .tf { min-width: min(260px, 100%); }
 .ops-state { min-height: 180px; padding: 28px; display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; }

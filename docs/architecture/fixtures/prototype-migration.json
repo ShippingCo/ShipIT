@@ -2100,6 +2100,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/owner-summaries.test.tsx",
+        "name": "validates recipient selection and saves explicit scope, weekly timing, alert policy and optional channel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/owner-summaries.test.tsx",
+        "name": "preserves the exact uncertain command and form until an explicit retry confirms it",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/owner-summaries.test.tsx",
+        "name": "loads the exact saved report, displays source states and limits response data to public fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/owner-summaries.test.tsx",
+        "name": "shows permission failures and supports loading retry without a local-data fallback",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/parcel-bulk.test.tsx",
         "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
         "cases": null
@@ -2758,6 +2778,10 @@
       {
         "file": "apps/web/src/operations/MoneyReceipts.tsx",
         "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/OwnerSummaries.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/operations/Packages.tsx",
@@ -5517,6 +5541,38 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/owner-summaries.test.tsx",
+      "name": "validates recipient selection and saves explicit scope, weekly timing, alert policy and optional channel",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #149: server-owned schedules and saved evidence, explicit channel permission, exact uncertain command recovery and safe report failures."
+    },
+    {
+      "file": "apps/web/src/test/owner-summaries.test.tsx",
+      "name": "preserves the exact uncertain command and form until an explicit retry confirms it",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #149: server-owned schedules and saved evidence, explicit channel permission, exact uncertain command recovery and safe report failures."
+    },
+    {
+      "file": "apps/web/src/test/owner-summaries.test.tsx",
+      "name": "loads the exact saved report, displays source states and limits response data to public fields",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #149: server-owned schedules and saved evidence, explicit channel permission, exact uncertain command recovery and safe report failures."
+    },
+    {
+      "file": "apps/web/src/test/owner-summaries.test.tsx",
+      "name": "shows permission failures and supports loading retry without a local-data fallback",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #149: server-owned schedules and saved evidence, explicit channel permission, exact uncertain command recovery and safe report failures."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",

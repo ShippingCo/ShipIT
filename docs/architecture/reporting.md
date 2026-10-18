@@ -738,3 +738,195 @@ New York DST regression (one booking instead of two) was fixed using exact 24-ho
 arithmetic; both modes and Kolkata midnight boundaries passed in the final daily
 database test. No real provider, production deployment, final-head CI or review
 approval is claimed by these local results.
+
+## Scheduled owner summaries and overdue alerts (#149)
+
+The product owner selected in-app reports plus optional WhatsApp notifications on
+18 October 2026. WhatsApp starts disabled. The recipient must explicitly opt in
+using their own verified WhatsApp login identifier. A message contains only an
+authenticated report link, with no financial amounts, customer names, bank references
+or public bearer grant. Customer/shipment consent does not authorize owner reports.
+
+Reports → Owner summaries and alerts supports schedule creation/editing/disabling,
+selected franchises/recipients, timezone, daily/weekly/monthly frequency, local time,
+corrected versions, overdue thresholds, explicit notifications and repeat policy,
+self opt-in, acknowledgement, status history, saved evidence and matching CSV.
+
+Daily means the previous complete local day. Weekly means Monday–Sunday, due on the
+selected ISO weekday; monthly means the previous calendar month, due on day one.
+The configured minute is local wall-clock time. A skipped DST time becomes due at
+the first existing local time after it; repeated times share one period identity.
+A watermark prevents backwards generation across clock changes. Starting a schedule
+captures the most recent due period, not an unbounded backlog. Checks are five
+minutes apart per schedule. Weekday is ignored for daily/monthly schedules.
+
+Captures retain a half-open economic period [from,to), a recorded capture cutoff,
+and original safe source rows under one repeatable-read view. #148 owns booking,
+correction, receipt/allocation, refund, customer and historical-debt definitions.
+Reporting never writes financial facts. Additional source definitions are:
+
+- Expenses: applied expense-request heads at the period cutoff, including recognized
+  agent-fee expenses. Advances, fee payments and transfers are not expenses.
+- Overdue: positive #63/#141 debt using frozen contractual due dates. Missing dates
+  stay unknown; minimum paise and overdue-day thresholds are explicit.
+- Agent-held: known cashbook facts at agent cash locations, distinct from earnings
+  and debt. Unassigned custody retains separate counts, source IDs and reasons.
+- Cash differences: absolute variances of each session's latest recorded period
+  count, with signed evidence retained. Counts are not approvals or transfers.
+- Reconciliation: the manual report owner's pending/different/unassigned rows only.
+  Recorded/verified rows are not exceptions. Disabled reconciliation stays disabled
+  and does not block ordinary reports. Raw references/statements are excluded.
+
+Late backdated source evidence can create explicitly corrected versions when enabled;
+original versions and periods remain. A current administrator may also request a
+correction within 90 days. Changing franchise selection cannot change an old report.
+Overdue evaluation uses current debt independently of summary frequency. Stable
+schedule/booking alerts notify once or at the configured repeat interval (minimum
+24 hours). Acknowledgement stops repeats. Payment or falling below threshold resolves
+the condition; a later recurrence reopens it. Alert notifications save their exact
+current cutoff and evidence rather than linking to moving totals.
+
+Configuration requires current franchise-admin grants in every selected franchise.
+R11 readers must be current recipients or full selected-scope administrators. E03
+still governs exports. Org-admin-only access grants no configuration/export power;
+read_only, operators and agents gain no financial reporting access. Every nested ID,
+read/export, exact retry, acknowledgement and worker reservation rechecks scope.
+Unknown, foreign and expired report IDs have controlled 404 behavior. Commands and
+access events project into the canonical private audit history without payloads.
+
+The WhatsApp reservation commit is the send-time authorization point, following
+#39. No database lock spans HTTP. Revocation before reservation suppresses sending.
+A crash or ambiguous commit after reservation becomes uncertain and never automatically
+resends. Only confirmed non-acceptance retries, with bounded backoff and five attempts.
+A current administrator can retry a repaired failed configuration, but must inspect
+Meta records for uncertain acceptance. Sent means provider accepted, not guaranteed
+delivery. In-app availability commits atomically and survives WhatsApp failure.
+A failed source capture exposes a failed run/schedule and safe diagnostic code,
+delays that schedule, and lets other schedules progress. No raw provider body is logged.
+
+Limits: 20 schedules per owning franchise, 50 selected franchises, 20 recipients,
+5,000 combined source rows and 8 MiB per snapshot/export. Limits fail atomically.
+Payloads expire after 24 hours; worker maintenance also visits disabled schedules.
+The UI shows the most recent 100 authorized reports within 90 days. History/access
+records and resolved alerts are purged after 90 days; command receipts have a
+365-day retry horizon. Correction chains remain until their newest evidence ages
+out. Recipient preferences remain account configuration without copying phones.
+
+API prefix /api/v1/owner-reports: GET workspace; POST schedules, schedules/:id,
+consent, alerts/:id/acknowledge, runs/:id/correct, deliveries/:id/retry; GET runs/:id
+and runs/:id/export. Normal session, organization/franchise selection, CSRF and
+scoped idempotency headers apply. Inputs reject ownership fields, stale versions
+and conflicting keys. DTOs are in packages/shared/src/owner-summaries.ts.
+
+Rollout: apply additive migration 55 (1793466000000-owner-report-schedules.cjs), then
+enable OWNER_SUMMARIES_ENABLED=true in API and worker. No source backfill, historical
+sends or automatic conversion of #66 reporting_schedule selection intent occurs.
+Create owner schedules explicitly. prepareOwnerReports() in packages/db/test/support.ts
+is the runtime-grant reference: source SELECT, owned command/state tables, restricted
+snapshot-payload cleanup, and narrow worker discovery/cleanup EXECUTE. Never grant
+public discovery or schema ownership. Reuse the existing start:worker entry point.
+In-app-only operation needs no WhatsApp configuration. Owner-only WhatsApp does not
+require enabling customer automation policies.
+
+Optional delivery uses the existing server-only WhatsApp secret, outbound_enabled,
+an owned connected installation and an actually approved/synced UTILITY template
+with exactly one text variable for the report URL. Add this to that configuration:
+
+```json
+"owner_reports": {
+  "template_name": "owner_report_ready",
+  "template_language": "en_US",
+  "app_origin": "https://your-existing-operator-origin.example"
+}
+```
+
+The origin must exactly match an allowed operator origin and use HTTPS outside
+development. Current installation identity, credential revision and registered
+approval/template shape are rechecked before reservation. Real approval and delivery
+are not established by synthetic provider tests. Rollback disables the flag and
+reverts compatible code; retain history and repair schema forward. No deployment
+or production mutation is part of local verification.
+
+Research: adopt [PostgreSQL calendar/timezone operations](https://www.postgresql.org/docs/18/functions-datetime.html)
+and [repeatable-read visibility](https://www.postgresql.org/docs/18/transaction-iso.html)
+for consistent source cutoffs. Adapt [AWS idempotent intent guidance](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)
+to scoped identities, fingerprints and committed reservations. Reuse the provider
+under [Meta's business-initiated template guidance](https://about.fb.com/news/2025/04/ways-to-manage-your-businesses-chats-on-whatsapp/).
+No new scheduler, broker, LLM, bank integration or package dependency is introduced.
+
+Preview is POST schedules/:id/preview with the current expected_version and an
+idempotency key. It creates a private, immutable preview artifact without any
+delivery intent, including for disabled schedules. Preview and scheduled/alert run
+kinds remain distinct. Captures record the first MVCC snapshot's server time; send
+reservation uses READ COMMITTED so an opt-out committed while waiting for the owner
+lock is respected. A controlled two-transaction regression exercises that race.
+
+Reproducible fictional verification: run the owner-summary database file through
+the guarded PostgreSQL harness, the owner-summaries web test, and `pnpm quality`.
+The seven database scenarios cover calendar boundaries, persisted equations and
+HTTP response dates, uncertain acceptance/crash recovery, an opt-out racing the
+send reservation, overdue acknowledgement/repeat/payment resolution, every selected
+franchise's grants, real expense/count/custody/reconciliation sources, preview,
+late correction, payload expiry and capture-failure recovery. The populated-upgrade
+test in packages/db/test/integration/owner-reports.test.ts verifies migration 54→55,
+atomic rollback, retained financial records and no fabricated delivery intent.
+
+Manual developer check: start the existing report-browser-demo.ts fixture with
+REPORT_DEMO_OWNER=1, REPORT_DEMO_WEB_PORT=5174 and TEST_DATABASE_IDENTITY=db_test against a disposable guarded test
+database; start Vite on 5174 with SHIPIT_API_PROXY=http://127.0.0.1:3061 and
+VITE_DATA_MODE=production. Open http://localhost:3061/_fixture/session. The synthetic
+previous-day report has one booking, ₹134 gross, ₹60 collections and ₹74 debt;
+one due date and one custody source are unknown. Open its saved evidence, export
+CSV, reload its link, preview without sending, create a disabled monthly schedule
+and edit it to weekly/Wednesday. Check required-field validation and keyboard focus;
+at 390px the document must not overflow horizontally. Stop the disposable fixture
+through /_fixture/stop. No live recipient or provider credentials are required.
+
+On 18 October 2026 this browser journey passed against real local Fastify/PostgreSQL,
+including the 390px layout, saved-link reload and CSV success state. Final focused
+owner database rerun: 7/7 passed (192.830s); UI: 4/4 passed; all workspace typechecks
+and lint passed. The planning inventory required the four new report-test declarations
+and CSV object-URL cleanup to be reviewed and registered before the full gate.
+Browser-discovered UTC timestamp formatting and
+fieldset minimum-width defects were repaired before these final focused results.
+Meta acceptance is exercised through the existing real HTTP adapter with synthetic
+responses; no live template approval, customer message or provider delivery is claimed.
+
+Broad verification also exposed an existing #148 capture/URL-reload race: the
+duplicate reload could replace a subsequent metric drill-through and detach its
+focused evidence heading. A successful capture now publishes its returned page
+without a second reload; request generations reject stale reads and focus runs
+after the committed render. The existing daily-dashboard regression additionally
+requires the exact metric heading and rejects the redundant unfiltered reload.
+The combined daily/owner focused UI run passed seven cases. Failed aggregate logs
+are retained separately; verification must distinguish those failures from final
+affected-gate reruns and the remaining database/build gates.
+
+Migration 55 also advances current-history expectations in the existing upgrade
+tests (54 assertions across 48 files); fixed historical prefix counts and no-op
+assertions remain unchanged. Two synthetic forward-repair filenames now sort after
+the new migration. The first broad schema run exposed those missed expectations
+and a separate two-database pool test failure. That original pool case passed alone
+in 19.631s and with a pricing fixture in 10.594s against its unchanged 25s limit;
+the broad reporter did not retain its original assertion detail, so timeout/load
+remains an inference. The isolation case now installs only its required infrastructure
+schema while retaining every role, cross-database, cleanup and readiness assertion;
+complete fresh/populated domain upgrades remain mandatory in the schema group.
+
+Final local gate evidence (18 October 2026, pinned Node 22.23.2/pnpm 10.34.5/
+Python 3.12.14 and disposable native PostgreSQL 18.6): tooling 41/41, testkit
+22/22, DB unit 12/12, API 767/767, web 369/369 and real S3-compatible object
+contract 3/3 passed. Final lint and all workspace typechecks passed after the
+migration expectation edits. Full schema integration passed 91 cases across all
+42 files in 398.147s, with zero failures/skips/cancellations/TODOs. Five focused
+historical/owner upgrade, forward-repair and isolation cases passed in 39.925s.
+
+The complete 81-file Windows API database group exceeded its unchanged 1,800s
+aggregate budget while still advancing through final-mile/financial workflow files.
+It is incomplete, not a passing aggregate, and the production build did not run
+inside that failed chain. Full API database qualification therefore uses the four
+existing CI shards on the exact PR head; neither the local timeout nor earlier
+aggregate failures are hidden or relabelled as passes. A separate `pnpm build`
+passed (API type build and Vite production bundle; web bundle 14.02s). Current-head
+CI results must be recorded before merge. Existing web tests emit
+React act/router warnings; the S3 negative-stream case emits an expected SDK warning.

@@ -1,14 +1,14 @@
-import {reportLimits,type DailyFilter,type DailyRow} from '@shippingco/shared';
+import {reportLimits,type DailyFilter,type DailyRow,type OwnerSummaryPeriod} from '@shippingco/shared';
 import {scopedQuery,type TenantAccess} from '../security/scope.ts';
 import {HttpError} from '../../plugins/errors.ts';
 import {dailyWindows} from './daily-rules.ts';
 /** All source reads and both comparison cutoffs share one PostgreSQL statement snapshot. */
-export async function captureDaily(scope:TenantAccess,filter:DailyFilter) {
+export async function captureDaily(scope:TenantAccess,filter:DailyFilter,period?:OwnerSummaryPeriod) {
  const result=(await scopedQuery<{as_of:Date;rows:DailyRow[]}>(scope,['reports.capture'],`SELECT * FROM (WITH clock AS (
   SELECT statement_timestamp() AS now,COALESCE($1::date,(statement_timestamp() AT TIME ZONE 'Asia/Kolkata')::date)::timestamp AT TIME ZONE 'Asia/Kolkata' AS start
  ), windows AS (
-  SELECT 'today'::text period,start AS lo,LEAST(now,start+interval '24 hours') AS hi FROM clock
-  UNION ALL SELECT 'yesterday',start-interval '24 hours',CASE WHEN $2='same_elapsed' THEN LEAST(now,start+interval '24 hours')-interval '24 hours' ELSE start END FROM clock
+  SELECT 'today'::text period,COALESCE($4::timestamptz,start) AS lo,COALESCE($5::timestamptz,LEAST(now,start+interval '24 hours')) AS hi FROM clock
+  UNION ALL SELECT 'yesterday',start-interval '24 hours',CASE WHEN $2='same_elapsed' THEN LEAST(now,start+interval '24 hours')-interval '24 hours' ELSE start END FROM clock WHERE $4::timestamptz IS NULL
  ), bookings AS (
   SELECT b.*,w.period,w.lo,w.hi,
    b.confirmed_at>=w.lo AS in_period,
@@ -47,7 +47,7 @@ export async function captureDaily(scope:TenantAccess,filter:DailyFilter) {
  SELECT statement_timestamp() AS as_of,COALESCE(jsonb_agg(jsonb_build_object('id',id,'franchise_id',franchise_id,'period',period,'kind',kind,
   'occurred_at',to_char(occurred_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'customer_id',customer_id,'method',method,
   'eligible',eligible,'in_period',in_period,'new_customer',new_customer,'billed_gross',billed_gross::text,'tax_exclusive_revenue',tax_exclusive_revenue::text,
-  'collections',collections::text,'refunds',refunds::text,'outstanding',outstanding::text) ORDER BY period,kind,occurred_at,id),'[]'::jsonb) rows FROM bounded) captured`,[filter.day,filter.mode,reportLimits.rows+1])).rows[0]!;
+  'collections',collections::text,'refunds',refunds::text,'outstanding',outstanding::text) ORDER BY period,kind,occurred_at,id),'[]'::jsonb) rows FROM bounded) captured`,[filter.day,filter.mode,reportLimits.rows+1,period?.from??null,period?.to??null])).rows[0]!;
  if(result.rows.length>reportLimits.rows)throw new HttpError('REPORT_LIMIT_EXCEEDED');
- return {as_of:result.as_of.toISOString(),windows:dailyWindows(result.as_of,filter.day,filter.mode),rows:result.rows};
+ return {as_of:result.as_of.toISOString(),windows:period?[{period:'today' as const,from:period.from,to:period.to}]:dailyWindows(result.as_of,filter.day,filter.mode),rows:result.rows};
 }

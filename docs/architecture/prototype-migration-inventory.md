@@ -1126,3 +1126,14 @@ The existing operator scope/switch regression now counts options within the
 Franchise selector rather than every select on the page. Its exact A/B scope values,
 count, immediate old-shell removal and fresh B retrieval assertions are preserved.
 The reviewed test-body fingerprint changes only for that selector correction.
+
+### Scheduled owner reports (#149)
+
+The only new timer revokes a temporary CSV object URL after an explicit authorized download; it performs no polling or persistent browser write. The four new declarations protect server-owned schedule intent, exact uncertain retries, saved evidence and controlled load/permission errors.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/owner-summaries.test.tsx: validates recipient selection and saves explicit scope, weekly timing, alert policy and optional channel | preserve | reports |
+| apps/web/src/test/owner-summaries.test.tsx: preserves the exact uncertain command and form until an explicit retry confirms it | preserve | reports |
+| apps/web/src/test/owner-summaries.test.tsx: loads the exact saved report, displays source states and limits response data to public fields | preserve | reports |
+| apps/web/src/test/owner-summaries.test.tsx: shows permission failures and supports loading retry without a local-data fallback | preserve | reports |
