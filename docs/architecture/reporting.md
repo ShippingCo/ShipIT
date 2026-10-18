@@ -215,15 +215,13 @@ unchanged. No real transfer occurs. See the [verification record](issue-62-verif
 
 ## To-Pay ageing and collection reconciliation (#63)
 
-The user selected the original report scope on 2026-10-04 after reviewing the
-missing expanded finance producers. This does **not** complete all of #63.
-Monthly debtor terms/opening balances, combined receipt allocations, unallocated
-advances and producer-backed overdue alerts remain blocked by #137/#138/#141/#142.
-ADR 0045's correction/refund equations and statement policy remain unchanged.
+The original scope shipped in PR #163. The 2026-10-18 completion consumes the
+merged #138 receipt allocations, #139 adjustments, #141 frozen account terms and
+#142 monthly statements. ADR 0045's financial equations remain unchanged.
 
 `POST /api/v1/reports/ageing` accepts the usual organization/franchise selection,
 Idempotency-Key and `{anchor:"booking"|"due", status:null|parcelStatus,
-customer_id:null|UUID, balances:"outstanding"|"all"}`. Defaults are booking age,
+customer_id:null|UUID, balances:"outstanding"|"all", overdue_only?:boolean}`. Defaults are booking age,
 all statuses, all authorized customers and outstanding only. Unknown fields,
 arbitrary historical cutoffs and policy overrides are rejected. This is one
 franchise per snapshot; R11 reads/E03 exports and creating-actor ownership apply.
@@ -238,16 +236,19 @@ Delivery never settles debt. Original gross includes booked tax and rounding;
 adjusted gross subtracts approved reductions. Net collections = collections −
 reversals − actual refunds. Outstanding = max(adjusted gross − net collections,0);
 refundable credit = max(net collections − adjusted gross,0), kept separate.
-Customer totals group the existing private booking customer ID, not a newly
-invented debtor account. Read-only drill-through retains entry IDs, sequences,
+Customer totals and the customer filter use the frozen responsible debtor on
+account bookings, otherwise the original booking customer. Shipping customer,
+account and terms-revision IDs remain separate evidence. Read-only drill-through retains entry IDs, sequences,
 reversal links, correction IDs and parcel status without contacts or payment
 external references. Cash custody is not a reporting balance input.
 
 Age is the difference between Asia/Kolkata calendar dates at capture, with
 exclusive buckets 0–30, 31–60 and 61+ days. Negative ages are explicitly Future;
 missing anchors are Unknown. Booking age is never labelled days overdue. Due
-dates and overdue flags remain null until a reviewed due-date producer exists;
-selecting due-date age therefore puts current rows into Unknown. It never
+dates come from the immutable customer-account booking terms. Overdue is true
+only for positive remaining debt after that date in Kolkata, independently of
+the selected age anchor; `overdue_only:true` is the source query for #149.
+Legacy bookings with no terms retain null due dates and overdue flags. It never
 substitutes booking date for a missing due date. Bucket totals age remaining
 outstanding only, not original gross or settled amounts.
 
@@ -261,11 +262,45 @@ reuse the exact key/body; changed intent conflicts. Expiry requires a new
 snapshot. Source/audit failure rolls back capture. Access is audited without
 customer contact or raw request logging.
 
-No schema, grant or configuration change beyond existing migration 43 and
-report grants is needed. Released migrations and fixture counts remain unchanged.
+No new migration or policy is introduced. All existing migrations remain unchanged.
+Runtime report reads need SELECT on the existing account-booking/statement, receipt,
+allocation, COD-reservation and advance-return tables; the fixture grants mirror
+that read boundary. Existing R11/E03 and statement permissions remain unchanged.
 Compatible rollback removes these routes/UI; saved snapshots expire normally.
 No background worker, provider call, LLM, auto-collection or mutable balance is
 introduced. Broader account workflows stay with their owning issues.
+
+### Monthly evidence and advance reconciliation
+
+One MVCC query captures debts, receipt allocations, separate advances and the latest
+issued statement reference containing each booking. Receipt/allocation IDs explain
+combined payments without counting the receipt amount again. Signed refund
+corrections reconcile the displayed evidence to totals. Cash custody, agent fees
+and handovers cannot reopen customer debt.
+
+Advances are franchise-wide or restricted to the selected debtor, independent of
+parcel-status, overdue and outstanding filters. Each receipt appears once:
+received minus allocated minus seller COD reservations minus actual advance returns
+equals unallocated. Advances do not offset a different obligation automatically.
+The screen explains this scope; CSV retains the same advance evidence JSON once,
+on the first debt row or a metadata-only row when there is no debt. Such a row has
+no booking or money amount cells and is not an additional obligation. Both debt
+and advance sources are limited to 5,000 and the complete CSV to 8 MiB.
+
+Expand an issued statement from a booking to read its opening balance, charges,
+credits, allocated payments, refunds and closing balance plus source IDs. This is
+the retained document at its displayed as-of, which may differ from the report's
+current snapshot. The existing statement endpoint rechecks its own permission;
+report access never confers statement or allocation write authority. A booking
+without an issued statement says so explicitly. Older v1 saved snapshots remain
+readable with unavailable advance evidence and optional new provenance fields.
+
+Reproducible fixture: `apps/api/test/database/ageing-accounts.test.ts` creates two
+monthly shipments, pays the first in full and the second partly from one receipt,
+leaves 1,000 paise unapplied and cash with a delivery agent, then issues a statement.
+It reconciles totals/CSV, day 30/31/60/61, the Kolkata due-day boundary, saved reload,
+later allocation and isolated B/C tenants. It uses producer services and substitutes
+only the report capture clock, never mutating frozen booking or ledger records.
 
 Design sources: reuse [ADR 0044](../adr/0044-bounded-report-snapshots.md) and
 [ADR 0045](../adr/0045-sales-and-financial-evidence.md), especially
@@ -330,10 +365,42 @@ finance prerequisites remain open. No commit, push, PR or deployment was made.
 - Disposable database/object-store/browser fixtures were cleaned up. The user's
   pre-existing localhost:5173 server was preserved. No production data was used.
 
-The original implementation is reviewable, but aggregate DB verification and
-expanded producer-dependent acceptance remain incomplete; do not close #63 or
-claim merge readiness from these results. Current-change remote CI is not run
-because publication is outside authorization.
+At the time of this historical run, aggregate DB verification and expanded producer-dependent acceptance were incomplete. These results alone did not establish merge readiness. Later PR #163 checks passed before its merge; the 2026-10-18 follow-up verification is recorded separately.
+
+### Expanded account-ageing verification — 2026-10-18
+
+The completion branch starts at merged PR #179 (`ae3bf6d`), after all #63
+prerequisites were verified closed. Reproduce the browser fixture with
+`pnpm db:local exec node --experimental-strip-types apps/api/test/ageing-browser-demo.ts`,
+then start Vite with `SHIPIT_API_PROXY=http://127.0.0.1:3061` and open
+`http://localhost:3061/_fixture/session`. The existing two-terminal instructions
+above also describe the optional 5174 port and clean shutdown.
+
+The real API/PostgreSQL browser check verified due-date selection, keyboard snapshot
+creation, reload, receipt evidence, separate advances and issued-statement expansion.
+The synthetic example shows 13,400 paise gross, 500 allocated, 12,900 outstanding
+and 1,000 unallocated; the issued statement reconciles to those values. A 390px
+viewport had no horizontal overflow, and browser warning/error logs were empty.
+The CSV button reported success; exact export bytes are verified by automated
+service tests, not a claim that a native download was inspected. Both owned browser
+fixture services and their disposable database were stopped after verification.
+
+The final strict `pnpm db:local demo:reports` run passed all 22 cases across six files, including original and expanded ageing, with no failures/skips/cancellations/todos and disposable resource cleanup.
+
+Local checks on the final implementation: toolchain/tooling, planning, lint, all
+five workspace typechecks, 760 API tests, 361 web tests, three S3-compatible
+contracts, 90 schema database tests, and production build passed. Migration
+history confirms all 54 released files unchanged. The aggregate Windows
+`pnpm db:local quality` run failed at the existing
+`shipment-costs.test.ts:127` 5,001-source case; its strict reporter did not retain
+the underlying assertion. That full command is **not** recorded as passing.
+Detailed diagnostics passed all 11 shipment-cost tests alone, then all 74 tests
+across that file and its eight neighbors with the normal two workers; the
+5,001-source case took 82 seconds. Those checks did not reproduce or establish
+the root cause of the original failure. No test, timeout or assertion was weakened.
+Current-head GitHub quality and every PostgreSQL shard remain required before
+merge; the PR records their final results. No independent human approval is
+claimed; current branch protection and review conversations must be checked.
 
 ## Delivery and route performance (#64)
 

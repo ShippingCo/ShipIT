@@ -946,6 +946,11 @@
       },
       {
         "file": "apps/web/src/test/ageing.test.tsx",
+        "name": "shows separate advances even without matching debt and sends an explicit overdue filter",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/ageing.test.tsx",
         "name": "uses explicit age and status filters, restores saved evidence and exports the saved ID",
         "cases": null
       },
@@ -3640,6 +3645,14 @@
       "disposition": "preserve",
       "group": "seam",
       "reason": "Issue #142 approved unused-advance return scope: independent review, actual evidence, private finance roles and exact uncertain intent; no prototype writes."
+    },
+    {
+      "file": "apps/web/src/test/ageing.test.tsx",
+      "name": "shows separate advances even without matching debt and sends an explicit overdue filter",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #63: authorized saved ageing, explicit unknown dates, matching CSV and exact uncertain retry."
     },
     {
       "file": "apps/web/src/test/ageing.test.tsx",

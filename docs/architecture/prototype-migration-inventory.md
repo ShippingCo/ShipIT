@@ -1103,3 +1103,5 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 | apps/web/src/test/account-statements.test.tsx: shows independently checked balances, source debt, private history and exact uncertain issue recovery | preserve | seam | Issue #142: source-reconciled statements, explicit roles and exact retry identity. |
 | apps/web/src/test/account-statements.test.tsx: allows accountant preview with no issuing action and rejects unreconciled DTO totals | preserve | seam | Issue #142: source-reconciled statements, explicit roles and exact retry identity. |
 | apps/web/src/test/advance-refunds.test.tsx: requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write | preserve | seam | Issue #142 approved scope: unused-advance return evidence, exact retry identity and finance role controls. No consumers, effects or fingerprints change. |
+
+| apps/web/src/test/ageing.test.tsx: shows separate advances even without matching debt and sends an explicit overdue filter | preserve | reports |

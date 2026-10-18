@@ -20,7 +20,7 @@ export function createAgeingService(database:DatabasePool) {
         if(previous){if(previous.fingerprint!==fingerprint)throw new HttpError('IDEMPOTENCY_CONFLICT');if(previous.expired)throw new HttpError('REPORT_EXPIRED');return page(previous.metadata,previous.rows);}
         const captured=await captureAgeing(scope,filter);
         const metadata:AgeingSnapshot={id:randomUUID(),schema_version:1,definition:'to_pay_ageing_v1',timezone:'Asia/Kolkata',organization_id:q.organizationId,franchise_id:q.franchiseId,filter,as_of:captured.as_of,
-          expires_at:new Date(Date.parse(captured.as_of)+reportLimits.lifetimeSeconds*1000).toISOString(),...ageingSummary(captured.rows),customers:ageingCustomers(captured.rows),due_date_source:'unavailable',advance_source:'unavailable'};
+          expires_at:new Date(Date.parse(captured.as_of)+reportLimits.lifetimeSeconds*1000).toISOString(),...ageingSummary(captured.rows),customers:ageingCustomers(captured.rows),due_date_source:'frozen_account_terms',advance_source:'receipt_ledger',advances:captured.advances,unallocated_advance:captured.advances.reduce((n,a)=>n+BigInt(a.unallocated),0n).toString()};
         ageingCsv(metadata,captured.rows);
         await repository.save(scope,key,fingerprint,metadata,captured.rows);
         await repository.audit(scope,metadata.id,'report.capture');return page(metadata,captured.rows);

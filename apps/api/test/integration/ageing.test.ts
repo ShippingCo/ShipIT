@@ -1,7 +1,12 @@
 import { describe,it,expect } from 'vitest';
-import { ageing,ageingFilter,ageingSummary } from '../../src/modules/reports/ageing-rules.ts';
-import type { AgeingRow } from '@shippingco/shared';
+import { ageing,ageingFilter,ageingSummary,ageingCsv,ageingColumns } from '../../src/modules/reports/ageing-rules.ts';
+import type { AgeingRow,AgeingSnapshot } from '@shippingco/shared';
 describe('ageing business boundaries',()=>{
+  it('exports advances without fabricating a debt row when no balances match',()=>{
+    const s={id:'saved',as_of:'2026-10-18T00:00:00Z',advances:[{receipt_id:'receipt',unallocated:'500'}]} as AgeingSnapshot;
+    const csv=ageingCsv(s,[]),cells=csv.split('\r\n')[1]!.match(/"(?:[^"]|"")*"(?=,|$)/g)!;
+    expect(cells[ageingColumns.indexOf('booking_id')]).toBe('""');expect(cells[ageingColumns.indexOf('outstanding_paise')]).toBe('""');expect(csv).toContain('receipt');
+  });
   it('assigns exactly one Kolkata calendar bucket at days 0,30,31,60,61 and midnight',()=>{
     const anchor='2026-01-01T18:30:00Z';
     for(const [days,bucket] of [[0,'0_30'],[30,'0_30'],[31,'31_60'],[60,'31_60'],[61,'61_plus']] as const)
@@ -18,6 +23,6 @@ describe('ageing business boundaries',()=>{
   });
   it('rejects invented cutoffs, ownership, policy and status instead of silently changing scope',()=>{
     expect(ageingFilter({})).toEqual({anchor:'booking',status:null,customer_id:null,balances:'outstanding'});
-    for(const b of [{as_of:'2020-01-01'},{franchise_id:'foreign'},{anchor:'delivery'},{status:'paid'},{customer_id:'phone'},{balances:'due'},{buckets:[90]}])expect(()=>ageingFilter(b)).toThrow();
+    for(const b of [{overdue_only:'yes'},{as_of:'2020-01-01'},{franchise_id:'foreign'},{anchor:'delivery'},{status:'paid'},{customer_id:'phone'},{balances:'due'},{buckets:[90]}])expect(()=>ageingFilter(b)).toThrow();
   });
 });
