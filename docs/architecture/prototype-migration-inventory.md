@@ -1107,3 +1107,22 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 | apps/web/src/test/ageing.test.tsx: shows separate advances even without matching debt and sends an explicit overdue filter | preserve | reports |
 
 | apps/web/src/test/sales.test.tsx: decodes refund corrections and opens a monthly statement with its frozen balance | preserve | reports | Issue #62: browser transport decodes refund corrections and reconciled monthly statement revisions without inventing another transfer or sale. |
+
+## Issue #148 reviewed inventory change
+
+The production Workspace now includes R11-authorized saved daily metrics through the
+API data-access seam. Prototype Dashboard/store behavior remains demo-only. Three new
+production UI regressions cover selected scope and evidence/reload, exact uncertain
+retry with late-scope-response rejection, and malformed/foreign/empty responses.
+No prototype exports, transitive store callers or coupled runtime hashes changed.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/daily-dashboard.test.tsx: captures selected scope, uses server money, drills through exact saved metrics and reloads from URL | preserve | reports |
+| apps/web/src/test/daily-dashboard.test.tsx: preserves exact uncertain request and rejects late responses after a scope change | preserve | reports |
+| apps/web/src/test/daily-dashboard.test.tsx: rejects malformed and foreign success payloads and renders a safe empty snapshot | preserve | reports |
+
+The existing operator scope/switch regression now counts options within the
+Franchise selector rather than every select on the page. Its exact A/B scope values,
+count, immediate old-shell removal and fresh B retrieval assertions are preserved.
+The reviewed test-body fingerprint changes only for that selector correction.

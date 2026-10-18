@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor,within } from '@testing-library/react';
 import type { OperatorContext } from '@shippingco/shared';
 import App from '../App';
 import { createScopeController } from '../operator/scope';
@@ -66,7 +66,7 @@ describe('production operator flow',()=>{
   it('lists only server scopes and clears the old shell immediately while switching',async()=>{
     context=ready;const slow=deferred<Response>();responseOverride=path=>path.endsWith(B)?slow.promise:undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
-    const options=screen.getAllByRole('option');expect(options).toHaveLength(2);expect(options.map(option=>(option as HTMLOptionElement).value)).toEqual([A,B]);
+    const options=within(screen.getByLabelText('Franchise')).getAllByRole('option');expect(options).toHaveLength(2);expect(options.map(option=>(option as HTMLOptionElement).value)).toEqual([A,B]);
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});
     expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Checking workspace access');

@@ -8,6 +8,9 @@
 .ops-kpi { padding: 20px; display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; color: inherit; text-decoration: none; }
 .ops-kpi-icon { width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid var(--md-outline-variant); border-radius: 50%; color: var(--md-primary); }
 .ops-kpi-number { display: block; font: var(--md-sys-typescale-display-small); font-variant-numeric: tabular-nums; }
+.daily-metric-button { display: block; padding: 4px 0; border: 0; background: transparent; color: var(--md-primary); text-align: left; cursor: pointer; }
+.daily-metric-button:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 4px; }
+.daily-metric-button .ops-kpi-number { font-size: 28px; line-height: 1.2; }
 .ops-kpi-label { display: block; font-weight: 700; }
 .ops-kpi-note, .ops-note { color: var(--md-on-surface-variant); font-size: 13px; }
 .ops-card { padding: 20px; min-width: 0; overflow-wrap: anywhere; }

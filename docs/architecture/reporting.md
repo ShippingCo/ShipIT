@@ -1,4 +1,4 @@
-# Scoped reporting and exports (#61, #62)
+# Scoped reporting and exports (#61, #62, #148)
 
 M6 makes financial, operational, messaging and compliance reports reconcile to saved
 facts. The expanded milestone also adds cash, account billing, agent settlement and
@@ -595,3 +595,146 @@ the PR. Manual synthetic example: capture a closed Monday week as a franchise ad
 inspect accepted versus confirmed delivery and thanks versus staff resolution, open
 a category, reload its snapshot URL, and repeat as a foreign franchise/operator to
 confirm denied counts. Use signed fake callbacks and fictional fixtures only.
+
+## Owner daily dashboard (#148)
+
+Verified implementation base: main `37e3d97`, after merged sales PR #181, ageing
+PR #180 and monthly-statements PR #179. Named prerequisites #61, #62, #63, #138,
+#139 and #142 are closed. #67 and #149 consume this work. The approved D137-3
+identity/metric definitions remain authoritative; no owner role or financial write
+permission is added. Production Workspace shows the dashboard to R11 report readers.
+The fictional prototype dashboard remains isolated and unchanged.
+
+API (authenticated organization/franchise selection, no-store responses):
+
+- `POST /api/v1/reports/daily`: optional `day` (YYYY-MM-DD, null means server today),
+  `mode` (`same_elapsed`, default; or `complete_day`), and `franchise_ids` (1–50,
+  including the active anchor). Future days, invalid dates, duplicates and unknown
+  fields are rejected. CSRF and an exact idempotency key/body are required.
+- `GET /api/v1/reports/daily/:id`: saved `owner_daily_v1` summary plus 100 source
+  rows. Optional `period=today|yesterday`, `metric` (a summary key), optional collection `method`, and `offset`
+  (multiples of 100) filter the saved evidence without recalculating the summary.
+  Capture initially returns selected-day rows. `today` names the selected day;
+  historical requests retain explicit calendar windows in the metadata and UI.
+- `GET /api/v1/reports/daily/:id/export`: the same optional period/metric selection;
+  fixed minimal, formula-safe CSV with source IDs and independent integer paise.
+  Summaries retain their full saved meaning; exported filtered rows match the
+  clicked measure. Customer metrics reconcile by distinct franchise/customer IDs;
+  average reconciles by eligible gross divided by eligible booking count.
+
+Every source query and both periods use one PostgreSQL statement view. Selected day
+runs from Kolkata midnight to the earlier of next midnight or capture time. Complete
+comparison uses all of yesterday; elapsed comparison stops yesterday at the same
+elapsed local-day instant. Duration arithmetic is exactly 24 hours, independent of the database session timezone. Both ranges are half-open, so midnight is never counted
+twice. All source evidence visible at capture is evaluated at each period's effective
+cutoff. Later recorded/backdated facts appear only in new snapshots; this is not a
+claim to reconstruct exactly what an operator knew yesterday.
+
+Equations and source ownership:
+
+- Bookings: confirmed commercial bookings in the window, excluding financial
+  cancellations effective before that window's cutoff. Parcels are not bookings.
+- Billed gross and tax-exclusive revenue: booking snapshots less the existing
+  component-wise financial reductions effective by cutoff. Monthly documents do
+  not create bookings, revenue or an additional obligation.
+- Average bill: adjusted cohort gross / eligible bookings, nearest integer paise
+  (half up). No eligible booking means `null` / Unavailable. No NaN or infinity.
+- Collections: each immutable money receipt once by actual `occurred_at`, including
+  advances and receipts for older bookings. Receipt allocation/release ledger entries
+  are excluded from inflows. Legacy independent collections less their reversals
+  retain their saved method; no receiving-account provenance is invented.
+- Actual refunds: booking refund records less refund corrections, plus actual unused
+  advance returns by their transfer instant. Requests/approvals and allocation
+  releases do not constitute an actual refund. Refunds remain separate from inflows.
+- Outstanding: sum of positive adjusted booking gross - net ledger applications +
+  actual booking refunds, for all bookings before each cutoff. This is a stock of
+  customer debt, not today's sales, bank matching, cash custody or agent retention.
+- Customers: distinct `(franchise_id, customer_id)` among eligible window bookings.
+  New means no earlier eligible booking before the window; otherwise returning.
+  A customer first booking in this window is counted once as new even if they book
+  repeatedly. Earlier cancellations are evaluated at each cutoff. No cross-franchise
+  phone merging. New + returning = eligible unique relationships.
+- Comparison: signed current - previous; percentage is the signed change divided
+  by the previous value, truncated to two decimal places. A zero or unavailable
+  denominator produces an unavailable percentage, never an infinite increase.
+
+Snapshot storage, ownership, 24-hour expiry, 20-active quota, 5,000 source-row and
+8 MiB bounds reuse #61. The row bound covers both periods, including historical
+unpaid bookings. Limits fail atomically with 413, never partial successful totals.
+Narrow franchise selection if necessary. There is no new editable totals store,
+projection service, cache, job, provider call, dependency or financial mutation.
+Read/capture/export access events use the existing private report audit.
+
+All selected franchises require current R11 grants. Saved reads, pagination, exact
+capture retries and exports reauthorize the whole saved selection; E03 is additionally
+required in every exported franchise. Snapshots belong to their capturing actor.
+Unknown, expired and foreign IDs have the same controlled 404. Revocation removes
+access. UI failures do not fall back to localStorage. The shell's existing authority
+lifetime unmounts private dashboard state on franchise/user/membership changes.
+
+Research/design review: adopt a single SELECT view, rather than a new isolation or
+projection subsystem, following [PostgreSQL 18 snapshot semantics](https://www.postgresql.org/docs/18/transaction-iso.html).
+Use explicit Kolkata conversion and half-open ranges following [PostgreSQL date/time documentation](https://www.postgresql.org/docs/18/functions-datetime.html).
+Reuse the stored key/fingerprint/result and expose exact uncertain retries, adapting
+[AWS Builders' Library idempotent API guidance](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/).
+These practices address mixed-cutoff totals, midnight ambiguity and duplicate capture
+respectively, with no new dependencies. Materialized projections and distributed
+caches are deferred: no measured need justifies their operational cost here.
+
+Rollout: apply existing migrations through all 54 released files before the API/web
+update. No new migration, backfill, secret or feature flag is required. In addition
+to #61 grants, the report runtime needs SELECT on `money_receipts`,
+`money_receipt_allocations`, `advance_refund_commands` and existing booking/payment/
+financial-change sources. `prepareReports()` and `prepareMoneyReceipts()` supply
+fixture grants; production grants belong to the deployment owner. Keep existing
+SELECT/INSERT and restricted cleanup UPDATE on report snapshots/access events.
+Rollback compatible API/web code to remove entry points; retain saved/private history
+until ordinary expiry cleanup. Do not rewrite original financial evidence.
+
+Manual verification: use disposable PostgreSQL, set `REPORT_DEMO_DAILY=1`, and run the
+existing `report-browser-demo.ts` command above. Open its fixture-session URL, use
+Workspace, leave day blank and press Load daily dashboard. Expected fictional values:
+1 booking, ₹134 gross, ₹128 tax-exclusive, ₹60 collected, ₹74 outstanding, 1 new
+customer. Switch comparison modes; click each current/previous metric for matching
+saved source rows, download CSV, and reload the `daily_snapshot` URL. Test narrow
+screens and keyboard focus. Stop via the documented fixture-stop endpoint. No real
+customer, bank, accountant or provider compatibility is claimed.
+
+Automated evidence: `apps/api/test/integration/daily-dashboard.test.ts` protects IST
+midnight/modes, integer average, cancellation denominator, identity partition,
+zero comparison and evidence selection. `apps/api/test/database/daily-dashboard.test.ts`
+uses real PostgreSQL/runtime roles for ₹1,000/₹600/₹400 timing, three bookings/one
+customer, receipt/advance allocation deduplication, independent CSV equations,
+cancellation/refund and historical-cutoff behavior, immutability, concurrent exact
+capture, lost commit acknowledgement, scope escalation/revocation and expiry.
+`apps/web/src/test/daily-dashboard.test.tsx` covers selected controls, server values,
+saved reload/evidence, exact uncertain retries, late-response rejection, protocol
+projection and empty states. Existing sales/monthly-statement tests protect document
+issuance without duplicate revenue; their producer commands are reused unchanged.
+
+Local verification on 18 October 2026 (pinned Node 22.23.2, pnpm 10.34.5,
+Python 3.12.14; disposable PostgreSQL 18.6 and private object-store fixtures):
+763 API unit/integration tests, 365 web tests, 3 object-store contract tests and
+90 schema tests passed. The final four maintained API database shards ran serially:
+124, 138, 182 and 145 tests respectively, totaling 589 tests across all 80 files,
+with no failures, skips, cancellations or todo cases. Tooling/testkit/DB unit,
+planning, tenant-query lint, all workspace types, all 54 released migration hashes
+and the API/web production build also passed. The final source manifest was stable
+through these database shards. Real browser checks used the fictional API/database
+fixture for capture, both modes, metric/method evidence, CSV bytes, saved reload,
+empty/future dates, keyboard focus and a 390-pixel viewport without page overflow.
+
+This evidence combines broad checks with affected reruns; neither earlier aggregate
+is represented as green. The first root quality run stopped on an existing shell
+test's global option selector; scoping it to the Franchise select preserved its
+two-franchise and stale-state assertions, and all 365 web tests then passed. A later
+continuation hit its outer 30-minute wrapper limit and removed PostgreSQL during
+remaining workers. Its sparse shipment-cost failure cannot be timed reliably
+relative to that shutdown. An unchanged-assertion, unchanged-timeout 18-case cost
+diagnostic passed; this alone did not explain the earlier failure. All final API
+shards, including costs and the interrupted workers, passed with the repository's
+existing literal `test:db` wrapper budget and case/file deadlines. A demonstrated
+New York DST regression (one booking instead of two) was fixed using exact 24-hour
+arithmetic; both modes and Kolkata midnight boundaries passed in the final daily
+database test. No real provider, production deployment, final-head CI or review
+approval is claimed by these local results.

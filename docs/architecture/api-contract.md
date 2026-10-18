@@ -740,3 +740,11 @@ review and actual-return endpoints. Approval alone posts no movement. Actual
 returns use immutable manually recorded evidence, a current configured source
 location and shared receipt/COD capacity; noncash returns feed optional manual
 reconciliation without duplicate financial posting.
+
+## Owner daily metrics (#148)
+
+The versioned `owner_daily_v1` summary/evidence contract is exposed through
+`POST /api/v1/reports/daily`, `GET /api/v1/reports/daily/:id` and its `/export`
+endpoint. Filters, half-open Kolkata comparison cutoffs, source equations, error
+codes and R11/E03 reauthorization follow [the reporting contract](reporting.md#owner-daily-dashboard-148).
+Capture is a private saved report, not a financial mutation or a new ledger.
