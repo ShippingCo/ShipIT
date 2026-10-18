@@ -30,7 +30,10 @@ export async function captureSales(scope:TenantAccess,filter:SalesFilter,custome
  const result=(await scopedQuery<{as_of:Date;rows:SourceRow[]}>(scope,['reports.capture','finance.statement'],`SELECT statement_timestamp() AS as_of,COALESCE(jsonb_agg(r.row ORDER BY r.confirmed_at,r.id),'[]'::jsonb) rows FROM (
  SELECT b.id,b.confirmed_at,jsonb_build_object('id',b.id,'franchise_id',b.franchise_id,'customer_id',b.customer_id,'confirmed_at',to_char(b.confirmed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'booking_version',b.version,'tax',b.tax_snapshot,
  'receipt_id',receipt.id,'receipt_number',receipt.number,'payment_version',p.version,'collections',p.collected::text,'refunds',a.refunds::text,'corrections',a.corrections,
- 'statement_ids',COALESCE((SELECT jsonb_agg(l.statement_id ORDER BY l.statement_id) FROM shipit.account_statement_lines l WHERE l.organization_id=b.organization_id AND l.franchise_id=b.franchise_id AND l.booking_id=b.id),'[]'::jsonb)) row
+ 'statement_ids',COALESCE((SELECT jsonb_agg(st.id ORDER BY st.id) FROM shipit.account_statements st
+ WHERE st.organization_id=b.organization_id AND st.franchise_id=b.franchise_id AND (
+ EXISTS(SELECT 1 FROM shipit.account_statement_lines l WHERE l.organization_id=st.organization_id AND l.franchise_id=st.franchise_id AND l.statement_id=st.id AND l.booking_id=b.id)
+ OR st.snapshot->'lines' @> jsonb_build_array(jsonb_build_object('booking_id',b.id)))),'[]'::jsonb)) row
  FROM shipit.bookings b
  LEFT JOIN shipit.issued_receipts receipt ON receipt.organization_id=b.organization_id AND receipt.franchise_id=b.franchise_id AND receipt.booking_id=b.id AND receipt.kind='booking_charge'
  CROSS JOIN LATERAL (SELECT COALESCE(sum(CASE WHEN kind='collection' THEN amount_paise::numeric ELSE -amount_paise::numeric END),0) collected,COALESCE(max(sequence),0) version

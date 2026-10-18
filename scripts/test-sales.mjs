@@ -13,7 +13,9 @@ if(dirname(directory)!==tmpdir())throw new Error('DB_TEST_CLEANUP_FAILED');
 const registry=join(directory,'resources.jsonl');
 await writeFile(registry,'',{mode:0o600});
 try {
-  const files=['../apps/api/test/database/sales.test.ts','../packages/db/test/integration/sales.test.ts']
+  const files=['../apps/api/test/database/sales.test.ts','../packages/db/test/integration/sales.test.ts',
+    '../apps/api/test/database/financial-workflow.test.ts','../apps/api/test/database/account-statements.test.ts',
+    '../apps/api/test/database/payments.test.ts']
     .map(path=>fileURLToPath(new URL(path,import.meta.url)));
   const result=await executeDatabaseTests(files,registry);
   console.log(`Fictional sales and financial evidence: ${result.passed} passed; no external service calls.`);

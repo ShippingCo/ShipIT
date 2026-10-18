@@ -2236,6 +2236,11 @@
       },
       {
         "file": "apps/web/src/test/sales.test.tsx",
+        "name": "decodes refund corrections and opens a monthly statement with its frozen balance",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/sales.test.tsx",
         "name": "creates through the labelled keyboard form, reloads saved filters, shows zero sales and requests the saved CSV",
         "cases": null
       },
@@ -5709,6 +5714,14 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
+    },
+    {
+      "file": "apps/web/src/test/sales.test.tsx",
+      "name": "decodes refund corrections and opens a monthly statement with its frozen balance",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Issue #62: browser transport decodes refund corrections and reconciled monthly statement revisions without inventing another transfer or sale."
     },
     {
       "file": "apps/web/src/test/sales.test.tsx",

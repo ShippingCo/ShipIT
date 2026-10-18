@@ -9,12 +9,45 @@ import { createFinanceService } from '../../src/modules/reports/finance-service.
 import type { DatabasePool } from '@shippingco/db';
 import { createPaymentService } from '../../src/modules/payments/service.ts';
 import type { SalesPage } from '@shippingco/shared';
+import { statementSetup } from '../account-statement-support.ts';
+import { createReceivingAccountService } from '../../src/modules/payments/account-service.ts';
+import { createMoneyReceiptService } from '../../src/modules/payments/receipt-service.ts';
 async function setup(t:Parameters<typeof paymentSetup>[0]){
  const s=await paymentSetup(t);await s.db.prepareReports();const q={organization_id:org,franchise_id:A},day=new Date(Date.parse(s.booked.charges.confirmed_at)+19800000).toISOString().slice(0,10),filter={from_day:day,to_day:day};
  const call=(path:string,body?:unknown,actor:{id:string;token:string}=s.local,key=randomUUID(),query=q)=>s.app.inject({method:body===undefined?'GET':'POST',url:'/api/v1/'+path+'?'+new URLSearchParams(query),headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(actor.token),...(body===undefined?{}:{payload:JSON.stringify(body)})});
  const correction={booking_id:s.bookingId,expected_version:0,payment_version:1,kind:'cancellation',reason:'booking_cancelled',approval_ref:'SYN_ACCOUNTANT_REVIEW',pre_tax:12800,taxable:12000,cgst:320,sgst:320,igst:0,rounding:-40};
  return {...s,q,filter,call,correction};
 }
+await test('sales reconcile monthly statement revisions and combined receipt allocations without duplicate revenue',{timeout:60000},async t=>{
+ const s=await statementSetup(t),first=await s.book(),q={organization_id:org,franchise_id:A},headers=['idempotency-key','synthetic'];
+ const service=createSalesService(s.pool),finance=createFinanceService(s.pool),filter={from_day:s.period.from_day,to_day:s.period.to_day};
+ const capture=()=>service.create(s.local.token,q,randomUUID(),headers,filter,randomUUID());
+ const original=await capture(),statement=await s.issue(),late=await s.book(),revision=await s.issue();
+ const receiving=await createReceivingAccountService(s.pool).configure(s.local.token,null,q,randomUUID(),headers,{expected_version:0,name:'Fictional sales account',methods:['bank_transfer'],other_method_name:null,active:true},randomUUID());
+ const receipt=await createMoneyReceiptService(s.pool).record(s.operator.token,q,randomUUID(),headers,{customer_id:s.source.id,account_id:receiving.id,expected_account_version:1,method:'bank_transfer',amount_paise:1200,currency:'INR',receiver_id:s.operator.id,custodian_id:s.operator.id,occurred_at:new Date().toISOString(),external_reference:'SYN_SALES_RECEIPT',allocations:[{booking_id:first.id,amount_paise:500,context:'to_pay',expected_payment_version:0},{booking_id:late.id,amount_paise:400,context:'to_pay',expected_payment_version:0}]},randomUUID());
+ const paidStatement=await s.issue(),saved=await capture();
+ assert.equal(saved.snapshot.count,original.snapshot.count+1);
+ assert.equal(BigInt(saved.snapshot.totals.gross),BigInt(original.snapshot.totals.gross)+BigInt(late.charges.tax.final_payable_paise));
+ assert.equal(saved.snapshot.totals.collections,'900');assert.equal(paidStatement.unallocated_advance,'300');
+ assert.equal(saved.snapshot.totals.outstanding,paidStatement.totals.outstanding);
+ assert.deepEqual(saved.rows.find(r=>r.id===first.id)!.statement_ids,[statement.id,revision.id,paidStatement.id].sort());
+ assert.deepEqual(saved.rows.find(r=>r.id===late.id)!.statement_ids,[revision.id,paidStatement.id].sort());
+ for(const document of [statement,revision,paidStatement]){
+  const response=await s.app.inject({method:'GET',url:'/api/v1/finance/statements/'+document.id+'?'+new URLSearchParams(q),cookies:s.cookies(s.local.token)});
+  assert.equal(response.statusCode,200,response.body);assert.equal(response.headers['cache-control'],'no-store');assert.deepEqual(response.json(),document);
+ }
+ const csv=await service.read(s.local.token,saved.snapshot.id,q,randomUUID(),true);assert.ok('csv' in csv);assert.ok(csv.csv.includes(paidStatement.id!));
+ const rows=csv.csv.trimEnd().split('\r\n').slice(1).map(line=>line.split(',').map(cell=>cell.slice(1,-1)));
+ assert.equal(rows.reduce((n,row)=>n+BigInt(row[csv.columns.indexOf('collections_paise')]!),0n),900n);
+ assert.deepEqual(await service.read(s.local.token,original.snapshot.id,q,randomUUID()),original);
+ assert.deepEqual(await finance.readStatement(s.local.token,q,statement.id,randomUUID()),statement);
+ const sibling=await s.grant('franchise_admin',[B]),foreign=await s.beta('franchise_admin');
+ for(const [actor,scope] of [[sibling,{organization_id:org,franchise_id:B}],[foreign,{organization_id:otherOrg,franchise_id:C}]] as const){
+  await assert.rejects(finance.readStatement(actor.token,scope,paidStatement.id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+  await assert.rejects(service.read(actor.token,saved.snapshot.id,scope,randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
+ }
+ assert.ok(!JSON.stringify(saved).includes('SYN_SALES_RECEIPT'));assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipts WHERE id=$1',[receipt.receipt_id])).rows[0]!.n,1);
+});
 await test('sales source-to-total reconciliation, approved cancellation, refund and immutable statement do not double count',{timeout:60000},async t=>{
  const s=await setup(t),paid=await s.pay(collectionInput(s.gross));assert.equal(paid.statusCode,200);
  const issued=await s.request('GET',s.bookingId+'/receipt');assert.equal(issued.statusCode,200,issued.body);

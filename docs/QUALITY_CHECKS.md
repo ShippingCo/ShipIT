@@ -42,6 +42,15 @@ pnpm db:local quality
 pnpm check:migrations
 ```
 
+Web tests bound independent jsdom file workers to two in `apps/web/vite.config.ts`.
+On the verified 16-thread/15-GiB Windows host, default scheduling twice exceeded
+the existing five-second six-scenario navigation test, while the isolated file
+and complete two-worker suite passed unchanged. Vitest's supported
+[`maxWorkers`](https://v3.vitest.dev/config/#maxworkers) controls worker processes;
+within-test business races and `maxConcurrency`, scenario counts, assertions,
+timeouts and isolation remain unchanged. This trades some file parallelism for
+predictable DOM-runtime load; it does not exclude tests or raise deadlines.
+
 `pnpm quality` runs, in order: toolchain verification, tooling tests, planning and
 domain validators, lint, all workspace typechecks, testkit/DB unit, API and prototype tests,
 required real PostgreSQL tests, and web build. It stops on a failed command and requires

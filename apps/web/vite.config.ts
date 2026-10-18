@@ -30,6 +30,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
+      // Bound independent DOM environments; business races retain their own concurrency.
+      maxWorkers: 2,
     },
   };
 });
