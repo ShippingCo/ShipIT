@@ -153,8 +153,11 @@ await test('departed initial observer can be recovered by a current admin withou
  await assert.rejects(s.closes.read(s.operator.token,id,q,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
 });
 await test('source bound fails atomically after 5,000 genuine receipt facts instead of saving a truncated count',{timeout:120000},async t=>{
- const s=await setupCashClose(t);for(let n=0;n<5001;n++)await s.receipt(1);
+ const started=performance.now(),s=await setupCashClose(t);t.diagnostic(`source-bound setup: ${Math.round(performance.now()-started)}ms`);
+ for(let n=0;n<5001;n++){await s.receipt(1);if((n+1)%1000===0)t.diagnostic(`source-bound genuine receipts: ${n+1} in ${Math.round(performance.now()-started)}ms`);}
+ t.diagnostic(`source-bound all 5001 receipts: ${Math.round(performance.now()-started)}ms`);
  const open=await s.command('open',null,s.openBody);await assert.rejects(s.command('count',open.session_id,{expected_version:1,counted_at:s.counted,counted_paise:105001,denominations:[],reason:'Oversized anchored evidence must fail completely'}),{code:'CASH_CLOSE_LIMIT_EXCEEDED'});
+ t.diagnostic(`source-bound count rejected: ${Math.round(performance.now()-started)}ms`);
  assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.cash_close_commands WHERE operation='count'")).rows[0]!.n,0);
  const detail=await s.closes.read(s.operator.token,open.session_id,q,randomUUID());assert.equal(detail.session.version,1);assert.equal(detail.session.count,null);assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipts')).rows[0]!.n,5001);
 });

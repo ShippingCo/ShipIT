@@ -15,6 +15,9 @@ import type {createReceivingAccountService} from './account-service.ts';
 export function registerMoneyReceipts(app:FastifyInstance,receipts:ReturnType<typeof createMoneyReceiptService>,accounts:ReturnType<typeof createReceivingAccountService>,secure:boolean) {
  const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
  app.get('/api/v1/money-receipt-receivers',request=>receipts.receivers(session(request),request.query,request.id));
+ app.get<{Params:{receipt_id:string}}>('/api/v1/money-receipts/:receipt_id/advance-refunds',request=>receipts.refunds(session(request),request.params.receipt_id,request.query,request.id));
+ app.post<{Params:{receipt_id:string}}>('/api/v1/money-receipts/:receipt_id/advance-refunds',request=>receipts.refundCommand(session(request),request.params.receipt_id,null,'request',request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
+ for(const operation of ['approve','reject','return'] as const)app.post<{Params:{receipt_id:string;request_id:string}}>(`/api/v1/money-receipts/:receipt_id/advance-refunds/:request_id/${operation}`,request=>receipts.refundCommand(session(request),request.params.receipt_id,request.params.request_id,operation,request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
  app.get<{Params:{receipt_id:string}}>('/api/v1/money-receipts/:receipt_id/history',request=>receipts.history(session(request),request.params.receipt_id,request.query,request.id));
  app.get('/api/v1/receiving-accounts',request=>accounts.list(session(request),request.query,request.id));
  app.get('/api/v1/money-receipts',request=>receipts.list(session(request),request.query,request.id));

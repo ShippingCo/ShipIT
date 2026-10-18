@@ -1099,3 +1099,7 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 | apps/web/src/test/reconciliation.test.tsx: read_only cannot mount private reconciliation requests | preserve | seam | Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting. |
 
 | apps/web/src/test/reconciliation.test.tsx: uploads a local CSV, publishes its selected mapping and preserves that version through preview and import | preserve | seam | Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting. |
+
+| apps/web/src/test/account-statements.test.tsx: shows independently checked balances, source debt, private history and exact uncertain issue recovery | preserve | seam | Issue #142: source-reconciled statements, explicit roles and exact retry identity. |
+| apps/web/src/test/account-statements.test.tsx: allows accountant preview with no issuing action and rejects unreconciled DTO totals | preserve | seam | Issue #142: source-reconciled statements, explicit roles and exact retry identity. |
+| apps/web/src/test/advance-refunds.test.tsx: requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write | preserve | seam | Issue #142 approved scope: unused-advance return evidence, exact retry identity and finance role controls. No consumers, effects or fingerprints change. |

@@ -25,6 +25,7 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
       try { return await work(tx); }
       catch(error) {
         if(error instanceof HttpError) domainError=error;
+        if(error instanceof DatabaseError&&error.sqlState==='P0142')domainError=new HttpError('FINANCIAL_REFUND_REFERENCE_CONFLICT');
         // The indexes remain the final boundary if occupancy changes after a check.
         // Translate inside the transaction so normal rollback must succeed first.
         if(error instanceof DatabaseError && error.code==='DB_QUERY_FAILED' && error.sqlState==='23505') {
@@ -842,7 +843,7 @@ export async function withMoneyReceiptScope<T>(database:DatabasePool,token:strin
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
    const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
-   const allowed=action==='money_receipts.read'?(orgAdmin||admin||accountant):action==='money_receipts.select'?(orgAdmin||admin||accountant||operator):action==='money_receipts.correct'?admin:(admin||operator);
+   const allowed=action==='money_receipts.read'?(orgAdmin||admin||accountant):action==='money_receipts.select'?(orgAdmin||admin||accountant||operator):action==='money_receipts.correct'||action==='money_receipts.refund.review'||action==='money_receipts.refund.return'?admin:(admin||operator);
    if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
    return await work({command:issueTenantAccess(tx,{...context,action}),payment:issueTenantAccess(tx,{...context,action:reading?'payments.read':action==='money_receipts.correct'?'payments.reverse':'payments.collect'}),
@@ -1038,7 +1039,9 @@ export async function withReportOptionsScope<T>(database:DatabasePool,token:stri
 /** #141: explicit local admin configuration; existing financial readers only. */
 export async function withCustomerAccountScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
  action:import('../customer-accounts/types.ts').CustomerAccountAction,correlationId:string,
- work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+ work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>,statementEvidence=false):Promise<T> {
+ // Account evidence reads retain the exact profile role check while recording append-only report access.
+ if(statementEvidence&&action!=='customer_accounts.read')throw new HttpError('ACTION_FORBIDDEN');
  const reading=action==='customer_accounts.read'||action==='customer_accounts.select';
  return membershipTransaction(database,async tx=>{
   try {
@@ -1053,7 +1056,7 @@ export async function withCustomerAccountScope<T>(database:DatabasePool,token:st
    const permitted=reading?(orgAdmin||local.some(m=>(['franchise_admin','accountant'].includes(m.role)||action==='customer_accounts.select'&&m.role==='operator'))):local.some(m=>m.role===(action==='customer_accounts.request'?'operator':'franchise_admin'));
    if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
-   return await work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
+   return await work(issueTenantAccess(tx,{action:statementEvidence?'reports.capture':action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
   } catch(error) {
    if(!reading&&error instanceof DatabaseError&&error.code==='DB_TIMEOUT')throw new HttpError('IDEMPOTENCY_IN_PROGRESS');throw error;
   }

@@ -25,7 +25,7 @@ export interface MoneyReceiptAllocation {
 }
 export interface MoneyReceiptResult {
  receipt_id:string; customer_id:string; version:number; currency:'INR'; received_paise:number;
- allocated_paise:number; unallocated_paise:number; allocations:MoneyReceiptAllocation[];
+ allocated_paise:number; unallocated_paise:number; returned_paise?:number; allocations:MoneyReceiptAllocation[];
 }
 export interface MoneyReceiptEvidence {
  id:string; customer_id:string; account_id:string; account_revision_id:string; method:ReceiptMethod; received_paise:number;
@@ -36,4 +36,10 @@ export interface MoneyReceiptDetail { receipt:MoneyReceiptEvidence; balance:Mone
 
 export interface MoneyReceiptHistoryEntry extends MoneyReceiptAllocation {
  version:number; recorded_at:string; released_paise:number;
+}
+
+export type AdvanceRefundOperation='request'|'approve'|'reject'|'return';
+export interface AdvanceRefundCommand {
+ id:string; request_id:string; receipt_id:string; version:number; operation:AdvanceRefundOperation;
+ actor_id:string; recorded_at:string; amount_paise:number; input:Record<string,unknown>;
 }

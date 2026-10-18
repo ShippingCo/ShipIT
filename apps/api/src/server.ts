@@ -171,7 +171,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerCustomerAccounts(instance,createCustomerAccountService(database,config.customerAccountWritesEnabled===true&&config.environment!=='demo',pricingClock),config.environment!=='developer');
       registerSettings(instance,database,config.environment!=='developer',config.settingsWritesEnabled===true&&config.environment!=='demo');
       registerShipmentCosts(instance,database,config.environment!=='developer',config.shipmentCostWritesEnabled===true&&config.environment!=='demo');
-      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
+      registerReports(instance,createReportService(database),config.environment!=='developer',createSalesService(database),createFinanceService(database,config.financialWorkflowWritesEnabled===true,cashbookWrites,config.customerAccountWritesEnabled===true&&config.environment!=='demo'),createAgeingService(database),createPerformanceService(database),createEffectivenessService(database,whatsapp?.configuration.support_hours));
       registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');

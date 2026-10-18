@@ -395,7 +395,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_accounts,shipit.customer_account_revisions,shipit.customer_account_rates,shipit.customer_account_bookings,shipit.customer_credit_approvals,shipit.customer_credit_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(id) ON shipit.customer_accounts,shipit.customer_credit_approvals,shipit.customer_credit_requests TO ${identifier(resource.runtimeRole)}`);
-        await owner.query(`GRANT SELECT ON shipit.customer_account_customer_links,shipit.customer_account_audit_events TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.customer_account_customer_links,shipit.customer_account_audit_events,shipit.cod_receipt_positions TO ${identifier(resource.runtimeRole)}`);
       }finally {await owner.close();pools.delete(owner);}
     },
     async prepareSettings() {
@@ -442,6 +442,8 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         if((await owner.query("SELECT to_regclass('shipit.customer_account_bookings') present")).rows[0]?.present)await owner.query(`GRANT SELECT ON shipit.customer_account_bookings TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT ON shipit.money_receipts,shipit.money_receipt_commands,shipit.money_receipt_allocations TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.advance_refund_commands') AS relation")).rows[0]?.relation)
+          await owner.query(`GRANT SELECT,INSERT ON shipit.advance_refund_commands TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.cod_receipt_allocations') AS relation")).rows[0]?.relation)
           await owner.query(`GRANT SELECT ON shipit.cod_receipt_allocations,shipit.cod_receipt_positions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT INSERT(id,organization_id,franchise_id,receipt_id,principal_id,operation_id,version,key_digest,fingerprint,input,correlation_id)
@@ -489,6 +491,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.report_snapshots,shipit.report_access_events TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.customer_account_bookings') AS relation")).rows[0]?.relation)await owner.query(`GRANT SELECT ON shipit.customer_account_bookings TO ${identifier(resource.runtimeRole)}`);
       await owner.query(`GRANT SELECT ON shipit.pricing_audit_events TO ${identifier(resource.runtimeRole)}`);
       if((await owner.query("SELECT to_regclass('shipit.financial_adjustment_requests') AS relation")).rows[0]?.relation)await owner.query(`GRANT SELECT ON shipit.financial_adjustment_requests,shipit.financial_request_decisions,shipit.financial_document_links,shipit.financial_deletion_denials TO ${identifier(resource.runtimeRole)}`);
           // #64 reads immutable dispatch provenance; its producer trigger owns INSERT.

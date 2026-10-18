@@ -1,5 +1,5 @@
 import type {ReceivingAccountDto,ReceivingAccountInput,MoneyReceiptResult,MoneyReceiptDetail,MoneyReceiptInput,AllocateReceiptInput,CorrectAllocationInput} from '@shippingco/shared';
-import {object,uuid,text,integer,instant,choice,array,nullable,protocol} from './dto';
+import {object,uuid,text,integer,instant,choice,array,nullable,optional,protocol} from './dto';
 import type {ScopedApi} from './scoped-api';
 import type {CommandIntent} from './command-intent';
 const method=choice('cash','upi','card','bank_transfer','other');
@@ -9,10 +9,10 @@ export function receivingAccountDto(value:unknown):ReceivingAccountDto {
  if(!result.methods.length||new Set(result.methods).size!==result.methods.length||(result.methods.includes('cash')&&result.methods.length!==1)||result.methods.includes('other')!==(result.other_method_name!==null))return protocol();return result;
 }
 const allocation=object({id:uuid,booking_id:uuid,payment_entry_id:uuid,kind:choice('allocation','release'),amount_paise:integer(1),release_of:nullable(uuid)});
-const balance=object({receipt_id:uuid,customer_id:uuid,version:integer(1),currency:choice('INR'),received_paise:integer(1),allocated_paise:integer(),unallocated_paise:integer(),allocations:array(allocation,50)});
+const balance=object({receipt_id:uuid,customer_id:uuid,version:integer(1),currency:choice('INR'),received_paise:integer(1),allocated_paise:integer(),unallocated_paise:integer(),returned_paise:optional(integer()),allocations:array(allocation,50)});
 export function moneyReceiptResult(value:unknown):MoneyReceiptResult {
  const result=balance(value);
- if(BigInt(result.allocated_paise)+BigInt(result.unallocated_paise)!==BigInt(result.received_paise))return protocol();
+ if(BigInt(result.allocated_paise)+BigInt(result.unallocated_paise)+BigInt(result.returned_paise??0)!==BigInt(result.received_paise))return protocol();
  const ids=new Set<string>(),bookings=new Set<string>();
  for(const a of result.allocations){if(ids.has(a.id)||bookings.has(a.booking_id)||(a.kind==='allocation')!==(a.release_of===null))return protocol();ids.add(a.id);bookings.add(a.booking_id);}
  return result;

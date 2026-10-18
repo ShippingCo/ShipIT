@@ -31,11 +31,12 @@ export async function append(scope:TenantAccess,id:string,key:string,fingerprint
 }
 export async function customer(scope:TenantAccess,id:string){if(!(await scopedQuery(scope,['finance.adjust','finance.statement'],`SELECT id FROM shipit.customers WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');}
 interface Statement {id:string;kind:'account_statement';customer_id:string;from_day:string;to_day:string;as_of:string;rows:SalesRow[];totals:SalesAmounts}
+export async function accountSources(scope:TenantAccess,ids:string[]){return (await scopedQuery(scope,['finance.statement'],`SELECT booking_id FROM shipit.customer_account_bookings WHERE {{franchise:organization_id:franchise_id}} AND booking_id=ANY($1::uuid[]) LIMIT 1`,[ids])).rows.length>0;}
 export async function issue(scope:TenantAccess,key:string,fingerprint:string,s:Statement){
  const c=assertTenantAccess(scope,['finance.adjust','finance.statement']);await scopedQuery(scope,['finance.adjust','finance.statement'],`INSERT INTO shipit.account_statements(id,organization_id,franchise_id,customer_id,actor_id,key_digest,fingerprint,from_day,to_day,snapshot,correlation_id)
  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`,[s.id,c.permittedFranchiseIds[0],s.customer_id,c.actor.id,key,fingerprint,s.from_day,s.to_day,s,c.correlationId,c.organizationId]);
  await scopedQuery(scope,['finance.adjust','finance.statement'],`INSERT INTO shipit.account_statement_lines(organization_id,franchise_id,statement_id,booking_id) SELECT {{organization}},$1,$2,id FROM unnest($3::uuid[]) id WHERE {{franchise:$4:$1}}`,[c.permittedFranchiseIds[0],s.id,s.rows.map(r=>r.id),c.organizationId]);
 }
-export async function statement(scope:TenantAccess,id:string){const r=(await scopedQuery<{snapshot:Statement}>(scope,['reports.capture','finance.adjust','finance.statement'],`SELECT snapshot FROM shipit.account_statements WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[id])).rows[0];if(!r)throw new HttpError('RESOURCE_NOT_FOUND');return r.snapshot;}
+export async function statement(scope:TenantAccess,id:string){const r=(await scopedQuery<{snapshot:Statement}>(scope,['reports.capture','finance.adjust','finance.statement'],`SELECT snapshot FROM shipit.account_statements WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND snapshot->>'kind'='account_statement'`,[id])).rows[0];if(!r)throw new HttpError('RESOURCE_NOT_FOUND');return r.snapshot;}
 
 
