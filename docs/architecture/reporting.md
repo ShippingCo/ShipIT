@@ -148,6 +148,23 @@ timestamp and amounts remain visible. An absent issued receipt is labelled expli
 Zero-tax groups use `0/1`; no-sales results have zero totals and header-only CSV.
 These are application summaries for accountant review, never official tax returns.
 
+The completed #138/#139/#142 producers use these same authoritative payment and
+financial-change rows. Collections include allocated receipt amounts, never unused
+customer advances. A `refund_correction` reduces a previously recorded refund;
+it does not record another transfer. The Sales screen accepts and labels that
+evidence in both saved reports and current booking history.
+
+New sales captures include every issued monthly statement revision containing
+the booking, alongside legacy statement membership. Each booking remains one
+sales row regardless of its document count. The existing private
+`GET /api/v1/finance/statements/:id` evidence link reads either the legacy
+`account_statement` or the monthly `account_statement_v2` document under current
+R11 scope. Monthly documents show their frozen opening/charges/credits/allocated
+payments/refunds/closing equation and separate advances. Issuing monthly documents
+still belongs to Customer accounts; the legacy issue command cannot replace that
+workflow. For another included franchise, switch to that franchise before opening
+its statement. Existing report snapshots and issued documents are not rewritten.
+
 ### Necessary financial producers
 
 All endpoints require the same session, selected organization/franchise, CSRF

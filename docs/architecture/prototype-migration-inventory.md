@@ -1105,3 +1105,5 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 | apps/web/src/test/advance-refunds.test.tsx: requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write | preserve | seam | Issue #142 approved scope: unused-advance return evidence, exact retry identity and finance role controls. No consumers, effects or fingerprints change. |
 
 | apps/web/src/test/ageing.test.tsx: shows separate advances even without matching debt and sends an explicit overdue filter | preserve | reports |
+
+| apps/web/src/test/sales.test.tsx: decodes refund corrections and opens a monthly statement with its frozen balance | preserve | reports | Issue #62: browser transport decodes refund corrections and reconciled monthly statement revisions without inventing another transfer or sale. |

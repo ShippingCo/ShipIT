@@ -1,7 +1,7 @@
 import { assertTenantAccess,scopedQuery,type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import type { changeInput } from './finance-service.ts';
-import type { SalesRow,SalesAmounts } from '@shippingco/shared';
+import type { SalesRow,SalesAmounts,AccountStatement } from '@shippingco/shared';
 import { randomUUID } from 'node:crypto';
 
 export async function access(scope:TenantAccess,id:string,action:'financial.read'|'statement.read'){
@@ -37,6 +37,7 @@ export async function issue(scope:TenantAccess,key:string,fingerprint:string,s:S
  SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$8,$9,$10 WHERE {{franchise:$11:$2}}`,[s.id,c.permittedFranchiseIds[0],s.customer_id,c.actor.id,key,fingerprint,s.from_day,s.to_day,s,c.correlationId,c.organizationId]);
  await scopedQuery(scope,['finance.adjust','finance.statement'],`INSERT INTO shipit.account_statement_lines(organization_id,franchise_id,statement_id,booking_id) SELECT {{organization}},$1,$2,id FROM unnest($3::uuid[]) id WHERE {{franchise:$4:$1}}`,[c.permittedFranchiseIds[0],s.id,s.rows.map(r=>r.id),c.organizationId]);
 }
-export async function statement(scope:TenantAccess,id:string){const r=(await scopedQuery<{snapshot:Statement}>(scope,['reports.capture','finance.adjust','finance.statement'],`SELECT snapshot FROM shipit.account_statements WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND snapshot->>'kind'='account_statement'`,[id])).rows[0];if(!r)throw new HttpError('RESOURCE_NOT_FOUND');return r.snapshot;}
+export async function statementEvidence(scope:TenantAccess,id:string){const r=(await scopedQuery<{snapshot:Statement|AccountStatement}>(scope,['reports.capture','finance.adjust','finance.statement'],`SELECT snapshot FROM shipit.account_statements WHERE {{franchise:organization_id:franchise_id}} AND id=$1 AND snapshot->>'kind' IN ('account_statement','account_statement_v2')`,[id])).rows[0];if(!r)throw new HttpError('RESOURCE_NOT_FOUND');return r.snapshot;}
+export async function statement(scope:TenantAccess,id:string){const s=await statementEvidence(scope,id);if(s.kind!=='account_statement')throw new HttpError('RESOURCE_NOT_FOUND');return s;}
 
 

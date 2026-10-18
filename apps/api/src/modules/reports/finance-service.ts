@@ -57,7 +57,7 @@ export function createFinanceService(database:DatabasePool,workflowWritesEnabled
    });
   },
   async readStatement(session:string,query:unknown,idInput:unknown,correlation:string) {
-   const q=selection(query),id=uuid(idInput,'$');return withReportScope(database,session,q.organizationId,q.franchiseId,false,correlation,async scope=>{const result=await finance.statement(scope,id);await finance.access(scope,id,'statement.read');return result;});
+   const q=selection(query),id=uuid(idInput,'$');return withReportScope(database,session,q.organizationId,q.franchiseId,false,correlation,async scope=>{const result=await finance.statementEvidence(scope,id);await finance.access(scope,id,'statement.read');return result;});
   },
  };
 }

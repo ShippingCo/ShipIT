@@ -102,7 +102,7 @@ await test('concurrent issue, stale preview, lost acknowledgement and current sc
  const results=await Promise.allSettled([s.service.issueAccountStatement(s.local.token,q,key,headers,body,randomUUID()),s.service.issueAccountStatement(s.local.token,q,randomUUID(),headers,body,randomUUID())]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.account_statements')).rows[0]!.n,1);
  const first=(await s.service.statementHistory(s.local.token,s.a.id,q,randomUUID())).items[0]!;
- await assert.rejects(createFinanceService(s.pool).readStatement(s.local.token,q,first.id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ assert.deepEqual(await createFinanceService(s.pool).readStatement(s.local.token,q,first.id,randomUUID()),await s.service.accountStatement(s.local.token,first.id,q,randomUUID()));
  const http=(method:'GET'|'POST',path:string,payload?:unknown,requestHeaders:Record<string,string>=s.headers)=>s.app.inject({method,url:path+'?'+new URLSearchParams(q),headers:{...requestHeaders,'idempotency-key':randomUUID()},cookies:s.cookies(s.local.token),...(payload===undefined?{}:{payload:JSON.stringify(payload)})});
  assert.equal((await http('GET','/api/v1/account-statements/'+first.id)).statusCode,200);
  assert.equal((await http('POST','/api/v1/account-statements/preview',s.period)).statusCode,200);

@@ -1,5 +1,160 @@
 # Issue #62 local verification
 
+## Completion follow-up — 2026-10-18
+
+Clean main was refreshed with `git pull --ff-only origin main` at
+`ad9375b` (PR #180), then branch `issue-62-complete-sales-gst` was created.
+Live #62 remains open in M6 (milestone 7); its blocked wording predates the
+now-closed #139/#142 prerequisites. #21/#30/#61/#137/#138/#139/#141/#142 are
+closed and their producer implementations are in this base. No issue labels or
+states were changed. PR #162 is merged at `3eb0e0`; its head's Engineering checks
+[run 37209432362](https://github.com/ShippingCo/ShipIT/actions/runs/37209432362)
+succeeded. That remote result does not explain the historical local race failure.
+Recovered the original #62 final summary/approved statement boundary and #61
+foundation summary; ADR 0045 remains the financial authority.
+
+The old four-case sales demo passes unchanged on this base. The remaining work
+was integration repair, not another reporting implementation:
+
+- Browser decoders rejected #139's `refund_correction` in reports/current history.
+  They now accept it and distinguish reduction of a refund record from money sent.
+- Sales statement links used a legacy-only reader and renderer; monthly #142
+  documents returned 404. The existing scoped evidence route now reads both
+  document kinds. The browser reuses #142's reconciled document decoder and
+  displays frozen balances, revision/predecessor and separate advances.
+- Membership originally exposed only the first billing document. New captures
+  include every owned revision whose frozen lines contain the booking, while
+  retaining one sales row per booking. Saved snapshots and issued documents stay
+  unchanged. A foreign-franchise statement requires switching to its own scope.
+
+No migration, grants, financial producer, tax policy, payment execution, dependency,
+LLM configuration or mutable balance authority was added. One real-PostgreSQL
+regression covers late monthly shipments, receipt allocation across two bookings,
+separate unused advances, revision links, immutable old snapshots, matching CSV
+sums and sibling/unrelated denial. One browser-transport regression covers refund
+corrections, both current and saved decoding, and monthly statement drill-through.
+The required inventory registers only that new test; other inventory fields are
+unchanged. `demo:sales` now includes the existing #139/#142/payment suites.
+
+Research: PostgreSQL's [JSON operators](https://www.postgresql.org/docs/18/functions-json.html)
+support checking saved line membership without expanding sales rows. The existing
+[single-statement snapshot](https://www.postgresql.org/docs/18/transaction-iso.html)
+keeps tax, payments, corrections and document links on one committed view. This is
+an application design using scoped saved document membership and bounded saved
+payloads; it costs additional reads of issued documents, with no new worker,
+ledger or schema. No new regulatory interpretation is involved.
+
+Before the final SQL compatibility correction, `pnpm db:local demo:sales` passed all 31 cases across five
+files, with no failures/skips/cancellations/todos and successful container cleanup.
+This includes #139's refund-record correction source-to-sales tests, #142's
+three-shipment/partial-payment/cancellation/late-document cases, and the historical
+two-fitting-collections race. Inspection confirms obligation/franchise row locking
+still serializes payment commands; neither current results nor PR #162's green CI
+establish the cause of the old intermittent failure. No race fix is claimed.
+
+Final pinned toolchain, 40 tooling tests, planning/inventory, tenant-query/lint,
+all five typechecks, production API/web builds, and all 54 released migration
+hashes passed. Three focused UI tests pass. The first UI attempt failed because
+its synthetic statement omitted reconciled payment/refund evidence and a valid
+digest; the corrected fixture passes the unchanged #142 decoder. The first expanded
+DB run caught #142's old assertion that monthly documents must be rejected by the
+legacy evidence reader. Detailed isolated diagnostics confirmed that assertion;
+it now checks equality with the canonical monthly document, retaining all scope
+and concurrency assertions. The final 31-case run above passes that updated contract.
+
+`pnpm test` passed 22 testkit tests, 12 DB harness unit tests and 760 API tests,
+then failed one of 362 web cases: the existing six-scenario shipment-cost navigation
+case exceeded its unchanged five-second deadline. All seven navigation cases pass
+alone (affected case 1.643 seconds). This is a failed aggregate, not a quality pass;
+isolated success does not establish its cause. The complete web run with two file
+workers then passed all 362 tests across 40 files, retaining original assertions
+and deadlines (affected case 1.815 seconds). A final default-scheduling run with
+all database/browser services stopped reproduced the same timeout. This host
+exposes 16 execution threads and 15 GiB RAM. The existing web configuration now
+uses Vitest's supported `maxWorkers: 2`, bounding independent DOM environments
+while preserving within-test concurrency, every scenario/assertion, isolation and
+all original deadlines. Host scheduling pressure is the supported inference;
+no navigation business-logic fix is claimed. This small verification correction
+is documented in QUALITY_CHECKS and adds no new harness or test. The normal
+complete `pnpm test` command passed on this final configuration: 22 testkit,
+12 DB harness unit, 760 API, 362 web and three real object-store contract tests. Earlier
+database results remain valid because no backend code changed afterward; the
+only subsequent UI copy edit calls legacy documents “one-off statements.”
+All three real S3-compatible contracts also passed
+and the disposable object-store container was removed.
+
+The first full schema shard failed the populated monthly-statement/settings
+upgrades. Isolated diagnostics reproduced both failures at their pre-upgrade
+sales calls: the new query referenced `account_statements.account_id`, added only
+by migration 54 (and a newer account-booking table). The final query instead uses
+the existing immutable document payload's line membership and original ownership
+columns. Missing `lines` in a legacy payload does not match. No schema detection,
+missing-table fallback, edited migration or weakened fixture is involved. This
+SQL correction invalidated the earlier database result for capture behavior.
+Seven focused sales/upgrade checks passed afterward, followed by all 90 strict
+schema tests across 41 files, with zero failures/skips/cancellations/todos and
+successful disposal. Tenant-query validation passed again. All four API shards
+passed: 146/163/177/101 tests across 20/20/20/19 files, with zero failures, skips,
+cancellations or todos and successful disposal. This is complete strict coverage
+of all 587 API DB tests plus 90 schema tests. Shard 3 includes final Sales,
+payment races, receipts and the 5,001-source contribution case. These final results
+supersede earlier focused capture evidence where relevant. The supported existing
+CI shards were run serially, without deadline changes or overlapping DB suites.
+No single `pnpm db:local quality` aggregate pass is claimed.
+
+Real API/PostgreSQL browser verification used the existing monthly-account fixture:
+capture 2099-01-01, inspect one 13,400-paise sale/500 allocated/12,900 outstanding,
+follow its monthly statement, verify the separate 1,000-paise advance, and reload
+the saved report. Warning/error logs were empty. A 390×844 viewport had document
+width 381, no horizontal overflow. The actual downloaded CSV in the user's
+Downloads directory was inspected: one row, matching snapshot/statement ID,
+gross 13400, collections 500, outstanding 12900. The browser download API call
+took unexpectedly long but did return the actual path and file; no native delivery
+assumption was used. Synthetic date controls were set through accessibility values
+after DOM fill failed to update React state; keyboard activation saved the report.
+Both owned services and the disposable fixture database were stopped; the viewport
+override was reset. No live customer/provider activity occurred.
+
+Reproduce with the pinned toolchain, Docker and existing test grants:
+`pnpm db:local demo:sales`. No new deployment setup is needed. For a manual check,
+start the existing `apps/api/test/ageing-browser-demo.ts` disposable fixture (same
+two-terminal instructions in reporting.md), capture Sales for 2099-01-01, open
+the saved booking evidence and its issued monthly statement, then reload. Expect
+one 13,400-paise sale, 500 allocated, 12,900 outstanding, and the statement's
+separate 1,000-paise advance; the advance must not become sales collections.
+
+Commit message: `fix(reports): integrate sales with monthly financial evidence`
+
+PR title: `Complete sales reporting integration with finance producers (#62)`
+
+PR body: The merged sales register could not load refund-correction rows or
+monthly statement evidence from the completed finance producers. Accept and label
+refund corrections, read both statement formats under current report scope, and
+include later monthly document revisions without multiplying sales. Reuse existing
+snapshots, exact-paise calculations and the canonical monthly document validator.
+Keep the query compatible with populated older schemas. Add source-to-total and
+browser regressions, extend the existing synthetic verification command, and bound
+web test workers after reproducing host scheduling timeouts. No migration or new
+financial authority. Closes #62.
+
+PR validation: normal `pnpm test` passes (760 API, 362 web, 34 harness/unit and
+three real object-store cases). All five strict PostgreSQL shards pass serially:
+90 schema and 587 API DB tests, no failures/skips/cancellations/todos. Real browser
+capture/reload/monthly statement/narrow layout and actual CSV bytes match source
+totals. Final 40 tooling tests, planning/inventory, lint/tenant queries, all five
+typechecks, production API/web builds, whitespace and all 54 released migration
+hashes passed after the worker configuration and copy edits. Existing React
+`act(...)` warnings and expected SDK warnings from rejected/aborted object-store
+streams remain visible; no warnings or assertions were suppressed. No single
+`pnpm db:local quality` aggregate pass or current-head remote CI is claimed.
+The historical payment-race failure remains unexplained; current focused and full
+database tests pass without a claimed race fix. Preserve the documented accountant
+review/no-filing boundary. The subsequent explicit user instruction authorizes
+commit, push, PR publication and merge after the required gates pass. Deployment
+is not authorized.
+
+## Historical implementation evidence — 2026-10-04
+
 Date: 2026-10-04. Branch: `issue-62-sales-gst`. Implementation base:
 `cc7088f355258a753776875dbcee9b9219bb2e3e`, freshly pulled main, #61 PR #161.
 Initial working tree was clean. No commit, push, published PR or deployment was
