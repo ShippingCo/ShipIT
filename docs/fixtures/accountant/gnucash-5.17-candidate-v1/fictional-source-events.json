@@ -1,0 +1,392 @@
+{
+  "mapping_version": "gnucash-5.17-candidate-v1",
+  "qualification": "pending_import_and_accountant_review",
+  "currency": "INR",
+  "sign": "positive debit; negative credit; exact integer paise",
+  "events": [
+    {
+      "id": "SIT-sale-0001-v1",
+      "day": "2026-09-01",
+      "kind": "sale",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "100000"
+        },
+        {
+          "account": "Income:Freight",
+          "paise": "-100000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-receipt-0001-v1",
+      "day": "2026-09-02",
+      "kind": "receipt",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Cash",
+          "paise": "60000"
+        },
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "-60000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-allocation-0001-v1",
+      "day": "2026-09-02",
+      "kind": "allocation",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "60000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-60000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-receipt-0002-v1",
+      "day": "2026-09-03",
+      "kind": "receipt",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:UPI clearing",
+          "paise": "40000"
+        },
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "-40000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-allocation-0002-v1",
+      "day": "2026-09-03",
+      "kind": "allocation",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "40000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-40000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-advance-0003-v1",
+      "day": "2026-09-04",
+      "kind": "receipt",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Cash",
+          "paise": "20000"
+        },
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "-20000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-sale-0002-v1",
+      "day": "2026-09-05",
+      "kind": "sale",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "10000"
+        },
+        {
+          "account": "Income:Freight",
+          "paise": "-10000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-receipt-0004-v1",
+      "day": "2026-09-05",
+      "kind": "receipt",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Cash",
+          "paise": "210000"
+        },
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "-210000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-allocation-0004-v1",
+      "day": "2026-09-05",
+      "kind": "allocation",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "10000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-10000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-cod-0001-v1",
+      "day": "2026-09-05",
+      "kind": "cod_reservation",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "200000"
+        },
+        {
+          "account": "Liabilities:Seller COD",
+          "paise": "-200000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-sale-0003-v1",
+      "day": "2026-09-06",
+      "kind": "sale",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "105000"
+        },
+        {
+          "account": "Income:Freight",
+          "paise": "-100000"
+        },
+        {
+          "account": "Liabilities:CGST",
+          "paise": "-2500"
+        },
+        {
+          "account": "Liabilities:SGST",
+          "paise": "-2500"
+        }
+      ]
+    },
+    {
+      "id": "SIT-receipt-0005-v1",
+      "day": "2026-09-06",
+      "kind": "receipt",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Card clearing",
+          "paise": "105000"
+        },
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "-105000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-allocation-0005-v1",
+      "day": "2026-09-06",
+      "kind": "allocation",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "105000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-105000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-expense-0001-v1",
+      "day": "2026-09-07",
+      "kind": "expense",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Expenses:Processor fees",
+          "paise": "10000"
+        },
+        {
+          "account": "Assets:Card clearing",
+          "paise": "-10000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-transfer-0001-v1",
+      "day": "2026-09-07",
+      "kind": "actual_transfer",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Bank",
+          "paise": "95000"
+        },
+        {
+          "account": "Assets:Card clearing",
+          "paise": "-95000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-advance-return-0001-v1",
+      "day": "2026-09-08",
+      "kind": "advance_return",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Customer advances",
+          "paise": "5000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-5000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-cod-remittance-0001-v1",
+      "day": "2026-09-09",
+      "kind": "cod_remittance",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Seller COD",
+          "paise": "50000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-50000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-agent-advance-0001-v1",
+      "day": "2026-09-10",
+      "kind": "agent_advance",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Assets:Agent advances",
+          "paise": "10000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-10000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-agent-expense-0001-v1",
+      "day": "2026-09-11",
+      "kind": "agent_expense",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Expenses:Agent fees",
+          "paise": "12000"
+        },
+        {
+          "account": "Assets:Agent advances",
+          "paise": "-5000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-3000"
+        },
+        {
+          "account": "Liabilities:Agent fees payable",
+          "paise": "-4000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-agent-payment-0001-v1",
+      "day": "2026-09-12",
+      "kind": "agent_payment",
+      "correction_of": null,
+      "splits": [
+        {
+          "account": "Liabilities:Agent fees payable",
+          "paise": "4000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-4000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-adjustment-0001-v1",
+      "day": "2026-09-20",
+      "kind": "charge_reduction",
+      "correction_of": "SIT-sale-0001-v1",
+      "splits": [
+        {
+          "account": "Income:Freight",
+          "paise": "10000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-10000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-refund-0001-v1",
+      "day": "2026-09-21",
+      "kind": "refund",
+      "correction_of": "SIT-sale-0001-v1",
+      "splits": [
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "8000"
+        },
+        {
+          "account": "Assets:Cash",
+          "paise": "-8000"
+        }
+      ]
+    },
+    {
+      "id": "SIT-refund-correction-0001-v1",
+      "day": "2026-09-22",
+      "kind": "refund_correction",
+      "correction_of": "SIT-refund-0001-v1",
+      "splits": [
+        {
+          "account": "Assets:Cash",
+          "paise": "1000"
+        },
+        {
+          "account": "Assets:Customer receivables",
+          "paise": "-1000"
+        }
+      ]
+    }
+  ]
+}

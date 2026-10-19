@@ -930,3 +930,10 @@ aggregate failures are hidden or relabelled as passes. A separate `pnpm build`
 passed (API type build and Vite production bundle; web bundle 14.02s). Current-head
 CI results must be recorded before merge. Existing web tests emit
 React act/router warnings; the S3 negative-stream case emits an expected SDK warning.
+
+## Accountant register (#150)
+
+The [generic accountant bundle and API contract](accountant-exports.md) adds a private,
+versioned register over existing financial owners, with independent controls and
+saved-source drill-through. The [GnuCash candidate](accountant-target-proposal.md)
+is not qualified; actual import and genuine accountant review remain separate gates.

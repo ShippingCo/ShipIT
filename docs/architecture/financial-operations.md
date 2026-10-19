@@ -2305,3 +2305,12 @@ franchise. It never becomes a prerequisite for recording operational money.
 ## #142 monthly account statements
 
 [Statement ownership, equations, API, private exports and operator runbook](account-statements.md) extend the approved statement policy using existing obligations, account terms and #138 allocation. No new sale or debt is created.
+
+## Accountant export handoff (#150)
+
+Use the [accountant register runbook](accountant-exports.md) for generic CSV evidence,
+source equations, correction identities, privacy and recovery. R11/E03 apply without
+new money-write powers. The [fictional GnuCash review pack](../fixtures/accountant/gnucash-5.17-candidate-v1/README.md)
+contains proposed mappings and expected results; it is not accountant approval or
+proof of target compatibility. Statements, receipts and adjustments retain their
+original document qualification. Manual matching never creates a financial event.

@@ -679,3 +679,8 @@ notification link grants no access. Worker scope discovery is restricted by the 
 gate to its code-owned worker. The reservation commit is the send-time authorization
 point; an unknown provider outcome cannot be redriven as an ordinary retry.
 See [definitions and rollout](reporting.md#scheduled-owner-summaries-and-overdue-alerts-149).
+
+The #150 [accountant register](accountant-exports.md) consumes existing R11 reads and
+E03 exports. Technical capture does not grant financial mutation. Every selected
+franchise is reauthorized, including saved-artifact reads, exact replay and downloads;
+org-admin preview alone never confers E03. Artifacts remain actor-owned.

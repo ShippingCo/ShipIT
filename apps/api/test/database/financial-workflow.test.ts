@@ -232,6 +232,10 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
   const captureAgeing=()=>{const k=randomUUID();return ageing.create(s.local.token,q,k,['idempotency-key',k],{balances:'all'},randomUUID());};
   const frozenSales=await captureSales(),frozenAgeing=await captureAgeing();
   assert.equal(frozenSales.rows.find(r=>r.id===booking)!.amounts.refunds,'50000');assert.equal(frozenAgeing.rows.find(r=>r.id===booking)!.refunds,'50000');
+  await s.db.prepareAgentMoney();await s.db.prepareReconciliation();
+  const {createAccountantService}=await import('../../src/modules/reports/accountant-service.ts');
+  const accountantRegister=createAccountantService(s.pool),accountantFilter={from_day:confirmed,to_day:confirmed};
+  const originalRegister=await accountantRegister.create(s.local.token,q,randomUUID(),['idempotency-key','synthetic'],accountantFilter,randomUUID());
   // Correct a fictional erroneous refund record without recording another transfer.
   const originalRefund=(await owner.query("SELECT * FROM shipit.financial_changes WHERE booking_id=$1 AND version=2",[booking])).rows[0]!;
   const correctionBody={booking_id:booking,expected_version:3,payment_version:1,kind:'refund_correction',reason:'incorrect_refund_recording',refund:10000,refund_correction_of:originalRefund.id};
@@ -243,6 +247,12 @@ for(const paid of [false,true])await test(`approved 500 ${paid?'paid':'unpaid'} 
   assert.equal(correctionDetail.before.held,'0');assert.equal(correctionDetail.proposed.held,'10000');assert.equal(correctionDetail.proposed.refundable_credit,'10000');
   const correctionKey=randomUUID(),correctionApplied=await apply(corrected,{expected_version:1},correctionKey);
   assert.deepEqual(await apply(corrected,{expected_version:1},correctionKey,s.local.token,disabled),correctionApplied);
+  const correctedRegister=await accountantRegister.create(s.local.token,q,randomUUID(),['idempotency-key','synthetic'],accountantFilter,randomUUID());
+  const refundRows=correctedRegister.rows.filter(r=>r.family==='refunds');
+  assert.equal(refundRows.reduce((n,r)=>n+BigInt(r.fields.refunded_paise!),0n),40000n);
+  assert.ok(refundRows.some(r=>r.fields.kind==='refund_correction'&&r.fields.refunded_paise==='-10000'&&r.fields.correction_of===originalRefund.id&&r.fields.verification==='correction:not_new_transfer'));
+  assert.deepEqual(correctedRegister.rows.filter(r=>r.family==='sales'),originalRegister.rows.filter(r=>r.family==='sales'));
+  assert.deepEqual(await accountantRegister.read(s.local.token,originalRegister.snapshot.id,q,randomUUID()),originalRegister);
   const position=await current();assert.equal(position.refunds,'40000');assert.equal(position.collections,'50000');assert.equal(BigInt(position.collections)-BigInt(position.refunds)-BigInt(position.gross),10000n);
   const operatorContext=await disabled.proposalContext(s.operator.token,q,booking,randomUUID());assert.equal(operatorContext.position.refundable_credit,'10000');assert.equal(operatorContext.expected_version,4);assert.equal(operatorContext.payment_version,1);
   assert.deepEqual(operatorContext.refund_targets.find(r=>r.id===originalRefund.id),{id:originalRefund.id,original_paise:'20000',remaining_paise:'10000'});
