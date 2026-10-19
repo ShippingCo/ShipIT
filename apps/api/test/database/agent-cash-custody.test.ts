@@ -158,7 +158,10 @@ await test('durable cash captures are server-derived, immutable, private and rep
 
 await test('combined cash and finance source limit rejects a real oversized capture atomically without truncation',{timeout:60000},async t=>{
  const s=await setupAgentMoney(t),{createAgentCashCaptureService}=await import('../../src/modules/agent-settlements/cash-capture-service.ts'),captures=createAgentCashCaptureService(s.pool,true),occurredAt=new Date().toISOString();
- for(let offset=0;offset<1670;offset+=25){await Promise.all(Array.from({length:Math.min(25,1670-offset)},async()=>{const key=randomUUID();return s.receipts.record(s.local.token,q,key,headers(key),{...s.receiptBody,amount_paise:1,allocations:[],occurred_at:occurredAt},randomUUID());}));}
+ // The fixture pool has three connections and a one-second acquisition deadline.
+ // More queued seed commands add no concurrency at the database and can exhaust
+ // acquisition time on CI. Preserve all 1,670 real writes and the existing deadline.
+ for(let offset=0;offset<1670;offset+=3){await Promise.all(Array.from({length:Math.min(3,1670-offset)},async()=>{const key=randomUUID();return s.receipts.record(s.local.token,q,key,headers(key),{...s.receiptBody,amount_paise:1,allocations:[],occurred_at:occurredAt},randomUUID());}));}
  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipts')).rows[0]!.n,1671);
  const count=new Date().toISOString(),day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(count)),key=randomUUID(),body={agent_id:s.agent.id,day,counted_at:count,counted_paise:211670,reason:'Synthetic full source limit boundary'},version=(await s.position()).source_version;
  await assert.rejects(captures.capture(s.agent.token,q,key,headers(key),body,randomUUID()),{code:'REPORT_LIMIT_EXCEEDED'});
