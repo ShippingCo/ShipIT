@@ -34,7 +34,7 @@ separate unmet requirements.** No compatibility claim or issue closure follows f
 | UI | Current Reports navigation; API-backed capture/preview/download, exact retry, reload, source focus and permission-loss clearing | Six controlled React/jsdom/archive tests passed; real desktop/narrow-screen inspection pending unavailable desktop control |
 | Persistence/grants | Existing JSON artifact schema; new consumer gets SELECT on refund evidence, no money write grant; no migration | Restricted-runtime PostgreSQL scenarios; all 55 released migration files unchanged |
 | Rollout/rollback | Compatible API before UI; remove entry points on rollback; retain source history/artifacts; no qualified mapping enabled | Documented |
-| Final CI/review/merge | Exact PR-head CI and independent review | Pending PR publication/checks; no merge authorized while required evidence missing |
+| Final CI/review/merge | Exact PR-head CI and independent review | Draft [PR #184](https://github.com/ShippingCo/ShipIT/pull/184); exact-head checks/review tracked there; no merge while required evidence missing |
 
 ## Reproducible checks and observations
 
@@ -47,9 +47,9 @@ all new API/database/web tests; no external bank/provider or customer messaging 
   15/15 passed before the final quota/maximum-row additions. Subsequent accountant
   run passed all seven then-present cases, including quota and exact control drill-through.
 - `pnpm --filter @shippingco/api exec vitest run test/integration/accountant.test.ts`:
-  initial six unit cases passed; deterministic review-pack check subsequently added.
+  all seven cases passed, including deterministic review-pack verification.
 - `pnpm --filter @shippingco/web exec vitest run src/test/accountant.test.tsx`:
-  six cases passed, including independent archive header/checksum/UTF-8 checks.
+  six cases passed, including independent archive header/checksum/UTF-8 checks and 100-row control pagination. The full web suite passed 375 cases.
 - `pnpm lint` and `pnpm typecheck`: passed on implementation iterations; full final
   run required below. `pnpm check:migrations`: passed, 55 released files unchanged.
 - `node scripts/generate-accountant-review-pack.mjs --check`: exact fictional files,
@@ -62,6 +62,5 @@ all new API/database/web tests; no external bank/provider or customer messaging 
   consumer now uses serializable capture and one same-key retry. The race/quota tests
   pass without altering ledger source balances or weakening constraints.
 
-Final full quality/remote checks are recorded in the PR and appended here after they
-finish. Logs remain ignored locally, not public fixture evidence. No later issue,
+Final full quality/remote checks are recorded against the exact head in [PR #184](https://github.com/ShippingCo/ShipIT/pull/184). The local full run has passed 774 API cases and the 91-case schema group; its complete API database group is still running at this documentation checkpoint. Logs remain ignored locally, not public fixture evidence. No later issue,
 redesign, deployment, M7 or M8 work was started. #150 stays open.
