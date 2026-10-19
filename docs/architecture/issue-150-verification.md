@@ -30,7 +30,7 @@ separate unmet requirements.** No compatibility claim or issue closure follows f
 | Known document types and provenance | Booking/payment receipts, statement revisions, shipment/docket links and unqualified external links; no invented statutory invoice/credit-note number | Implemented; statement/receipt/adjustment tests |
 | Capture/time and original evidence | Serializable MVCC, exact microsecond cutoff/expiry; opening/period occurrence distinctions; late changes appear only in new captures | Implemented; repeat/correction/expiry tests |
 | Optional reconciliation | Disabled/unavailable states; recorded matches, source versions and batch gross/fee lineage retained even after disable | Focused PostgreSQL case passed |
-| Limits | 31 days, 5000 combined rows, 8 MiB files/saved payload, 100-row pages, 20 captures, 24 hours; fail before partial save | Unit bounds, quota/expiry cases; maximum-row case included in full suite |
+| Limits | 31 days, 5000 combined rows, 8 MiB files/saved payload, 100-row pages, 20 captures, 24 hours; fail before partial save | Unit bounds, quota/expiry cases; 5,000-row boundary/overflow and both concurrent quota cases passed |
 | UI | Current Reports navigation; API-backed capture/preview/download, exact retry, reload, source focus and permission-loss clearing | Six controlled React/jsdom/archive tests passed; real desktop/narrow-screen inspection pending unavailable desktop control |
 | Persistence/grants | Existing JSON artifact schema; new consumer gets SELECT on refund evidence, no money write grant; no migration | Restricted-runtime PostgreSQL scenarios; all 55 released migration files unchanged |
 | Rollout/rollback | Compatible API before UI; remove entry points on rollback; retain source history/artifacts; no qualified mapping enabled | Documented |
@@ -44,8 +44,9 @@ all new API/database/web tests; no external bank/provider or customer messaging 
 - `pnpm check:toolchain`: passed Node 22.23.2, pnpm 10.34.5, Python 3.12.14.
 - `pnpm install --frozen-lockfile --ignore-scripts`: passed; lockfile unchanged.
 - Focused PostgreSQL run of accountant, agent-money-sources and financial-workflow:
-  15/15 passed before the final quota/maximum-row additions. Subsequent accountant
-  run passed all seven then-present cases, including quota and exact control drill-through.
+  22/22 passed after the final fixes, including all nine accountant cases and the
+  existing report, agent-money and financial-workflow consumers. This covers the
+  exact 5,000-row boundary, overflow rollback and cross-consumer quota race.
 - `pnpm --filter @shippingco/api exec vitest run test/integration/accountant.test.ts`:
   all seven cases passed, including deterministic review-pack verification.
 - `pnpm --filter @shippingco/web exec vitest run src/test/accountant.test.tsx`:
@@ -59,8 +60,15 @@ all new API/database/web tests; no external bank/provider or customer messaging 
   authority/routes/fingerprints remain unchanged. One bounded download cleanup timer
   was also classified. Planning then passed 326 declarations and 17 negative controls.
 - A focused race exposed stale replay/quota reads under repeatable read; the new
-  consumer now uses serializable capture and one same-key retry. The race/quota tests
-  pass without altering ledger source balances or weakening constraints.
+  consumer uses serializable capture and one same-key retry. A deterministic mixed
+  read-committed/report race showed this alone was insufficient. The shared report
+  lock now advances the PostgreSQL tuple version with `version=version`, forcing a
+  stale capture to restart. The test proves a maximum of 20 artifacts and unchanged
+  franchise values; no financial source or constraint is altered.
+- Final-head CI caught an incorrect receipt custody column in the late attribution
+  addition. It now reads the immutable `initial_custodian_id`, with real-PG assertions
+  for agent and operator receipts. Focused tests pass after the correction; the
+  superseded failing CI run is not counted as final verification.
 
-Final full quality/remote checks are recorded against the exact head in [PR #184](https://github.com/ShippingCo/ShipIT/pull/184). The local full run has passed 774 API cases and the 91-case schema group; its complete API database group is still running at this documentation checkpoint. Logs remain ignored locally, not public fixture evidence. No later issue,
+Final full quality/remote checks are recorded against the exact head in [PR #184](https://github.com/ShippingCo/ShipIT/pull/184). The superseded local full run passed 774 API cases and the 91-case schema group; final full verification after the custody/quota fixes is tracked in the PR. Logs remain ignored locally, not public fixture evidence. No later issue,
 redesign, deployment, M7 or M8 work was started. #150 stays open.

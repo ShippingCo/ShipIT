@@ -32,7 +32,7 @@ export const accountantColumns = {
     "customer_id",
     "method",
     "receiver_id",
-    "custodian_id",
+    "initial_custodian_id",
     "received_paise",
     "account_id",
     "account_revision_id",

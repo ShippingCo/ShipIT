@@ -36,7 +36,7 @@ export async function captureAccountant(scope:TenantAccess,filter:AccountantFilt
  r.customer_id::text AS customer_id,
  r.method AS method,
  r.receiver_id::text AS receiver_id,
- r.custodian_id::text AS custodian_id,
+ r.initial_custodian_id::text AS initial_custodian_id,
  r.amount_paise::text AS received_paise,
  r.account_id::text AS account_id,
  r.account_revision_id::text AS account_revision_id,

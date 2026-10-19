@@ -94,8 +94,10 @@ unrelated daylight-saving rules cannot shorten or extend a Kolkata day.
 
 `accountant_register_v1` uses a serializable source snapshot across independent
 source/control queries, plus one exact-key transaction retry and a fresh membership
-check before responding. Serializable conflict handling also protects the active
-capture quota; a waiting transaction must not use stale quota or replay observations.
+check before responding. The shared report lock performs a no-op franchise version
+update, preserving every domain value while advancing PostgreSQL's tuple version.
+This fences stale quota/replay observations across read-committed and repeatable-read
+consumers too; a row lock or serializable accountant transaction alone is insufficient.
 Its cutoff/expiry preserve database microseconds. The [accountant contract](../architecture/accountant-exports.md)
 defines combined row/file bounds, opening history, period positions and selected
 private references. Existing definitions and stored snapshots are unchanged.

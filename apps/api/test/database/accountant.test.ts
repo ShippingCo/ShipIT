@@ -5,6 +5,7 @@ import {paymentSetup,collectionInput,paymentFault} from '../payment-support.ts';
 import {org,A,B,C,otherOrg} from '../audit-support.ts';
 import {createAccountantService} from '../../src/modules/reports/accountant-service.ts';
 import type {AccountantPage,AccountantExport} from '@shippingco/shared';
+import type {DatabasePool} from '@shippingco/db';
 const q={organization_id:org,franchise_id:A},headers=['idempotency-key','synthetic'];
 async function setup(t:Parameters<typeof paymentSetup>[0]) {
  const s=await paymentSetup(t,100000);await s.db.prepareReports();await s.db.prepareMoneyReceipts();await s.db.prepareAgentMoney();await s.db.prepareReconciliation();
@@ -56,7 +57,7 @@ await test('accountant COD, advance, cash handover, UPI/card and expense familie
  const capture=await service.create(s.local.token,q,randomUUID(),headers,filter,randomUUID());
  const all=async(id:string)=>{const rows=[];let offset:number|null=0;while(offset!==null){const p=await service.read(s.local.token,id,{...q,offset:String(offset)},randomUUID()) as AccountantPage;rows.push(...p.rows);offset=p.next_offset;}return rows;};
  const before=await all(capture.snapshot.id),sum=(family:string,column:string,rows=before)=>rows.filter(r=>r.family===family).reduce((n,r)=>n+BigInt(r.fields[column]??0),0n);
- assert.equal(sum('receipts','received_paise'),740000n);assert.equal(sum('allocations','allocated_paise'),10000n);assert.equal(sum('cod_reservations','reserved_paise'),200000n);assert.equal(sum('sales','gross_paise'),50000n);
+ assert.equal(sum('receipts','received_paise'),740000n);assert.ok(before.filter(r=>r.family==='receipts').every(r=>r.fields.receiver_id===(r.fields.method==='cash'?s.agent.id:s.operator.id)&&r.fields.initial_custodian_id===r.fields.receiver_id));assert.equal(sum('allocations','allocated_paise'),10000n);assert.equal(sum('cod_reservations','reserved_paise'),200000n);assert.equal(sum('sales','gross_paise'),50000n);
  assert.equal(before.filter(r=>r.family==='advance_positions'&&r.fields.position==='closing').reduce((n,r)=>n+BigInt(r.fields.unallocated_paise!),0n),530000n);
  assert.equal(before.find(r=>r.family==='cod_positions'&&r.fields.position==='closing')?.fields.remaining_paise,'200000');
  assert.ok(!JSON.stringify(before).includes('SYNTHETIC_FORMULA'));assert.equal(capture.snapshot.reconciliation_state,'disabled');
@@ -161,4 +162,25 @@ await test('combined register row bound and saved pagination reject overflow wit
  const date=new Date(s.filter.to_day+'T00:00:00Z');date.setUTCDate(date.getUTCDate()+1);const day=date.toISOString().slice(0,10);
  const oversized=await s.call('POST','',{from_day:day,to_day:day});assert.equal(oversized.statusCode,413,oversized.body);assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.report_snapshots')).rows[0]!.n,1);
  const bundle=await s.service.read(s.local.token,p.snapshot.id,q,randomUUID(),true) as AccountantExport;assert.equal(bundle.files.find(f=>f.name==='sales.csv')!.csv.split('\r\n').length,2501);
+});
+
+await test('a stale accountant capture cannot exceed the shared quota after an existing report commits',{timeout:60000},async t=>{
+ const s=await setup(t),empty={from_day:'2000-01-01',to_day:'2000-01-01'},tenancy=(await s.db.adminQuery('SELECT * FROM shipit.franchises ORDER BY id')).rows;
+ for(let i=0;i<19;i++){const r=await s.call('POST','',empty);assert.equal(r.statusCode,200,r.body);}
+ let reached!:()=>void,resume!:()=>void,armed=true;
+ const ready=new Promise<void>(resolve=>{reached=resolve;}),released=new Promise<void>(resolve=>{resume=resolve;});
+ const gated:DatabasePool={...s.pool,async connect(){const client=await s.pool.connect();return {release:discard=>client.release(discard),async query<Row extends Record<string,unknown>>(sql:string,params?:readonly unknown[]){
+  const result=await client.query<Row>(sql,params);
+  if(armed&&sql.includes('SELECT statement_timestamp() cutoff')){armed=false;reached();await released;}
+  return result;
+ }};}};
+ const contender=createAccountantService(gated).create(s.local.token,q,randomUUID(),headers,empty,randomUUID());
+ const rejected=assert.rejects(contender,{code:'REPORT_QUOTA_EXCEEDED'});
+ await ready;
+ try{
+  const {createReportService}=await import('../../src/modules/reports/service.ts');
+  await createReportService(s.pool).create(s.local.token,q,randomUUID(),headers,empty,randomUUID());
+ }finally{resume();}
+ await rejected;assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.report_snapshots')).rows[0]!.n,20);
+ assert.deepEqual((await s.db.adminQuery('SELECT * FROM shipit.franchises ORDER BY id')).rows,tenancy);
 });

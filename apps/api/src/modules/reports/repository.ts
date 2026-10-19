@@ -6,8 +6,12 @@ import { utcRange } from './rules.ts';
 const actions=['reports.capture'] as const;
 export interface SavedReport<M=ReportSnapshot,R=ReportRow> { id:string; fingerprint:string; metadata:M; rows:R[]; expired:boolean }
 export async function lock(scope:TenantAccess) {
-  // Same lock order as monetary commands; bounds concurrent capture/quota checks per franchise.
-  const result=await scopedQuery(scope,['reports.capture'],`SELECT id FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`);
+  // Same lock order as monetary commands. A row lock alone does not invalidate an
+  // older repeatable-read/serializable snapshot when another report saved meanwhile.
+  // This no-op update advances PostgreSQL's tuple version for every report writer,
+  // forcing stale captures to restart before replay/quota reads. No domain value,
+  // lifecycle, application version or financial source is changed.
+  const result=await scopedQuery(scope,['reports.capture'],`UPDATE shipit.franchises SET version=version WHERE {{franchise:organization_id:id}} RETURNING id`);
   if(!result.rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
   const c=assertTenantAccess(scope,actions);
   await scopedQuery(scope,['reports.capture'],`UPDATE shipit.report_snapshots SET metadata=NULL,rows=NULL

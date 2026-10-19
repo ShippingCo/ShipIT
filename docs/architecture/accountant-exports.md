@@ -112,7 +112,12 @@ position rows, 100 preview rows/page, 8 MiB combined files/archive and saved pay
 20 active actor captures and 24-hour expiry. Receiving-account reconciliation capture
 is additionally bounded to 50 accounts. Existing database statement/lock timeouts
 apply. No partial bundle is saved on overflow, failed control, audit failure or
-transaction failure. Serializable retry protects the active-capture quota under race.
+transaction failure. All consumers of the shared report store serialize replay/quota
+checks using the existing franchise lock order and a no-op `version=version` update.
+The PostgreSQL tuple change forces a stale repeatable-read/serializable capture to
+restart even when the competing report used read committed; a row lock alone does
+not provide this guarantee. Franchise values, application versions and financial
+sources remain unchanged. The accountant consumer retries once with the same key.
 
 Earlier supporting history counts toward the bound. A shorter period may not resolve
 an oversized opening history. Reduce scope where meaningful; if a single franchise's
@@ -135,7 +140,8 @@ migrations through #146 and their runtime SELECT grants are prerequisites. In
 particular the report reader needs SELECT on `financial_refund_evidence` as well as
 the receipt, booking/document, cashbook, agent/COD and reconciliation source tables
 and views it reads. It retains the existing narrow report snapshot INSERT, audit
-INSERT and expiry payload-clearing privileges; no new source write privilege is
+INSERT and expiry payload-clearing privileges, plus existing franchise UPDATE(version)
+for the shared no-op serialization fence; no new financial source write privilege is
 needed. Fresh/populated DB tests use the restricted runtime role, not owner reads.
 
 Deploy the compatible API before the web entry point. Rollback removes the register
