@@ -1,0 +1,32 @@
+{
+  "status": "expected_only_no_target_results",
+  "initial_transactions": 20,
+  "initial_splits": 44,
+  "correction_transactions": 3,
+  "correction_splits": 6,
+  "source_totals_paise": {
+    "original_sales_gross": "215000",
+    "original_freight": "210000",
+    "cgst": "2500",
+    "sgst": "2500",
+    "igst": "0",
+    "actual_receipts": "435000",
+    "allocations": "215000",
+    "cod_reserved": "200000",
+    "cod_remitted": "50000",
+    "advance_returned": "5000",
+    "ordinary_expense": "10000",
+    "agent_expense": "12000",
+    "agent_advance": "10000",
+    "agent_advance_applied": "5000",
+    "agent_fee_cash_paid": "7000",
+    "charge_reduction": "10000",
+    "original_refund": "8000",
+    "refund_correction": "-1000",
+    "net_refund": "7000"
+  },
+  "initial_debits_paise": "1251000",
+  "correction_debits_paise": "19000",
+  "repeat_expected_new_events": 0,
+  "after_corrections_transactions": 23
+}

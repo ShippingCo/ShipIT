@@ -89,3 +89,13 @@ reports. [The reporting guide](../architecture/reporting.md#owner-daily-dashboar
 defines these equations and per-period effective cutoffs. Kolkata midnight is
 converted explicitly; duration arithmetic uses 24 hours so a database session's
 unrelated daylight-saving rules cannot shorten or extend a Kolkata day.
+
+### Accountant consumer (#150)
+
+`accountant_register_v1` uses a serializable source snapshot across independent
+source/control queries, plus one exact-key transaction retry and a fresh membership
+check before responding. Serializable conflict handling also protects the active
+capture quota; a waiting transaction must not use stale quota or replay observations.
+Its cutoff/expiry preserve database microseconds. The [accountant contract](../architecture/accountant-exports.md)
+defines combined row/file bounds, opening history, period positions and selected
+private references. Existing definitions and stored snapshots are unchanged.

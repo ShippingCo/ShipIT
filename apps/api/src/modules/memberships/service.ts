@@ -643,9 +643,9 @@ export async function withFinancialScope<T>(database:DatabasePool,token:string,o
 
 /** Report evidence uses R11 financial reads and E03 exports; technical capture grants no money mutation. */
 export async function withReportScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
-  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,captureCutoff?:string)=>Promise<T>,franchiseIds:readonly string[]=[franchiseId],consistent=false):Promise<T> {
+  exporting:boolean,correlationId:string,work:(scope:import('../security/scope.ts').TenantAccess,captureCutoff?:string)=>Promise<T>,franchiseIds:readonly string[]=[franchiseId],consistent:boolean|'microseconds'=false):Promise<T> {
   return membershipTransaction(database,async tx=>{
-    const captureCutoff=consistent?await authorityRepository.beginReportCapture(tx):undefined;
+    const captureCutoff=consistent?await authorityRepository.beginReportCapture(tx,consistent==='microseconds'):undefined;
     const session=await authenticated(tx,token);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
     if(!await authorityRepository.lockOrganization(tx,organizationId))throw new HttpError('RESOURCE_NOT_FOUND');

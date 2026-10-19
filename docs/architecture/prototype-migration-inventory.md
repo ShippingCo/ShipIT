@@ -1137,3 +1137,18 @@ The only new timer revokes a temporary CSV object URL after an explicit authoriz
 | apps/web/src/test/owner-summaries.test.tsx: preserves the exact uncertain command and form until an explicit retry confirms it | preserve | reports |
 | apps/web/src/test/owner-summaries.test.tsx: loads the exact saved report, displays source states and limits response data to public fields | preserve | reports |
 | apps/web/src/test/owner-summaries.test.tsx: shows permission failures and supports loading retry without a local-data fallback | preserve | reports |
+
+## Accountant register regressions (#150)
+
+Six new controlled-transport/archive tests; existing prototype authority, effects, routes and dependency fingerprints are unchanged.
+
+| Declaration | Disposition | Group | Reason |
+| --- | --- | --- | --- |
+| apps/web/src/test/accountant.test.tsx: captures with keyboard form, downloads matching artifact, and reloads saved filters | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+| apps/web/src/test/accountant.test.tsx: retries the exact uncertain intent while preserving disabled inputs and read-only export | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+| apps/web/src/test/accountant.test.tsx: opens exact saved source evidence with focus and clears private data after access loss | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+| apps/web/src/test/accountant.test.tsx: ignores a late capture result after the register unmounts | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+| apps/web/src/test/accountant.test.tsx: creates a readable USTAR archive with UTF-8 CSV content and valid checksum | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+| apps/web/src/test/accountant.test.tsx: rejects traversal and oversized archives | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
+
+The accountant download delays Blob URL release by one second so the browser can consume the file. This bounded timeout has no financial or persistence authority.

@@ -505,3 +505,11 @@ allowing current franchise administrators to opt in individual franchises. Reads
 and committed exact-key recovery remain available after disabling; all ordinary
 money operations remain independent. See [manual reconciliation](../../docs/architecture/manual-reconciliation.md)
 for endpoint contracts, private CSV grammar, amounts, audit, expiry and recovery.
+
+### Accountant register
+
+`POST /api/v1/reports/accountant`, `GET /api/v1/reports/accountant/:id` and
+`GET /api/v1/reports/accountant/:id/export` use R11/E03, actor-owned expiring report
+artifacts and current scope checks. See the [complete contract and runtime source
+grant requirements](../../docs/architecture/accountant-exports.md). Only generic
+CSV v1 is enabled. Target mappings await actual import evidence and accountant review.

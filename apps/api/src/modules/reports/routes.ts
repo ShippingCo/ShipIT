@@ -1,3 +1,4 @@
+import {createAccountantService} from './accountant-service.ts';
 import type {DatabasePool} from '@shippingco/db';
 import {createDailyService} from './daily-service.ts';
 import type {createEffectivenessService} from './effectiveness-service.ts';
@@ -57,4 +58,11 @@ export function registerDaily(app:FastifyInstance,database:DatabasePool,secure:b
  app.post('/api/v1/reports/daily',(request,reply)=>{reply.header('Cache-Control','no-store');return service.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id);});
  app.get<{Params:{id:string}}>('/api/v1/reports/daily/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id);});
  app.get<{Params:{id:string}}>('/api/v1/reports/daily/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id,true);});
+}
+
+export function registerAccountant(app:FastifyInstance,database:DatabasePool,secure:boolean) {
+ const service=createAccountantService(database),session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+ app.post('/api/v1/reports/accountant',(request,reply)=>{reply.header('Cache-Control','no-store');return service.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id);});
+ app.get<{Params:{id:string}}>('/api/v1/reports/accountant/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id);});
+ app.get<{Params:{id:string}}>('/api/v1/reports/accountant/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id,true);});
 }

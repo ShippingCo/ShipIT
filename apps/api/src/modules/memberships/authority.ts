@@ -3,9 +3,10 @@ import type { Invitation, InvitationState, Membership, MembershipLifecycle, Role
 import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 
-export async function beginReportCapture(tx:TransactionExecutor) {
- assertActiveTransaction(tx);await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
- return (await tx.query<{cutoff:Date}>('SELECT statement_timestamp() cutoff')).rows[0]!.cutoff.toISOString();
+export async function beginReportCapture(tx:TransactionExecutor,precise=false) {
+ assertActiveTransaction(tx);await tx.query(precise?'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE':'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+ const value=(await tx.query<{cutoff:Date;precise:string}>(`SELECT statement_timestamp() cutoff,to_char(statement_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') precise`)).rows[0]!;
+ return precise?value.precise:value.cutoff.toISOString();
 }
 
 // Organization-wide occupancy is a conflict fact, never permission to load the

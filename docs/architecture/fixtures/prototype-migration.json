@@ -940,6 +940,36 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "captures with keyboard form, downloads matching artifact, and reloads saved filters",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "retries the exact uncertain intent while preserving disabled inputs and read-only export",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "opens exact saved source evidence with focus and clears private data after access loss",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "ignores a late capture result after the register unmounts",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "creates a readable USTAR archive with UTF-8 CSV content and valid checksum",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/accountant.test.tsx",
+        "name": "rejects traversal and oversized archives",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/advance-refunds.test.tsx",
         "name": "requires independent review and actual evidence, retaining an uncertain return exactly; finance readers cannot write",
         "cases": null
@@ -2644,6 +2674,10 @@
         "kind": "setTimeout"
       },
       {
+        "file": "apps/web/src/operations/AccountantRegister.tsx",
+        "kind": "setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Ageing.tsx",
         "kind": "setTimeout"
       },
@@ -3685,6 +3719,54 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #142: source-reconciled account statements, explicit issuance permissions and exact uncertain-command recovery."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "captures with keyboard form, downloads matching artifact, and reloads saved filters",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "retries the exact uncertain intent while preserving disabled inputs and read-only export",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "opens exact saved source evidence with focus and clears private data after access loss",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "ignores a late capture result after the register unmounts",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "creates a readable USTAR archive with UTF-8 CSV content and valid checksum",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
+    },
+    {
+      "file": "apps/web/src/test/accountant.test.tsx",
+      "name": "rejects traversal and oversized archives",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/advance-refunds.test.tsx",

@@ -1,0 +1,7 @@
+"Date","Number","Description","Account","Deposit","Withdrawal"
+"2026-09-20","SIT-adjustment-0001-v1","SIT-adjustment-0001-v1 charge_reduction","Income:Freight","100.00",""
+"2026-09-20","SIT-adjustment-0001-v1","SIT-adjustment-0001-v1 charge_reduction","Assets:Customer receivables","","100.00"
+"2026-09-21","SIT-refund-0001-v1","SIT-refund-0001-v1 refund","Assets:Customer receivables","80.00",""
+"2026-09-21","SIT-refund-0001-v1","SIT-refund-0001-v1 refund","Assets:Cash","","80.00"
+"2026-09-22","SIT-refund-correction-0001-v1","SIT-refund-correction-0001-v1 refund_correction","Assets:Cash","10.00",""
+"2026-09-22","SIT-refund-correction-0001-v1","SIT-refund-correction-0001-v1 refund_correction","Assets:Customer receivables","","10.00"
