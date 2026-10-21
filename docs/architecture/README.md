@@ -268,3 +268,7 @@ scoped operational health and recovery. [Verification](issue-60-verification.md)
 fixed pagination and private matching CSV. [Verification](issue-61-verification.md).
 
 Issue #137: [proposed financial operations contract](financial-operations.md). D137-1–D137-5 have product-owner ratification; current runtime financial permissions remain authoritative until owning implementation.
+
+[Cross-report reconciliation verification](issue-67-verification.md) records #67’s
+synthetic shop/monthly cycle, exact source equations, runtime isolation, CSV header
+regressions and the separate pending external-accounting qualification.
