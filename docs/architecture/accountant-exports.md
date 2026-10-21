@@ -15,6 +15,13 @@ reload that capture. A complete CSV bundle is downloaded as an uncompressed `.ta
 extract it and read `manifest.csv` and `dictionary.csv` before processing any rows.
 There is one file for every supported family, including empty header-only files.
 
+Each CSV header is unique. In `agent_fees.csv`, `basis` is opening/period and
+`fee_basis` is the source fee calculation basis. In `settlements.csv`, `capture_id`
+is the export capture and `source_capture_id` is the underlying agent cash capture.
+These export-only names correct previously ambiguous duplicate headers; saved/API
+source fields remain compatible. See [#67 evidence](issue-67-verification.md) for
+regressions, re-download guidance and exact cross-report controls.
+
 `POST /api/v1/reports/accountant?organization_id=…&franchise_id=…` accepts only
 `from_day`, `to_day`, optional `franchise_ids`, optional boolean `include_references`
 and `format: generic_csv_v1`. It requires the existing cookie/CSRF boundary and an

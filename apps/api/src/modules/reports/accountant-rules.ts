@@ -37,8 +37,9 @@ export function accountantFiles(snapshot:AccountantSnapshot,rows:readonly Accoun
  for(const family of families){
   const selected=rows.filter(r=>r.family===family),declared=accountantColumns[family as keyof typeof accountantColumns];
   if(!declared)throw new HttpError('TEMPORARILY_UNAVAILABLE');
-  const columns=declared;
-  files.push({name:family+'.csv',csv:accountantCsv([...common,...columns],selected.map(r=>['1',snapshot.mapping_version,snapshot.id,snapshot.as_of,snapshot.organization_id,r.id,r.meaning,r.basis,...columns.map(c=>r.fields[c]??'unknown')]))});
+  // Keep saved/API fields compatible while giving each exported column a unique name.
+  const columns=declared.map(column=>family==='agent_fees'&&column==='basis'?'fee_basis':family==='settlements'&&column==='capture_id'?'source_capture_id':column);
+  files.push({name:family+'.csv',csv:accountantCsv([...common,...columns],selected.map(r=>['1',snapshot.mapping_version,snapshot.id,snapshot.as_of,snapshot.organization_id,r.id,r.meaning,r.basis,...declared.map(c=>r.fields[c]??'unknown')]))});
   for(const column of [...common,...columns])dictionary.push([family+'.csv',column,column.endsWith('_paise')?'signed integer INR paise':column.endsWith('_id')?'opaque text; retain leading zeroes':'text','unknown = absent or unavailable; never zero',references.has(column)?'only when include_references=true':'selected source evidence']);
  }
  const gst=new Map<string,{basis:string;kind:string;rate:string;treatment:string;jurisdiction:string;policy:string;taxable:bigint;nonTaxable:bigint;cgst:bigint;sgst:bigint;igst:bigint;rounding:bigint;gross:bigint}>();

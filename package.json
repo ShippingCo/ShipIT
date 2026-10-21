@@ -32,6 +32,7 @@
     "demo:onboarding": "node --experimental-strip-types apps/api/test/onboarding-demo.ts",
     "demo:carrier": "node --experimental-strip-types scripts/test-carrier-pilot.mjs",
     "demo:sales": "node --experimental-strip-types scripts/test-sales.mjs",
+    "demo:reconciliation": "node --experimental-strip-types scripts/test-report-reconciliation.mjs",
     "demo:reports": "node --experimental-strip-types scripts/test-reports.mjs",
     "test:attachments": "node scripts/with-test-object-store.mjs"
   },

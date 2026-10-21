@@ -11,6 +11,15 @@ loads fixed pages, reloads by snapshot ID and downloads matching CSV. The Sales 
 GST tab adds the #62 definition described below. #63–#65 and the wider #137–#150
 workflows retain their own sources and consumers.
 
+## Integrated reconciliation evidence
+
+[Issue #67 verification](issue-67-verification.md) ties sales, dashboard, accounts,
+cashbook/close, agent settlement, reconciliation, contribution, audit and scheduled
+summary/export evidence to one runtime-service fixture. Sales collections are
+allocations to a booking cohort; daily collections are actual receipt occurrences.
+Compare matching definitions and capture windows, not the two amounts indiscriminately.
+Run `pnpm db:local demo:reconciliation` for the reproducible cycle and producer regressions.
+
 ## Contract
 
 All endpoints require an authenticated operator session and `organization_id` plus

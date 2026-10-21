@@ -169,6 +169,14 @@ reuse it without treating #139/#142 or #138/#139/#142, respectively, as complete
 #137 ratifies finance policy before the remaining producer work. The finance modules
 remain required for #67 and the #76 pilot release gate.
 
+### #67 reconciliation evidence — 2026-10-21
+
+All twelve direct prerequisites were individually verified CLOSED from live GitHub.
+[Verification](architecture/issue-67-verification.md) records the integrated fixture,
+exact totals, acceptance map and generic export header corrections. Historical status
+paragraphs above are not current dependency state. #67 remains open for PR review;
+external accountant review/target import and downstream pilot readiness are not implied.
+
 ### #63 completion follow-up — 2026-10-18
 
 #138, #139, #141 and #142 are now merged. The follow-up extends PR #163 with
