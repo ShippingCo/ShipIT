@@ -280,3 +280,10 @@ The exact pushed head, all eleven remote checks (five quality jobs, five Postgre
 shards and the required aggregate), PR review and open/unmerged state are verified
 at handoff. Branch protection requires the strict `Planning and prototype checks`
 aggregate; independent human approval is not represented by automated checks.
+
+Review artifact: [PR #185](https://github.com/ShippingCo/ShipIT/pull/185), targeting
+main. [Current PR checks](https://github.com/ShippingCo/ShipIT/pull/185/checks) are
+the exact-head remote evidence; superseded/cancelled workflow runs are not passes.
+The PR description and final handoff record the verified SHA and workflow run.
+Leave PR #185 OPEN/unmerged, auto-merge disabled, and #67 OPEN in `status: review`
+once all current-head checks pass. Human approval remains pending.
