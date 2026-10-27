@@ -43,7 +43,7 @@ An independent approving review is the production workflow target. Setup may be 
 
 ## Quality commands and current baseline
 
-Use Node 22.23.2, pnpm 10.34.5 and Python 3.12.14. The version files and packageManager are authoritative. See [quality checks](QUALITY_CHECKS.md) for setup, registered exceptions and enforcement rollout.
+Use Node 24.22.1, pnpm 10.34.5 and Python 3.12.14. The version files and packageManager are authoritative. See [quality checks](QUALITY_CHECKS.md) for setup, registered exceptions and enforcement rollout.
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts

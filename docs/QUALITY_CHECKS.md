@@ -7,7 +7,7 @@ provider integration and deployment remain with their implementation issues.
 
 ## Setup
 
-- Node **22.23.2**, from `.node-version` (supported Node 22 maintenance LTS).
+- Node **24.22.1**, from `.node-version` (Node 24 LTS security release).
 - pnpm **10.34.5**, from `package.json` `packageManager`.
 - Python **3.12.14**, from `.python-version`. Python assertions must remain enabled.
 - Git is needed by tooling tests, migration-history checking and disposable-checkout verification.
