@@ -9,7 +9,7 @@ import { ApiFailure } from '../data-access/errors';
 import { createAttachmentClient } from '../data-access/attachments';
 import type { ScopeController } from '../operator/scope';
 import { createBookingWorkflow } from './workflow';
-import type { Field } from './form';
+import {totalWeight, type Field, type ParcelDraft} from './form';
 import { CustomerLookup } from './CustomerLookup';
 import { ReceiptPanel } from './ReceiptPanel';
 import { receiptMoney } from '../utils/receipt';
@@ -32,7 +32,8 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
   useEffect(() => {
     const first = Object.entries(state.errors).find(([, value]) => value)?.[0];
     if (first) document.getElementById(`counter-${first}`)?.focus();
-  }, [state.errors]);
+    else {const index=state.parcelErrors.findIndex(errors=>Object.values(errors).some(Boolean));if(index>=0){const key=Object.keys(state.parcelErrors[index])[0];document.getElementById(`counter-package-${index}-${key}`)?.focus();}}
+  }, [state.errors,state.parcelErrors]);
   useEffect(() => {
     const preventLoss = (event: BeforeUnloadEvent) => { if (state.busy || [state.bookingPhase, state.customerPhase].includes('uncertain')) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', preventLoss); return () => window.removeEventListener('beforeunload', preventLoss);
@@ -63,7 +64,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id} />
     <section className="card counter-section"><h2 className="t-title-lg">Private attachments</h2><p>Booking is saved independently of each upload. Files are saved only after server safety validation.</p>{attachmentClient && <AttachmentUploader client={attachmentClient} runtime={controller.runtime} />}</section>
   </div>;
-  return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); void workflow.save(); }} aria-label="New booking">
+  return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); }} aria-label="New booking">
     <h1 className="t-headline-sm">New Booking</h1>
     {creditNavigationBlocked&&creditPending&&<p role="alert">Retry the retained credit request before leaving or changing franchise.</p>}
     {state.quote?.account&&<p role="status">Price source: {state.quote.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate (no matching negotiated rule)'}</p>}
@@ -77,14 +78,18 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       </div><p role="status">Customer: {state.customerPhase}</p>
       <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
     </section>
-    <section className="card counter-section"><h2 className="t-title-lg">2 · Parcel recipient and service</h2><BookingPreference workflow={workflow}/><div className="counter-grid">
+    <section className="card counter-section"><h2 className="t-title-lg">2 · Packages and service</h2><p>One booking can contain up to 50 packages. Each has its own recipient, weight and tracking docket. All use the selected service and destination; pricing and payment cover the whole booking.</p><BookingPreference workflow={workflow}/><div className="counter-grid">
       {field('recipientName', 'Recipient name')}{field('recipientPhone', 'Recipient phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('recipientAddress', 'Recipient address')}
       {field('destination', 'Destination key', 'Use the franchise rate-card key, not a tax jurisdiction.')}
       {select('service', 'Service', [{ value: 'standard', label: 'Standard' }, { value: 'express', label: 'Express' }, { value: 'same_city', label: 'Same-city' }])}
       {field('weight', 'Weight (grams)', 'Whole grams.', { inputMode: 'numeric' })}{field('docket', 'Manual docket', 'Leave blank for collision-safe server allocation.')}
       {field('override', 'Freight override (paise)', 'Optional. The server checks the reason, tolerance and your permission.', { inputMode: 'numeric' })}
       {select('reason', 'Override reason', [{ value: 'customer_agreement', label: 'Customer agreement' }, { value: 'service_recovery', label: 'Service recovery' }, { value: 'commercial_exception', label: 'Commercial exception' }])}
-    </div></section>
+    </div>
+      {state.additionalParcels.map((parcel,index)=><fieldset key={index} disabled={disabled}><legend>Package {index+2}</legend><div className="counter-grid">{([['recipientName','Recipient name'],['recipientPhone','Recipient phone'],['recipientAddress','Recipient address'],['weight','Weight (grams)'],['docket','Manual docket']] as [keyof ParcelDraft,string][]).map(([key,label])=><TextField key={key} id={`counter-package-${index}-${key}`} label={`Package ${index+2} · ${label}`} value={parcel[key]} error={state.parcelErrors[index]?.[key]} onChange={value=>workflow.changeParcel(index,key,value)} />)}</div><button type="button" className="btn btn-text" onClick={()=>workflow.removeParcel(index)}>Remove package {index+2}</button></fieldset>)}
+      <button type="button" className="btn btn-outlined" disabled={disabled||state.additionalParcels.length>=49} onClick={()=>workflow.addParcel()}>Add package</button>
+      <p>{state.additionalParcels.length+1} package(s) · Combined weight: {totalWeight(d,state.additionalParcels)||'Check package weights'} g. Request fresh pricing after changing packages.</p>
+    </section>
     <section className="card counter-section"><h2 className="t-title-lg">3 · Tax facts</h2><p>These facts describe the service recipient. They are not inferred from the parcel destination, sender, recipient or payer. Ordinary domestic state supplies only.</p><div className="counter-grid">
       {field('recipientRef', 'Service recipient reference', 'Actual reference to the party receiving the courier service; no personal narrative.')}
       {select('registration', 'Service recipient registration', [{ value: 'unregistered', label: 'Unregistered' }, { value: 'registered', label: 'Registered' }])}
@@ -102,7 +107,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       <div className="counter-grid">{select('paymentMode', 'Payment choice', [{ value: 'to_pay', label: 'To Pay' }, { value: 'paid_counter', label: 'Paid now' }])}{d.paymentMode === 'paid_counter' && select('method', 'Payment method', [{ value: '', label: 'Select method' }, { value: 'cash', label: 'Cash' }, { value: 'upi', label: 'UPI (manual recording)' }])}</div>
       {d.paymentMode === 'paid_counter' && <p>After saving the booking, record received money with its named account and eligible receiver. A planned method alone records no money.</p>}
       <p role={['error', 'uncertain', 'stale'].some(p => [state.customerPhase, state.pricingPhase, state.taxPhase, state.bookingPhase].includes(p as typeof state.bookingPhase)) || Object.values(state.errors).some(Boolean) ? 'alert' : 'status'} aria-live="polite">{state.message}</p>
-      <button className="btn btn-filled" disabled={state.busy || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} aria-busy={state.bookingPhase === 'loading'}>{state.bookingPhase === 'uncertain' ? 'Retry same booking' : 'Save booking'}</button>
+      <button type="button" onClick={()=>{void workflow.save();}} className="btn btn-filled" disabled={state.busy || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} aria-busy={state.bookingPhase === 'loading'}>{state.bookingPhase === 'uncertain' ? 'Retry same booking' : 'Save booking'}</button>
       <p>Files can be attached after the booking is confirmed. Printing is optional.</p>
     </section>
   </form>;

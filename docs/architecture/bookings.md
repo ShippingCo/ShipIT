@@ -254,3 +254,20 @@ key. RTO means an approved return workflow started, not physical return completi
 financial reversal. Full API, policy and rollout details are in
 [ADR 0014](../adr/0014-guarded-parcel-lifecycle-commands.md) and
 [Issue #24 verification](issue-24-verification.md).
+
+## Counter multi-package entry (#186)
+
+The production counter exposes the existing 1–50 parcel booking contract. The first
+package is required; additional packages can be added, edited and removed before
+confirmation. All packages share the selected service/destination and the booking's
+customer, tax facts, total charges and obligation. Each keeps its own recipient,
+positive whole-gram weight and globally unique docket. Server pricing uses the sum
+of package weights; package changes invalidate the preview and any exact credit
+approval. Lots and deliveries continue to act on individual parcel IDs. There is
+no per-package payment balance or cancellation added here.
+
+Only activating **Save booking** (mouse, Enter or Space on that button) submits the
+command. Implicit form submission elsewhere does nothing. Choosing payment method
+records no receipt. Uncertain confirmation locks all package edits and retries the
+same request body/key. Draft contacts remain memory-only and scope invalidation
+purges the additional packages alongside the original draft.

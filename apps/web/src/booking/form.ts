@@ -51,3 +51,16 @@ export function taxFacts(d: Draft): TaxFacts {
     recipient_gstin: d.registration === 'registered' ? d.gstin.trim().toUpperCase() : null, handover_state: d.handoverState || null,
     evidence_ref: d.evidenceRef || null, special_case: d.specialCase as TaxFacts['special_case'] };
 }
+
+export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'weight' | 'docket'>;
+export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',weight:'',docket:''});
+export function parcelErrors(parcel: ParcelDraft): Errors {
+  const errors = validate({...emptyDraft(), ...parcel}, 'booking');
+  return Object.fromEntries(Object.entries(errors).filter(([key]) => key in parcel));
+}
+export function totalWeight(first: Draft, additional: ParcelDraft[]): string {
+  const weights = [first, ...additional].map(p => p.weight);
+  if(weights.some(w => !/^[1-9][0-9]*$/.test(w))) return '';
+  const total = weights.reduce((sum,w) => sum + BigInt(w), 0n);
+  return total <= BigInt(Number.MAX_SAFE_INTEGER) ? String(total) : '';
+}
