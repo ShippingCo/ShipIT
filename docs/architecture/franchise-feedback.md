@@ -75,10 +75,33 @@ new UI. Old filter cursors may be rejected safely; refresh the list.
    under the existing movement rules. Financial cancellation is not a stop-delivery
    command.
 
+The user confirmed the existing temporary-agent custody, cash handover and daily
+statement workflow is the intended scope. No attendance, payroll or wage management
+is introduced.
+
+Existing regression evidence was inspected in `apps/api/test/database/`:
+`custody.test.ts` covers identity-bound invitation acceptance, franchise-only context,
+revocation/reactivation and assignment/custody controls; `deliveries.test.ts` covers
+assignment-only proof and foreign/other-agent hiding; `agent-cash-custody.test.ts`
+covers participant-only handovers, exact acknowledgement and recovery after revocation;
+`agent-parcel-statements.test.ts` covers cutoff-bound parcel evidence;
+`agent-statement-review.test.ts` covers own-agent statements, independent review,
+versioned corrections and no synthetic money effects. Temporary access activates the
+same franchise delivery-agent membership these services authorize; there is no
+separate temporary-agent bypass. No additional functional gap was established.
+
+Deployment must already have the released schemas/runtime grants and the explicitly
+enabled server flags `CUSTODY_ENABLED`, `AGENT_MONEY_ENABLED`,
+`MONEY_RECEIPTS_ENABLED` and `CASHBOOK_ENABLED` for the respective writes. These
+default off and reject demo activation. Follow the existing
+[financial operations deployment instructions](financial-operations.md), using
+independent reviewers and verified accounts; do not broaden roles to work around a
+disabled feature. This task did not change a deployment.
+
 These are existing ratified workflows, not new assumptions about temporary wages,
 expense categories, opening balances, self-approval or reconciliation. If “temporary
 agent daily data” means attendance, shifts or wages beyond these parcel/cash statements,
-that is a separate business decision and needs a concrete user clarification first.
+that remains outside the confirmed scope.
 
 ## Queued message setup and diagnosis
 
