@@ -181,26 +181,26 @@
       "apps/web/src/App.tsx": "467b6dbc36c98ba5fc6f00989a9d28737ca3b0a04e9051efab4398573a1d2dba",
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
-      "apps/web/src/components/m3/Controls.tsx": "f68a01f147784901f94b078b036584112c32206dcb9336a9f67132dfae94559d",
+      "apps/web/src/components/m3/Controls.tsx": "ac106b600ec77dce5739a898fdc9d73693abbfe796dbc5d69322ff633d55c784",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
-      "apps/web/src/data/store.ts": "064fda5747516bc6ee39f0e6d41b5096a6551fb5a755526371527a6ae7a496e9",
+      "apps/web/src/data/store.ts": "4254155ea29a147800f9775b6e8875afd270294adcc800ede48aa333fbab6960",
       "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
       "apps/web/src/main.tsx": "5605ec5cd89de6bfd64a7210fab53beb3313159933818cbee4622c581794ec2c",
       "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
-      "apps/web/src/pages/business/Dashboard.tsx": "26d98d1b095cecd4590cbbf77f7a06c1fab8247c94bf2c9a78e478bb79b5b448",
+      "apps/web/src/pages/business/Dashboard.tsx": "e70071ffbcc4d119ba8006ac1e8798ca7a58617b9d84959262da72a1f414b0b5",
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
       "apps/web/src/pages/business/MiscPages.tsx": "d7da7d40536c529b73d768d679b5e09cd07a2385114ee2ee67842eb2d59e9a77",
-      "apps/web/src/pages/business/NewBookingPage.tsx": "d0d64a83e77738aaec4befc58314d11361fbb414459f5dc84d142728a16b6007",
-      "apps/web/src/pages/business/PackagesPage.tsx": "b356832e5e09406b3961b868389cdaa05c0eb354a62101f8f0123acea00989df",
+      "apps/web/src/pages/business/NewBookingPage.tsx": "8d725ca24750053333fa49dfc23ad3d8f32d6fca3e29d08f72c292b1ee9b0915",
+      "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
+      "apps/web/src/test/app.test.tsx": "a934d6cde3dee36a385f41d40dbb2f32b11bbaa55de51ed8f2fd7ce0cfd663c2",
       "apps/web/src/test/counter.test.tsx": "d306d2cdcc6054c038ab0c266532d1bbfc9fb057652b1459c34de7e2161c7a97",
       "apps/web/src/test/operator.test.tsx": "139f7484780dd8512acc0b986dcd6e372f7a29759c4979f9fa0456380cd36afe",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
@@ -364,6 +364,10 @@
         }
       ],
       "apps/web/src/pages/business/Dashboard.tsx": [
+        {
+          "target": "apps/web/src/operations/business-dates.ts",
+          "syntax": "import {businessDay,dayStart,weekMonday} from '../../operations/business-dates';"
+        },
         {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../../components/m3/Icon';"
@@ -797,6 +801,10 @@
         {
           "target": "apps/web/src/data/store.ts",
           "syntax": "import('../data/store')"
+        },
+        {
+          "target": "apps/web/src/data/store.ts",
+          "syntax": "import('../data/store')"
         }
       ],
       "apps/web/src/test/counter.test.tsx": [
@@ -1185,6 +1193,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "opens today’s packages from the dashboard while keeping useful cross-day recent bookings",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/app.test.tsx",
+        "name": "terminal parcels cannot be reassigned through the demo store and delivery keeps unpaid money separate",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/attachments.test.tsx",
         "name": "selects, shows progress and pending scan, then retains only approved metadata",
         "cases": null
@@ -1242,6 +1260,16 @@
       {
         "file": "apps/web/src/test/attachments.test.tsx",
         "name": "a booking attachment client cannot rebind to a newly selected franchise",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/business-dates.test.tsx",
+        "name": "uses IST midnight and Monday weeks across Sunday, month and year boundaries",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/business-dates.test.tsx",
+        "name": "date presets edit the range without submitting or replacing saved report evidence",
         "cases": null
       },
       {
@@ -1855,6 +1883,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/lot-candidates.test.tsx",
+        "name": "filters candidates by server destination, ungrouped state and IST booking date before deliberate selection",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
         "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
         "cases": null
@@ -2037,6 +2070,11 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "separates official e-way validity and renders every immutable revision with a stable revision identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position",
         "cases": null
       },
       {
@@ -4133,6 +4171,22 @@
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "opens today’s packages from the dashboard while keeping useful cross-day recent bookings",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
+      "file": "apps/web/src/test/app.test.tsx",
+      "name": "terminal parcels cannot be reassigned through the demo store and delivery keeps unpaid money separate",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "selects, shows progress and pending scan, then retains only approved metadata",
       "cases": null,
@@ -4227,6 +4281,22 @@
       "group": "attachments",
       "disposition": "preserve",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/business-dates.test.tsx",
+      "name": "uses IST midnight and Monday weeks across Sunday, month and year boundaries",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
+      "file": "apps/web/src/test/business-dates.test.tsx",
+      "name": "date presets edit the range without submitting or replacing saved report evidence",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/cash-close.test.tsx",
@@ -5205,6 +5275,14 @@
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
     },
     {
+      "file": "apps/web/src/test/lot-candidates.test.tsx",
+      "name": "filters candidates by server destination, ungrouped state and IST booking date before deliberate selection",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
       "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
       "cases": null,
@@ -5499,6 +5577,14 @@
       "disposition": "preserve",
       "group": "eway",
       "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",

@@ -44,7 +44,7 @@ export default function PackagesPage() {
   const [filter, setFilter] = useState(params.get('filter') || 'all');
   const [openId, setOpenId] = useState(params.get('open') || null);
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 }>({ key: 'createdAt', dir: -1 });
-  const [range, setRange] = useState<DatePreset>('all');
+  const [range, setRange] = useState<DatePreset>(params.get('booked')==='today'?'today':'all');
   const [custom, setCustom] = useState<CustomRange>({ from: '', to: '' });
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [lotOpen, setLotOpen] = useState(false);
@@ -136,7 +136,7 @@ export default function PackagesPage() {
           <span className="bulkbar-n">{pickedIds.length} selected</span>
           <Button size="sm" variant="outlined" icon="warehouse" onClick={() => bulkAdvance('checked_in', 'checked in')}>Check in at hub</Button>
           <Button size="sm" variant="outlined" icon="local_shipping" onClick={() => bulkAdvance('dispatched', 'dispatched')}>Dispatch</Button>
-          <Button size="sm" variant="outlined" icon="layers" onClick={() => setLotOpen(true)}>Move to lot</Button>
+          <Button size="sm" variant="outlined" icon="layers" disabled={pickedRows.some(b=>['delivered','rto'].includes(b.status))} onClick={() => setLotOpen(true)}>Move to lot</Button>
           <button type="button" className="bulkbar-clear" onClick={() => setPicked({})}>Clear</button>
         </div>
       )}
@@ -316,14 +316,14 @@ export function PackageDetailDialog({ id, onClose }) {
             ))}
           </div>
 
-          <SelectField
+          {!['delivered','rto'].includes(b.status)&&<SelectField
             label="Move to lot"
             value={b.lotId || ''}
             onChange={(v) => { assignToLot(id, v); toast(v ? 'Moved to lot.' : 'Removed from lot.'); }}
             options={[{ value: '', label: 'Not in a lot' }, ...data.lots.map((l) => ({ value: l.id, label: `${l.code} · ${l.name}` }))]}
             trailing="layers"
             style={{ marginTop: 12 }}
-          />
+          />}
 
           {actionsFor.length > 0 && (
             <div className="u-row u-wrap" style={{ marginTop: 12 }}>
@@ -337,7 +337,7 @@ export function PackageDetailDialog({ id, onClose }) {
             <div style={{ marginTop: 10 }}>
               <Button
                 size="sm" variant="tonal" icon="payments"
-                onClick={() => { recordPayment(id); toast(`Recorded ${fmtMoney(grossOf(b))} for ${b.docket}.`); }}
+                onClick={() => { if(!window.confirm('Confirm that payment was actually collected. Delivery alone does not mean paid.'))return;recordPayment(id); toast(`Recorded ${fmtMoney(grossOf(b))} for ${b.docket}.`); }}
               >
                 Record payment — {fmtMoney(grossOf(b))}
               </Button>

@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import React,{useMemo,useState} from 'react';
 import type { OperatorRole } from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
@@ -14,11 +15,12 @@ const has=(roles:readonly OperatorRole[],role:OperatorRole)=>roles.includes(role
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export default function Deliveries({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>deliveries(api),[api]);
+ const paymentHelp=<section className="card ops-card"><h2>Payment collected at delivery</h2><p>Completing delivery does not mark a bill paid. An operator or franchise admin records actual To-Pay money in Money receipts, selects the bill and names the receiving agent as custodian. Agents use cash handovers for money already recorded; a handover does not create another customer payment.</p>{roles.some(r=>r==='operator'||r==='franchise_admin')&&<Link className="btn btn-outlined" to="/business/money-receipts">Record collected To-Pay payment</Link>}{roles.includes('delivery_agent')&&<Link className="btn btn-outlined" to="/business/agent-settlements">Open my cash handovers and daily statement</Link>}</section>;
  const queue=useResource('delivery-queue',signal=>source.list(signal),value=>value.items.length===0),[selected,setSelected]=useState<string|null>(null);
  if(queue.phase==='loading')return <Loading label="Loading assigned delivery work…"/>;
  if(queue.phase==='error')return <Failure retry={queue.reload} label="Delivery work could not be loaded."/>;
- if(queue.phase==='empty')return <Empty icon="local_shipping" title="No active deliveries" body="Only current assignments in this franchise appear here."/>;
- return <div className="ops-page"><section className="card ops-card"><div className="u-between"><div><h1 className="t-headline-sm">Delivery work</h1><p className="ops-note">Server-authorized active attempts only. Challenge values are never displayed.</p></div><button className="btn btn-outlined" onClick={queue.reload}><Msym name="refresh"/>Refresh</button></div>
+ if(queue.phase==='empty')return <>{paymentHelp}<Empty icon="local_shipping" title="No active deliveries" body="Only current assignments in this franchise appear here."/></>;
+ return <div className="ops-page">{paymentHelp}<section className="card ops-card"><div className="u-between"><div><h1 className="t-headline-sm">Delivery work</h1><p className="ops-note">Server-authorized active attempts only. Challenge values are never displayed.</p></div><button className="btn btn-outlined" onClick={queue.reload}><Msym name="refresh"/>Refresh</button></div>
   <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Docket</th><th>Attempt</th><th>Expires</th><th></th></tr></thead><tbody>{queue.value!.items.map(item=><tr key={item.attempt_id}><td className="ops-mono">{item.docket}</td><td>{item.attempt_number} of 2</td><td>{formatKolkata(item.expires_at)}</td><td><button className="btn btn-text" onClick={()=>setSelected(item.parcel_id)}>Open</button></td></tr>)}</tbody></table></div></section>
   {selected&&<DeliveryDetail key={selected} parcelId={selected} roles={roles} source={source} close={()=>setSelected(null)} refreshQueue={queue.reload}/>}</div>;
 }

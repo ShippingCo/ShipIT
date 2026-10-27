@@ -1,4 +1,6 @@
-import {Link} from 'react-router-dom';
+import {useDetailReturn} from './detail-return';
+import {businessDay,dayStart,shiftDay} from './business-dates';
+import {useSearchParams,Link} from 'react-router-dom';
 import React,{useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type { BulkParcelAction,BulkParcelItem,LotDto,LotMembershipResult,OperatorRole,ParcelTransitionDto,PaymentProjection } from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
@@ -21,18 +23,23 @@ const statusOptions=[{value:'',label:'All server statuses'},...parcelStatuses.ma
 
 export default function Packages({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]);
- const [docket,setDocket]=useState(''),[status,setStatus]=useState(''),[query,setQuery]=useState({docket:'',status:''});
- const key=JSON.stringify(query);const page=usePagedResource(key,(cursor,signal)=>source.list({docket:query.docket||undefined,status:query.status as ParcelStatus||undefined,limit:50,cursor},signal));
- const [selected,setSelected]=useState<string|null>(null);
- const select=(id:string)=>setSelected(id);
+ const [params,setParams]=useSearchParams();
+ const [destination,setDestination]=useState(''),[from,setFrom]=useState(params.get('booked')==='today'?businessDay():''),[to,setTo]=useState(params.get('booked')==='today'?businessDay():'');
+ const [docket,setDocket]=useState(''),[status,setStatus]=useState(''),[query,setQuery]=useState({docket:'',status:'',destination:'',from,to});
+ const key=JSON.stringify(query);const page=usePagedResource(key,(cursor,signal)=>source.list({destination_key:query.destination||undefined,from:query.from?dayStart(query.from):undefined,to:query.to?dayStart(shiftDay(query.to,1)):undefined,docket:query.docket||undefined,status:query.status as ParcelStatus||undefined,limit:50,cursor},signal));
+ const selected=params.get('parcel'),remember=useDetailReturn(selected);
+ const setSelected=(id:string|null)=>{const next=new URLSearchParams(params);if(id)next.set('parcel',id);else next.delete('parcel');setParams(next);};
+ const select=(id:string)=>{remember();setSelected(id);};
  return <div className="ops-page">
-  <form className="card ops-card ops-toolbar" onSubmit={event=>{event.preventDefault();setQuery({docket:docket.trim(),status});setSelected(null);}} aria-label="Package filters">
+  <form className="card ops-card ops-toolbar" onSubmit={event=>{event.preventDefault();setQuery({docket:docket.trim(),status,destination:destination.trim().toUpperCase(),from,to});setSelected(null);}} aria-label="Package filters">
    <TextField label="Exact docket" value={docket} onChange={setDocket} helper="Server exact docket lookup; blank lists the current page."/>
    <SelectField label="Parcel status" value={status} onChange={setStatus} options={statusOptions}/>
+   <TextField label="Destination city / routing key" value={destination} onChange={setDestination} helper="Exact configured destination key, e.g. MUMBAI. Origin is the selected franchise; addresses are not city records."/>
+   <TextField label="Booked from (Asia/Kolkata)" type="date" value={from} onChange={setFrom}/><TextField label="Booked through (Asia/Kolkata)" type="date" value={to} onChange={setTo} min={from||undefined}/>
    <button className="btn btn-filled"><Msym name="search"/>Search server</button>
-   <button type="button" className="btn btn-text" onClick={()=>{setDocket('');setStatus('');setQuery({docket:'',status:''});}}>Clear</button>
+   <button type="button" className="btn btn-text" onClick={()=>{setDocket('');setStatus('');setDestination('');setFrom('');setTo('');setQuery({docket:'',status:'',destination:'',from:'',to:''});}}>Clear</button>
   </form>
-  {page.phase==='loading'?<Loading label="Loading parcels…"/>:page.phase==='error'?<Failure retry={page.reload} label="Parcels could not be loaded."/>:page.phase==='empty'?<Empty icon="inventory_2" title="No parcels match" body="Change the server-supported docket or status filter, or create a booking."/>:<>
+  {page.phase==='loading'?<Loading label="Loading parcels…"/>:page.phase==='error'?<Failure retry={page.reload} label="Parcels could not be loaded."/>:page.phase==='empty'?<Empty icon="inventory_2" title="No parcels match" body="Change the docket, status, destination or booking-date filter, or create a booking."/>:<>
    <section className="card ops-card"><div className="u-between"><div><h1 className="t-headline-sm">Packages</h1><p className="ops-note">{page.items.length} loaded from authoritative pagination{page.page.has_more?' · more available':''}.</p></div><button className="btn btn-outlined" onClick={page.reload}><Msym name="refresh"/>Refresh</button></div>
     <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Docket</th><th>Status</th><th>Weight</th><th>Confirmed</th><th></th></tr></thead><tbody>{page.items.map(item=><tr key={item.id}><td className="ops-mono">{item.docket}</td><td><span className="ops-pill">{item.status.replaceAll('_',' ')}</span></td><td>{item.weight_grams.toLocaleString('en-IN')} g</td><td>{formatKolkata(item.confirmed_at)}</td><td><button className="btn btn-text" onClick={()=>select(item.id)}>Open</button></td></tr>)}</tbody></table></div>
     {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={()=>page.loadMore()}>{page.phase==='more'?'Loading…':'Load next page'}</button>}
@@ -64,6 +71,7 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const deliverySource=useMemo(()=>deliveries(api),[api]);
  const detail=useResource(parcelId,signal=>source.read(parcelId,signal));
+ useEffect(()=>{if(detail.phase==='ready')document.getElementById('package-detail-title')?.focus();},[detail.phase]);
  const timeline=useResource(parcelId+'-timeline',signal=>source.timeline(parcelId,signal));
  const membership=useResource(parcelId+'-membership',signal=>lotSource.currentMembership(parcelId,signal));
  const memberLot=useResource(parcelId+'-'+(membership.value?.lot_id??'none'),signal=>membership.value?lotSource.read(membership.value.lot_id,signal):Promise.resolve(null));
@@ -76,13 +84,14 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
  const parcel=detail.value!;
  const refresh=()=>{detail.reload();timeline.reload();membership.reload();memberLot.reload();payment.reload();refreshed();};
  async function removeMembership(){const member=membership.value,lot=memberLot.value;if(!member||!lot)return;try{await remove.run(lotSource.intent({kind:'remove',lotId:lot.id,parcelId:parcel.id,body:{membership_id:member.id,expected_version:lot.version}}));membership.reload();memberLot.reload();refreshed();}catch{/* notice owns safe result */}}
- return <section className="card ops-card ops-detail" aria-labelledby="package-detail-title"><div className="u-between"><div><h2 id="package-detail-title" className="t-headline-sm">{parcel.docket}</h2><span className="ops-pill">{parcel.status.replaceAll('_',' ')}</span></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
+ return <section className="card ops-card ops-detail" aria-labelledby="package-detail-title"><div className="u-between"><div><h2 tabIndex={-1} id="package-detail-title" className="t-headline-sm">{parcel.docket}</h2><span className="ops-pill">{parcel.status.replaceAll('_',' ')}</span></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
   <div className="ops-facts"><Fact label="Server version" value={parcel.version}/><Fact label="Weight" value={`${parcel.weight_grams.toLocaleString('en-IN')} g`}/><Fact label="Custody" value={parcel.custody.replaceAll('_',' ')}/><Fact label="Booking" value={parcel.booking_id}/></div>
   <div className="ops-grid"><div className="ops-fact"><b>Sender</b>{parcel.sender.name}<span className="ops-note">{parcel.sender.phone_display}</span></div><div className="ops-fact"><b>Recipient</b>{parcel.recipient.name}<span className="ops-note">{parcel.recipient.phone_display}</span></div></div>
   <ParcelActionForm parcel={parcel} roles={roles} command={life} source={source} confirmed={refresh}/>
   {has(roles,'dispatcher')&&(parcel.status==='in_transit'||parcel.status==='failed_attempt')&&<DeliveryStartForm parcel={parcel} source={deliverySource} retry={parcel.status==='failed_attempt'} confirmed={refresh}/>}
   <section><h3>Timeline</h3>{timeline.phase==='loading'?<p role="status">Loading timeline…</p>:timeline.phase==='error'?<button className="btn btn-outlined" onClick={timeline.reload}>Retry timeline</button>:<ol className="ops-list">{timeline.value!.items.map(item=><li className="ops-row" key={item.event_id}><span className="ops-row-main"><b>{item.label}</b><span className="ops-note">{formatKolkata(item.occurred_at)} · sequence {item.sequence}</span></span></li>)}</ol>}</section>
   <section><h3>Lot membership</h3>{membership.phase==='loading'||memberLot.phase==='loading'?<p role="status">Loading membership…</p>:membership.phase==='error'||memberLot.phase==='error'?<button className="btn btn-outlined" onClick={()=>{membership.reload();memberLot.reload();}}>Retry membership</button>:!membership.value?<p role="status" className="ops-success">Server confirms this parcel is ungrouped.</p>:<div className="ops-row"><span className="ops-row-main"><b>{memberLot.value?.code??membership.value.lot_id}</b><span>{memberLot.value?.name}</span><span className="ops-note">Membership {membership.value.id}</span></span><button className="btn btn-outlined" disabled={remove.phase==='pending'} onClick={()=>{void removeMembership();}}>Remove from lot</button></div>}<CommandNotice phase={remove.phase} code={remove.error?.code} retry={remove.canRetry?()=>{void remove.retry().then(()=>{membership.reload();memberLot.reload();refreshed();}).catch(()=>{});}:undefined}/></section>
+  {has(roles,'operator','franchise_admin')&&<section><h3>Booking cancellation</h3><p>Request cancellation of the whole booking's remaining charges in Financial approvals. Individual packages cannot be cancelled here. Physical movement and returns remain separate guarded operations; cancellation does not stop a parcel or refund money automatically.</p><Link className="btn btn-outlined" to={'/business/financials?booking_id='+parcel.booking_id}>Review whole-booking cancellation</Link></section>}
   <PaymentPanel roles={roles} resource={payment}/>
  </section>;
 }
@@ -105,7 +114,7 @@ function ParcelActionForm({parcel,roles,command,source,confirmed}:{parcel:Parcel
  else if(parcel.status==='dispatched'&&has(roles,'dispatcher'))kind='transit';
  else if(parcel.status==='out_for_delivery'&&has(roles,'delivery_agent'))kind='failed_attempt';
  else if(parcel.status==='failed_attempt'&&has(roles,'franchise_admin'))kind='rto';
- if(!kind)return <section><h3>Lifecycle action</h3><p className="ops-note">No safe production transition is available for this state and role. Delivery completion remains unavailable until the trusted proof workflow is connected.</p></section>;
+ if(!kind)return <section><h3>Lifecycle action</h3><p className="ops-note">No safe production transition is available for this state and role. Use Deliveries for assigned recipient-proof completion; financial changes never replace delivery proof.</p></section>;
  const referenceLabel=kind==='check_in'?'Location reference':kind==='dispatch'?'Finalized manifest ID':kind==='transit'?'Route ID':kind==='failed_attempt'?'Active attempt ID':'Approval reference';
  async function submit(event:React.FormEvent){event.preventDefault();let next:ParcelCommand;
   if(kind==='check_in')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,location_ref:reference}};

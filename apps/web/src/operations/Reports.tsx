@@ -1,3 +1,4 @@
+import {DatePresets} from './DatePresets';
 import {accountant} from '../data-access/accountant';
 import {AccountantRegister} from './AccountantRegister';
 import OwnerSummaries from './OwnerSummaries';
@@ -81,7 +82,7 @@ export function ReportView({source,canExport}:{source:ReportSource;canExport:boo
     <p>Original booking amounts and net funds applied to these bills, including legacy collections and linked receipt allocations. Customer advances stay in Money receipts. Use Sales and GST for financial corrections, actual refunds and adjusted balances.</p>
     <p>Booking snapshot · Asia/Kolkata. Collections include payments received up to capture for these bookings, including later days.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}>
-      <TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
+      <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
       <SelectField label="Order" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:'confirmed_desc',label:'Newest first'},{value:'confirmed_asc',label:'Oldest first'}]}/>
       <p>Up to 31 days and 5,000 bookings. Saved reports expire after 24 hours.</p>
       <button className="btn btn-filled" disabled={pending||command.canRetry}>Create snapshot</button>

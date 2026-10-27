@@ -101,3 +101,9 @@ it('read and timeline projections allowlist nested parties and deterministic pub
     event_id:id,sequence:1,occurred_at:'2099-01-01T00:00:00.000Z',code:'parcel.booked',status:'booked',label:'Booking received'});
   expect(()=>timelineDto({event_id:id,event_type:'private.raw',aggregate_sequence:2,occurred_at:new Date()})).toThrow('TIMELINE_EVENT_UNSUPPORTED');
 });
+
+it('destination and ungrouped parcel filters are bounded values, not query structure',()=>{
+ const organization_id=randomUUID();
+ expect(parcelList({organization_id,destination_key:'SYN_DEST',ungrouped:'true'})).toMatchObject({destination:'SYN_DEST',ungrouped:true});
+ for(const change of [{destination_key:"X' OR TRUE"},{destination_key:'X% wildcard'},{destination_key:['A']},{destination_key:'SYN_DEST\n'},{destination_key:'X'.repeat(33)},{ungrouped:'false'},{ungrouped:true}])expect(()=>parcelList({organization_id,...change})).toThrow();
+});

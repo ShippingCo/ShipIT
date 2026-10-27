@@ -1,3 +1,4 @@
+import {useSearchParams} from 'react-router-dom';
 import React,{useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type {OperatorRole,FinancialProposalContext,FinancialProposalInput,FinancialRequestDto,FinancialRequestDetail,FinancialOwnRequest,FinancialChangeKind,FinancialDocumentInput,ReceivingAccountDto,ReceiptMethod} from '@shippingco/shared';
 import {financialChangeKinds,financialComponentKeys} from '@shippingco/shared';
@@ -48,8 +49,9 @@ function FinancialWorkspace({controller,roles}:{controller:ScopeController;roles
  </div>;
 }
 function ProposalForm({source,locked,run,amendment,cancelAmend}:{source:FinancialWorkflowSource;locked:boolean;run:Run;amendment:FinancialOwnRequest|null;cancelAmend:()=>void}) {
+ const [parameters]=useSearchParams(),linked=parameters.get('booking_id')??'';
  const previous=amendment?.request;
- const [booking,setBooking]=useState(previous?.booking_id??''),[loaded,setLoaded]=useState<string|null>(previous?.booking_id??null),[kind,setKind]=useState<FinancialChangeKind>(previous?.kind??'discount'),[reason,setReason]=useState<string>(previous?.reason??'customer_agreement');
+ const [booking,setBooking]=useState(previous?.booking_id??linked),[loaded,setLoaded]=useState<string|null>(previous?.booking_id??null),[kind,setKind]=useState<FinancialChangeKind>(previous?.kind??(linked?'cancellation':'discount')),[reason,setReason]=useState<string>(previous?.reason??(linked?'booking_cancelled':'customer_agreement'));
  const [amounts,setAmounts]=useState<Record<string,string>>(Object.fromEntries(financialComponentKeys.map(key=>[key,previous?decimal(previous[key]):'0']))),[refund,setRefund]=useState(previous?decimal(previous.refund):''),[correction,setCorrection]=useState(previous?.refund_correction_of??''),[links,setLinks]=useState<FinancialDocumentInput[]>(amendment?.document_links.map(({kind,receipt_id,external_ref})=>({kind,receipt_id,external_ref}))??[]),[error,setError]=useState('');
  const observation=useResource(loaded??'none',signal=>loaded?source.context(loaded,signal):Promise.resolve(null));
  const reasons=kind==='discount'?['customer_agreement','service_recovery']:kind==='cancellation'?['booking_cancelled']:kind==='correction'?['incorrect_charge']:kind==='refund'?['customer_refund']:['incorrect_refund_recording'];

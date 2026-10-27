@@ -1,3 +1,4 @@
+import {DatePresets} from './DatePresets';
 import {ReportPreferenceControl,type ReportPreference} from './SettingsPreferences';
 import React,{useEffect,useState} from 'react';
 
@@ -56,7 +57,7 @@ export function SalesView({source,canExport,canManage,franchises,preference}:{so
 
  return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">Sales and GST</h1><p>Application summary for accountant review. This is not an official tax return or a filing service.</p>
 
- <form onSubmit={e=>{e.preventDefault();void create();}}><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/><TextField label="Saved GST rate fraction (blank for all, e.g. 5/100)" value={rate} onChange={setRate}/>
+ <form onSubmit={e=>{e.preventDefault();void create();}}><DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/><TextField label="Saved GST rate fraction (blank for all, e.g. 5/100)" value={rate} onChange={setRate}/>
 
  <ReportPreferenceControl preference={preference} disabled={pending||command.canRetry||!!id} accept={(ids,version)=>{setSelected([...ids]);setSettingsVersion(version);}}/>{settingsVersion&&<p>Accepted settings source {settingsVersion}</p>}<fieldset disabled={pending||command.canRetry}><legend>Included franchises</legend><p>Selected scope: {selected.map(id=>franchises.find(f=>f.id===id)?.name??id).join(', ')}. Load more authorized options to inspect additional selections.</p>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>{setSettingsVersion(undefined);setSelected(ids=>e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id));}}/>{f.name}</label>)}</fieldset><p>Asia/Kolkata dates. Up to 31 days and 5,000 bookings; saved reports expire after 24 hours.</p><button className="btn btn-filled" disabled={pending||command.canRetry||finance.canRetry}>Create sales snapshot</button></form>
 

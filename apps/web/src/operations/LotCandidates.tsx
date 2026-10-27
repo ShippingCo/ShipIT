@@ -1,0 +1,11 @@
+import {useState} from 'react';
+import type {ParcelSource} from '../data-access/parcels';
+import {usePagedResource} from './hooks';
+import {TextField,SelectField} from '../components/m3/Input';
+import {dayStart,shiftDay} from './business-dates';
+import {formatKolkata} from './format';
+export function LotCandidates({source,destination,select,busy}:{source:ParcelSource;destination:string;select:(id:string)=>void;busy:boolean}) {
+ const [from,setFrom]=useState(''),[to,setTo]=useState(''),[status,setStatus]=useState<'booked'|'checked_in'>('booked');
+ const page=usePagedResource(JSON.stringify([destination,from,to,status]),(cursor,signal)=>source.list({destination_key:destination,ungrouped:true,status,from:from?dayStart(from):undefined,to:to?dayStart(shiftDay(to,1)):undefined,limit:50,cursor},signal));
+ return <section><h3>Select ungrouped packages</h3><p>Booking confirmation date in Asia/Kolkata. Destination {destination}; current franchise only. The server rechecks eligibility when adding. Other dispatcher-authorized movements remain available by parcel ID.</p><div className="ops-form-grid"><TextField type="date" label="Lot selection booked from" value={from} onChange={setFrom} disabled={busy}/><TextField type="date" label="Lot selection booked through" value={to} min={from||undefined} onChange={setTo} disabled={busy}/><SelectField label="Ready package status" value={status} onChange={v=>setStatus(v as typeof status)} disabled={busy} options={[{value:'booked',label:'Booked'},{value:'checked_in',label:'Checked in'}]}/></div>{page.phase==='loading'?<p role="status">Loading candidate packages…</p>:page.phase==='error'?<button type="button" onClick={page.reload}>Retry candidates</button>:<ul className="ops-list">{page.items.map(p=><li className="ops-row" key={p.id}><span>{p.docket} · {formatKolkata(p.confirmed_at)}</span><button type="button" className="btn btn-text" disabled={busy} onClick={()=>select(p.id)}>Select {p.docket}</button></li>)}</ul>}{page.phase==='empty'&&<p>No ungrouped packages match these dates and status.</p>}{page.page.has_more&&<button type="button" disabled={busy||page.phase==='more'} onClick={page.loadMore}>More candidate packages</button>}</section>;
+}

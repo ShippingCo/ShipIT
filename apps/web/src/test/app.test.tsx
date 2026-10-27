@@ -321,3 +321,16 @@ describe('explicit fictional receipt printing',()=>{
     } finally {print.mockRestore();}
   });
 });
+
+describe('franchise feedback demo regressions',()=>{
+ it('opens today’s packages from the dashboard while keeping useful cross-day recent bookings',async()=>{
+  render(<App/>);await goto('/business');fireEvent.click(screen.getByText('Booked today'));
+  await waitFor(()=>expect(window.location.hash).toContain('/business/packages?booked=today'));
+  expect(screen.getByRole('button',{name:/Today/})).toBeVisible();
+ });
+ it('terminal parcels cannot be reassigned through the demo store and delivery keeps unpaid money separate',async()=>{
+  const store=await import('../data/store'),parcel=store.db().bookings.find(b=>b.status==='delivered')!;
+  expect(parcel).toBeDefined();const before=parcel.lotId;store.assignToLot(parcel.id,'another-lot');expect(store.findBooking(parcel.id)!.lotId).toBe(before);
+  const pending=store.db().bookings.find(b=>b.payment&&!b.payment.settled)!;const settled=pending.payment!.settled;store.updateStatus(pending.id,'delivered');expect(store.findBooking(pending.id)!.payment!.settled).toBe(settled);
+ });
+});

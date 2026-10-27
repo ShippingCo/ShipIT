@@ -43,7 +43,7 @@ function date(value:unknown,field:'from'|'to') {
 }
 export function parcelList(value:unknown):ParcelFilter {
   if(!value||typeof value!=='object'||Array.isArray(value))return fail('organization_id','REQUIRED');
-  const input=value as Record<string,unknown>,allowed=['organization_id','franchise_id','docket','status','customer_id','from','to','sort','limit','cursor'];
+  const input=value as Record<string,unknown>,allowed=['organization_id','franchise_id','docket','status','customer_id','destination_key','ungrouped','from','to','sort','limit','cursor'];
   if(Reflect.ownKeys(input).some(key=>typeof key!=='string'||!allowed.includes(key)))return fail('$','UNKNOWN_FIELD');
   const organizationId=queryUuid(input.organization_id,'organization_id')!,franchiseId=queryUuid(input.franchise_id,'franchise_id');
   let docketValue:string|null=null;
@@ -55,7 +55,9 @@ export function parcelList(value:unknown):ParcelFilter {
   if(input.cursor!==undefined&&(typeof input.cursor!=='string'||input.cursor.length>4096))return fail('cursor',typeof input.cursor==='string'?'OUT_OF_RANGE':'INVALID_TYPE');
   if(input.cursor==='')throw new HttpError('CURSOR_INVALID');
   const from=date(input.from,'from'),to=date(input.to,'to');if(from&&to&&from>=to)return fail('to','OUT_OF_RANGE');
-  return {organizationId,franchiseId,docket:docketValue,status:input.status as ParcelStatus??null,
+  if(input.destination_key!==undefined&&(typeof input.destination_key!=='string'||input.destination_key.length>32||input.destination_key.includes('\n')||!/^[A-Z][A-Z0-9_]{0,31}$/.test(input.destination_key)))return fail('$');
+  if(input.ungrouped!==undefined&&input.ungrouped!=='true')return fail('$');
+  return {destination:input.destination_key as string??null,ungrouped:input.ungrouped==='true',organizationId,franchiseId,docket:docketValue,status:input.status as ParcelStatus??null,
     customerId:queryUuid(input.customer_id,'customer_id'),from,to,sort:input.sort as ParcelSort??'created_at_desc',limit,cursor:input.cursor as string??null};
 }
 export function parcelSelection(value:unknown) {

@@ -1,3 +1,4 @@
+import {DatePresets} from './DatePresets';
 import React,{useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import type {PerformancePage,PerformanceFilter} from '@shippingco/shared';
@@ -28,7 +29,7 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
     <p>Booking-date parcel cohort · Asia/Kolkata. One parcel is counted once, including overlapping lot and direct route membership.</p>
     <p>On-time uses delivered parcels with actual proof and the chosen saved ETA version. Open parcels and RTO are separate; missing timing is excluded explicitly.</p>
     <form onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
-      <TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
+      <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
       <SelectField label="ETA basis" value={eta} onChange={v=>setEta(v as typeof eta)} options={[{value:'original',label:'Original dispatch-route ETA'},{value:'revised',label:'Last applied ETA before delivery'}]}/>
       <p>Up to 31 days and 5,000 parcels. Snapshots expire after 24 hours.</p><button className="btn btn-filled">Create performance snapshot</button>
     </fieldset></form>

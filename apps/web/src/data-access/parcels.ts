@@ -12,7 +12,7 @@ export interface ParcelRead {
   recipient:{name:string;phone_normalized:string;phone_display:string;address:string};
 }
 export interface ParcelTimelineItem {event_id:string;sequence:number;occurred_at:string;code:string;status:ParcelStatus;label:string}
-export interface ParcelListFilter {docket?:string;status?:ParcelStatus;from?:string;to?:string;sort?:'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';limit?:number;cursor?:string|null}
+export interface ParcelListFilter {destination_key?:string;ungrouped?:boolean;docket?:string;status?:ParcelStatus;from?:string;to?:string;sort?:'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';limit?:number;cursor?:string|null}
 export type ParcelCommand =
   {kind:'check_in';parcelId:string;body:{expected_version:number;evidence_ref:string;location_ref:string}}|
   {kind:'dispatch';parcelId:string;body:{expected_version:number;evidence_ref:string;manifest_id:string}}|

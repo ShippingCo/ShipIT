@@ -1,3 +1,4 @@
+import {businessDay,dayStart,weekMonday} from '../../operations/business-dates';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Msym } from '../../components/m3/Icon';
@@ -100,7 +101,7 @@ export default function Dashboard() {
   const nav = useNavigate();
   if (!data) return null;
 
-  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const startOfToday = Date.parse(dayStart(businessDay()));
   const toPay = toPaySummary();
   const outForDelivery = data.bookings.filter((b) => b.status === 'out_for_delivery');
   const reach = reachSummary();
@@ -196,17 +197,17 @@ export default function Dashboard() {
     (b) => b.status === 'delivered' && (b.deliveredTs || 0) >= startOfToday).length;
 
   const week = Array.from({ length: 7 }, (_, i) => {
-    const from = startOfToday - (6 - i) * DAY_MS;
+    const from = Date.parse(dayStart(weekMonday(businessDay()))) + i * DAY_MS;
     return {
       key: from,
-      label: new Date(from).toLocaleDateString('en-IN', { weekday: 'narrow' }),
-      full: new Date(from).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }),
+      label: new Date(from).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata',weekday: 'narrow' }),
+      full: new Date(from).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata',weekday: 'long', day: 'numeric', month: 'short' }),
       n: data.bookings.filter((b) => b.createdAt >= from && b.createdAt < from + DAY_MS).length,
-      today: i === 6,
+      today: from===startOfToday,
     };
   });
   const weekPeak = Math.max(1, ...week.map((d) => d.n));
-  const deltaVsYesterday = todayBookings.length - week[5].n;
+  const deltaVsYesterday = todayBookings.length - data.bookings.filter(b=>b.createdAt>=startOfToday-DAY_MS&&b.createdAt<startOfToday).length;
 
   /* ---------- 4b. how old the unpaid money is ---------- */
   const unsettled = data.bookings.filter((b) => b.payment && !b.payment.settled && b.status === 'delivered');
@@ -231,7 +232,7 @@ export default function Dashboard() {
     <div className="page page-glance">
       <div className="ctxbar">
         <span className="ctxbar-date">
-          {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {new Date().toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata',weekday: 'long', day: 'numeric', month: 'long' })}
         </span>
         <a href="#/customer" target="_blank" rel="noreferrer" className="btn btn-text">
           <Msym name="chat" /> Customer WhatsApp
@@ -337,7 +338,7 @@ export default function Dashboard() {
           icon="note_add" label="Booked today" tone="info"
           value={<Count to={todayBookings.length} />}
           delta={deltaVsYesterday}
-          onClick={() => nav('/business/booking')}
+          onClick={() => nav('/business/packages?booked=today')}
         />
         <KpiCard
           icon="task_alt" label="Delivered today" tone="ok"
@@ -451,7 +452,7 @@ export default function Dashboard() {
 
   
       {/* ============ 7. THE LAST FEW BOOKINGS ============ */}
-      <div className="section-label" style={{ marginTop: 22 }}>Recent bookings</div>
+      <div className="section-label" style={{ marginTop: 22 }}>Recent bookings</div><p className="muted t-body-sm">Latest bookings across days; Booked today shows only today in Asia/Kolkata.</p>
       <Card>
         {data.bookings.slice(0, 6).map((b) => {
           const late = activeDelayFor(b) && b.status !== 'delivered';
