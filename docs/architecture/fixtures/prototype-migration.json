@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "24d35bdcbe5dc5cf7711dd2ab17cc22e1b3c69a830d3df77e460393a10322ea7",
-      "apps/web/src/test/counter.test.tsx": "4760d2fe84e852d110259ece7b44881e1df257cade59e45b14cb39d42f214cd5",
+      "apps/web/src/test/counter.test.tsx": "d306d2cdcc6054c038ab0c266532d1bbfc9fb057652b1459c34de7e2161c7a97",
       "apps/web/src/test/operator.test.tsx": "139f7484780dd8512acc0b986dcd6e372f7a29759c4979f9fa0456380cd36afe",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1441,6 +1441,21 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
+        "name": "payment choices and implicit form submission never confirm a booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "adds, edits and removes packages, prices combined weight and saves independent dockets atomically",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "rejects invalid extra package details and prevents edits during uncertain multi-package confirmation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
         "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
         "cases": null
       },
@@ -2312,6 +2327,11 @@
       {
         "file": "apps/web/src/test/sales.test.tsx",
         "name": "retries the exact uncertain intent and denies exports for a read-only report grant",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/segmented-payment.test.tsx",
+        "name": "chooses a payment segment without submitting its surrounding booking form",
         "cases": null
       },
       {
@@ -4522,6 +4542,30 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
+      "name": "payment choices and implicit form submission never confirm a booking",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "adds, edits and removes packages, prices combined weight and saves independent dockets atomically",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "rejects invalid extra package details and prevents edits during uncertain multi-package confirmation",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
       "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
       "cases": null,
       "group": "seam",
@@ -5919,6 +5963,14 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
+    },
+    {
+      "file": "apps/web/src/test/segmented-payment.test.tsx",
+      "name": "chooses a payment segment without submitting its surrounding booking form",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",

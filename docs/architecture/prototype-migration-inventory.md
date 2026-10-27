@@ -1152,3 +1152,14 @@ Six new controlled-transport/archive tests; existing prototype authority, effect
 | apps/web/src/test/accountant.test.tsx: rejects traversal and oversized archives | preserve | reports | Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification. |
 
 The accountant download delays Blob URL release by one second so the browser can consume the file. This bounded timeout has no financial or persistence authority.
+
+## Franchise feedback counter regression review (#186)
+
+Counter fingerprint changes add package editing and explicit confirmation tests; existing assertions remain. Segmented selection has native non-submit semantics.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: payment choices and implicit form submission never confirm a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: adds, edits and removes packages, prices combined weight and saves independent dockets atomically | preserve | booking |
+| apps/web/src/test/counter.test.tsx: rejects invalid extra package details and prevents edits during uncertain multi-package confirmation | preserve | booking |
+| apps/web/src/test/segmented-payment.test.tsx: chooses a payment segment without submitting its surrounding booking form | preserve | booking |

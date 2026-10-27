@@ -56,6 +56,41 @@ describe('production counter API composition',()=>{
   fireEvent.click(screen.getByRole('link',{name:'Open Receipts'}));await screen.findByRole('heading',{name:'Receipts'});await screen.findByRole('button',{name:/SYN-33/});
   expect(calls.some(c=>c.path.startsWith('/api/v1/parcels?'))).toBe(true);expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);expect(document.body.textContent).not.toMatch(/WhatsApp sent|customer notified/);
  });
+ it('payment choices and implicit form submission never confirm a booking',async()=>{
+  await entered();fill('Payment choice','paid_counter');fill('Payment method','cash');
+  fireEvent.submit(screen.getByRole('form',{name:'New booking'}));
+  fireEvent.keyDown(screen.getByLabelText('Payment method',{exact:false}),{key:'Enter',code:'Enter'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+ });
+ it('adds, edits and removes packages, prices combined weight and saves independent dockets atomically',async()=>{
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+  expect(screen.queryByText('Server payable ₹134.00')).toBeNull();
+  fill('Package 2 · Recipient name','Second recipient');fill('Package 2 · Recipient phone','+1 202-555-0102');
+  fill('Package 2 · Weight (grams)','501');fill('Package 2 · Manual docket','SYN-SECOND');
+  fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+  fireEvent.click(screen.getByRole('button',{name:'Remove package 3'}));
+  fireEvent.click(screen.getByRole('button',{name:'Get server price and tax'}));await screen.findByText('Server payable ₹134.00');
+  expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({weight_grams:1500});
+  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({...f.booking,parcels:[...f.booking.parcels,{id:f.id(90),docket:'SYN-SECOND',weight_grams:501,status:'booked'}]},201)):undefined;
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  const sent=body(posts('/api/v1/bookings?')[0]);expect(sent.parcels).toHaveLength(2);
+  expect(sent.parcels[1]).toEqual({weight_grams:501,docket:'SYN-SECOND',recipient:{name:'Second recipient',phone:'+1 202-555-0102',address:''}});
+  expect(sent.tax_intent.pricing_input.weight_grams).toBe(1500);
+  expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);
+ });
+ it('rejects invalid extra package details and prevents edits during uncertain multi-package confirmation',async()=>{
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Add package'}));save();
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByLabelText('Package 2 · Recipient name',{exact:false})).toHaveAttribute('aria-invalid','true');
+  fill('Package 2 · Recipient name','Second recipient');fill('Package 2 · Recipient phone','+1 202-555-0102');fill('Package 2 · Weight (grams)','1');
+  fireEvent.click(screen.getByRole('button',{name:'Get server price and tax'}));await screen.findByText('Server payable ₹134.00');
+  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
+  save();await screen.findByRole('button',{name:'Retry same booking'});
+  expect(screen.getByRole('button',{name:'Add package'})).toBeDisabled();expect(screen.getByRole('button',{name:'Remove package 2'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(2));
+  const [a,b]=posts('/api/v1/bookings?');expect([a.options.body,key(a)]).toEqual([b.options.body,key(b)]);
+ });
  it('double click and lost commit acknowledgement retain identical path/body/key with one displayed result',async()=>{
   await entered();const slow=f.deferred<Response>();let first=true;override=c=>c.path.startsWith('/api/v1/bookings?')&&first?(first=false,slow.promise):undefined;
   const button=screen.getByRole('button',{name:'Save booking'});fireEvent.click(button);fireEvent.click(button);await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(1));
@@ -100,7 +135,7 @@ describe('production counter API composition',()=>{
   fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
  it('keyboard form submission focuses first invalid field and describes the error',async()=>{
-  await start();screen.getByRole('button',{name:'Save booking'}).focus();fireEvent.submit(screen.getByRole('form',{name:'New booking'}));
+  await start();screen.getByRole('button',{name:'Save booking'}).focus();fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
   const first=document.getElementById('counter-name')!;await waitFor(()=>expect(first).toHaveFocus());expect(first).toHaveAttribute('aria-invalid','true');expect(first).toHaveAccessibleDescription('Enter a customer name, up to 120 characters.');expect(screen.getByRole('alert')).toHaveTextContent('Review the highlighted fields.');expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it.each(['/api/v1/pricing/quote','/api/v1/tax/calculations'])('scope change cancels late %s and prevents private totals repaint',async path=>{

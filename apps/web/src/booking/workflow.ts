@@ -7,19 +7,19 @@ import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
-import { emptyDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
+import { emptyDraft, emptyParcel, parcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
 export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 'stale';
 interface State {
-  draft: Draft; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
+  draft: Draft; additionalParcels: ParcelDraft[]; parcelErrors: Errors[]; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
   accountId?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
   settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean;
 }
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api), accountApi=customerAccounts(api);
-  let state: State = { draft: emptyDraft(), errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing',
+  let state: State = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing',
     bookingPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false };
   const listeners = new Set<() => void>();
   let live = true, customerIntent: CommandIntent | undefined, quoteIntent: CommandIntent | undefined,
@@ -31,8 +31,12 @@ export function createBookingWorkflow(controller: ScopeController) {
     creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined,creditPhase:'editing',quote: undefined, tax: undefined, pricingPhase: 'editing', taxPhase: 'editing' }); };
   const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking;
   function validation(section: Parameters<typeof validate>[1]) {
-    const errors = validate(state.draft, section); set({ errors, message: Object.keys(errors).length ? 'Review the highlighted fields.' : '' });
-    return Object.keys(errors).length === 0;
+    const errors = validate(state.draft, section);
+    const extra = section === 'customer' ? [] : state.additionalParcels.map(parcelErrors);
+    if(section !== 'customer' && !totalWeight(state.draft,state.additionalParcels)) errors.weight = 'Enter valid package weights with a safe combined total.';
+    const invalid = Object.keys(errors).length > 0 || extra.some(e => Object.keys(e).length > 0);
+    set({errors,parcelErrors:extra,message:invalid?'Review the highlighted fields.':''});
+    return !invalid;
   }
   function failed(error: unknown, phase: 'customerPhase' | 'pricingPhase' | 'taxPhase' | 'bookingPhase') {
     const pending = uncertain(error) || error instanceof ApiFailure && ['IDEMPOTENCY_CONFLICT', 'PAYMENT_REFERENCE_CONFLICT'].includes(error.code);
@@ -52,16 +56,19 @@ export function createBookingWorkflow(controller: ScopeController) {
     if(!state.customer||!state.tax||!taxInput)return null;
     const d=state.draft;
     return {customer_id:state.customer.id,expected_customer_version:state.customer.version,tax_calculation_id:state.tax.id,tax_intent:taxInput,
-      parcels:[{weight_grams:Number(d.weight),...(d.docket?{docket:d.docket}:{}),recipient:{name:d.recipientName,phone:d.recipientPhone,address:d.recipientAddress}}]};
+      parcels:[d,...state.additionalParcels].map(p=>({weight_grams:Number(p.weight),...(p.docket?{docket:p.docket}:{}),recipient:{name:p.recipientName,phone:p.recipientPhone,address:p.recipientAddress}}))};
   };
   let unsubscribe = () => {};
   const purge = () => {
     live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = creditIntent = undefined; taxInput = undefined;
-    state = { draft: emptyDraft(), errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false };
+    state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false };
     listeners.forEach(l => l());
   };
   return {
     api, customerApi, accountApi,
+    addParcel() {if(locked()||state.additionalParcels.length>=49)return;set({additionalParcels:[...state.additionalParcels,emptyParcel()],parcelErrors:[]});invalidateCommercial();},
+    changeParcel(index:number,field:keyof ParcelDraft,value:string) {if(locked()||!state.additionalParcels[index])return;set({additionalParcels:state.additionalParcels.map((p,i)=>i===index?{...p,[field]:value}:p),parcelErrors:[]});invalidateCommercial();},
+    removeParcel(index:number) {if(locked())return;set({additionalParcels:state.additionalParcels.filter((_,i)=>i!==index),parcelErrors:[]});invalidateCommercial();},
     selectAccount(id:string) {if(locked())return;set({accountId:id||undefined});invalidateCommercial();},
     snapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
@@ -117,10 +124,10 @@ export function createBookingWorkflow(controller: ScopeController) {
       set({ busy: true, message: 'Requesting server price and tax…' });
       let phase: 'pricingPhase' | 'taxPhase' = 'pricingPhase';
       try {
-        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote({...pricingInput(state.draft),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})});
+        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote({...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)}),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})});
           const quote = await commercialApi.executeQuote(quoteIntent); if (!current()) return; set({ quote, pricingPhase: 'ready' }); }
         phase = 'taxPhase'; set({ taxPhase: 'loading' });
-        taxInput ??= { quote_id: state.quote!.id, pricing_input: {...pricingInput(state.draft),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})}, facts: taxFacts(state.draft) };
+        taxInput ??= { quote_id: state.quote!.id, pricing_input: {...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)}),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})}, facts: taxFacts(state.draft) };
         if (!calculateIntent) {
           prepareIntent ??= commercialApi.prepare(taxInput);
           const preparation = await commercialApi.executePrepare(prepareIntent); if (!current()) return;

@@ -90,6 +90,7 @@ export function SegmentedControl<T extends string = string>({ options, value, on
         return (
           <button
             key={o.value}
+            type="button"
             className={cx('seg-btn', selected && 'on')}
             aria-pressed={selected}
             onClick={() => onChange(o.value)}
