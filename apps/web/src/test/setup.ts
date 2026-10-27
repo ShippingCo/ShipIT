@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach } from 'vitest';
+import { transferableAbortController } from 'node:util';
+
+// jsdom supplies its own AbortSignal, while Request comes from Node's fetch.
+// Keep cancellation in the same realm as Request; Node 24 checks that identity.
+const nativeController = transferableAbortController();
+globalThis.AbortController = nativeController.constructor as typeof AbortController;
+globalThis.AbortSignal = nativeController.signal.constructor as typeof AbortSignal;
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

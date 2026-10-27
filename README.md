@@ -49,13 +49,32 @@ The stack is React/Vite, Fastify and raw SQL over pg, migrated with node-pg-migr
 
 ## Running it
 
-Requires Node **22.23.2**, [pnpm](https://pnpm.io) **10.34.5** and Python **3.12.14** for quality checks. See [quality setup and verification](docs/QUALITY_CHECKS.md).
+Requires Node **24.22.1**, [pnpm](https://pnpm.io) **10.34.5** and Python **3.12.14** for quality checks. See [quality setup and verification](docs/QUALITY_CHECKS.md).
 
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm dev          # production operator entry; API required at http://localhost:3000
-VITE_DATA_MODE=demo pnpm dev  # isolated fictional prototype
+pnpm db           # start the existing local PostgreSQL Docker container
+pnpm db:migrate   # apply database migrations
+pnpm api          # API at http://localhost:3000 (leave running)
+# In another terminal:
+pnpm worker       # WhatsApp notification worker (leave running)
+# In another terminal:
+pnpm web          # main software UI at http://localhost:5173 (leave running)
 ```
+
+Run these commands from the repository root with Docker Desktop running. They load
+`.env.database.local`, `.env`, then `.env.local`; later files override earlier ones,
+and shell variables override the files. Keep real credentials in these ignored files
+and use `.env.example` as the configuration reference. Placeholder values must be replaced
+or omitted when an earlier file already supplies the real value.
+
+`pnpm dev` also starts the web UI. The aliases `pnpm dev:api`, `pnpm dev:web`,
+`pnpm dev:worker` and `pnpm db:start` are available. The web launcher imports only
+`VITE_*` and `SHIPIT_API_PROXY` from root env files; Vite also supports its own
+`apps/web/.env*` files. Set `VITE_DATA_MODE=demo` for the isolated fictional prototype.
+The worker requires the WhatsApp configuration described in `.env.example`.
+`pnpm db` starts the existing `LOCAL_DB_CONTAINER` (default `shipit-postgres-local`);
+it does not provision a new database. `pnpm db:local` remains the disposable test harness.
 
 ```bash
 pnpm build        # single-file bundle into apps/web/dist/
