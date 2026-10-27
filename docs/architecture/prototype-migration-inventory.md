@@ -1163,3 +1163,16 @@ Counter fingerprint changes add package editing and explicit confirmation tests;
 | apps/web/src/test/counter.test.tsx: adds, edits and removes packages, prices combined weight and saves independent dockets atomically | preserve | booking |
 | apps/web/src/test/counter.test.tsx: rejects invalid extra package details and prevents edits during uncertain multi-package confirmation | preserve | booking |
 | apps/web/src/test/segmented-payment.test.tsx: chooses a payment segment without submitting its surrounding booking form | preserve | booking |
+
+## Franchise feedback operational regression review (#186)
+
+Reviewed changed demo store guard, booking submit/toast, dashboard timezone/navigation, terminal parcel actions, shared date presets, and new scoped package/candidate/date tests. Existing regression cases remain; production provider authority is unchanged.
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/app.test.tsx: opens today’s packages from the dashboard while keeping useful cross-day recent bookings | preserve | booking |
+| apps/web/src/test/app.test.tsx: terminal parcels cannot be reassigned through the demo store and delivery keeps unpaid money separate | preserve | booking |
+| apps/web/src/test/business-dates.test.tsx: uses IST midnight and Monday weeks across Sunday, month and year boundaries | preserve | booking |
+| apps/web/src/test/business-dates.test.tsx: date presets edit the range without submitting or replacing saved report evidence | preserve | booking |
+| apps/web/src/test/lot-candidates.test.tsx: filters candidates by server destination, ungrouped state and IST booking date before deliberate selection | preserve | booking |
+| apps/web/src/test/operations.test.tsx: booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position | preserve | booking |

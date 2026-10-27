@@ -1,3 +1,4 @@
+import {businessDay,dayStart,shiftDay,weekMonday} from '../../operations/business-dates';
 import React, { useEffect, useRef, useState } from 'react';
 import { Msym, cx } from './Icon';
 import { IconButton } from './Button';
@@ -98,22 +99,18 @@ export interface CustomRange {
 export const DATE_PRESETS: Array<{ value: DatePreset; label: string }> = [
   { value: 'all', label: 'All time' },
   { value: 'today', label: 'Today' },
-  { value: 'week', label: 'Last 7 days' },
+  { value: 'week', label: 'This week' },
   { value: 'month', label: 'This month' },
   { value: 'custom', label: 'Custom range' },
 ];
 
 /** Resolves a preset (or custom from/to) to a millisecond window. */
 export function dateWindow(preset: DatePreset, custom?: CustomRange): [number, number] {
-  const now = new Date();
-  if (preset === 'today') return [new Date(now).setHours(0, 0, 0, 0), Infinity];
-  if (preset === 'week') return [now.getTime() - 7 * 864e5, Infinity];
-  if (preset === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1).getTime(), Infinity];
-  if (preset === 'custom') {
-    const from = custom?.from ? new Date(custom.from).setHours(0, 0, 0, 0) : 0;
-    const to = custom?.to ? new Date(custom.to).setHours(23, 59, 59, 999) : Infinity;
-    return [from, to];
-  }
+  const today=businessDay(),end=Date.parse(dayStart(shiftDay(today,1)))-1;
+  if(preset==='today')return [Date.parse(dayStart(today)),end];
+  if(preset==='week')return [Date.parse(dayStart(weekMonday(today))),end];
+  if(preset==='month')return [Date.parse(dayStart(today.slice(0,8)+'01')),end];
+  if(preset==='custom')return [custom?.from?Date.parse(dayStart(custom.from)):0,custom?.to?Date.parse(dayStart(shiftDay(custom.to,1)))-1:Infinity];
   return [0, Infinity];
 }
 

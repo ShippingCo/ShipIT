@@ -165,6 +165,10 @@ await test('docket, UUID, status, customer and date reads return only allowliste
   const list=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({...base,docket:parcel.docket,status:'booked',customer_id:s.source.id,
     from:'2099-01-01T00:00:00Z',to:'2099-01-01T00:01:00Z',sort:'docket_asc'}),cookies:s.cookies(s.operator.token)});
   assert.equal(list.statusCode,200,list.body);assert.equal(list.json().items.length,1);assert.equal(list.json().items[0].id,parcel.id);
+  for(const [destination,expected] of [['SYN_DEST',1],['OTHER_CITY',0]] as const) {
+    const filtered=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({...base,destination_key:destination,from:'2098-12-31T18:30:00Z',to:'2099-01-01T18:30:00Z'}),cookies:s.cookies(s.operator.token)});
+    assert.equal(filtered.statusCode,200,filtered.body);assert.equal(filtered.json().items.length,expected);
+  }
   const detail=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
   assert.equal(detail.statusCode,200,detail.body);assert.deepEqual(Object.keys(detail.json()).sort(),['booking_id','confirmed_at','custody','docket','id','recipient','sender','status','version','weight_grams']);
   const timeline=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'/timeline?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
@@ -191,6 +195,15 @@ await test('foreign and unknown parcel selectors are indistinguishable and curso
   assert.equal(crossed.statusCode,422,crossed.body);assert.equal(crossed.json().error.code,'CURSOR_INVALID');
   const changed=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:org,franchise_id:A,limit:'1',status:'booked',cursor}),cookies:s.cookies(s.operator.token)});
   assert.equal(changed.statusCode,422,changed.body);assert.equal(changed.json().error.code,'CURSOR_INVALID');
+  for(const extra of [{destination_key:'SYN_DEST'},{ungrouped:'true'}] as Array<Record<string,string>>) {
+    const filtered=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({...extra,organization_id:org,franchise_id:A,limit:'1',cursor}),cookies:s.cookies(s.operator.token)});
+    assert.equal(filtered.json().error.code,'CURSOR_INVALID');
+  }
+  for(const [actor,organization,franchise] of [[sibling,org,B],[foreign,otherOrg,C]] as const) {
+    const filtered=await s.app.inject({url:'/api/v1/parcels?'+new URLSearchParams({organization_id:organization,franchise_id:franchise,destination_key:'SYN_DEST'}),cookies:s.cookies(actor.token)});
+    assert.equal(filtered.statusCode,200,filtered.body);assert.equal(filtered.json().items.length,0);
+  }
+
 });
 
 await test('parcel reads survive pool restart while revoked and unapproved roles fail closed',{timeout:30000},async t=>{

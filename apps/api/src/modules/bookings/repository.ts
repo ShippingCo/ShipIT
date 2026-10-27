@@ -70,8 +70,10 @@ export async function listParcels(scope:TenantAccess,filter:ParcelFilter,boundar
       AND ($3::text IS NULL OR p.status=$3) AND ($4::uuid IS NULL OR b.customer_id=$4)
       AND ($5::timestamptz IS NULL OR b.confirmed_at >= $5) AND ($6::timestamptz IS NULL OR b.confirmed_at < $6)
       AND ($7::text IS NULL OR (${order.expression},p.id) ${order.comparison} ($7::${filter.sort.startsWith('created_at')?'timestamptz':'text'}${filter.sort.startsWith('docket')?' COLLATE "C"':''},$8::uuid))
+      AND ($10::text IS NULL OR b.tax_intent->'pricing_input'->>'destination_key'=$10)
+      AND ${filter.ungrouped?'NOT EXISTS (SELECT 1 FROM shipit.lot_memberships m WHERE m.organization_id=p.organization_id AND m.franchise_id=p.franchise_id AND m.parcel_id=p.id AND m.ended_at IS NULL)':'TRUE'}
     ORDER BY ${order.expression} ${order.direction},p.id ${order.direction} LIMIT $9`,
-  [filter.franchiseId,filter.docket,filter.status,filter.customerId,filter.from,filter.to,boundary?.value??null,boundary?.id??null,filter.limit+1])).rows;
+  [filter.franchiseId,filter.docket,filter.status,filter.customerId,filter.from,filter.to,boundary?.value??null,boundary?.id??null,filter.limit+1,filter.destination??null])).rows;
 }
 
 export async function findParcel(scope:TenantAccess,id:string) {

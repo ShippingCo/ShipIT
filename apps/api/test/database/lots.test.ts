@@ -327,3 +327,15 @@ await test('unresolved organization serialization is bounded and exact retry suc
   assert.deepEqual(await s.effects(),before);const result=await service.execute(...args);assert.deepEqual(await service.execute(...args),result);
   assert.deepEqual(await s.effects(),{lots:1,memberships:0,active:0,commands:1,audits:1,events:1});
 });
+
+await test('dated ungrouped candidates use the scoped booking destination and exclude active memberships',{timeout:30000},async t=>{
+ const s=await setup(t),lot=await s.create();
+ const extra={destination_key:'SYN_DEST',ungrouped:'true',status:'booked',from:'2098-12-31T18:30:00Z',to:'2099-01-01T18:30:00Z'};
+ const read=()=>s.request('GET','parcels',undefined,s.operator,randomUUID(),org,A,extra);
+ const before=await read();assert.equal(before.statusCode,200,before.body);assert.equal(before.json().items.length,1);
+ const added=await s.request('POST',`lots/${lot.id}/parcels`,{expected_version:lot.version,parcel_id:s.parcel.id});
+ assert.equal(added.statusCode,200,added.body);
+ const after=await read();assert.equal(after.statusCode,200,after.body);assert.equal(after.json().items.length,0);
+ const outside=await s.request('GET','parcels',undefined,s.operator,randomUUID(),org,A,{...extra,from:'2099-01-01T18:30:00Z',to:'2099-01-02T18:30:00Z'});
+ assert.equal(outside.statusCode,200,outside.body);assert.equal(outside.json().items.length,0);
+});

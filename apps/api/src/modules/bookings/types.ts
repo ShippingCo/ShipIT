@@ -6,7 +6,7 @@ export type ParcelStatus = 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_
 export type ParcelSort = 'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';
 export interface ParcelFilter {
   organizationId:string;franchiseId:string|null;docket:string|null;status:ParcelStatus|null;
-  customerId:string|null;from:string|null;to:string|null;sort:ParcelSort;limit:number;cursor:string|null;
+  destination?:string|null;ungrouped?:boolean;customerId:string|null;from:string|null;to:string|null;sort:ParcelSort;limit:number;cursor:string|null;
 }
 export interface ParcelBoundary { value:string;id:string }
 export interface ParcelReadRow {

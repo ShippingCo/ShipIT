@@ -168,7 +168,7 @@ export default function NewBookingPage() {
         lotId: form.lotId || null, attachments: files, paymentMode: form.paymentMode,
         goodsValue: Number(form.goodsValue) || 0,
       });
-      toast(`Docket ${b.docket} saved · WhatsApp sent`, {
+      toast(`Docket ${b.docket} saved · demo message queued`, {
         action: { label: 'Print receipt', onClick: () => printReceipt(b.docket) },
       });
       nav('/business/packages');
@@ -179,7 +179,7 @@ export default function NewBookingPage() {
 
   return (
     <div className="page">
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={event=>event.preventDefault()} noValidate>
         <div className="booking-layout">
           <div>
             <Card pad>
@@ -324,7 +324,7 @@ export default function NewBookingPage() {
               <span className={`pill ${form.paymentMode === 'topay' ? 'pill-warn' : 'st-delivered'} sum-pay`}>
                 {form.paymentMode === 'topay' ? 'Collect on delivery' : 'Paid now'}
               </span>
-              <Button type="submit" icon="check" size="lg" block loading={saving} className="sum-cta">
+              <Button type="button" onClick={submit} icon="check" size="lg" block loading={saving} className="sum-cta">
                 Save booking
               </Button>
             </Card>

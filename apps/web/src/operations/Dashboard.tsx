@@ -46,6 +46,7 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
  ].filter(Boolean) as {to:string;icon:string;number:number;label:string;note:string}[];
  return <div className="ops-page">
   {header}
+  {allowed(roles,parcelRead)&&<Link className="btn btn-outlined" to="/business/packages?booked=today">Booked today</Link>}
   <section aria-label="Current operational summaries" className="ops-grid">{metrics.map(metric=><Link className="card ops-kpi" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
   {metrics.every(metric=>metric.number===0)&&<Empty icon="inventory_2" title="No records on the current pages" body="Create a booking or operational record, then retry this dashboard."/>}
  </div>;

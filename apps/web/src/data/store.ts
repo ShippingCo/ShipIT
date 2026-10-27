@@ -576,7 +576,7 @@ export function deleteLot(id: string) {
   db().routes.forEach((r) => { r.lotIds = r.lotIds.filter((x) => x !== id); });
   db().lots = db().lots.filter((l) => l.id !== id); save();
 }
-export const assignToLot = (bookingId: string, lotId: string | null) => { const b = findBooking(bookingId); if (b) { b.lotId = lotId || null; save(); } };
+export const assignToLot = (bookingId: string, lotId: string | null) => { const b = findBooking(bookingId); if (b && !['delivered','rto'].includes(b.status)) { b.lotId = lotId || null; save(); } };
 
 export function createRoute(data: NewRouteInput): DispatchRoute {
   const r: DispatchRoute = {
