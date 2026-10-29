@@ -22,7 +22,7 @@ describe('production messaging history',()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>{if(first){first=false;return gate.promise;}return json(page([row]));}));mount();expect(screen.getByRole('status')).toHaveTextContent('Loading messaging history');
   await act(async()=>gate.resolve(json(page([row]))));expect(await screen.findByText('Accepted by provider',{selector:'span'})).toBeVisible();expect(screen.queryByText('Delivered',{selector:'span'})).not.toBeInTheDocument();
   row={...row,message:{...row.message,state:'read',progress:'read'}};fireEvent.click(screen.getByText('Refresh history'));expect(await screen.findByText('Read',{selector:'span'})).toBeVisible();
-  fireEvent.change(screen.getByLabelText('History view'),{target:{value:'automation'}});expect(await screen.findByText('Automation: Waiting')).toBeVisible();expect(screen.getByText('Message: Read')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('History view'),{target:{value:'automation'}});const automation=await screen.findByRole('table',{name:'Automation history'});expect(within(automation).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['Notification','Automation outcome','Evidence','Recorded','Action']);const automationRow=within(automation).getByRole('row',{name:/Booking confirmation/});const automationCells=within(automationRow).getAllByRole('cell');expect(automationCells[0]).toHaveTextContent(/^Booking confirmation$/);expect(automationCells[1]).toHaveTextContent(/^Waiting$/);expect(automationCells[2]).toHaveTextContent(/^Message: Read$/);
  });
  it.each(['suppressed','failed','uncertain'])('labels %s separately',async state=>{serve({...message,message:{...message.message,state}});mount();expect(await screen.findByText(state[0].toUpperCase()+state.slice(1),{selector:'span'})).toBeVisible();});
  it('shows empty/error/explicit retry without demo fallback',async()=>{
@@ -36,16 +36,16 @@ describe('production messaging history',()=>{
  it('always redacts delivery verification content and strips unknown response fields before UI state',async()=>{
   const unsafe={...detail,notification_kind:'delivery_otp',body:'synthetic-secret',phone:'555-private',variables:['123456'],message:{...detail.message,provider_message_id:'raw-provider'}};
   expect(JSON.stringify(historyDetail(unsafe))).not.toMatch(/synthetic-secret|555-private|123456|raw-provider/);
-  serve({...message,notification_kind:'delivery_otp'},unsafe);mount();await screen.findByText('Delivery verification message');fireEvent.click(screen.getByRole('button',{name:'Inspect Delivery verification message'}));await screen.findByRole('heading',{name:'Delivery verification message'});
+  serve({...message,notification_kind:'delivery_otp'},unsafe);mount();await screen.findByText('Delivery verification message');fireEvent.click(screen.getByRole('button',{name:'Inspect Delivery verification message '+id(80)}));await screen.findByRole('heading',{name:'Delivery verification message'});
   expect(document.body.textContent).not.toMatch(/123456|synthetic-secret|Clear history|Clear automation|Reveal/);
  });
  it('traps dialog focus, closes on Escape and restores trigger focus',async()=>{
-  serve();mount();const trigger=await screen.findByRole('button',{name:'Inspect Booking confirmation'});trigger.focus();fireEvent.click(trigger);
+  serve();mount();const trigger=await screen.findByRole('button',{name:'Inspect Booking confirmation '+id(80)});trigger.focus();fireEvent.click(trigger);
   const dialog=await screen.findByRole('dialog');await waitFor(()=>expect(dialog.contains(document.activeElement)).toBe(true));const close=within(dialog).getByText('Close');close.focus();fireEvent.keyDown(close,{key:'Tab'});expect(dialog.contains(document.activeElement)).toBe(true);
   fireEvent.keyDown(document.activeElement!,{key:'Escape'});await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());expect(trigger).toHaveFocus();
  });
  it('operator cannot redrive even an erroneously offered recovery',async()=>{
-  serve(message,{...detail,recovery:{kind:'redrive',expected_version:3,allowed_reasons:['dependency_repaired']}});mount();fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation'}));await screen.findByText('Provider attempts');expect(screen.queryByRole('button',{name:'Redrive original message'})).not.toBeInTheDocument();
+  serve(message,{...detail,recovery:{kind:'redrive',expected_version:3,allowed_reasons:['dependency_repaired']}});mount();fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation '+id(80)}));await screen.findByText('Provider attempts');expect(screen.queryByRole('button',{name:'Redrive original message'})).not.toBeInTheDocument();
  });
  it('refreshes version, requires uncertain warning, then preserves the exact W44 request after transport uncertainty',async()=>{
   let reads=0;const writes:RequestInit[]=[];
@@ -54,13 +54,13 @@ describe('production messaging history',()=>{
    if(options.method==='POST'){writes.push(options);if(writes.length===1)throw new TypeError('network');return json({id:id(80),version:6,state:'queued'});}
    if(path.includes('/'+id(80)+'?')){reads++;return json({...detail,message:{...detail.message,state:'uncertain',version:reads===1?3:5},recovery:{kind:'investigate_uncertain',expected_version:reads===1?3:5,allowed_reasons:['retry_uncertain_confirmed']}});}
    return json(page([message]));
-  }));mount(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation'}));fireEvent.click(await screen.findByRole('button',{name:'Redrive original message'}));
+  }));mount(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation '+id(80)}));fireEvent.click(await screen.findByRole('button',{name:'Redrive original message'}));
   await screen.findByText(/Retrying may deliver a duplicate/);expect(writes.length).toBe(0);fireEvent.click(screen.getByText('I investigated — retry despite duplicate risk'));
   fireEvent.click(await screen.findByText('Retry same request'));await waitFor(()=>expect(writes.length).toBe(2));expect(writes[1].body).toBe(writes[0].body);expect(writes[1].headers).toEqual(writes[0].headers);expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:5,reason_code:'retry_uncertain_confirmed'});
   await waitFor(()=>expect(screen.getByText('Server update confirmed.')).toBeVisible());
   await screen.findByText('Accepted by provider',{selector:'span'});
   fireEvent.click(screen.getByRole('button',{name:'Close'}));
-  await waitFor(()=>expect(screen.getByRole('button',{name:'Inspect Booking confirmation'})).toHaveFocus());
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Inspect Booking confirmation '+id(80)})).toHaveFocus());
 
  });
  it('uses W19 for eligible route reminders, without redriving or modifying ETA',async()=>{
@@ -68,7 +68,7 @@ describe('production messaging history',()=>{
   const writes:{path:string;options:RequestInit}[]=[];vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
    if(path==='/auth/bootstrap')return json({csrf_token:'synthetic'});if(options.method==='POST'){writes.push({path,options});return json({id:id(93),event_type:'route.delay_reminder.requested',route_id:id(91),original_event_id:id(92),fanout_id:id(94),created_at:now});}
    return json(path.includes('/'+id(90)+'?')?fanout:page([fanout]));
-  }));mount();fireEvent.change(screen.getByLabelText('History view'),{target:{value:'automation'}});fireEvent.click(await screen.findByRole('button',{name:'Inspect Route delay'}));fireEvent.click(await screen.findByText('Send route reminder'));
+  }));mount();fireEvent.change(screen.getByLabelText('History view'),{target:{value:'automation'}});fireEvent.click(await screen.findByRole('button',{name:'Inspect Route delay '+id(90)}));fireEvent.click(await screen.findByText('Send route reminder'));
   await waitFor(()=>expect(writes.length).toBe(1));expect(writes[0].path).toContain(`/routes/${id(91)}/delay-reminders?`);expect(JSON.parse(String(writes[0].options.body))).toEqual({original_delay_event_id:id(92)});expect(screen.queryByText('Redrive original message')).not.toBeInTheDocument();
  });
  it('aborts old scope responses, rejects stale paint and purges on 401',async()=>{
@@ -82,7 +82,7 @@ describe('production messaging history',()=>{
  });
  it.each(['org_admin','franchise_admin','operator','dispatcher'] as const)('allows %s navigation',async role=>{
   serve();const ctx={...context,franchises:context.franchises.map(f=>({...f,roles:[role]}))} as OperatorContext;
-  render(<MemoryRouter initialEntries={['/business/automation']}><BusinessShell controller={controller([role])} context={ctx} select={()=>{}}/></MemoryRouter>);expect(screen.getAllByRole('link',{name:'Automation & Messages'})).toHaveLength(2);await screen.findByText('Accepted by provider',{selector:'span'});
+  render(<MemoryRouter initialEntries={['/business/automation']}><BusinessShell controller={controller([role])} context={ctx} select={()=>{}}/></MemoryRouter>);const navigation=screen.getAllByRole('link',{name:'Automation & Messages'});expect(navigation).toHaveLength(1);expect(navigation[0]).toHaveAttribute('href','/business/automation');expect(navigation[0]).toHaveAttribute('aria-current','page');await screen.findByText('Accepted by provider',{selector:'span'});
  });
  it('rejects malformed successful status DTOs',()=>{expect(()=>historyDto({...message,message:{...message.message,state:'sent_and_delivered'}})).toThrow();});
 });

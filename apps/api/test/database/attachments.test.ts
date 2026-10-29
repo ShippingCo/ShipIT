@@ -58,7 +58,7 @@ await test('attachment W22 and R14 each enforce every role, assignment purpose a
   const result=await s.request('POST','/uploads',intent(),actor.token);assert.equal(result.statusCode,['franchise_admin','operator'].includes(role)?201:role==='delivery_agent'?404:403,role);
   assert.equal((await s.request('POST',`/${ready.id}/download-grants`,{},actor.token)).statusCode,read?200:role==='delivery_agent'?404:403,role);
  }
- assert.equal((await s.request('GET','',{},s.admin.token)).statusCode,200);assert.equal((await s.request('POST','/uploads',intent(),s.admin.token)).statusCode,403);assert.equal((await s.request('POST',`/${ready.id}/download-grants`,{},s.admin.token)).statusCode,403);
+ assert.equal((await s.request('GET','',{},s.admin.token)).statusCode,200);assert.equal((await s.request('POST','/uploads',intent(),s.admin.token)).statusCode,201);assert.equal((await s.request('POST',`/${ready.id}/download-grants`,{},s.admin.token)).statusCode,200);
  const actor=await s.grant('operator',[A]),g=await s.request('POST',`/${ready.id}/download-grants`,{},actor.token);await s.memberships.revokeMembership(s.admin.token,actor.member.id,{expected_version:1});
  assert.equal((await s.app.inject({url:g.json().url,cookies:s.cookies(actor.token)})).statusCode,404);
 });

@@ -87,17 +87,16 @@ await test('bounded retries, poison quarantine, authorized original redrive and 
   assert.ok(alerts.length>0);s.advance();assert.equal(await worker.claim(c.id),null);
   const reason={expected_version:quarantined.version,reason_code:'dependency_repaired'},key=randomUUID();
   const denied=await s.http('jobs/'+first.id+'/redrive',s.operator.token,'POST',reason,key);assert.equal(denied.statusCode,403);
-  const orgDenied=await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',reason,key);assert.equal(orgDenied.statusCode,403);
-  const redrive=await s.http('jobs/'+first.id+'/redrive',s.local.token,'POST',reason,key);assert.equal(redrive.statusCode,200,redrive.body);
-  assert.deepEqual((await s.http('jobs/'+first.id+'/redrive',s.local.token,'POST',reason,key)).json(),redrive.json());
-  assert.equal((await s.http('jobs/'+first.id+'/redrive',s.local.token,'POST',{...reason,reason_code:'consumer_upgraded'},key)).statusCode,409);
-  assert.equal((await s.http('jobs/'+first.id+'/redrive',s.local.token,'POST',reason)).statusCode,409);
+  const redrive=await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',reason,key);assert.equal(redrive.statusCode,200,redrive.body);
+  assert.deepEqual((await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',reason,key)).json(),redrive.json());
+  assert.equal((await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',{...reason,reason_code:'consumer_upgraded'},key)).statusCode,409);
+  assert.equal((await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',reason)).statusCode,409);
   repaired=true;await worker.tick();assert.equal((await s.job(first.id)).state,'completed');assert.equal((await s.job(first.id)).attempts,6);
-  assert.deepEqual((await s.http('jobs/'+first.id+'/redrive',s.local.token,'POST',reason,key)).json(),redrive.json());
+  assert.deepEqual((await s.http('jobs/'+first.id+'/redrive',s.admin.token,'POST',reason,key)).json(),redrive.json());
   assert.equal((await s.job(first.id)).state,'completed'); // Original replay never resets later progress.
   const detail=await s.http('jobs/'+first.id);assert.equal(detail.statusCode,200,detail.body);assert.equal(detail.json().attempts.filter((a:{kind:string})=>a.kind==='quarantined').length,1);
   assert.ok(!detail.body.includes('lease_token'));assert.ok(!detail.body.includes('envelope'));assert.ok(!detail.body.includes('SECRET'));
-  const audit=await s.list(s.local.token,{resource_type:'outbox_job',resource_id:first.id});assert.equal(audit.statusCode,200,audit.body);
+  const audit=await s.list(s.admin.token,{resource_type:'outbox_job',resource_id:first.id});assert.equal(audit.statusCode,200,audit.body);
   assert.equal(audit.json().items.length,1);assert.equal(audit.json().items[0].reason_code,'dependency_repaired');
   assert.ok(!s.logs.join('').includes('SECRET_SHOULD_NOT_ESCAPE'));
   const incompatible=s.consumer('synthetic.schema',{subscriptions:{'booking.created':[99]}}),bad=createOutboxWorker(s.pool,[incompatible],{clock:s.clock});

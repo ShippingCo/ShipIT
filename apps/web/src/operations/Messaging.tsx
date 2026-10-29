@@ -1,3 +1,5 @@
+import {PageHeader,SectionHeader,FilterBar,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import React,{useMemo,useRef,useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { OperatorRole } from '@shippingco/shared';
@@ -15,27 +17,33 @@ export default function Messaging({controller,roles}:{controller:ScopeController
  const source=useMemo(()=>messaging(scopedApi(controller)),[controller]);
  const [view,setView]=useState<HistoryView>('messages'),[status,setStatus]=useState(''),[kind,setKind]=useState(''),[correlation,setCorrelation]=useState(''),[filterCorrelation,setFilterCorrelation]=useState('');
  if(!roles.some(role=>allowed.includes(role)))return <p role="alert">Messaging history is unavailable for this role.</p>;
- return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm" tabIndex={-1}>Automation &amp; Messages</h1>
-  <p className="ops-note">Durable notification evidence. Provider acceptance is separate from delivery. Message content is private and is not retained here.</p>
-  <div className="card ops-card ops-form-grid"><SelectField aria-label="History view" label="History view" value={view} onChange={value=>{setView(value as HistoryView);setStatus('');setKind('');}} options={[{value:'messages',label:'Messages'},{value:'automation',label:'Automation'}]}/>
+ return <section className="service-workspace" aria-labelledby="workspace-title"><PageHeader title="Automation & Messages" eyebrow="Customer service" description="Durable notification evidence. Provider acceptance is separate from delivery. Message content is private and is not retained here."/>
+  <FilterBar label="Messaging history filters"><SelectField aria-label="History view" label="History view" value={view} onChange={value=>{setView(value as HistoryView);setStatus('');setKind('');}} options={[{value:'messages',label:'Messages'},{value:'automation',label:'Automation'}]}/>
    <SelectField aria-label={view==='messages'?'Message status':'Automation outcome'} label={view==='messages'?'Message status':'Automation outcome'} value={status} onChange={setStatus} options={[{value:'',label:'All'},...(view==='messages'?messageStates:automationStates).map(value=>({value,label:statusLabel[value]}))]}/>
    <SelectField aria-label="Notification kind" label="Notification kind" value={kind} onChange={setKind} options={[{value:'',label:'All'},...kinds.map(value=>({value,label:kindLabel[value]}))]}/>
    <form onSubmit={e=>{e.preventDefault();setFilterCorrelation(correlation);}}><TextField label="Correlation reference (UUID)" value={correlation} onChange={setCorrelation} pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"/><button className="btn btn-text">Apply correlation</button></form>
-  </div>
+  </FilterBar>
   <Feed key={`${view}:${status}:${kind}:${filterCorrelation}`} source={source} view={view} status={status} kind={kind} correlation={filterCorrelation} roles={roles}/>
  </section>;
 }
 function Feed({source,view,status,kind,correlation,roles}:{source:MessagingSource;view:HistoryView;status:string;kind:string;correlation:string;roles:readonly OperatorRole[]}) {
  const page=usePagedResource('history',(cursor,signal)=>source.list(view,{status,kind,correlation_id:correlation,cursor},signal));
  const [selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <><div className="ops-row-actions"><button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh history</button></div>
+ return <><SectionHeader title={view==='messages'?'Message history':'Automation history'} description="Current authorized evidence, ordered by the server." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh history</button>}/>
   {page.phase==='loading'?<Loading label="Loading messaging history…"/>:page.phase==='error'?<Failure retry={page.reload} label="Messaging history could not be loaded."/>:page.phase==='empty'?<Empty title="No matching history" body="No durable records match these filters."/>:
-   <ul className="ops-list">{page.items.map(row=><li key={row.id} className="ops-row"><div className="ops-row-main"><b>{kindLabel[row.notification_kind]}</b><span>{view==='automation'&&row.decision?`Automation: ${statusLabel[row.decision.outcome]}`:row.row_kind==='fanout'?statusLabel[row.fanout!.state]:statusLabel[row.message!.state]}</span>{view==='automation'&&row.message&&<span>Message: {statusLabel[row.message.state]}</span>}<time className="ops-note" dateTime={row.effective_time}>{new Date(row.effective_time).toLocaleString()}</time>{row.row_kind==='fanout'&&<span>{row.fanout!.completed_count+row.fanout!.skipped_count+row.fanout!.failed_count} / {row.fanout!.total_count} decisions processed</span>}</div><button ref={button=>{if(button&&row.id===selected)trigger.current=button;}} className="btn btn-text" onClick={e=>{trigger.current=e.currentTarget;setSelected(row.id);}} aria-label={`Inspect ${kindLabel[row.notification_kind]}`}>Inspect</button></li>)}</ul>}
+   <RecordTable label={view==='messages'?'Message history':'Automation history'} rows={page.items} rowKey={row=>row.id} selectedKey={selected} columns={[
+    {key:'kind',label:'Notification',cell:row=><strong>{kindLabel[row.notification_kind]}</strong>},
+    {key:'status',label:view==='messages'?'Message status':'Automation outcome',cell:row=>{const value=view==='automation'&&row.decision?row.decision.outcome:row.row_kind==='fanout'?row.fanout!.state:row.message!.state;return <StatusBadge tone={['failed','uncertain','blocked'].includes(value)?'warning':['delivered','read','completed'].includes(value)?'success':'neutral'}>{statusLabel[value]}</StatusBadge>;}},
+    {key:'progress',label:'Evidence',cell:row=>row.row_kind==='fanout'?<span>{row.fanout!.completed_count+row.fanout!.skipped_count+row.fanout!.failed_count} / {row.fanout!.total_count} decisions processed</span>:row.message?<span className="service-cell-stack">{view==='automation'?'Message: '+statusLabel[row.message.state]:row.message.attempt_count+' recorded attempts'}{row.recovery.kind!=='none'&&<span className="ops-note">Recovery review available</span>}</span>:'Policy decision'},
+    {key:'time',label:'Recorded',cell:row=><time dateTime={row.effective_time}>{new Date(row.effective_time).toLocaleString()}</time>},
+    {key:'action',label:'Action',cell:row=><button ref={button=>{if(button&&row.id===selected)trigger.current=button;}} className="btn btn-text" onClick={e=>{trigger.current=e.currentTarget;setSelected(row.id);}} aria-label={`Inspect ${kindLabel[row.notification_kind]} ${row.id}`}>Inspect</button>},
+   ]}/>}
   {page.page.has_more&&page.phase!=='error'&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>{page.phase==='more'?'Loading…':'Load older history'}</button>}
-  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog" aria-describedby="history-description" onCloseAutoFocus={event=>{event.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" aria-describedby="history-description" onCloseAutoFocus={event=>{event.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+   <Dialog.Close className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    <Dialog.Title className="t-title-lg">Notification evidence</Dialog.Title><Dialog.Description id="history-description">Current server status and safe references. Message bodies and verification codes are never shown.</Dialog.Description>
    {selected&&<Detail key={selected} source={source} view={view} id={selected} roles={roles} changed={page.reload}/>}
-   <Dialog.Close className="btn btn-text">Close</Dialog.Close>
+
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </>;
 }
@@ -61,8 +69,8 @@ function Detail({source,view,id,roles,changed}:{source:MessagingSource;view:Hist
    <h3>{kindLabel[row.notification_kind]}</h3><Evidence row={row}/>
    {row.message&&<><h4>Provider attempts</h4>{row.attempts.length===0?<p>No recorded provider attempts.</p>:<ol className="ops-list">{row.attempts.map(attempt=><li key={attempt.attempt}>Attempt {attempt.attempt}: {attempt.outcome} · {attempt.reason_code.replaceAll('_',' ')} · {new Date(attempt.recorded_at).toLocaleString()}</li>)}</ol>}{row.history_truncated&&<p>Showing the newest 100 attempts. Earlier evidence is retained.</p>}</>}
    {row.fanout_items.length>0&&<><h4>Route fanout decisions</h4><ul className="ops-list">{row.fanout_items.map(item=><li className="ops-row" key={item.parcel_id}><span className="ops-row-main">Parcel {item.parcel_id}<span>{statusLabel[item.outcome]} · {item.reason_code.replaceAll('_',' ')}</span>{item.outbound_intent_id&&<span>Message reference: {item.outbound_intent_id}</span>}</span></li>)}</ul></>}
-   {roles.includes('franchise_admin')&&row.recovery.kind!=='none'&&<button className="btn btn-outlined" disabled={busy||!!confirm} onClick={()=>{void prepare('redrive');}}>Redrive original message</button>}
-   {roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role))&&row.reminder.eligible&&<button className="btn btn-outlined" disabled={busy} onClick={()=>{void prepare('reminder');}}>Send route reminder</button>}
+   {canAdminister(roles,'whatsapp.write')&&row.recovery.kind!=='none'&&<button className="btn btn-outlined" disabled={busy||!!confirm} onClick={()=>{void prepare('redrive');}}>Redrive original message</button>}
+   {(canAdminister(roles,'whatsapp.write')||roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role)))&&row.reminder.eligible&&<button className="btn btn-outlined" disabled={busy} onClick={()=>{void prepare('reminder');}}>Send route reminder</button>}
    {confirm&&<div className="ops-alert" role="alert"><p>This provider outcome is uncertain. Retrying may deliver a duplicate message. Confirm only after investigating provider evidence.</p><button autoFocus className="btn btn-filled" disabled={busy} onClick={()=>{void command.run(source.redrive(confirm)).then(confirmed).catch(()=>setConfirm(null));}}>I investigated — retry despite duplicate risk</button><button className="btn btn-text" onClick={()=>setConfirm(null)}>Cancel retry</button></div>}
   </>}
   {error&&<p role="alert">{error}</p>}<CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/>

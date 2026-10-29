@@ -150,7 +150,8 @@ await test('W19 reminders are separately identified, idempotent, rate-limited an
   s.setNow('2099-01-01T01:01:00Z');const operator=await request(s.operator,body);assert.equal(operator.statusCode,202,operator.body);
   s.setNow('2099-01-01T02:02:00Z');const dispatcher=await request(fixture.dispatcher,body);assert.equal(dispatcher.statusCode,202,dispatcher.body);
   const beforeDenied=(await s.db.adminQuery('SELECT count(*)::int n FROM shipit.route_delay_reminder_events')).rows[0]!.n;
-  for(const actor of [s.admin,await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('delivery_agent',[A])]) {
+  assert.equal((await request(s.admin,body)).statusCode,429); // Owner is authorized; the shared cooldown still applies.
+  for(const actor of [await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('delivery_agent',[A])]) {
     const denied=await request(actor,body);assert.equal(denied.statusCode,403,denied.body);assert.equal(denied.json().error.code,'ACTION_FORBIDDEN');
   }
   const noOrigin=await request(s.operator,body,randomUUID(),fixture.route.id,org,A,{'content-type':'application/json'});
@@ -354,7 +355,7 @@ await test('history Route-delay root and items correlate safely; W19 eligibility
  const s=await setup(t),fixture=await routeDelayFixture(s,4);await applyDelaySource(s,fixture.delay.event_id);await createRouteDelayFanoutWorker(s.pool,s.dependencies).tick();
  const history=createHistoryService(s.pool,s.keys.browser),rows=await history.list(s.operator.token,'automation',s.query,randomUUID()),root=rows.items.find(row=>row.row_kind==='fanout')!;
  assert.ok(root);const detail=await history.detail(s.operator.token,'automation',root.id,s.query,randomUUID());assert.equal(detail.fanout_items.length,4);assert.equal(detail.reminder.eligible,true);
- assert.equal((await history.detail(s.admin.token,'automation',root.id,s.query,randomUUID())).reminder.eligible,false);
+ assert.equal((await history.detail(s.admin.token,'automation',root.id,s.query,randomUUID())).reminder.eligible,true);
  for(const item of detail.fanout_items){const message=await history.detail(s.operator.token,'messages',item.outbound_intent_id!,s.query,randomUUID());assert.equal(message.fanout!.id,root.id);assert.equal(message.decision!.outcome,item.outcome);assert.equal(message.reminder.eligible,false);}
  const before=(await s.db.adminQuery('SELECT version,base_eta_at,total_delay_minutes FROM shipit.routes WHERE id=$1',[fixture.route.id])).rows[0];
  const key=randomUUID(),reminders=createRouteDelayReminderService(s.pool),body={original_delay_event_id:fixture.delay.event_id};

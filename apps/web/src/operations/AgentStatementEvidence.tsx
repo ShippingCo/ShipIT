@@ -1,3 +1,4 @@
+import {RecordTable} from '../components/workspace/Workspace';
 import React,{useState} from 'react';
 import type {StatementEvidence} from '../data-access/agent-statement-evidence';
 import {formatKolkata} from './format';
@@ -5,7 +6,10 @@ import {formatKolkata} from './format';
 export function statementRupees(value:string){const n=BigInt(value),abs=n<0n?-n:n;return (n<0n?'-':'')+'₹'+(abs/100n).toLocaleString('en-IN')+'.'+String(abs%100n).padStart(2,'0');}
 const ref=(id:string|null)=>id??'None';
 function Sources({title,rows}:{title:string;rows:readonly {id:string;description:string}[]}){
- const [limit,setLimit]=useState(50);return <details className="card ops-card"><summary>{title} · {rows.length} captured entries</summary>{rows.length?<><ul className="ops-source-list">{rows.slice(0,limit).map((row,i)=><li key={row.id+'-'+i}><code>{row.id}</code><p>{row.description}</p></li>)}</ul>{limit<rows.length&&<button className="btn btn-outlined" onClick={()=>setLimit(n=>n+50)}>Show more {title.toLowerCase()}</button>}</>:<p>No matching source evidence at this cutoff.</p>}</details>;
+ const [limit,setLimit]=useState(50);return <details className="card ops-card"><summary>{title} · {rows.length} captured entries</summary>{rows.length?<><RecordTable label={title} rows={rows.slice(0,limit)} rowKey={row=>row.id+'-'+rows.indexOf(row)} columns={[
+ {key:'reference',label:'Source reference',cell:row=><code className="finance-record-ref">{row.id}</code>},
+ {key:'evidence',label:'Captured source evidence',cell:row=>row.description},
+ ]}/>{limit<rows.length&&<button className="btn btn-outlined" onClick={()=>setLimit(n=>n+50)}>Show more {title.toLowerCase()}</button>}</>:<p>No matching source evidence at this cutoff.</p>}</details>;
 }
 export default function AgentStatementEvidence({evidence}:{evidence:StatementEvidence}){
  const {cash:c,finance:f,parcels:p,totals:t}=evidence,ft=f.totals,pt=p.totals;

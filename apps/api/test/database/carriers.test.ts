@@ -78,7 +78,7 @@ await test('R19/W26 roles, foreign nested resources and bounded reads cannot dis
     const write=await s.request('POST',path,observationInput(ref),actor.token);
     assert.equal(write.statusCode,role==='franchise_admin'?201:403,role+write.body);
   }
-  assert.equal((await s.request('POST',path,observationInput(ref),s.admin.token)).statusCode,403);
+  assert.equal((await s.request('POST',path,observationInput(ref),s.admin.token)).statusCode,201);
   assert.equal((await s.request('GET',path,undefined,s.admin.token)).statusCode,200);
   const sibling=await s.grant('franchise_admin',[B]),foreign=await s.beta('franchise_admin');
   const before=await s.carrierCounts();

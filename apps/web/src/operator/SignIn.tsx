@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TextField } from '../components/m3/Input';
 import type { OperatorDataSource } from './data-source';
+import {Msym} from '../components/m3/Icon';
 export default function SignIn({ complete, source }: { complete: () => Promise<void>; source: OperatorDataSource }) {
   const active = useRef<AbortController | null>(null);
   useEffect(() => { const abort = new AbortController(); active.current = abort; return () => abort.abort(); }, []);
@@ -20,7 +21,8 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
     } catch { setCode(''); setError('Sign-in could not be completed. Check your details or request a new code.'); }
     finally { setBusy(false); }
   }
-  return <section className="card operator-card">
+  return <section className="card operator-card operator-auth-card">
+    <span className="workspace-auth-mark"><Msym name="inventory_2"/></span><p className="workspace-eyebrow">Operator workspace</p>
     <h1 id="signin-title" tabIndex={-1} className="t-headline-sm">Sign in to ShippingCo</h1>
     <p className="muted">Use your verified operator email. If you have not been enrolled, contact your administrator to verify your identity first.</p>
     <form onSubmit={event => { void submit(event); }}>

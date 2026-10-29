@@ -1,5 +1,14 @@
 import type { TenancyAction } from '../tenancy/types.ts';
 import type { Membership, Role } from './types.ts';
+import { canAdminister } from '@shippingco/shared';
+
+/** Memberships are resolved for one organization inside the caller's locked transaction.
+ * Owner franchises come from that organization, never from a request or role expansion. */
+export function administrativeScope(action:string,memberships:readonly Membership[],all:readonly string[]=[]) {
+  const active=memberships.filter(m=>m.lifecycle==='active');
+  if(active.some(m=>m.role==='org_admin')&&canAdminister(['org_admin'],action))return [...new Set(all)].sort();
+  return [...new Set(active.filter(m=>canAdminister([m.role],action)).flatMap(m=>m.franchiseIds))].sort();
+}
 
 export interface ManagementAuthority { organizationWide: boolean; franchiseIds: string[] }
 export function managementAuthority(memberships: readonly Membership[]): ManagementAuthority | null {
@@ -22,15 +31,15 @@ export function tenancyScope(action: TenancyAction, memberships: readonly Member
     const ids=active.filter(value=>franchiseReadRoles.includes(value.role)).flatMap(value=>value.franchiseIds);
     return ids.length ? [...new Set(ids)].sort() : null;
   }
+  if(orgAdmin&&canAdminister(['org_admin'],action))return [...organizationFranchiseIds];
   const ids=active.filter(value=>value.role==='franchise_admin' ||
     (action==='franchise.lifecycle.manage' && value.role==='org_admin')).flatMap(value=>value.franchiseIds);
   return ids.length ? [...new Set(ids)].sort() : null;
 }
 
 /** R05/W03: explicit local grants only; V needs a separate verified-purpose workflow. */
-export function customerScope(memberships: readonly Membership[]) {
-  return [...new Set(memberships.filter(m => m.lifecycle === 'active' &&
-    (m.role === 'franchise_admin' || m.role === 'operator')).flatMap(m => m.franchiseIds))].sort();
+export function customerScope(memberships: readonly Membership[],all:readonly string[]=[]) {
+  return roleScope('customer.read',memberships,all,['franchise_admin','operator']);
 }
 
 /** R06/R07 owning-franchise reads. Custody/assignment-only grants remain unavailable
@@ -46,22 +55,22 @@ export function shipmentReadScope(kind:'booking'|'parcel',memberships:readonly M
 
 /** W07-W09/W12/W14. Custodial C and assigned A are deliberately narrower than a role
  * name; until durable custody grants land, this issue activates owning-franchise F only. */
-export function parcelCommandScope(action:import('../parcels/types.ts').ParcelAction,memberships:readonly Membership[]) {
+export function parcelCommandScope(action:import('../parcels/types.ts').ParcelAction,memberships:readonly Membership[],all:readonly string[]=[]) {
   const roles:readonly Role[]=action==='parcels.check_in'?['operator']:
     action==='parcels.dispatch'?['franchise_admin','operator','dispatcher']:
     action==='parcels.transit'?['dispatcher']:
     action==='parcels.fail_delivery'?['delivery_agent']:
     action==='parcels.approve_rto'?['franchise_admin']:[];
-  return [...new Set(memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** Issue #42 W10/W11/W38-W40. Assignment and independence are rechecked from delivery records. */
-export function deliveryScope(action:import('../deliveries/types.ts').DeliveryAction,memberships:readonly Membership[]) {
+export function deliveryScope(action:import('../deliveries/types.ts').DeliveryAction,memberships:readonly Membership[],all:readonly string[]=[]) {
   const roles:readonly Role[]=action==='deliveries.agents'||action==='deliveries.start'||action==='deliveries.retry'?['dispatcher']:
     action==='deliveries.exception.approve'?['franchise_admin']:
     action==='deliveries.read'||action==='deliveries.list'?['delivery_agent','dispatcher','franchise_admin']:
     ['delivery_agent'];
-  return [...new Set(memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R21 published projection, W27 policy administration, W37 resolution, W01 booking preparation. */
@@ -70,7 +79,7 @@ export function taxScope(action: import('../tax/types.ts').TaxAction, membership
   if (action === 'tax.read' && active.some(m => m.role === 'org_admin')) return [...all];
   const roles: readonly Role[] = action === 'tax.read' ? ['franchise_admin','operator','dispatcher','accountant'] :
     ['tax.draft','tax.publish','tax.resolve'].includes(action) ? ['franchise_admin'] : ['franchise_admin','operator','dispatcher'];
-  return [...new Set(active.filter(m => roles.includes(m.role)).flatMap(m => m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R21 reads; W27 local config; W01 ordinary variance; W43 privileged approval. */
@@ -80,7 +89,7 @@ export function pricingScope(action:import('../pricing/types.ts').PricingAction,
   if(reading&&active.some(m=>m.role==='org_admin'))return [...all];
   const roles:readonly Role[]=reading?['franchise_admin','operator','dispatcher','accountant']:
     action==='pricing.draft'||action==='pricing.publish'||action==='pricing.override.approve'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
-  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R08 and W04. Dispatcher-only corrections are a separate live grant, never inheritance. */
@@ -89,7 +98,7 @@ export function lotScope(action:import('../lots/types.ts').LotAction,memberships
   const read=action==='lots.read'||action==='lots.list';
   if(read&&active.some(m=>m.role==='org_admin'))return [...all];
   const roles:readonly Role[]=read?['franchise_admin','operator','dispatcher','read_only']:['franchise_admin','operator','dispatcher'];
-  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R09/W05/W06. Assignment-only agent snippets await their authoritative projection. */
@@ -98,7 +107,7 @@ export function routeScope(action:import('../routes/types.ts').RouteAction,membe
   if(read&&active.some(m=>m.role==='org_admin'))return [...all];
   const roles:readonly Role[]=read?['franchise_admin','operator','dispatcher','read_only']:
     action==='routes.archive'?['franchise_admin']:['franchise_admin','operator','dispatcher'];
-  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R11 and W20/W21: no role inheritance or additional cashier/agent grant. */
@@ -106,7 +115,7 @@ export function paymentScope(action:import('../payments/types.ts').PaymentAction
   const active=memberships.filter(m=>m.lifecycle==='active');
   if(action==='payments.read'&&active.some(m=>m.role==='org_admin'))return [...all];
   const roles:readonly Role[]=action==='payments.read'?['franchise_admin','accountant']:['franchise_admin'];
-  return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+  return roleScope(action,memberships,all,roles);
 }
 
 /** R13: one minimum finance artifact, never the R06/R11 operational/ledger grants. */
@@ -125,13 +134,17 @@ export function custodyScope(action:import('../custody/types.ts').CustodyAction,
   action==='custody.authorize'?['dispatcher']:
   action==='custody.acknowledge'||action==='custody.release'?['delivery_agent']:
   action==='custody.prepare'?['franchise_admin','delivery_agent']:['franchise_admin'];
- return [...new Set(active.filter(m=>roles.includes(m.role)).flatMap(m=>m.franchiseIds))].sort();
+ return roleScope(action,memberships,all,roles);
 }
 
 
 /** Mixed staff roles must not turn an agent-only transfer into administrator authority. */
 export function custodyAgentOnly(action:import('../custody/types.ts').CustodyAction,roles:readonly Role[]){
  if(action==='custody.acknowledge'||action==='custody.release')return true;
- if(action==='custody.prepare')return !roles.includes('franchise_admin');
+ if(action==='custody.prepare')return !canAdminister(roles,action);
  return action==='custody.read'&&!roles.some(r=>['org_admin','franchise_admin','operator','dispatcher','read_only'].includes(r));
+}
+
+function roleScope(action:string,memberships:readonly Membership[],all:readonly string[],roles:readonly Role[]) {
+  return [...new Set([...administrativeScope(action,memberships,all),...memberships.filter(m=>m.lifecycle==='active'&&roles.includes(m.role)).flatMap(m=>m.franchiseIds)])].sort();
 }

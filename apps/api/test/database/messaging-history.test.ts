@@ -53,7 +53,7 @@ await test('history R16/R17 permits only four roles and preserves R18/W44 separa
 await test('history server eligibility shares W44 rules, exact replay and original identity across new attempts',{timeout:30000},async t=>{
  const s=await setup(t),{id}=await s.enqueue();s.setSend(async()=>({kind:'configuration_failure',reason:'private-provider-error'}));await s.worker.tick();
  const failed=await s.read(id);assert.equal(failed.message!.state,'failed');assert.equal(failed.recovery.kind,'redrive');
- const operator=await s.grant('operator',[A]);assert.equal((await s.read(id,operator.token)).recovery.kind,'none');assert.equal((await s.read(id,s.admin.token)).recovery.kind,'none');
+ const operator=await s.grant('operator',[A]);assert.equal((await s.read(id,operator.token)).recovery.kind,'none');assert.equal((await s.read(id,s.admin.token)).recovery.kind,'redrive');
  const key=correlation(),body={expected_version:failed.recovery.expected_version,reason_code:failed.recovery.allowed_reasons[0]};
  const first=await s.service.redrive(s.local.token,id,s.query,key,body,correlation());
  assert.deepEqual(await s.service.redrive(s.local.token,id,s.query,key,body,correlation()),first);

@@ -17,7 +17,7 @@ await test('owner reporting upgrades populated 54-migration history atomically w
  const s=await paymentSetup(t,100000,db);assert.equal((await s.pay(collectionInput(25000))).statusCode,200);
  const before=(await db.adminQuery('SELECT to_jsonb(b) booking,to_jsonb(e) payment FROM shipit.bookings b JOIN shipit.payment_entries e ON e.organization_id=b.organization_id AND e.franchise_id=b.franchise_id AND e.booking_id=b.id')).rows;
  await assert.rejects(migrate({dir:broken}));assert.equal((await db.adminQuery("SELECT to_regclass('shipit.owner_report_schedules') relation")).rows[0]!.relation,null);
- assert.deepEqual(await migrate(),{applied:1});assert.deepEqual(await migrate(),{applied:0});
+ assert.deepEqual(await migrate(),{applied:2});assert.deepEqual(await migrate(),{applied:0});
  assert.deepEqual((await db.adminQuery('SELECT to_jsonb(b) booking,to_jsonb(e) payment FROM shipit.bookings b JOIN shipit.payment_entries e ON e.organization_id=b.organization_id AND e.franchise_id=b.franchise_id AND e.booking_id=b.id')).rows,before);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.owner_report_runs')).rows[0]!.n,0);
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit.owner_report_deliveries')).rows[0]!.n,0);

@@ -58,3 +58,7 @@ The design follows least privilege and per-request authorization guidance from
 [WorkOS RBAC](https://workos.com/docs/rbac/integration). Invitation identity binding and
 short expiry align with [Auth0 Organizations](https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members)
 and [WorkOS membership administration](https://workos.com/docs/dashboard/members-and-roles).
+
+## Amendment: administrative policy v2
+
+Issue #190 / [ADR 0046](0046-owner-and-local-administrator-authority.md) uses the same seven roles and real memberships, expands declared administrative business actions, and preserves no-self/final-owner/grant/revocation boundaries.

@@ -68,9 +68,9 @@ await test('receipt service persists split cash/UPI against a 50000 bill and rep
  assert.deepEqual(await service.summary(s.admin.token,second.receipt_id,q,randomUUID()),second);
  assert.equal((await service.read(s.admin.token,second.receipt_id,q,randomUUID())).receipt.external_reference,'SYNTHETIC-UPI-REF');
  assert.equal((await accounts.read(s.admin.token,cash.id,q,randomUUID())).id,cash.id);
- await assert.rejects(service.allocate(s.admin.token,first.receipt_id,q,randomUUID(),headers('denied'),allocation,randomUUID()),{code:'ACTION_FORBIDDEN'});
- await assert.rejects(service.correct(s.admin.token,first.receipt_id,q,randomUUID(),headers('denied'),correction,randomUUID()),{code:'ACTION_FORBIDDEN'});
- await assert.rejects(accounts.configure(s.admin.token,null,q,randomUUID(),headers('denied'),config,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.allocate(s.admin.token,first.receipt_id,q,randomUUID(),headers('owner-capacity'),allocation,randomUUID()),{code:'ALLOCATION_CONFLICT'});
+ const ownerCorrection=await service.correct(s.admin.token,first.receipt_id,q,randomUUID(),headers('owner-release'),correction,randomUUID());assert.equal(ownerCorrection.unallocated_paise,1);
+ assert.equal((await accounts.configure(s.admin.token,null,q,randomUUID(),headers('owner-configure'),config,randomUUID())).version,1);
  // Validly shaped guessed nested IDs never create a partial receipt or leaf.
  for(const invalid of [{...body,customer_id:randomUUID()},{...body,account_id:randomUUID()},{...body,receiver_id:randomUUID(),custodian_id:randomUUID()},
   {...body,allocations:[{...body.allocations[0],booking_id:randomUUID()}]}]){
@@ -79,9 +79,9 @@ await test('receipt service persists split cash/UPI against a 50000 bill and rep
  const revokedReceiver=await s.grant('operator',[A]);await s.memberships.revokeMembership(s.admin.token,revokedReceiver.member.id,{expected_version:revokedReceiver.member.version});
  const receiverKey=randomUUID();await assert.rejects(service.record(operator.token,q,receiverKey,headers(receiverKey),{...body,receiver_id:revokedReceiver.id,custodian_id:revokedReceiver.id},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipts')).rows[0]!.n,2);
- assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipt_allocations')).rows[0]!.n,2);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.money_receipt_allocations')).rows[0]!.n,3);
 
- await assert.rejects(service.record(s.admin.token,q,randomUUID(),headers('denied'),body,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.record(s.admin.token,q,randomUUID(),headers('owner-stale'),body,randomUUID()),{code:'VERSION_CONFLICT'});
  await assert.rejects(service.summary(operator.token,second.receipt_id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.summary(s.admin.token,second.receipt_id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.summary(operator.token,second.receipt_id,{organization_id:otherOrg,franchise_id:C},randomUUID()),{code:'RESOURCE_NOT_FOUND'});

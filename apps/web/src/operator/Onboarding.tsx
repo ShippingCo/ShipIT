@@ -3,6 +3,7 @@ import { TextField } from '../components/m3/Input';
 import { ApiFailure, recoveryFor } from '../data-access/errors';
 import type { OnboardingRequest } from '@shippingco/shared';
 import type { ScopeController } from './scope';
+import {Msym} from '../components/m3/Icon';
 
 type Intent = { key: string; body: OnboardingRequest };
 // Only a pending request intent, never workspace authority. GET context always runs first.
@@ -43,13 +44,14 @@ export default function Onboarding({ userId, complete, controller }: { userId: s
       if (error instanceof ApiFailure && recoveryFor(error, true) === 'validate') {
         setIntent(null); clearPending(userId); setMessage('Check the business and location details, then try again.');
       } else if (error instanceof ApiFailure && ['conflict', 'refresh'].includes(recoveryFor(error, true))) {
-        setMessage('The request conflicts with current state. Refresh workspace access before reviewing a new action.');
+        setMessage('The request conflicts with current state. Check your workspace access before reviewing a new action.');
       } else {
         setMessage('We could not confirm your workspace. Retry the same request, or refresh workspace access.');
       }
     } finally { setBusy(false); }
   }
-  return <section className="card operator-card" aria-labelledby="onboarding-title">
+  return <section className="card operator-card operator-auth-card" aria-labelledby="onboarding-title">
+    <span className="workspace-auth-mark"><Msym name="storefront"/></span><p className="workspace-eyebrow">Your workspace</p>
     <h1 id="onboarding-title" className="t-headline-sm">Set up your shop</h1>
     <p className="muted">Create your independent business and its first location.</p>
     <form onSubmit={event => { void submit(event); }} noValidate>

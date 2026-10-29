@@ -1,3 +1,4 @@
+import { administrativeScope } from './policy.ts';
 import {custodyScope,custodyAgentOnly} from './policy.ts';
 import { active as bookingActive } from '../bookings/repository.ts';
 import type { OperatorContext, OnboardingResult } from '@shippingco/shared';
@@ -51,7 +52,7 @@ async function membershipTransaction<T>(database:DatabasePool,work:(tx:Transacti
   }
 }
 
-/** R18 sanitized operations and W44 controlled redrive; no org-admin write inheritance. */
+/** R18/W44 under policy v2; current tenant and repaired-job invariants remain mandatory. */
 export async function withOutboxScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
   action:'outbox.read'|'outbox.redrive',correlationId:string,
   work:(scope:import('../security/scope.ts').TenantAccess,revision:string)=>Promise<T>):Promise<T> {
@@ -65,14 +66,14 @@ export async function withOutboxScope<T>(database:DatabasePool,token:string,orga
     const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    if(!local.some(m=>m.role==='franchise_admin')&&!(action==='outbox.read'&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if(!administrativeScope(action,memberships,all).includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
     if(action==='outbox.redrive'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
     return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])));
   });
 }
-/** R29 configuration / R16-R17 safe history and W45 administration. No org-admin write inheritance. */
+/** R29/R16-R17/W45 administration under policy v2; credentials and consent remain protected. */
 export async function withWhatsappScope<T>(database:DatabasePool,token:string,organizationId:string,franchiseId:string,
   action:'whatsapp.read'|'whatsapp.write'|'whatsapp.consent.read'|'customer.access.manage'|'pickups.read'|'pickups.decide'|'support.read'|'support.write',correlationId:string,
   work:(scope:import('../security/scope.ts').TenantAccess,revision:string,permissions:{redrive:boolean;remind:boolean})=>Promise<T>):Promise<T> {
@@ -86,13 +87,13 @@ export async function withWhatsappScope<T>(database:DatabasePool,token:string,or
     const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    if(!local.some(m=>((action.startsWith('pickups.')||action.startsWith('support.'))?['franchise_admin','operator']:action==='whatsapp.consent.read'?['franchise_admin','operator','dispatcher']:['franchise_admin']).includes(m.role))&&!((action==='whatsapp.read'||action==='whatsapp.consent.read'||action==='pickups.read'||action==='support.read')&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
+    if(!administrativeScope(action,memberships,all).includes(franchiseId)&&!local.some(m=>((action.startsWith('pickups.')||action.startsWith('support.'))?['franchise_admin','operator']:action==='whatsapp.consent.read'?['franchise_admin','operator','dispatcher']:['franchise_admin']).includes(m.role))&&!((action==='whatsapp.read'||action==='whatsapp.consent.read'||action==='pickups.read'||action==='support.read')&&orgAdmin))throw new HttpError('ACTION_FORBIDDEN');
     if((action==='whatsapp.write'||action==='customer.access.manage'||action==='pickups.decide'||action==='support.write')&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
     const access=issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,
       permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
     return work(access,JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds])),{
-      redrive:parent.lifecycle==='active'&&local.some(m=>m.role==='franchise_admin'),
-      remind:parent.lifecycle==='active'&&local.some(m=>['franchise_admin','operator','dispatcher'].includes(m.role)),
+      redrive:parent.lifecycle==='active'&&administrativeScope('whatsapp.write',memberships,all).includes(franchiseId),
+      remind:parent.lifecycle==='active'&&(administrativeScope('whatsapp.write',memberships,all).includes(franchiseId)||local.some(m=>['franchise_admin','operator','dispatcher'].includes(m.role))),
     });
   });
 }
@@ -360,24 +361,24 @@ export async function withStaffTenantScope<T>(database:DatabasePool,sessionToken
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId)) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     if(!await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+    const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     let permittedFranchiseIds:string[]|null;
     if (action.startsWith('pricing.')) {
-      const all=memberships.some(m=>m.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
       permittedFranchiseIds=pricingScope(action as import('../pricing/types.ts').PricingAction,memberships,all);
       if(!permittedFranchiseIds.length)throw new HttpError(selection?.object?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
       if(!selection||!permittedFranchiseIds.includes(selection.franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
       permittedFranchiseIds=[selection.franchiseId];
       // The effective approval action comes only from current W43 membership, never browser claims.
-      if((action==='pricing.override'||action==='pricing.validate')&&pricingScope('pricing.override.approve',memberships,[]).includes(selection.franchiseId))action='pricing.override.approve';
+      if((action==='pricing.override'||action==='pricing.validate')&&pricingScope('pricing.override.approve',memberships,all).includes(selection.franchiseId))action='pricing.override.approve';
     } else if (action==='customer.read'||action==='customer.list'||action==='customer.create'||action==='customer.update') {
-      permittedFranchiseIds=customerScope(memberships);
+      permittedFranchiseIds=customerScope(memberships,all);
       if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
       if(!selection || !permittedFranchiseIds.includes(selection.franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
       permittedFranchiseIds=[selection.franchiseId];
     } else if(action==='operations.export' || action==='financial.export') {
       // E01 / E03 ceilings; no staff/configuration export is created by this seam.
-      permittedFranchiseIds=[...new Set(memberships.filter(value=>value.role==='franchise_admin' ||
-        (action==='financial.export' && value.role==='accountant')).flatMap(value=>value.franchiseIds))];
+      permittedFranchiseIds=[...new Set([...administrativeScope(action,memberships,all),...memberships.filter(value=>value.role==='franchise_admin' ||
+        (action==='financial.export' && value.role==='accountant')).flatMap(value=>value.franchiseIds)])];
       if(!permittedFranchiseIds.length) throw new HttpError(selection?.object ? 'RESOURCE_NOT_FOUND' : 'ACTION_FORBIDDEN');
     } else {
       const allFranchises=memberships.some(value=>value.role==='org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
@@ -419,7 +420,7 @@ export async function withTaxTenantScope<T>(database: DatabasePool, sessionToken
     if (!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId) ||
       !await authorityRepository.lockOrganization(tx,organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
     const memberships = await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-    const all = action === 'tax.read' && memberships.some(m => m.role === 'org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
+    const all = memberships.some(m => m.role === 'org_admin') ? await authorityRepository.organizationFranchiseIds(tx,organizationId) : [];
     const permitted = taxScope(action,memberships,all);
     if (!permitted.length) throw new HttpError('ACTION_FORBIDDEN');
     if (!permitted.includes(franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
@@ -428,8 +429,8 @@ export async function withTaxTenantScope<T>(database: DatabasePool, sessionToken
     const tax = issueTenantAccess(tx,{ ...context,action });
     let pricing: import('../security/scope.ts').TenantAccess|null = null;
     if (['tax.prepare','tax.calculate','tax.validate'].includes(action)) {
-      if (!pricingScope('pricing.validate',memberships,[]).includes(franchiseId)) throw new HttpError('ACTION_FORBIDDEN');
-      pricing = issueTenantAccess(tx,{ ...context,action: pricingScope('pricing.override.approve',memberships,[]).includes(franchiseId) ? 'pricing.override.approve' : 'pricing.validate' });
+      if (!pricingScope('pricing.validate',memberships,all).includes(franchiseId)) throw new HttpError('ACTION_FORBIDDEN');
+      pricing = issueTenantAccess(tx,{ ...context,action: pricingScope('pricing.override.approve',memberships,all).includes(franchiseId) ? 'pricing.override.approve' : 'pricing.validate' });
     }
     return work({ tax,pricing });
   });
@@ -439,7 +440,7 @@ export function createMembershipService(database:DatabasePool) {
   return {...createMembershipCore(database),withCorrelation:(id:string)=>createMembershipCore(database,id)};
 }
 
-/** Issue 22's narrower activation: only a live operator in the selected franchise.
+/** W01 / policy v2: a live owner, assigned franchise admin or operator in the selected franchise.
  * Every capability is independent and expires with this transaction. */
 export async function withBookingTenantScope<T>(database: DatabasePool, sessionToken: string, organizationId: string,
   franchiseId: string, correlationId: string, work: (s: import('../bookings/types.ts').BookingScopes) => Promise<T>): Promise<T> {
@@ -450,15 +451,16 @@ export async function withBookingTenantScope<T>(database: DatabasePool, sessionT
     const parent = await authorityRepository.lockOrganization(tx,organizationId);
     if (!parent) throw new HttpError('RESOURCE_NOT_FOUND');
     const memberships = await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-    const operators = memberships.filter(m => m.role === 'operator');
-    if (!operators.length) throw new HttpError('ACTION_FORBIDDEN');
-    if (!operators.some(m => m.franchiseIds.includes(franchiseId))) throw new HttpError('RESOURCE_NOT_FOUND');
+    const all=await authorityRepository.organizationFranchiseIds(tx,organizationId);
+    const permitted=[...administrativeScope('bookings.create',memberships,all),...memberships.filter(m=>m.role==='operator').flatMap(m=>m.franchiseIds)];
+    if (!permitted.length) throw new HttpError('ACTION_FORBIDDEN');
+    if (!permitted.includes(franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
     if (parent.lifecycle !== 'active') throw new HttpError('ORGANIZATION_DISABLED');
     const context = { actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
       organizationWide:false,correlationId,provenance:'membership' as const };
     const scopes = { bookings:issueTenantAccess(tx,{...context,action:'bookings.create'}),
       parcels:issueTenantAccess(tx,{...context,action:'parcels.create'}),customer:issueTenantAccess(tx,{...context,action:'customer.snapshot.read'}),
-      pricing:issueTenantAccess(tx,{...context,action:pricingScope('pricing.override.approve',memberships,[]).includes(franchiseId)?'pricing.override.approve':'pricing.validate'}),tax:issueTenantAccess(tx,{...context,action:'tax.validate'}),
+      pricing:issueTenantAccess(tx,{...context,action:pricingScope('pricing.override.approve',memberships,all).includes(franchiseId)?'pricing.override.approve':'pricing.validate'}),tax:issueTenantAccess(tx,{...context,action:'tax.validate'}),
       audit:issueTenantAccess(tx,{...context,action:'bookings.audit'}),events:issueTenantAccess(tx,{...context,action:'bookings.events'}) };
     await bookingActive(scopes.bookings);
     return work(scopes);
@@ -499,7 +501,7 @@ export async function withParcelCommandScope<T>(database:DatabasePool,sessionTok
     const parent=await authorityRepository.lockOrganization(tx,organizationId);
     if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-    const permitted=parcelCommandScope(action,memberships);
+    const permitted=parcelCommandScope(action,memberships,await authorityRepository.organizationFranchiseIds(tx,organizationId));
     if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
     if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
     if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
@@ -518,7 +520,7 @@ export async function withDeliveryScope<T>(database:DatabasePool,sessionToken:st
     const session=await authenticated(tx,sessionToken);
     if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
     const parent=await authorityRepository.lockOrganization(tx,organizationId);if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
-    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),permitted=deliveryScope(action,memberships);
+    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),permitted=deliveryScope(action,memberships,await authorityRepository.organizationFranchiseIds(tx,organizationId));
     if(!permitted.length)throw new HttpError(action==='deliveries.read'?'RESOURCE_NOT_FOUND':'ACTION_FORBIDDEN');
     if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
     if(!['deliveries.read','deliveries.list','deliveries.agents'].includes(action)){
@@ -526,7 +528,7 @@ export async function withDeliveryScope<T>(database:DatabasePool,sessionToken:st
       const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
       if(franchise.lifecycle!=='active')throw new HttpError('FRANCHISE_DISABLED');
     }
-    const roles=memberships.filter(m=>m.franchiseIds.includes(franchiseId)).map(m=>m.role);
+    const roles=memberships.filter(m=>m.role==='org_admin'||m.franchiseIds.includes(franchiseId)).map(m=>m.role);
     const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,
       correlationId,provenance:'membership' as const};
     return work({command:issueTenantAccess(tx,{...context,action}),events:issueTenantAccess(tx,{...context,action:'deliveries.events'}),roles,
@@ -546,7 +548,7 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
       const parent=await authorityRepository.lockOrganization(tx,organizationId);
       if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
       const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-      const all=reading&&memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
       const permitted=lotScope(action,memberships,all);
       if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
       if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -555,7 +557,7 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
         organizationWide:false,correlationId,provenance:'membership' as const};
       return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'lots.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'lots.events'}),
-        dispatcher:memberships.some(m=>m.role==='dispatcher'&&m.franchiseIds.includes(franchiseId)),
+        dispatcher:administrativeScope('lots.update',memberships,all).includes(franchiseId)||memberships.some(m=>m.role==='dispatcher'&&m.franchiseIds.includes(franchiseId)),
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
     } catch(error) {
       // Only expose a command retry conflict after membershipTransaction confirms rollback.
@@ -577,7 +579,7 @@ export async function withRouteScope<T>(database:DatabasePool,sessionToken:strin
       const parent=await authorityRepository.lockOrganization(tx,organizationId);
       if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
       const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-      const all=reading&&memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
+      const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
       const permitted=routeScope(action,memberships,all);
       if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
       if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
@@ -586,7 +588,7 @@ export async function withRouteScope<T>(database:DatabasePool,sessionToken:strin
         organizationWide:false,correlationId,provenance:'membership' as const};
       return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'routes.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'routes.events'}),
-        transit:action==='routes.departure'&&parcelCommandScope('parcels.transit',memberships).includes(franchiseId)?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
+        transit:action==='routes.departure'&&parcelCommandScope('parcels.transit',memberships,all).includes(franchiseId)?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
         parcelEvents:action==='routes.departure'?issueTenantAccess(tx,{...context,action:'parcels.events'}):null,
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});
     } catch(error) {
@@ -635,7 +637,7 @@ export async function withFinancialScope<T>(database:DatabasePool,token:string,o
   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
   const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
   if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
-  if(!memberships.some(m=>(m.role==='franchise_admin'||(action==='finance.request'&&m.role==='operator'))&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
+  if(!administrativeScope(action,memberships,all).includes(franchiseId)&&!memberships.some(m=>action==='finance.request'&&m.role==='operator'&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
   if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
   return work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
  });
@@ -652,7 +654,7 @@ export async function withReportScope<T>(database:DatabasePool,token:string,orga
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
     const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
-    const permitted=exporting?memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds):paymentScope('payments.read',memberships,all);
+    const permitted=exporting?[...administrativeScope('financial.export',memberships,all),...memberships.filter(m=>m.role==='accountant').flatMap(m=>m.franchiseIds)]:paymentScope('payments.read',memberships,all);
     if(!permitted.includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
     if(!franchiseIds.length||franchiseIds.length>50||!franchiseIds.includes(franchiseId)||franchiseIds.some(id=>!permitted.includes(id)))throw new HttpError('RESOURCE_NOT_FOUND');
     return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,
@@ -692,7 +694,7 @@ export async function withAttachmentScope<T>(database:DatabasePool,sessionToken:
     const all=organizationAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    const staff=local.some(m=>(action==='attachments.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
+    const staff=administrativeScope(action,memberships,all).includes(franchiseId)||local.some(m=>(action==='attachments.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
     const agent=local.some(m=>m.role==='delivery_agent');
     const metadata=action==='attachments.read'&&organizationAdmin;
     if(!staff&&!agent&&!metadata)throw new HttpError('ACTION_FORBIDDEN');
@@ -718,7 +720,7 @@ export async function withCarrierScope<T>(database:DatabasePool,sessionToken:str
     const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
     if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-    const staff=local.some(m=>(action==='carriers.write'?['franchise_admin']:['franchise_admin','operator','dispatcher','read_only']).includes(m.role));
+    const staff=administrativeScope(action,memberships,all).includes(franchiseId)||local.some(m=>(action==='carriers.write'?['franchise_admin']:['franchise_admin','operator','dispatcher','read_only']).includes(m.role));
     const orgRead=action==='carriers.read'&&all.includes(franchiseId);
     const agent=action==='carriers.read'&&local.some(m=>m.role==='delivery_agent');
     if(!staff&&!orgRead&&!agent)throw new HttpError('ACTION_FORBIDDEN');
@@ -730,7 +732,7 @@ export async function withCarrierScope<T>(database:DatabasePool,sessionToken:str
     }
     const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
       organizationWide:false,correlationId,provenance:'membership' as const};
-    const canTransit=action==='carriers.write'&&parcelCommandScope('parcels.transit',memberships).includes(franchiseId);
+    const canTransit=action==='carriers.write'&&parcelCommandScope('parcels.transit',memberships,all).includes(franchiseId);
     const canPrice=action==='carriers.write'&&pricingScope('pricing.publish',memberships,all).includes(franchiseId);
     return work({pricingDraft:canPrice?issueTenantAccess(tx,{...context,action:'pricing.draft'}):null,
       pricingPublish:canPrice?issueTenantAccess(tx,{...context,action:'pricing.publish'}):null,
@@ -756,7 +758,7 @@ export async function withEwayScope<T>(database:DatabasePool,sessionToken:string
       const all=organizationAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
       const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
       if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-      const operational=local.some(m=>(action==='eway.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
+      const operational=administrativeScope(action,memberships,all).includes(franchiseId)||local.some(m=>(action==='eway.write'?['franchise_admin','operator']:['franchise_admin','operator','dispatcher']).includes(m.role));
       const orgRead=action==='eway.read'&&organizationAdmin,finance=action==='eway.read'&&local.some(m=>m.role==='accountant');
       if(!operational&&!orgRead&&!finance)throw new HttpError('ACTION_FORBIDDEN');
       if(action==='eway.write'&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
@@ -780,7 +782,7 @@ export async function withPerformanceScope<T>(database:DatabasePool,token:string
     const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
     const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
     if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
-    const full=memberships.some(m=>m.franchiseIds.includes(franchiseId)&&(exporting?m.role==='franchise_admin':['franchise_admin','operator','dispatcher','read_only'].includes(m.role)))||(!exporting&&all.includes(franchiseId));
+    const full=memberships.some(m=>m.franchiseIds.includes(franchiseId)&&(exporting?m.role==='franchise_admin':['franchise_admin','operator','dispatcher','read_only'].includes(m.role)))||administrativeScope('operations.export',memberships,all).includes(franchiseId);
     const agentOnly=!full&&!exporting&&memberships.some(m=>m.role==='delivery_agent'&&m.franchiseIds.includes(franchiseId));
     if(!full&&!agentOnly)throw new HttpError('ACTION_FORBIDDEN');
     return work(issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),agentOnly);
@@ -819,7 +821,7 @@ export async function withReceivingAccountScope<T>(database:DatabasePool,token:s
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const permitted=reading?(orgAdmin||local.some(m=>['franchise_admin','operator','accountant'].includes(m.role))):local.some(m=>m.role==='franchise_admin');
+   const permitted=administrativeScope(action,memberships,all).includes(franchiseId)||reading&&local.some(m=>['operator','accountant'].includes(m.role));
    if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    return await work(issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
@@ -843,7 +845,7 @@ export async function withMoneyReceiptScope<T>(database:DatabasePool,token:strin
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   const admin=administrativeScope(action,memberships,all).includes(franchiseId),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
    const allowed=action==='money_receipts.read'?(orgAdmin||admin||accountant):action==='money_receipts.select'?(orgAdmin||admin||accountant||operator):action==='money_receipts.correct'||action==='money_receipts.refund.review'||action==='money_receipts.refund.return'?admin:(admin||operator);
    if(!allowed)throw new HttpError('ACTION_FORBIDDEN');if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
@@ -867,7 +869,7 @@ export async function withCashbookScope<T>(database:DatabasePool,token:string,or
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant'),agent=local.some(m=>m.role==='delivery_agent');
+   const admin=administrativeScope(action,memberships,all).includes(franchiseId),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant'),agent=local.some(m=>m.role==='delivery_agent');
    const allowed=handover?(action==='cashbook.handover.select'?(orgAdmin||admin||accountant||operator||agent):(admin||operator||agent)):action==='cashbook.read'?(orgAdmin||admin||accountant):action==='cashbook.select'?(orgAdmin||admin||accountant||operator):
     action==='cashbook.request'||action==='cashbook.acknowledge'?(admin||operator):admin;
    if(!allowed)throw new HttpError('ACTION_FORBIDDEN');
@@ -921,7 +923,7 @@ export async function withAgentMoneyScope<T>(database:DatabasePool,token:string,
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   const admin=administrativeScope(action,memberships,all).includes(franchiseId),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
    if(!(reading?(orgAdmin||admin||accountant):action==='agent_money.reserve'?(admin||operator):admin))throw new HttpError('ACTION_FORBIDDEN');
    const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
@@ -944,7 +946,7 @@ export async function withAgentStatementScope<T>(database:DatabasePool,token:str
    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),orgAdmin=memberships.some(m=>m.role==='org_admin');
    const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[],local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),agent=local.some(m=>m.role==='delivery_agent'),accountant=local.some(m=>m.role==='accountant');
+   const admin=administrativeScope(action,memberships,all).includes(franchiseId),operator=local.some(m=>m.role==='operator'),agent=local.some(m=>m.role==='delivery_agent'),accountant=local.some(m=>m.role==='accountant');
    if(!(reading?(orgAdmin||admin||accountant||operator||agent):(action==='agent_statement.decide'?admin:admin||operator||agent)))throw new HttpError('ACTION_FORBIDDEN');
    const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
    const agentOnly=agent&&!admin&&!operator&&(!reading||!accountant&&!orgAdmin);
@@ -968,7 +970,7 @@ export async function withCashCloseScope<T>(database:DatabasePool,token:string,o
    const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId),orgAdmin=memberships.some(m=>m.role==='org_admin');
    const all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[],local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const admin=local.some(m=>m.role==='franchise_admin'),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
+   const admin=administrativeScope(action,memberships,all).includes(franchiseId),operator=local.some(m=>m.role==='operator'),accountant=local.some(m=>m.role==='accountant');
    if(!(reading?(orgAdmin||admin||accountant||operator):(['cashbook.close.decide','cashbook.close.reopen','cashbook.close.review_opening'].includes(action)?admin:admin||operator)))throw new HttpError('ACTION_FORBIDDEN');
    const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
@@ -988,7 +990,7 @@ export async function withShipmentCostScope<T>(database:DatabasePool,token:strin
   const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
   const all=memberships.some(m=>m.role==='org_admin')?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
   if(!all.includes(franchiseId)&&!memberships.some(m=>m.franchiseIds.includes(franchiseId)))throw new HttpError('RESOURCE_NOT_FOUND');
-  if(!memberships.some(m=>m.role==='franchise_admin'&&m.franchiseIds.includes(franchiseId)))throw new HttpError('ACTION_FORBIDDEN');
+  if(!administrativeScope('shipment_costs.write',memberships,all).includes(franchiseId))throw new HttpError('ACTION_FORBIDDEN');
   const franchise=await authorityRepository.lockFranchise(tx,organizationId,franchiseId);if(!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
   return work(issueTenantAccess(tx,{action:'shipment_costs.write',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}),{organizationActive:parent.lifecycle==='active',franchiseActive:franchise.lifecycle==='active'});
  });
@@ -1007,14 +1009,14 @@ export async function withSettingsScope<T>(database:DatabasePool,token:string,or
   if(franchiseId===null&&!orgAdmin)throw new HttpError('ACTION_FORBIDDEN');
   if(franchiseId!==null&&!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
   if(franchiseId!==null&&!orgAdmin&&!local.some(m=>['franchise_admin','operator','dispatcher','accountant','read_only'].includes(m.role)))throw new HttpError('ACTION_FORBIDDEN');
-  const canUpdate=franchiseId===null?orgAdmin:local.some(m=>m.role==='franchise_admin');
+  const canUpdate=franchiseId===null?orgAdmin:administrativeScope('settings.franchise.update',memberships,all).includes(franchiseId);
   if(writing&&!canUpdate)throw new HttpError('ACTION_FORBIDDEN');
   const franchise=franchiseId===null?null:await authorityRepository.lockFranchise(tx,organizationId,franchiseId);
   if(franchiseId!==null&&!franchise)throw new HttpError('RESOURCE_NOT_FOUND');
   const action=franchiseId===null?(writing?'settings.organization.update':'settings.organization.read'):(writing?'settings.franchise.update':'settings.franchise.read');
   return work({access:issueTenantAccess(tx,{action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:franchiseId?[franchiseId]:[],organizationWide:franchiseId===null,correlationId,provenance:'membership'}),
    canUpdate,organizationActive:parent.lifecycle==='active',franchiseActive:franchiseId===null||franchise?.lifecycle==='active',canReadFinance:orgAdmin||local.some(m=>['franchise_admin','accountant'].includes(m.role)),canReadHistory:orgAdmin||local.some(m=>m.role==='franchise_admin'),
-   reportFranchiseIds:paymentScope('payments.read',memberships,all),exportFranchiseIds:memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds)});
+   reportFranchiseIds:paymentScope('payments.read',memberships,all),exportFranchiseIds:[...administrativeScope('financial.export',memberships,all),...memberships.filter(m=>m.role==='accountant').flatMap(m=>m.franchiseIds)]});
  });
 }
 
@@ -1033,7 +1035,7 @@ export async function withReportOptionsScope<T>(database:DatabasePool,token:stri
   const remaining=permitted.filter(id=>cursor===null||id>cursor),page=remaining.slice(0,50);
   // Empty pages still have a scoped anchor, but the repository receives the page IDs explicitly.
   const scope=issueTenantAccess(tx,{action:'reports.capture',actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:page.length?page:[franchiseId],organizationWide:false,correlationId,provenance:'membership'});
-  return work(scope,memberships.filter(m=>['franchise_admin','accountant'].includes(m.role)).flatMap(m=>m.franchiseIds),remaining.length>50);
+  return work(scope,[...administrativeScope('financial.export',memberships,all),...memberships.filter(m=>m.role==='accountant').flatMap(m=>m.franchiseIds)],remaining.length>50);
  });
 }
 
@@ -1054,7 +1056,7 @@ export async function withCustomerAccountScope<T>(database:DatabasePool,token:st
    const orgAdmin=memberships.some(m=>m.role==='org_admin'),all=orgAdmin?await authorityRepository.organizationFranchiseIds(tx,organizationId):[];
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
-   const permitted=reading?(orgAdmin||local.some(m=>(['franchise_admin','accountant'].includes(m.role)||action==='customer_accounts.select'&&m.role==='operator'))):local.some(m=>m.role===(action==='customer_accounts.request'?'operator':'franchise_admin'));
+   const permitted=administrativeScope(action,memberships,all).includes(franchiseId)||(reading?local.some(m=>m.role==='accountant'||action==='customer_accounts.select'&&m.role==='operator'):action==='customer_accounts.request'&&local.some(m=>m.role==='operator'));
    if(!permitted)throw new HttpError('ACTION_FORBIDDEN');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    return await work(issueTenantAccess(tx,{action:statementEvidence?'reports.capture':action,actor:{type:'user',id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership'}));
@@ -1080,7 +1082,7 @@ export async function withReconciliationScope<T>(database:DatabasePool,token:str
    const local=memberships.filter(m=>m.franchiseIds.includes(franchiseId));
    if(!all.includes(franchiseId)&&!local.length)throw new HttpError('RESOURCE_NOT_FOUND');
    const adminOnly=action==='reconciliation.configure'||action==='reconciliation.unmatch';
-   if(!(reading&&orgAdmin)&&!local.some(m=>m.role==='franchise_admin'||!adminOnly&&m.role==='accountant'))throw new HttpError('ACTION_FORBIDDEN');
+   if(!administrativeScope(action,memberships,all).includes(franchiseId)&&!local.some(m=>!adminOnly&&m.role==='accountant'))throw new HttpError('ACTION_FORBIDDEN');
    if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
    const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const};
    return await work(issueTenantAccess(tx,{...context,action}),issueTenantAccess(tx,{...context,action:'reconciliation.audit'}));

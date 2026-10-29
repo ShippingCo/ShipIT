@@ -52,7 +52,7 @@ await test('R26 readers and E04 exports deny financial-only reads, unauthorized 
   const s=await setup(t),snapshot=(await s.report('POST')).json<PerformancePage>(),id=snapshot.snapshot.id;
   for(const role of ['operator','dispatcher','read_only'] as const){const actor=await s.grant(role,[A]);assert.equal((await s.report('POST','',s.filter,actor)).statusCode,200);assert.equal((await s.report('GET','/'+id+'/export',undefined,actor)).statusCode,403);}
   for(const role of ['accountant'] as const){const actor=await s.grant(role,[A]);assert.equal((await s.report('POST','',s.filter,actor)).statusCode,403);}
-  const orgReport=await s.report('POST','',s.filter,s.admin);assert.equal(orgReport.statusCode,200,orgReport.body);assert.equal((await s.report('GET','/'+orgReport.json().snapshot.id+'/export',undefined,s.admin)).statusCode,403);
+  const orgReport=await s.report('POST','',s.filter,s.admin);assert.equal(orgReport.statusCode,200,orgReport.body);assert.equal((await s.report('GET','/'+orgReport.json().snapshot.id+'/export',undefined,s.admin)).statusCode,200);
   for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}]){
     const known=await s.report('GET','/'+id,undefined,s.local,randomUUID(),query),unknown=await s.report('GET','/'+randomUUID(),undefined,s.local,randomUUID(),query);
     assert.equal(known.statusCode,404);assert.equal(known.json().error.code,unknown.json().error.code);

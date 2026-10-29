@@ -188,7 +188,7 @@
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
       "apps/web/src/data/store.ts": "4254155ea29a147800f9775b6e8875afd270294adcc800ede48aa333fbab6960",
       "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
-      "apps/web/src/main.tsx": "5605ec5cd89de6bfd64a7210fab53beb3313159933818cbee4622c581794ec2c",
+      "apps/web/src/main.tsx": "7828070e8e776ab4eb43f0f6e5a4d17e158ab139385043344ac6fd7fffbef222",
       "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
       "apps/web/src/pages/business/Dashboard.tsx": "e70071ffbcc4d119ba8006ac1e8798ca7a58617b9d84959262da72a1f414b0b5",
@@ -201,8 +201,8 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "a934d6cde3dee36a385f41d40dbb2f32b11bbaa55de51ed8f2fd7ce0cfd663c2",
-      "apps/web/src/test/counter.test.tsx": "d306d2cdcc6054c038ab0c266532d1bbfc9fb057652b1459c34de7e2161c7a97",
-      "apps/web/src/test/operator.test.tsx": "139f7484780dd8512acc0b986dcd6e372f7a29759c4979f9fa0456380cd36afe",
+      "apps/web/src/test/counter.test.tsx": "1f56af9b4573ac658543daace74144fc12b1af5073f58ec0e9e9a095e5ecff2b",
+      "apps/web/src/test/operator.test.tsx": "37712be67661116f8b3bc6a13e92b0641b48f160b65517a46c20f72c6075c188",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -1464,6 +1464,11 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
+        "name": "does not claim an empty receipt result until the edited docket is searched",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
         "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
         "cases": null
       },
@@ -1859,7 +1864,7 @@
       },
       {
         "file": "apps/web/src/test/financial-workflow.test.tsx",
-        "name": "keeps org admins and accountants read-only and treats disabled writes as controlled conflicts",
+        "name": "keeps accountants read-only, allows owner proposals and treats disabled writes as controlled conflicts",
         "cases": null
       },
       {
@@ -2075,6 +2080,21 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "opens workspace navigation with keyboard focus and returns focus on Escape",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "shows booking and delivery administration with only %s",
+        "cases": "['org_admin','franchise_admin'] as const"
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "denies dispatcher direct booking routes without loading counter prerequisites",
         "cases": null
       },
       {
@@ -2404,7 +2424,7 @@
       },
       {
         "file": "apps/web/src/test/settings.test.tsx",
-        "name": "declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload",
+        "name": "declines history/query navigation and profile sign-out without losing draft, then clears on accepted sign-out",
         "cases": null
       },
       {
@@ -2449,7 +2469,7 @@
       },
       {
         "file": "apps/web/src/test/settings.test.tsx",
-        "name": "retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority",
+        "name": "retains the selected franchise when profile sign-out is declined and clears private draft when navigation reveals changed authority",
         "cases": null
       },
       {
@@ -2615,6 +2635,26 @@
       {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "requires a reason to reopen a resolved case",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-components.test.tsx",
+        "name": "keeps native field names separate from options and connects helpers and validation messages",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-components.test.tsx",
+        "name": "preserves supplied server record order and explicit action identity in a named accessible worklist",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-components.test.tsx",
+        "name": "sorts local ISO dates chronologically, exposes named filters and keeps zero totals and exported view exact",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-navigation.test.tsx",
+        "name": "groups permitted destinations once, expands folders independently and reveals the active route",
         "cases": null
       }
     ],
@@ -2986,6 +3026,10 @@
       {
         "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/pages/business/BusinessShell.tsx",
+        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
@@ -4604,6 +4648,14 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
+      "name": "does not claim an empty receipt result until the edited docket is searched",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve explicit search submission, truthful empty state and stable focus after clearing a searched docket."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
       "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
       "cases": null,
       "group": "seam",
@@ -5236,7 +5288,7 @@
     },
     {
       "file": "apps/web/src/test/financial-workflow.test.tsx",
-      "name": "keeps org admins and accountants read-only and treats disabled writes as controlled conflicts",
+      "name": "keeps accountants read-only, allows owner proposals and treats disabled writes as controlled conflicts",
       "cases": null,
       "disposition": "preserve",
       "group": "reports",
@@ -5585,6 +5637,30 @@
       "group": "booking",
       "disposition": "preserve",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "opens workspace navigation with keyboard focus and returns focus on Escape",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve one responsive navigation tree, focus entry, Escape return and dismissal when focus leaves the disclosure."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "shows booking and delivery administration with only %s",
+      "cases": "['org_admin','franchise_admin'] as const",
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 190: administrative navigation and direct-route permissions agree without broadening dispatcher booking authority."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "denies dispatcher direct booking routes without loading counter prerequisites",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Issue 190: administrative navigation and direct-route permissions agree without broadening dispatcher booking authority."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
@@ -6108,7 +6184,7 @@
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",
-      "name": "declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload",
+      "name": "declines history/query navigation and profile sign-out without losing draft, then clears on accepted sign-out",
       "cases": null,
       "disposition": "preserve",
       "group": "seam",
@@ -6180,7 +6256,7 @@
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",
-      "name": "retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority",
+      "name": "retains the selected franchise when profile sign-out is declined and clears private draft when navigation reveals changed authority",
       "cases": null,
       "disposition": "preserve",
       "group": "seam",
@@ -6449,6 +6525,38 @@
       "group": "assistant",
       "disposition": "preserve",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
+    },
+    {
+      "file": "apps/web/src/test/workspace-components.test.tsx",
+      "name": "keeps native field names separate from options and connects helpers and validation messages",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve canonical native field names and programmatic helper and validation associations."
+    },
+    {
+      "file": "apps/web/src/test/workspace-components.test.tsx",
+      "name": "preserves supplied server record order and explicit action identity in a named accessible worklist",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve server supplied row order, named semantic table and explicit action identity without fabricated sorting or totals."
+    },
+    {
+      "file": "apps/web/src/test/workspace-components.test.tsx",
+      "name": "sorts local ISO dates chronologically, exposes named filters and keeps zero totals and exported view exact",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve explicitly local prototype filtering, chronological ISO date sorting, zero totals and exact export view."
+    },
+    {
+      "file": "apps/web/src/test/workspace-navigation.test.tsx",
+      "name": "groups permitted destinations once, expands folders independently and reveals the active route",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve permission-filtered disclosure navigation, independent folder controls, active route visibility and unchanged link callbacks."
     }
   ],
   "safety": {

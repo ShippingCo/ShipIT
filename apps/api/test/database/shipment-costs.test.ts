@@ -46,7 +46,7 @@ await test('source identity deduplicates keys, overlapping allocation races and 
 await test('current roles, foreign nested IDs, source previews and scope replay remain private',{timeout:60000},async t=>{
  const s=await setupShipmentCosts(t),body=s.input(),source=await s.record(body),key=randomUUID(),preview=await s.costs.preview(s.local.token,q,key,headers(key),{rows:[body]},randomUUID()),apply=randomUUID();
  assert.equal(preview.valid,true);assert.deepEqual((await s.costs.apply(s.local.token,q,preview.id,apply,headers(apply),{},randomUUID())).items,[source]);
- for(const actor of [s.operator,s.admin,await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('delivery_agent',[A])])await assert.rejects(s.record(body,randomUUID(),actor),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [s.operator,await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('delivery_agent',[A])])await assert.rejects(s.record(body,randomUUID(),actor),{code:'ACTION_FORBIDDEN'});
  for(const scope of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])for(const id of [source.source_id,randomUUID()])await assert.rejects(s.costs.read(s.local.token,scope,id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  const bad=s.input();bad.allocations[0]!.booking_id=randomUUID();const invalidKey=randomUUID(),invalid=await s.costs.preview(s.local.token,q,invalidKey,headers(invalidKey),{rows:[bad]},randomUUID());assert.equal(invalid.rows[0]!.error,'RESOURCE_NOT_FOUND');
  await assert.rejects(s.costs.apply(s.local.token,q,invalid.id,randomUUID(),headers(randomUUID()),{},randomUUID()),{code:'SHIPMENT_COST_CONFLICT'});

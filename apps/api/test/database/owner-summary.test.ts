@@ -135,7 +135,7 @@ await test('multi-franchise owner reports recheck every grant for reads, exports
  const schedule=await s.save(body,key,manager);await s.worker.tick();assert.deepEqual(s.failures,[]);
  const workspace=await s.service.workspace(manager.token,query,randomUUID());assert.equal(workspace.schedules.length,1);assert.equal(workspace.runs.length,1);const run=workspace.runs[0]!;
  await s.service.report(accountant.token,run.id,query,randomUUID(),true);await s.service.report(s.admin.token,run.id,query,randomUUID());
- await assert.rejects(s.service.report(s.admin.token,run.id,query,randomUUID(),true),{code:'ACTION_FORBIDDEN'});
+ await s.service.report(s.admin.token,run.id,query,randomUUID(),true);
  await assert.rejects(s.save({...body,expected_version:1},randomUUID(),accountant,schedule.id),{code:'ACTION_FORBIDDEN'});
  await assert.rejects(s.pool.query('INSERT INTO shipit.owner_report_franchises(organization_id,franchise_id,schedule_id,selected_id) VALUES($1,$2,$3,$4)',[org,A,schedule.id,C]));
  await s.db.adminQuery('DELETE FROM shipit.membership_franchise_scopes WHERE membership_id=$1 AND franchise_id=$2',[manager.member.id,B]);

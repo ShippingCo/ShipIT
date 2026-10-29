@@ -50,11 +50,11 @@ await test('same phone stays distinct within A1 and across A2/B1; only authorize
   assert.equal((await s.read(ids[0])).statusCode,200);assert.deepEqual(await counts(s),{customers:4,commands:4,audits:4});
 });
 
-await test('canonical roles allow franchise_admin/operator only, fail V closed, no delete or selector authority',{timeout:30000},async t=>{
+await test('canonical roles allow owner/admin/operator and deny restricted staff, no delete or selector authority',{timeout:30000},async t=>{
   const s=await customerSetup(t),own=(await s.create()).json();
   for(const role of ['franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only','org_admin']) {
     const actor=role==='org_admin'?s.admin:role==='operator'?s.operator:await s.grant(role,[A]);
-    const allowed=role==='franchise_admin'||role==='operator';
+    const allowed=role==='org_admin'||role==='franchise_admin'||role==='operator';
     assert.equal((await s.search({},actor.token)).statusCode,allowed?200:403);
     assert.equal((await s.read(own.id,actor.token)).statusCode,allowed?200:404);
     assert.equal((await s.create(actor.token)).statusCode,allowed?201:403);

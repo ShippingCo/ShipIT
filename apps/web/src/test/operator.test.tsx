@@ -40,6 +40,36 @@ async function fill() {
 }
 
 describe('production operator flow',()=>{
+  it('opens workspace navigation with keyboard focus and returns focus on Escape',async()=>{
+    context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    const toggle=screen.getByRole('button',{name:'Open workspace navigation'});
+    expect(toggle).toHaveAttribute('aria-expanded','false');fireEvent.click(toggle);
+    const menu=screen.getByRole('navigation',{name:'Workspace navigation'});
+    expect(within(menu).getByRole('link',{name:'Workspace'})).toHaveFocus();
+    fireEvent.keyDown(document,{key:'Escape'});
+    expect(screen.getByRole('button',{name:'Open workspace navigation'})).toHaveFocus();
+    expect(toggle).toHaveAttribute('aria-expanded','false');
+    fireEvent.click(toggle);
+    act(()=>toggle.focus());expect(toggle).toHaveAttribute('aria-expanded','true');
+    act(()=>screen.getByRole('combobox',{name:'Franchise'}).focus());
+    expect(toggle).toHaveAttribute('aria-expanded','false');
+  });
+  it.each(['org_admin','franchise_admin'] as const)('shows booking and delivery administration with only %s',async role=>{
+    context={...ready,franchises:ready.franchises.map(f=>({...f,roles:[role]}))};
+    render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    for(const name of ['Booking & pickups','Shipments','Administration'])fireEvent.click(screen.getByRole('button',{name}));
+    expect(screen.getAllByRole('link',{name:'New Booking'}).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link',{name:'Deliveries'}).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link',{name:'Settings'}).length).toBeGreaterThan(0);
+    expect(context.franchises[0]!.roles).toEqual([role]);
+  });
+  it('denies dispatcher direct booking routes without loading counter prerequisites',async()=>{
+    context={...ready,franchises:ready.franchises.map(f=>({...f,roles:['dispatcher']}))};
+    window.location.hash='/business/new-booking';render(<App/>);
+    await screen.findByRole('heading',{name:'Access unavailable'});
+    expect(screen.queryByRole('link',{name:'New Booking'})).not.toBeInTheDocument();
+    expect(calls.some(c=>/\/customers|\/pricing\/quote|\/tax\/intents/.test(c.path))).toBe(false);
+  });
   it('completes onboarding, sends only approved fields and reloads server context without browser authority',async()=>{
     const view=render(<App/>);await fill();
     fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
@@ -87,12 +117,13 @@ describe('production operator flow',()=>{
   it('protected navigation after revocation removes cached data and offers controlled recovery',async()=>{
     context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
     responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({error:{code:'RESOURCE_NOT_FOUND'}},404)):undefined;
+    fireEvent.click(screen.getByRole('button',{name:'Administration'}));
     fireEvent.click(screen.getAllByRole('link',{name:'Settings'})[0]);
     await screen.findByRole('heading',{name:'Workspace access unavailable'});
     expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Private workspace data has been cleared');
     responseOverride=undefined;context={...empty,state:'scope_unavailable'};
-    fireEvent.click(screen.getAllByRole('button',{name:'Refresh workspace access'})[0]);
+    fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);
     await screen.findByRole('heading',{name:'No available workspace'});
     expect(screen.queryByRole('button',{name:'Create workspace'})).not.toBeInTheDocument();
   });
@@ -119,11 +150,12 @@ describe('production operator flow',()=>{
     };
     render(<App/>);await fill();fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
     await screen.findByRole('heading',{name:'Workspace access unavailable'});responseOverride=undefined;
-    fireEvent.click(screen.getAllByRole('button',{name:'Refresh workspace access'})[0]);await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);await screen.findByRole('heading',{name:'Counter A'});
     expect(calls.filter(c=>c.path==='/api/v1/onboarding')).toHaveLength(1);
   });
   it('accepts through the existing invitation API and never stores the secret',async()=>{
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
+    fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
     fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));await screen.findByRole('heading',{name:'Counter A'});
     expect(calls.find(c=>c.path==='/api/v1/membership-invitations/accept')?.options.body).toBe(JSON.stringify({token:'synthetic-invitation-secret'}));
@@ -134,18 +166,20 @@ describe('production operator flow',()=>{
     const accepting=deferred<Response>();
     responseOverride=path=>path.endsWith('/accept')?accepting.promise:undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
+    fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
     fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
     await act(async()=>{window.location.hash='/business/settings';});
     await screen.findByRole('heading',{name:'Set up your shop'});
     context=ready;await act(async()=>accepting.resolve(json({},201)));
     await screen.findByRole('heading',{name:'Counter A'});
-    expect(document.querySelector('.appbar-title')).toHaveTextContent('Settings');
+    expect(within(screen.getByRole('banner')).getByText('Settings')).toBeVisible();
     expect(screen.queryByText('Checking workspace access…')).not.toBeInTheDocument();
   });
   it('failed invitation acceptance preserves controlled recovery',async()=>{
     responseOverride=path=>path.endsWith('/accept')?Promise.resolve(json({error:{code:'ACTION_FORBIDDEN'}},403)):undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
+    fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'expired-secret'}});fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
     await screen.findByText(/Invitation could not be confirmed/);expect(screen.getByLabelText('Invitation code')).toHaveValue('');
   });
@@ -159,6 +193,15 @@ describe('production operator flow',()=>{
     fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Send sign-in code'}));
     await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'12345678'}});
     fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await screen.findByRole('heading',{name:'Counter A'});
+    expect(screen.queryByRole('button',{name:'Refresh workspace access'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Sign out'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Account and invitations'));
+    expect(screen.getByRole('button',{name:'Sign out'})).toBeVisible();
+    const profile=screen.getByText('Account and invitations').closest('details')!;
+    fireEvent.keyDown(profile,{key:'Escape'});
+    expect(screen.queryByRole('button',{name:'Sign out'})).not.toBeInTheDocument();
+    expect(profile.querySelector('summary')).toHaveFocus();
+    fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
   });
@@ -198,6 +241,7 @@ describe('production operator flow',()=>{
   it('logout hides private data immediately and late context cannot repaint', async () => {
     context=ready;const logout=deferred<Response>();responseOverride=path=>path==='/auth/logout'?logout.promise:undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));
     expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     await act(async()=>logout.resolve(json({ok:true})));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});

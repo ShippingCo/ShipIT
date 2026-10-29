@@ -37,6 +37,9 @@ await test('sole-admin approval is explicit, current and isolated from other fin
  await assert.rejects(s.command('decide',id,{...body,sole_admin_acknowledged:true},s.operator),{code:'ACTION_FORBIDDEN'});
  const second=await s.grant('franchise_admin',[A]);await assert.rejects(s.command('decide',id,{...body,sole_admin_acknowledged:true},s.local),{code:'CASH_CLOSE_REVIEW_REQUIRED'});
  await s.memberships.revokeMembership(s.admin.token,second.member.id,{expected_version:second.member.version});
+ // The owner is also an eligible reviewer under #190; self-review still fails while active.
+ await assert.rejects(s.command('decide',id,{...body,sole_admin_acknowledged:true},s.local),{code:'CASH_CLOSE_REVIEW_REQUIRED'});
+ await s.db.adminQuery("UPDATE shipit.auth_users SET lifecycle='disabled',auth_version=auth_version+1 WHERE id=$1",[s.admin.id]);
  const approved=await s.command('decide',id,{...body,sole_admin_acknowledged:true},s.local);assert.equal(approved.decision!.mode,'sole_admin_self');
  const owner=s.db.ownerPool();t.after(()=>owner.close());for(const table of ['cash_close_commands','cash_close_sessions','cash_close_dependencies'])for(const sql of [`UPDATE shipit.${table} SET id=id`,`DELETE FROM shipit.${table}`]){if(table==='cash_close_dependencies')continue;await assert.rejects(owner.query(sql),{sqlState:'23514'});}
  assert.equal((await s.db.adminQuery("SELECT has_table_privilege($1,'shipit.cash_close_sessions','INSERT') allowed",[s.db.runtimeRole])).rows[0]!.allowed,false);
@@ -88,7 +91,7 @@ await test('late evidence blocks submitted approval, preserves capture and permi
  await assert.rejects(s.command('submit',id,{expected_version:5,count_id:randomUUID(),reason:'Unknown nested count'}),{code:'RESOURCE_NOT_FOUND'});
  const accountant=await s.grant('accountant',[A]),agent=await s.grant('delivery_agent',[A]),readonly=await s.grant('read_only',[A]);
  assert.equal((await s.closes.read(accountant.token,id,q,randomUUID())).session.id,id);
- for(const actor of [accountant,agent,readonly,s.admin])await assert.rejects(s.closes.command(actor.token,'count',id,q,randomUUID(),headers('denied'),{expected_version:5,counted_at:s.counted,counted_paise:0,denominations:[],reason:'Denied authority'},randomUUID()),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [accountant,agent,readonly])await assert.rejects(s.closes.command(actor.token,'count',id,q,randomUUID(),headers('denied'),{expected_version:5,counted_at:s.counted,counted_paise:0,denominations:[],reason:'Denied authority'},randomUUID()),{code:'ACTION_FORBIDDEN'});
  for(const actor of [agent,readonly])await assert.rejects(s.closes.read(actor.token,id,q,randomUUID()),{code:'ACTION_FORBIDDEN'});
 });
 await test('concurrent opens, count versions and decisions serialize; direct runtime writes cannot forge review, sources or immutable outcomes',{timeout:60000},async t=>{
@@ -147,6 +150,8 @@ await test('departed initial observer can be recovered by a current admin withou
  const sub=await s.command('submit',id,{expected_version:2,count_id:cap.command_id,reason:'Explicit recovery of first opening evidence'},s.local);
  const {buildServer}=await import('../../src/server.ts'),{parseEnvironment}=await import('../../src/env.ts'),{browserToken,csrf}=await import('../../src/modules/auth/crypto.ts'),browser=browserToken(s.keys);
  const app=buildServer({config:parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3000',LOG_LEVEL:'silent',ALLOWED_ORIGINS:'http://localhost:5173',TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable',CASH_CLOSE_ENABLED:'true'}),database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined}});t.after(()=>app.close());
+ // Recovery fixture has only one active reviewer; the disabled owner retains historical membership.
+ await s.db.adminQuery("UPDATE shipit.auth_users SET lifecycle='disabled',auth_version=auth_version+1 WHERE id=$1",[s.admin.id]);
  const url='/api/v1/cashbook/sessions/'+id+'/decisions?'+new URLSearchParams(q),body={expected_version:3,submission_id:sub.command_id,kind:'approve',sole_admin_acknowledged:true,reason:'Sole admin accepts both attributed observations'},key=randomUUID(),request={method:'POST' as const,url,cookies:{shipit_session:s.local.token,shipit_browser:browser},headers:{origin:'http://localhost:5173','idempotency-key':key,'content-type':'application/json'},payload:JSON.stringify(body)};
  assert.equal((await app.inject(request)).statusCode,403);const accepted=await app.inject({...request,headers:{...request.headers,'x-csrf-token':csrf(s.keys,browser)}});assert.equal(accepted.statusCode,201,accepted.body);assert.equal(accepted.json().decision.mode,'sole_admin_self');assert.equal(accepted.json().opening_review.mode,'independent');
  const read=await app.inject({url:'/api/v1/cashbook/sessions/'+id+'?'+new URLSearchParams(q),cookies:{shipit_session:s.local.token}});assert.equal(read.statusCode,200);assert.match(String(read.headers['cache-control']),/no-store.*private/);
@@ -187,7 +192,7 @@ await test('admin opening and operator ending stay independently reviewable; two
  const first=await s.command('open',null,{...s.openBody,location_id:drawer.id,location_revision_id:drawer.revision_id},s.local),bCount=await s.command('count',first.session_id,{expected_version:1,counted_at:s.counted,counted_paise:100000,denominations:[],reason:'B ends the first shift opened by A'},second),bSub=await s.command('submit',first.session_id,{expected_version:2,count_id:bCount.command_id,reason:'B submits own first ending'},second);
  await assert.rejects(s.command('review_opening',first.session_id,{expected_version:3,opening_id:open.command_id,sole_admin_acknowledged:false,reason:'Another owned session is not this opening'},second),{code:'RESOURCE_NOT_FOUND'});
  const bOpening=await s.command('review_opening',first.session_id,{expected_version:3,opening_id:first.command_id,sole_admin_acknowledged:false,reason:'B independently verifies A opening before A reviews ending'},second),aEnding=await s.command('decide',first.session_id,{expected_version:4,submission_id:bSub.command_id,kind:'approve',sole_admin_acknowledged:false,reason:'A independently verifies B ending and cites B opening approval'},s.local);
- assert.equal(aEnding.decision!.opening_review_id,bOpening.command_id);assert.equal(aEnding.decision!.mode,'independent');assert.equal((await s.closes.read(s.local.token,first.session_id,q,randomUUID())).review.eligible_admins,2);
+ assert.equal(aEnding.decision!.opening_review_id,bOpening.command_id);assert.equal(aEnding.decision!.mode,'independent');assert.equal((await s.closes.read(s.local.token,first.session_id,q,randomUUID())).review.eligible_admins,3);
 });
 await test('opening corrections bind exact immutable revisions, recompute native source windows and retain approved exports and downstream physical carry',{timeout:60000},async t=>{
  const s=await setupCashClose(t);await s.db.prepareReports();const {createCashCloseExportService}=await import('../../src/modules/cashbook/close-export-service.ts'),exports=createCashCloseExportService(s.pool);
@@ -225,6 +230,8 @@ await test('separate opening approvals enforce current local admin distinction, 
  await assert.rejects(s.command('review_opening',id,body,s.local),{code:'CASH_CLOSE_REVIEW_REQUIRED'});
  const second=await s.grant('franchise_admin',[A]);await assert.rejects(s.command('review_opening',id,{...body,sole_admin_acknowledged:true},s.local),{code:'CASH_CLOSE_REVIEW_REQUIRED'});
  await s.memberships.revokeMembership(s.admin.token,second.member.id,{expected_version:second.member.version});await assert.rejects(s.command('review_opening',id,body,second),{code:'RESOURCE_NOT_FOUND'});
+ await assert.rejects(s.command('review_opening',id,{...body,sole_admin_acknowledged:true},s.local),{code:'CASH_CLOSE_REVIEW_REQUIRED'});
+ await s.db.adminQuery("UPDATE shipit.auth_users SET lifecycle='disabled',auth_version=auth_version+1 WHERE id=$1",[s.admin.id]);
  const reviewKey=randomUUID(),approvedInput={...body,sole_admin_acknowledged:true},approval=await s.command('review_opening',id,approvedInput,s.local,reviewKey);assert.equal(approval.opening_review!.mode,'sole_admin_self');
  assert.deepEqual(await createCashCloseService(s.pool).command(s.local.token,'review_opening',id,q,reviewKey,headers(reviewKey),approvedInput,randomUUID()),approval);
  await assert.rejects(s.command('review_opening',id,{...approvedInput,reason:'Changed replay evidence'},s.local,reviewKey),{code:'IDEMPOTENCY_CONFLICT'});

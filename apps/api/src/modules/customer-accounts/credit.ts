@@ -39,8 +39,8 @@ export async function prepareAccountBooking(scope:TenantAccess,body:BookingInput
   const approval=(await scopedQuery<{id:string}>(scope,['bookings.create'],`SELECT p.id FROM shipit.customer_credit_approvals p
   WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.id=$1 AND p.account_id=$2 AND p.account_revision_id=$3 AND p.operator_id=$4 AND p.intent_fingerprint=$5 AND p.amount_paise=$6 AND p.expires_at>$7
   AND NOT EXISTS(SELECT 1 FROM shipit.customer_account_bookings b WHERE b.approval_id=p.id)
-  AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
-   WHERE m.organization_id=p.organization_id AND f.franchise_id=p.franchise_id AND m.user_id=p.actor_id AND m.role='franchise_admin' AND m.lifecycle='active') FOR UPDATE OF p`,
+  AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+   WHERE m.organization_id=p.organization_id AND f.franchise_id=p.franchise_id AND m.user_id=p.actor_id AND m.role IN ('org_admin','franchise_admin') AND m.lifecycle='active') FOR UPDATE OF p`,
   [body.credit_approval_id,a.account_id,a.id,c.actor.id,creditIntent(body),tax.final_payable_paise,now])).rows[0];
   if(!approval)throw new HttpError('ACCOUNT_APPROVAL_INVALID');
  } else if(BigInt(credit.outstanding_paise)+BigInt(tax.final_payable_paise)>BigInt(a.credit_limit_paise))throw new HttpError('ACCOUNT_CREDIT_EXCEEDED');
@@ -69,7 +69,7 @@ export async function approve(scope:TenantAccess,operator:string,body:BookingInp
  JOIN shipit.tax_intents i ON i.organization_id=q.organization_id AND i.franchise_id=q.franchise_id AND i.quote_id=q.id AND i.actor_id=q.actor_id
  JOIN shipit.tax_calculations t ON t.organization_id=i.organization_id AND t.franchise_id=i.franchise_id AND t.intent_id=i.id
  WHERE {{franchise:q.organization_id:q.franchise_id}} AND q.id=$1 AND q.actor_id=$2 AND t.id=$3
- AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE m.user_id=q.actor_id AND m.organization_id=q.organization_id AND f.franchise_id=q.franchise_id AND m.role='operator' AND m.lifecycle='active')`,
+ AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active' WHERE m.user_id=q.actor_id AND m.organization_id=q.organization_id AND f.franchise_id=q.franchise_id AND m.role IN ('org_admin','franchise_admin','operator') AND m.lifecycle='active')`,
  [body.tax_intent.quote_id,operator,body.tax_calculation_id])).rows[0];
  if(!source)throw new HttpError('RESOURCE_NOT_FOUND');
  const expiry=new Date(Math.min(Date.parse(source.pricing.expires_at),Date.parse(source.tax.expires_at)));

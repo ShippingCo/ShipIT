@@ -1,5 +1,5 @@
 import React from 'react';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {FinancialAuditView} from '../operations/FinancialAudit';
 import {afterEach,describe,it,expect,vi} from 'vitest';
@@ -7,6 +7,10 @@ import {createScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
 import {financialAudit} from '../data-access/financial-audit';
 import type {FinancialAuditPage} from '@shippingco/shared';
+function evidenceCell(table:HTMLElement,row:HTMLElement,column:string){
+ const headers=within(table).getAllByRole('columnheader'),index=headers.indexOf(within(table).getByRole('columnheader',{name:column}));
+ return within(row).getAllByRole('cell')[index]!;
+}
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const org=id(1),franchise=id(2),user=id(3),snapshotId=id(4),requestId=id(5);
 const page:FinancialAuditPage={snapshot:{id:snapshotId,schema_version:1,definition:'financial_audit_v1',organization_id:org,franchise_id:franchise,timezone:'Asia/Kolkata',as_of:'2026-10-01T12:00:00.000Z',expires_at:'2026-10-02T12:00:00.000Z',filter:{from_day:'2026-10-01',to_day:'2026-10-01',sort:'confirmed_desc',kind:null,status:null,actor_id:null,booking_id:null},count:1,counts:{discount:1}},rows:[{id:'request:'+requestId,kind:'discount',change_kind:'discount',status:'pending',source_type:'financial_request',source_id:requestId,booking_id:id(6),receipt_id:null,actor_id:user,recorded_at:'2026-10-01T11:00:00.000Z',reason:'customer_agreement',version:0,correction_of:null,policy_id:null,approval_threshold_paise:null,additional_review_required:null,approval_basis:'unconfigured_policy',approved_actor_id:null,amount_basis:'charge_gross',before_paise:'50000',proposed_paise:'49900',decisions:[],document_links:[]}],next_offset:null};
@@ -56,7 +60,12 @@ describe('production financial audit screen',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Open live financial request'}));expect(openRequest).toHaveBeenCalledWith(requestId);fireEvent.click(screen.getByRole('button',{name:'Close captured evidence'}));expect(detailButton).toHaveFocus();
   const downloads:{href:string;name:string}[]=[];vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){downloads.push({href:this.href,name:this.download});});
   fireEvent.click(screen.getByRole('button',{name:'Download matching financial CSV'}));await screen.findByText('Matching audit CSV ready. Check your downloads.');expect(create).toHaveBeenCalledOnce();expect(downloads).toEqual([{href:'blob:synthetic-audit',name:'financial-audit-'+snapshotId+'.csv'}]);expect(fetcher.mock.calls.some(([path])=>path.includes('/audit/'+snapshotId+'/export'))).toBe(true);
-  expect(screen.getByText('Discount · pending')).toBeVisible();
+  const actions=screen.getByRole('table',{name:'Financial audit actions'}),capturedRow=within(actions).getByText(requestId).closest('tr')!;
+  expect(within(evidenceCell(actions,capturedRow,'Action / source')).getByText('Discount')).toBeVisible();
+  expect(evidenceCell(actions,capturedRow,'Status')).toHaveTextContent(/^pending$/);
+  expect(evidenceCell(actions,capturedRow,'Amount basis')).toHaveTextContent(/^charge gross$/);
+  expect(evidenceCell(actions,capturedRow,'Before')).toHaveTextContent(/^₹500\.00$/);
+  expect(evidenceCell(actions,capturedRow,'Proposed')).toHaveTextContent(/^₹499\.00$/);
  });
  it('refuses a capture response for filters other than the retained command',async()=>{
   const {source}=setup(),intent=source.intent({...page.snapshot.filter,kind:'refund'});await expect(source.execute(intent)).rejects.toMatchObject({kind:'protocol'});

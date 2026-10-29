@@ -15,7 +15,7 @@ await test('receiving account configuration replays exact historical results, ch
  assert.deepEqual(await configure(),created);assert.deepEqual(await service.read(admin.token,created.id,q,randomUUID()),updated);
  await assert.rejects(configure({...input,name:'Different intent'}),{code:'IDEMPOTENCY_CONFLICT'});
  await assert.rejects(configure({...input,expected_version:1},created.id,randomUUID()),{code:'VERSION_CONFLICT'});
- for(const actor of [s.admin,operator,accountant,readonly])await assert.rejects(configure(input,null,randomUUID(),actor.token),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [operator,accountant,readonly])await assert.rejects(configure(input,null,randomUUID(),actor.token),{code:'ACTION_FORBIDDEN'});
  for(const actor of [s.admin,operator,accountant])assert.deepEqual(await service.read(actor.token,created.id,q,randomUUID()),updated);
  await assert.rejects(service.read(readonly.token,created.id,q,randomUUID()),{code:'ACTION_FORBIDDEN'});
  await assert.rejects(service.read(admin.token,created.id,{organization_id:org,franchise_id:B},randomUUID()),{code:'RESOURCE_NOT_FOUND'});

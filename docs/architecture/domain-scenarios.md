@@ -1,5 +1,7 @@
 # Synthetic domain and authorization scenarios
 
+The original #3 cases below retain policy-v1 expected projections as historical evidence. Current administrative permissions are policy v2 in [ADR 0046](../adr/0046-owner-and-local-administrator-authority.md), the [amended matrix](authorization-contract.md) and `fixtures/administrative-policy.json`; runtime owner/admin tests exercise the amended policy.
+
 [Architecture index](README.md) · [Authorization](authorization-contract.md) · [Lifecycle](parcel-lifecycle.md) · [Verification](domain-verification.md)
 
 All data below and in the [machine-readable fixture](fixtures/domain-contract.json) is fictional.

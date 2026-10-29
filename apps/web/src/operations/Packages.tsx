@@ -1,3 +1,5 @@
+import {PageHeader,RecordTable,SectionHeader,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import {useDetailReturn} from './detail-return';
 import {businessDay,dayStart,shiftDay} from './business-dates';
 import {useSearchParams,Link} from 'react-router-dom';
@@ -18,7 +20,8 @@ import { TextField,SelectField } from '../components/m3/Input';
 import { Msym } from '../components/m3/Icon';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const has=(roles:readonly OperatorRole[],...wanted:OperatorRole[])=>roles.some(role=>wanted.includes(role));
+const has=(roles:readonly OperatorRole[],...wanted:OperatorRole[])=>(wanted.some(role=>role!=='delivery_agent'&&role!=='org_admin')&&canAdminister(roles,'parcels.read'))||roles.some(role=>wanted.includes(role));
+const parcelTones={booked:'neutral',checked_in:'info',dispatched:'info',in_transit:'info',out_for_delivery:'info',failed_attempt:'warning',held_at_office:'warning',delivered:'success',rto:'warning'} as const;
 const statusOptions=[{value:'',label:'All server statuses'},...parcelStatuses.map(value=>({value,label:value.replaceAll('_',' ')}))];
 
 export default function Packages({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
@@ -30,18 +33,27 @@ export default function Packages({controller,roles}:{controller:ScopeController;
  const selected=params.get('parcel'),remember=useDetailReturn(selected);
  const setSelected=(id:string|null)=>{const next=new URLSearchParams(params);if(id)next.set('parcel',id);else next.delete('parcel');setParams(next);};
  const select=(id:string)=>{remember();setSelected(id);};
- return <div className="ops-page">
-  <form className="card ops-card ops-toolbar" onSubmit={event=>{event.preventDefault();setQuery({docket:docket.trim(),status,destination:destination.trim().toUpperCase(),from,to});setSelected(null);}} aria-label="Package filters">
+ return <div className="ops-page logistics-workspace">
+  <PageHeader title="Packages" eyebrow="Shipment operations" description="Find a shipment, review its current status and take the next permitted action."/>
+  <form className="card ops-card ops-toolbar logistics-package-filters" onSubmit={event=>{event.preventDefault();setQuery({docket:docket.trim(),status,destination:destination.trim().toUpperCase(),from,to});setSelected(null);}} aria-label="Package filters">
    <TextField label="Exact docket" value={docket} onChange={setDocket} helper="Server exact docket lookup; blank lists the current page."/>
    <SelectField label="Parcel status" value={status} onChange={setStatus} options={statusOptions}/>
    <TextField label="Destination city / routing key" value={destination} onChange={setDestination} helper="Exact configured destination key, e.g. MUMBAI. Origin is the selected franchise; addresses are not city records."/>
    <TextField label="Booked from (Asia/Kolkata)" type="date" value={from} onChange={setFrom}/><TextField label="Booked through (Asia/Kolkata)" type="date" value={to} onChange={setTo} min={from||undefined}/>
+   <div className="logistics-filter-actions">
    <button className="btn btn-filled"><Msym name="search"/>Search server</button>
    <button type="button" className="btn btn-text" onClick={()=>{setDocket('');setStatus('');setDestination('');setFrom('');setTo('');setQuery({docket:'',status:'',destination:'',from:'',to:''});}}>Clear</button>
+   </div>
   </form>
   {page.phase==='loading'?<Loading label="Loading parcels…"/>:page.phase==='error'?<Failure retry={page.reload} label="Parcels could not be loaded."/>:page.phase==='empty'?<Empty icon="inventory_2" title="No parcels match" body="Change the docket, status, destination or booking-date filter, or create a booking."/>:<>
-   <section className="card ops-card"><div className="u-between"><div><h1 className="t-headline-sm">Packages</h1><p className="ops-note">{page.items.length} loaded from authoritative pagination{page.page.has_more?' · more available':''}.</p></div><button className="btn btn-outlined" onClick={page.reload}><Msym name="refresh"/>Refresh</button></div>
-    <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Docket</th><th>Status</th><th>Weight</th><th>Confirmed</th><th></th></tr></thead><tbody>{page.items.map(item=><tr key={item.id}><td className="ops-mono">{item.docket}</td><td><span className="ops-pill">{item.status.replaceAll('_',' ')}</span></td><td>{item.weight_grams.toLocaleString('en-IN')} g</td><td>{formatKolkata(item.confirmed_at)}</td><td><button className="btn btn-text" onClick={()=>select(item.id)}>Open</button></td></tr>)}</tbody></table></div>
+   <section className="card ops-card logistics-records"><SectionHeader title="Shipment worklist" description={`${page.items.length} packages loaded${page.page.has_more?' · more available':''}`} actions={<button className="btn btn-outlined" onClick={page.reload}><Msym name="refresh"/>Refresh</button>}/>
+    <RecordTable label="Packages" rows={page.items} rowKey={item=>item.id} selectedKey={selected} columns={[
+     {key:'docket',label:'Docket',cell:item=><strong className="ops-mono">{item.docket}</strong>},
+     {key:'status',label:'Status',cell:item=><StatusBadge tone={parcelTones[item.status]}>{item.status.replaceAll('_',' ')}</StatusBadge>},
+     {key:'weight',label:'Weight',align:'right',cell:item=>item.weight_grams.toLocaleString('en-IN')+' g'},
+     {key:'confirmed',label:'Confirmed',cell:item=>formatKolkata(item.confirmed_at)},
+     {key:'actions',label:'Actions',className:'record-actions',cell:item=><button className="btn btn-text" onClick={()=>select(item.id)}>Open</button>},
+    ]}/>
     {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={()=>page.loadMore()}>{page.phase==='more'?'Loading…':'Load next page'}</button>}
    </section>
    <PackageBulk controller={controller} source={source} rows={page.items} reload={page.reload}/>
@@ -62,7 +74,7 @@ function PackageBulk({controller,source,rows,reload}:{controller:ScopeController
   return {label:`${row.docket} · version ${row.version}`,item:{parcel_id:row.id,idempotency_key:key,command} as BulkParcelItem};
  }),[rows,action,evidence,context]);
  useEffect(()=>{bulk.select([]);},[bulk,action,evidence,context]);
- return <section className="ops-detail" aria-labelledby="bulk-title"><div className="card ops-card"><h2 id="bulk-title" className="t-title-lg">Bounded bulk command</h2><p className="ops-note">Confirmed successes leave the selection. Failed items stay actionable; stale items are authoritatively refreshed before deliberate retry.</p><div className="ops-form-grid"><SelectField label="Bulk action" value={action} onChange={value=>setAction(value as BulkParcelAction)} options={[{value:'check_in',label:'Check in booked parcels'},{value:'dispatch',label:'Dispatch checked-in parcels'}]}/><TextField label="Evidence reference (UUID)" value={evidence} onChange={setEvidence}/><TextField label={action==='check_in'?'Location reference (UUID)':'Finalized manifest ID (UUID)'} value={context} onChange={setContext}/></div></div>
+ return <section className="ops-detail logistics-bulk" aria-labelledby="bulk-title"><div className="card ops-card"><h2 id="bulk-title" className="t-title-lg">Bounded bulk command</h2><p className="ops-note">Confirmed successes leave the selection. Failed items stay actionable; stale items are authoritatively refreshed before deliberate retry.</p><div className="ops-form-grid"><SelectField label="Bulk action" value={action} onChange={value=>setAction(value as BulkParcelAction)} options={[{value:'check_in',label:'Check in booked parcels'},{value:'dispatch',label:'Dispatch checked-in parcels'}]}/><TextField label="Evidence reference (UUID)" value={evidence} onChange={setEvidence}/><TextField label={action==='check_in'?'Location reference (UUID)':'Finalized manifest ID (UUID)'} value={context} onChange={setContext}/></div></div>
   {valid?<BulkParcelPanel controller={bulk} action={action} candidates={candidates} refreshFailed={async(items,signal)=>{const refreshed=await Promise.all(items.map(async item=>{try{const row=await source.read(item.parcel_id,signal);const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};return {parcel_id:row.id,idempotency_key:item.idempotency_key,command} as BulkParcelItem;}catch{return null;}}));return refreshed.filter((item):item is BulkParcelItem=>item!==null);}}/>:<p className="card ops-card" role="status">Enter valid UUID evidence and {action==='check_in'?'location':'manifest'} references to enable selection.</p>}
  </section>;
 }
@@ -84,7 +96,7 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
  const parcel=detail.value!;
  const refresh=()=>{detail.reload();timeline.reload();membership.reload();memberLot.reload();payment.reload();refreshed();};
  async function removeMembership(){const member=membership.value,lot=memberLot.value;if(!member||!lot)return;try{await remove.run(lotSource.intent({kind:'remove',lotId:lot.id,parcelId:parcel.id,body:{membership_id:member.id,expected_version:lot.version}}));membership.reload();memberLot.reload();refreshed();}catch{/* notice owns safe result */}}
- return <section className="card ops-card ops-detail" aria-labelledby="package-detail-title"><div className="u-between"><div><h2 tabIndex={-1} id="package-detail-title" className="t-headline-sm">{parcel.docket}</h2><span className="ops-pill">{parcel.status.replaceAll('_',' ')}</span></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
+ return <section className="card ops-card ops-detail logistics-selected" aria-labelledby="package-detail-title"><div className="u-between"><div><h2 tabIndex={-1} id="package-detail-title" className="t-headline-sm">{parcel.docket}</h2><StatusBadge tone={parcelTones[parcel.status]}>{parcel.status.replaceAll('_',' ')}</StatusBadge></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
   <div className="ops-facts"><Fact label="Server version" value={parcel.version}/><Fact label="Weight" value={`${parcel.weight_grams.toLocaleString('en-IN')} g`}/><Fact label="Custody" value={parcel.custody.replaceAll('_',' ')}/><Fact label="Booking" value={parcel.booking_id}/></div>
   <div className="ops-grid"><div className="ops-fact"><b>Sender</b>{parcel.sender.name}<span className="ops-note">{parcel.sender.phone_display}</span></div><div className="ops-fact"><b>Recipient</b>{parcel.recipient.name}<span className="ops-note">{parcel.recipient.phone_display}</span></div></div>
   <ParcelActionForm parcel={parcel} roles={roles} command={life} source={source} confirmed={refresh}/>

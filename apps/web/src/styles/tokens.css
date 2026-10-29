@@ -4,12 +4,12 @@
    ============================================================ */
 
 :root {
-  /* ---- Primary (royal blue) ---- */
-  --md-primary: #2563eb;
+  /* ---- Primary (muted blue ink with light-blue surfaces) ---- */
+  --md-primary: #426c83;
   --md-on-primary: #ffffff;
-  --md-primary-container: #d3e3fd;
-  --md-on-primary-container: #041e49;
-  --md-primary-hover: #1d4ed8;
+  --md-primary-container: #eaf4fb;
+  --md-on-primary-container: #355b70;
+  --md-primary-hover: #355b70;
 
   /* ---- Secondary (steel blue) ---- */
   --md-secondary: #4b5563;
@@ -39,9 +39,9 @@
   --md-on-warning-container: #4a2b00;
 
   /* ---- Surfaces ----
-     White is the ONLY background colour in this app. Every surface — page canvas,
-     cards, tiles, icon containers, dialogs — is #ffffff. Hierarchy comes from 1px
-     hairline borders and spacing, never from grey fills. */
+     Working surfaces remain white. The workspace layer supplies a neutral gray
+     navigation background and subtle table headers; blue is reserved for actions
+     and selection. Hierarchy comes from borders, type and spacing. */
   --md-surface: #ffffff;
   --md-surface-dim: #ffffff;
   --md-background: #ffffff;

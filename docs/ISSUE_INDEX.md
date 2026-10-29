@@ -187,6 +187,8 @@ current implementation checks and merged follow-up PR.
 
 ## M7 — Production Readiness & Pilot
 
+[#190](https://github.com/ShippingCo/ShipIT/issues/190) is an additional P0 deployment blocker: full Owner and assigned franchise-admin business access, with tenant/actor boundaries. Foundations #3/#14 are merged; #71 must requalify the amended policy and #76 must include its final artifact/migration evidence. Local implementation does not mark this issue complete.
+
 | Issue | Implementation scope | Prerequisites | Initial status |
 | --- | --- | --- | --- |
 | [#68](https://github.com/ShippingCo/ShipIT/issues/68) | Provision isolated staging and production deployment pipelines | [#5](https://github.com/ShippingCo/ShipIT/issues/5), [#6](https://github.com/ShippingCo/ShipIT/issues/6), [#10](https://github.com/ShippingCo/ShipIT/issues/10), [#11](https://github.com/ShippingCo/ShipIT/issues/11), [#18](https://github.com/ShippingCo/ShipIT/issues/18), [#35](https://github.com/ShippingCo/ShipIT/issues/35) | Blocked |

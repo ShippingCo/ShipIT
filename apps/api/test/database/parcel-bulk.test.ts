@@ -120,12 +120,17 @@ await test('bulk preserves exact action role matrix, wrong-scope denial, state g
   const service=createParcelBulkService(s.pool,createParcelService(s.pool,s.clock));
   for(const [index,actor] of actors.entries()) {
     const key=randomUUID();const work=()=>service.execute(actor.token,{organization_id:org,franchise_id:A},key,['idempotency-key',key],s.payload,randomUUID());
-    if(index===2)assert.equal((await work()).summary.succeeded,1);else await assert.rejects(work(),{code:'ACTION_FORBIDDEN'});
+    if(index===0)assert.equal((await work()).summary.succeeded,1);
+    else if(index===1||index===2){
+      const item=(await work()).items[0]!;assert.ok(item.outcome==='failed');
+      assert.equal(item.error.code,'VERSION_CONFLICT');
+    }
+    else await assert.rejects(work(),{code:'ACTION_FORBIDDEN'});
   }
   for(const [index,actor] of actors.entries()) {
     const key=randomUUID(),payload={action:'dispatch',items:[{parcel_id:s.ids[0],idempotency_key:randomUUID(),command:{expected_version:1,evidence_ref:randomUUID(),manifest_id:randomUUID()}}]};
     const work=()=>service.execute(actor.token,{organization_id:org,franchise_id:A},key,['idempotency-key',key],payload,randomUUID());
-    if([1,2,3].includes(index))assert.equal((await work()).items[0]!.outcome,'failed');else await assert.rejects(work(),{code:'ACTION_FORBIDDEN'});
+    if([0,1,2,3].includes(index))assert.equal((await work()).items[0]!.outcome,'failed');else await assert.rejects(work(),{code:'ACTION_FORBIDDEN'});
   }
   for(const [actor,organization,franchise] of [[await s.grant('operator',[B]),org,B],[await s.beta('operator'),otherOrg,C]] as const){
     const response=await s.post(s.payload,randomUUID(),actor,organization,franchise);assert.equal(response.json().items[0].error.code,'RESOURCE_NOT_FOUND');

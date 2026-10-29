@@ -45,6 +45,19 @@ async function entered(paid=false) {
 }
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
 describe('production counter API composition',()=>{
+ it('does not claim an empty receipt result until the edited docket is searched',async()=>{
+  window.location.hash='/business/receipts';render(<App/>);
+  await screen.findByRole('table',{name:'Receipt bookings'});
+  fill('Find receipt by docket','UNKNOWN');
+  expect(screen.getByText('Search to load matching bookings.')).toBeVisible();
+  expect(screen.queryByRole('heading',{name:'No receipts found'})).not.toBeInTheDocument();
+  override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
+  fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));
+  await screen.findByRole('heading',{name:'No receipts found'});
+  expect(calls.filter(c=>c.path.startsWith('/api/v1/parcels')).at(-1)!.path).toContain('docket=UNKNOWN');
+  fireEvent.click(screen.getByRole('button',{name:'Clear search'}));
+  expect(screen.getByRole('textbox',{name:'Find receipt by docket'})).toHaveFocus();
+ });
  it('creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery',async()=>{
   const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();save();await screen.findByRole('heading',{name:'Booking saved'});
   expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/bookings?')[0])).toEqual({customer_id:f.customerId,expected_customer_version:1,tax_calculation_id:f.tax.id,tax_intent:{quote_id:f.quote.id,pricing_input:{destination_key:'SYN_DEST',service:'standard',weight_grams:999},facts:{service_recipient_ref:'SYN_BUYER',registration:'unregistered',recipient_state:null,recipient_gstin:null,handover_state:'27',evidence_ref:'SYN_HANDOVER',special_case:'none'}},parcels:[{weight_grams:999,recipient:{name:'Synthetic Recipient',phone:'+1 202-555-0101',address:'21 Fictional Street'}}]});
@@ -210,7 +223,11 @@ describe('monthly account booking',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Get server price and tax'}));await screen.findByText('Server payable ₹134.00');
  }
  it('shows source credit, retains an uncertain request identity and saves the exact approved debtor',async()=>{
-  await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));await screen.findByText(/Original ₹600.00/);
+  await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));
+  const sources=await screen.findByRole('table',{name:'Credit source bookings'});
+  expect(within(sources).getByRole('columnheader',{name:'Original'})).toBeVisible();
+  const originalIndex=within(sources).getAllByRole('columnheader').findIndex(header=>header.textContent==='Original');
+  expect(within(within(sources).getAllByRole('row')[1]).getAllByRole('cell')[originalIndex]).toHaveTextContent('₹600.00');
   let first=true;override=c=>{if(c.path.startsWith('/api/v1/customer-credit-requests')&&c.options.method==='POST'&&first){first=false;return Promise.reject(new TypeError('SYN_ACK_LOST'));}const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
   fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
   fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByText('Retry the retained credit request before leaving or changing franchise.');expect(screen.getByRole('heading',{name:'New Booking'})).toBeVisible();

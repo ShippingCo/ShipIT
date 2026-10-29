@@ -1,3 +1,4 @@
+import {SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import React,{useEffect,useState} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ageingBuckets,ageingStatuses,type AgeingPage,type AgeingFilter,type AccountStatement,statementMeasures } from '@shippingco/shared';
@@ -29,10 +30,10 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
   }
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const exported=await source.export(result.snapshot.id),url=URL.createObjectURL(new Blob([exported.csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=`ageing-${exported.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
-  return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">To-Pay ageing</h1>
+  return <section className="service-report-view" aria-label="To-Pay ageing"><SectionHeader title="To-Pay ageing"/>
     <p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Unallocated advances are shown separately and do not settle debt. Delivery does not settle payment.</p>
     <p>Booking age is not days overdue. Due dates use the terms frozen when the booking was confirmed. Missing dates remain unknown. Overdue means unpaid after the due date in Kolkata.</p>
-    <form onSubmit={e=>{e.preventDefault();void create();}}>
+    <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}>
       <SelectField aria-label="Age from" label="Age from" value={anchor} onChange={v=>setAnchor(v as AgeingFilter['anchor'])} options={[{value:'booking',label:'Booking date'},{value:'due',label:'Due date (unknown without terms)'}]}/>
       <SelectField aria-label="Parcel status" label="Parcel status" value={status} onChange={setStatus} options={[{value:'',label:'All statuses'},...ageingStatuses.map(value=>({value,label:value.replaceAll('_',' ')}))]}/>
       <label><input type="checkbox" checked={overdueOnly} onChange={e=>setOverdueOnly(e.target.checked)}/>Overdue only</label>
@@ -54,19 +55,13 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
       {!canExport&&<p>Your role can read reports but cannot export them.</p>}
       {result.snapshot.advance_source==='receipt_ledger'?<details><summary>Unallocated advances: {salesAmount(result.snapshot.unallocated_advance??'0')}</summary><p>For the selected debtor or whole franchise, regardless of parcel status, overdue or balance filters. Never deducted from outstanding until allocated. Seller COD reservations and actual returns are excluded.</p><ul>{result.snapshot.advances?.map(a=><li key={a.receipt_id}>Debtor {a.customer_id} · Receipt {a.receipt_id}: received {salesAmount(a.received)} − allocated {salesAmount(a.allocated)} − seller COD {salesAmount(a.cod_reserved)} − returned {salesAmount(a.returned)} = available {salesAmount(a.unallocated)}</li>)}</ul></details>:<p>Advance evidence unavailable in this older snapshot.</p>}
       <details><summary>Customer totals ({result.snapshot.customers.length})</summary><ul>{result.snapshot.customers.map(c=><li key={c.customer_id}>Customer {c.customer_id}: {salesAmount(c.totals.outstanding)} outstanding · {c.count} bookings</li>)}</ul></details>
-      {result.snapshot.count===0?<p role="status">{(result.snapshot.advances?.length??0)>0?'No matching balances. CSV contains separate advance evidence.':'No matching balances. CSV contains headers.'}</p>:<ul className="ops-list">{result.rows.map(r=><li className="ops-row" key={r.id}><div style={{minWidth:0,overflowWrap:'anywhere'}}>
-        <b>Booking {r.id}</b><p>Debtor {r.customer_id} · Shipping customer {r.shipping_customer_id??r.customer_id}</p><p>{salesAmount(r.outstanding)} outstanding · {bucketLabels[r.bucket]} · Due date: {r.due_at?new Date(r.due_at).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'Unknown'} · Overdue: {r.overdue===null?'Unknown':r.overdue?'Yes':'No'}</p>
-        {r.account_id&&<p>Account {r.account_id} · Terms revision {r.account_revision_id}</p>}
-        {r.statement_id&&<StatementEvidence key={r.statement_id} source={source} id={r.statement_id}/>}
-        {r.account_id&&!r.statement_id&&<p>No issued statement yet.</p>}
-        <details><summary>Collection history and parcels</summary>
-          <p>Original gross {salesAmount(r.original_gross)} − reductions {salesAmount(r.reductions)} = {salesAmount(r.gross)}. Collections {salesAmount(r.collections)} − reversals {salesAmount(r.reversals)} − refunds {salesAmount(r.refunds)} = net {salesAmount(r.net_collections)}.</p>
-          <p>Obligation {r.obligation_id} · Payment version {r.payment_version} · Financial version {r.financial_version}</p>
-          <ul>{r.parcels.map(p=><li key={p.id}>Parcel {p.id}: {p.status.replaceAll('_',' ')}</li>)}</ul>
-          {r.entries.length===0?<p>No recorded collections.</p>:<ol>{r.entries.map(e=><li key={e.id}>{e.kind}: {salesAmount(e.amount)} · {e.occurred_at} · Entry {e.id}{e.receipt_id&&<> · Receipt {e.receipt_id} · Allocation {e.allocation_id}</>}{e.reversal_of&&<> · Reverses {e.reversal_of}</>}</li>)}</ol>}
-          <ul>{r.changes.map(c=><li key={c.id}>{c.kind}: reduction {salesAmount(c.reduction)}, refund {salesAmount(c.refund)} · {c.occurred_at} · Source {c.id}</li>)}</ul>
-        </details>
-      </div></li>)}</ul>}
+      {result.snapshot.count===0?<p role="status">{(result.snapshot.advances?.length??0)>0?'No matching balances. CSV contains separate advance evidence.':'No matching balances. CSV contains headers.'}</p>:<RecordTable label="Ageing booking balances" rows={result.rows} rowKey={r=>r.id} columns={[
+ {key:'booking',label:'Booking / debtor',cell:r=><div className="service-cell-stack"><strong className="service-reference">Booking {r.id}</strong><span className="ops-note">Debtor {r.customer_id} · Shipping customer {r.shipping_customer_id??r.customer_id}</span>{r.account_id&&<span className="ops-note">Account {r.account_id} · Terms revision {r.account_revision_id}</span>}{r.statement_id&&<StatementEvidence key={r.statement_id} source={source} id={r.statement_id}/>} {r.account_id&&!r.statement_id&&<span>No issued statement yet.</span>}</div>},
+ {key:'outstanding',label:'Outstanding',align:'right',cell:r=><strong>{salesAmount(r.outstanding)}</strong>},
+ {key:'bucket',label:'Age',cell:r=>bucketLabels[r.bucket]},
+ {key:'due',label:'Due / overdue',cell:r=><span className="service-cell-stack">Due date: {r.due_at?new Date(r.due_at).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'Unknown'}<StatusBadge tone={r.overdue?'warning':'neutral'}>Overdue: {r.overdue===null?'Unknown':r.overdue?'Yes':'No'}</StatusBadge></span>},
+ {key:'evidence',label:'Evidence',cell:r=><details><summary>Collection history and parcels</summary><p>Original gross {salesAmount(r.original_gross)} − reductions {salesAmount(r.reductions)} = {salesAmount(r.gross)}. Collections {salesAmount(r.collections)} − reversals {salesAmount(r.reversals)} − refunds {salesAmount(r.refunds)} = net {salesAmount(r.net_collections)}.</p><p>Obligation {r.obligation_id} · Payment version {r.payment_version} · Financial version {r.financial_version}</p><ul>{r.parcels.map(p=><li key={p.id}>Parcel {p.id}: {p.status.replaceAll('_',' ')}</li>)}</ul>{r.entries.length===0?<p>No recorded collections.</p>:<ol>{r.entries.map(e=><li key={e.id}>{e.kind}: {salesAmount(e.amount)} · {e.occurred_at} · Entry {e.id}{e.receipt_id&&<> · Receipt {e.receipt_id} · Allocation {e.allocation_id}</>}{e.reversal_of&&<> · Reverses {e.reversal_of}</>}</li>)}</ol>}<ul>{r.changes.map(c=><li key={c.id}>{c.kind}: reduction {salesAmount(c.reduction)}, refund {salesAmount(c.refund)} · {c.occurred_at} · Source {c.id}</li>)}</ul></details>},
+ ]}/>}
       {result.next_offset!==null&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void more()}>Load more bookings</button>}
     </>}
   </section>;

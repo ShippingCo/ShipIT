@@ -23,15 +23,17 @@ export interface TextFieldProps
   trailing?: React.ReactNode;
 }
 
-export function TextField({ label, value, onChange, type = 'text', error, helper, trailing, list, className, style, onBlur, ...rest }: TextFieldProps) {
+export function TextField({ label, value, onChange, type = 'text', error, helper, trailing, list, className, style, onBlur, id:providedId, 'aria-describedby':describedBy, ...rest }: TextFieldProps) {
+  const generatedId=React.useId(),id=providedId??generatedId,helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
   const float = focused || String(value ?? '') !== '' || ['date', 'datetime-local'].includes(type);
   return (
-    <label className={cx('tf', error && 'err', float && 'float', trailing && 'has-trail', className)} style={style}>
-      <span className="tf-label">{label}</span>
+    <div className={cx('tf', error && 'err', float && 'float', trailing && 'has-trail', className)} style={style}>
+      {label&&<label className="tf-label" htmlFor={id}>{label}</label>}
       <span className="tf-box">
         <input
-          type={type} value={value ?? ''} list={list}
+          id={id} type={type} value={value ?? ''} list={list}
+          aria-describedby={[describedBy,error||helper?helpId:undefined].filter(Boolean).join(' ')||undefined}
           aria-invalid={error ? true : undefined}
           onFocus={() => setFocused(true)}
           onBlur={(e) => { setFocused(false); onBlur?.(e); }}
@@ -41,12 +43,12 @@ export function TextField({ label, value, onChange, type = 'text', error, helper
         {trailing && <span className="tf-trail"><Msym name={trailing} /></span>}
       </span>
       {(error || helper) && (
-        <span className="tf-help">
+        <span id={helpId} className="tf-help">
           {error && <Msym name="error" />}
           {error || helper}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 
@@ -59,25 +61,27 @@ export interface TextAreaProps extends FieldBase {
 }
 
 export function TextArea({ label, value, onChange, rows = 3, placeholder, error, helper, className, style, onBlur }: TextAreaProps) {
+  const id=React.useId(),helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
   return (
-    <label className={cx('tf', error && 'err', (focused || value) && 'float', className)} style={style}>
-      <span className="tf-label">{label}</span>
+    <div className={cx('tf', error && 'err', (focused || value) && 'float', className)} style={style}>
+      {label&&<label className="tf-label" htmlFor={id}>{label}</label>}
       <span className="tf-box">
         <textarea
-          rows={rows} value={value ?? ''} placeholder={placeholder}
+          id={id} rows={rows} value={value ?? ''} placeholder={placeholder}
+          aria-describedby={error||helper?helpId:undefined}
           aria-invalid={error ? true : undefined}
           onFocus={() => setFocused(true)} onBlur={(e) => { setFocused(false); onBlur?.(e); }}
           onChange={(e) => onChange(e.target.value)}
         />
       </span>
       {(error || helper) && (
-        <span className="tf-help">
+        <span id={helpId} className="tf-help">
           {error && <Msym name="error" />}
           {error || helper}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 
@@ -100,15 +104,17 @@ export interface SelectFieldProps
   trailing?: React.ReactNode;
 }
 
-export function SelectField({ label, value, onChange, options, error, helper, className, style, onBlur, trailing: _trailing, ...rest }: SelectFieldProps) {
+export function SelectField({ label, value, onChange, options, error, helper, className, style, onBlur, trailing: _trailing, id:providedId, 'aria-describedby':describedBy, ...rest }: SelectFieldProps) {
+  const generatedId=React.useId(),id=providedId??generatedId,helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
   const float = focused || String(value ?? '') !== '';
   return (
-    <label className={cx('tf', error && 'err', float && 'float', 'has-trail', className)} style={style}>
-      <span className="tf-label">{label}</span>
+    <div className={cx('tf', error && 'err', float && 'float', 'has-trail', className)} style={style}>
+      {label&&<label className="tf-label" htmlFor={id}>{label}</label>}
       <span className="tf-box">
         <select
-          value={value ?? ''}
+          id={id} value={value ?? ''}
+          aria-describedby={[describedBy,error||helper?helpId:undefined].filter(Boolean).join(' ')||undefined}
           aria-invalid={error ? true : undefined}
           onFocus={() => setFocused(true)} onBlur={(e) => { setFocused(false); onBlur?.(e); }}
           onChange={(e) => onChange(e.target.value)}
@@ -121,12 +127,12 @@ export function SelectField({ label, value, onChange, options, error, helper, cl
         <span className="tf-trail"><Msym name="expand_more" /></span>
       </span>
       {(error || helper) && (
-        <span className="tf-help">
+        <span id={helpId} className="tf-help">
           {error && <Msym name="error" />}
           {error || helper}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import {canAdminister} from '@shippingco/shared';
 import {acknowledgeReassignment} from '../deliveries/reassignment.ts';
 import {randomUUID} from 'node:crypto';
 import type {DatabasePool} from '@shippingco/db';
@@ -203,7 +204,7 @@ export function createParcelCustodyService(database:DatabasePool,writesEnabled=f
   async cancel(token:string,idInput:unknown,query:unknown,keyInput:unknown,headers:readonly string[],body:unknown,correlation:string){
    const q=selection(query),id=uuid(idInput,'$'),input={manifest_id:id,...acknowledgementInput(body)},identity=intent('cancel',input,keyInput,headers);
    return withCustodyScope(database,token,q.organizationId,q.franchiseId,'custody.prepare',correlation,async s=>{
-    if(!s.roles.includes('franchise_admin'))throw new HttpError('ACTION_FORBIDDEN');
+    if(!canAdminister(s.roles,'custody.prepare'))throw new HttpError('ACTION_FORBIDDEN');
     const scope=s.access,c=assertTenantAccess(scope,actions),m=await repo.manifest(scope,id,false),saved=await repo.replay(scope,'cancel',identity.key,identity.fingerprint);
     if(saved)return saved;enabled(writesEnabled);if(m.row.cancelled||m.items.some(i=>i.receipt_id))throw new HttpError('VERSION_CONFLICT');const command=randomUUID();
     await scopedQuery(scope,[...actions],`INSERT INTO shipit.custody_manifest_cancellations(manifest_id,organization_id,franchise_id,command_id)

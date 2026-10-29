@@ -92,28 +92,34 @@ await test('destination mismatch provides fixed correction and does not close so
   assert.equal(mismatch.json().error.code,'LOT_DESTINATION_MISMATCH');assert.deepEqual(await s.effects(),before);
   assert.deepEqual((await s.db.adminQuery('SELECT id,version FROM shipit.lots ORDER BY id')).rows,versions);
 });
-await test('dispatcher-only post-dispatch correction and archive preserve membership and authoritative dispatch timeline',{timeout:30000},async t=>{
+for(const correctingRole of ['dispatcher','franchise_admin','org_admin'])await test(`${correctingRole} post-dispatch correction and archive preserve membership and authoritative dispatch timeline`,{timeout:30000},async t=>{
   const s=await setup(t),a=await s.create(),b=await s.create('B'),dispatcher=await s.grant('dispatcher',[A]);
+  const corrector=correctingRole==='org_admin'?s.admin:correctingRole==='franchise_admin'?s.local:dispatcher;
   const add=await s.request('POST',`lots/${a.id}/parcels`,{parcel_id:s.parcel.id,expected_version:1});assert.equal(add.statusCode,200,add.body);
   const check=await s.request('POST',`parcels/${s.parcel.id}/check-in`,{expected_version:1,evidence_ref:randomUUID(),location_ref:randomUUID()});assert.equal(check.statusCode,200,check.body);
   const dispatch=await s.request('POST',`parcels/${s.parcel.id}/dispatch`,{expected_version:2,evidence_ref:randomUUID(),manifest_id:await finalizedManifest(s.pool,s.keys.browser,s.operator.token,[s.parcel.id])});assert.equal(dispatch.statusCode,200,dispatch.body);
   const beforeTimeline=(await s.request('GET',`parcels/${s.parcel.id}/timeline`)).json();
   const move={membership_id:add.json().membership.id,target_lot_id:b.id,expected_version:2,expected_target_version:1};
-  for(const actor of [s.operator,s.local]){
+  for(const actor of [s.operator]){
     assert.equal((await s.request('POST',`lots/${a.id}/parcels/${s.parcel.id}/move`,move,actor)).statusCode,403);
     assert.equal((await s.request('POST',`lots/${a.id}/archive`,{expected_version:2},actor)).statusCode,403);
   }
-  const moved=await s.request('POST',`lots/${a.id}/parcels/${s.parcel.id}/move`,move,dispatcher);assert.equal(moved.statusCode,200,moved.body);
-  const key=randomUUID(),archived=await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},dispatcher,key);assert.equal(archived.statusCode,200,archived.body);
+  const moved=await s.request('POST',`lots/${a.id}/parcels/${s.parcel.id}/move`,move,corrector);assert.equal(moved.statusCode,200,moved.body);
+  const key=randomUUID(),archived=await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},corrector,key);assert.equal(archived.statusCode,200,archived.body);
   assert.equal(archived.json().state,'archived');assert.equal(archived.json().active_member_count,0);
-  assert.deepEqual((await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},dispatcher,key)).json(),archived.json());
+  assert.deepEqual((await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},corrector,key)).json(),archived.json());
   assert.deepEqual((await s.request('GET',`parcels/${s.parcel.id}/timeline`)).json(),beforeTimeline);
   assert.equal((await s.db.adminQuery("SELECT count(*)::int n FROM shipit.lot_memberships WHERE ended_at IS NOT NULL")).rows[0]!.n,2);
   assert.deepEqual((await s.db.adminQuery('SELECT version,status,custody FROM shipit.parcels WHERE id=$1',[s.parcel.id])).rows[0],{version:3,status:'dispatched',custody:'route_dispatch'});
   assert.equal((await s.request('POST',`lots/${b.id}/parcels`,{parcel_id:s.parcel.id,expected_version:3},dispatcher)).json().error.code,'LOT_STATE_CONFLICT');
   assert.equal((await s.request('POST',`lots/${a.id}/archive`,{expected_version:3})).statusCode,403);
-  await s.memberships.updateMembership(s.admin.token,dispatcher.member.id,{expected_version:1,role:'operator',franchise_ids:[A]});
-  assert.equal((await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},dispatcher,key)).statusCode,403);
+  if(correctingRole==='dispatcher'){
+    await s.memberships.updateMembership(s.admin.token,dispatcher.member.id,{expected_version:1,role:'operator',franchise_ids:[A]});
+    assert.equal((await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},dispatcher,key)).statusCode,403);
+  }else if(correctingRole==='franchise_admin'){
+    await s.memberships.revokeMembership(s.admin.token,s.local.member.id,{expected_version:1});
+    assert.equal((await s.request('POST',`lots/${b.id}/archive`,{expected_version:2},corrector,key)).statusCode,404);
+  }
   assert.deepEqual((await s.request('GET',`parcels/${s.parcel.id}/timeline`)).json(),beforeTimeline);
 });
 for(const status of ['delivered','rto'])await test(`terminal ${status} cannot enter active lot, even dispatcher; zero success effects`,{timeout:30000},async t=>{
@@ -132,7 +138,7 @@ await test('R08/W04 exact roles, current replay revocation, disabled roots and m
     const actor=role==='org_admin'?s.admin:await s.grant(role,[A]);
     assert.equal((await s.request('GET',`lots/${lot.id}`,undefined,actor)).statusCode,['accountant','delivery_agent'].includes(role)?403:200);
     const r=await s.request('POST','lots',{name:'Role test',destination_key:'SYN_DEST'},actor);
-    assert.equal(r.statusCode,['franchise_admin','operator','dispatcher'].includes(role)?201:403,r.body);
+    assert.equal(r.statusCode,['org_admin','franchise_admin','operator','dispatcher'].includes(role)?201:403,r.body);
   }
   const key=randomUUID(),body={name:'Replay',destination_key:'SYN_DEST'},actor=await s.grant('operator',[A]);
   assert.equal((await s.request('POST','lots',body,actor,key)).statusCode,201);
@@ -283,7 +289,7 @@ await test('upgrade preserves existing booking and dispatch events/audit byte-fo
   const legacy=await legacyDispatch(s.pool,s.operator.token,parcelId,legacyKey,legacyBody);
   const beforeEvents=(await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows;
   const beforeAudit=(await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows;assert.ok(beforeEvents.length>=4);assert.ok(beforeAudit.length>0);
-  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:41});await db.prepareRoutes();
+  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:42});await db.prepareRoutes();
   assert.deepEqual((await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows,beforeEvents);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows,beforeAudit);
   const {createParcelService}=await import('../../src/modules/parcels/service.ts');

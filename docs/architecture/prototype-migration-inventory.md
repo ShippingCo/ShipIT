@@ -742,7 +742,7 @@ Controlled transport UI tests complement real PostgreSQL service verification.
 | apps/web/src/test/financial-workflow.test.tsx: validates component reductions and retains an uncertain request across blocked navigation and same-key retry | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: reviews server preview and reloads the original request after decision and application IDs | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: records private actual refund evidence only for the approved refund and current source account revision | preserve | reports |
-| apps/web/src/test/financial-workflow.test.tsx: keeps org admins and accountants read-only and treats disabled writes as controlled conflicts | preserve | reports |
+| apps/web/src/test/financial-workflow.test.tsx: keeps accountants read-only, allows owner proposals and treats disabled writes as controlled conflicts | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: amends only the creator pending request with freshly loaded versions and retained source document links | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: saves the explicit approved policy with exact uncertain replay without replacing the open financial request | preserve | reports |
 | apps/web/src/test/financial-workflow.test.tsx: rejects foreign booking context and another creators own request instead of painting their fields | preserve | reports |
@@ -1043,7 +1043,7 @@ browser or database verification.
 | apps/web/src/test/settings.test.tsx: saves typed organization configuration with expected version and shows immutable history and honest availability | preserve | seam |
 | apps/web/src/test/settings.test.tsx: retains a conflicting draft, requires explicit rebasing, and clears an override with null rather than copied defaults | preserve | seam |
 | apps/web/src/test/settings.test.tsx: preserves exact lost-response retry across actual OperatorApp Back/Forward and warns before departure | preserve | seam |
-| apps/web/src/test/settings.test.tsx: declines history/query navigation and explicit footer reload without losing draft, then clears on accepted reload | preserve | seam |
+| apps/web/src/test/settings.test.tsx: declines history/query navigation and profile sign-out without losing draft, then clears on accepted sign-out | preserve | seam |
 | apps/web/src/test/settings.test.tsx: purges draft and uncertain intent on scope abort and ignores pending old-context completion | preserve | seam |
 | apps/web/src/test/settings.test.tsx: operator display preference is separate from legal/franchise identity and operator role cannot write | preserve | seam |
 | apps/web/src/test/settings.test.tsx: booking suggestion requires acceptance, preserves provenance in quote and tax requests, and manual service clears it | preserve | seam |
@@ -1052,7 +1052,7 @@ browser or database verification.
 | apps/web/src/test/settings.test.tsx: uses current authorized native receiving account choices and freezes the selected exact revision | preserve | seam |
 | apps/web/src/test/settings.test.tsx: report options use authorized paginated API rather than all operator-context franchises | preserve | seam |
 | apps/web/src/test/settings.test.tsx: delivery-agent-only cannot resolve settings or protected financial references | preserve | seam |
-| apps/web/src/test/settings.test.tsx: retains the selected franchise when reload is declined and clears private draft when navigation reveals changed authority | preserve | seam |
+| apps/web/src/test/settings.test.tsx: retains the selected franchise when profile sign-out is declined and clears private draft when navigation reveals changed authority | preserve | seam |
 
 
 ## Issue #66 review repair: history and timezone recovery
@@ -1176,3 +1176,35 @@ Reviewed changed demo store guard, booking submit/toast, dashboard timezone/navi
 | apps/web/src/test/business-dates.test.tsx: date presets edit the range without submitting or replacing saved report evidence | preserve | booking |
 | apps/web/src/test/lot-candidates.test.tsx: filters candidates by server destination, ungrouped state and IST booking date before deliberate selection | preserve | booking |
 | apps/web/src/test/operations.test.tsx: booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position | preserve | booking |
+
+| apps/web/src/test/operator.test.tsx: shows booking and delivery administration with only %s | preserve | seam |
+
+| apps/web/src/test/operator.test.tsx: denies dispatcher direct booking routes without loading counter prerequisites | preserve | seam |
+
+## UI redesign regression additions — 29 October 2026
+
+The reviewed source now contains 343 test declarations. Existing business scenarios,
+Store exports/members, caller ownership and route declarations are retained. The new
+checks cover accessible shared components, responsive navigation and truthful receipt
+search states. The only new event effect is the cleaned-up Escape listener for the
+workspace navigation disclosure; no new persistence effect is introduced.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: does not claim an empty receipt result until the edited docket is searched | preserve | seam |
+| apps/web/src/test/operator.test.tsx: opens workspace navigation with keyboard focus and returns focus on Escape | preserve | seam |
+| apps/web/src/test/workspace-components.test.tsx: keeps native field names separate from options and connects helpers and validation messages | preserve | presentation |
+| apps/web/src/test/workspace-components.test.tsx: preserves supplied server record order and explicit action identity in a named accessible worklist | preserve | presentation |
+| apps/web/src/test/workspace-components.test.tsx: sorts local ISO dates chronologically, exposes named filters and keeps zero totals and exported view exact | preserve | presentation |
+
+### Sidebar disclosure navigation
+
+Only the operator test fingerprint changes to open the relevant folder before checking permitted links and protected navigation. All existing business assertions remain. One presentation regression is added:
+
+| Test | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/workspace-navigation.test.tsx: groups permitted destinations once, expands folders independently and reveals the active route | preserve | presentation |
+
+### Profile and session actions
+
+The routine footer refresh is removed. Existing settings-departure regressions now exercise declined and accepted profile sign-out: declined departure preserves the exact draft and sends no logout request; accepted departure sends one logout and clears the private editor. History/query and changed-authority checks remain. Two declarations are renamed for the visible action, with no test removed or added. The reviewed operator test fingerprint also covers hidden sign-out, profile Escape/focus restoration and the existing logout/invitation/revocation scenarios.

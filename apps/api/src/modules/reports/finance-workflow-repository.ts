@@ -162,6 +162,6 @@ export async function refundCashLocation(scope:TenantAccess,id:string,revision:s
  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.id=$1`,[id])).rows[0];
  if(!location||location.kind!=='cash'||location.account_id!==account)throw new HttpError('RESOURCE_NOT_FOUND');
  if(!location.active||location.revision_id!==revision||location.account_revision_id!==accountRevision)throw new HttpError('VERSION_CONFLICT');
- if(!(await scopedQuery(scope,['finance.apply'],`SELECT m.user_id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
- WHERE {{franchise:f.organization_id:f.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin')`,[location.custodian_id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ if(!(await scopedQuery(scope,['finance.apply'],`SELECT m.user_id FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
+ WHERE {{franchise:f.organization_id:f.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('operator','franchise_admin','org_admin')`,[location.custodian_id])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }

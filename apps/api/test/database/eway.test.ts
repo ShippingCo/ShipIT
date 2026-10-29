@@ -110,7 +110,7 @@ await test('every R15/W23 role is enforced independently with accountant minimum
   const actors=[{role:'org_admin',actor:s.admin}];
   for(const role of ['franchise_admin','operator','dispatcher','accountant','delivery_agent','read_only'])actors.push({role,actor:await s.grant(role,[A])});
   for(const {role,actor} of actors){
-    const read=!['delivery_agent','read_only'].includes(role),write=['franchise_admin','operator'].includes(role);
+    const read=!['delivery_agent','read_only'].includes(role),write=['org_admin','franchise_admin','operator'].includes(role);
     for(const suffix of ['','/history','reminders']){
       const response=await s.request('GET',suffix,undefined,actor.token);
       assert.equal(response.statusCode,read?200:403,role+suffix+response.body);
@@ -125,7 +125,7 @@ await test('every R15/W23 role is enforced independently with accountant minimum
     const estimate=await s.request('POST','/estimate',{expected_version:version,reason_ref:'SYN_ROLE',starts_at:start},actor.token);
     assert.equal(estimate.statusCode,write?409:403,role+estimate.body);
   }
-  assert.equal((await s.request('GET')).json().record.version,3);
+  assert.equal((await s.request('GET')).json().record.version,4);
 });
 
 await test('e-way concurrent normalized replay and competing corrections commit exactly once and survive a fresh pool', { timeout: 30000 }, async t => {

@@ -1,3 +1,4 @@
+import {canAdminister} from '@shippingco/shared';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
@@ -56,10 +57,10 @@ export function createDeliveryService(database:DatabasePool,configuration:Delive
   });
  }
  async function read(session:string,parcelInput:unknown,query:unknown,correlation:string) {
-  const parcel=parcelId(parcelInput);return scoped(session,query,'deliveries.read',correlation,scopes=>repository.currentState(scopes.command,parcel,scopes.roles.includes('delivery_agent')));
+  const parcel=parcelId(parcelInput);return scoped(session,query,'deliveries.read',correlation,scopes=>repository.currentState(scopes.command,parcel,scopes.roles.includes('delivery_agent')&&!canAdminister(scopes.roles,'deliveries.read')));
  }
  async function list(session:string,query:unknown,correlation:string) {
-  return scoped(session,query,'deliveries.list',correlation,async scopes=>({items:await repository.queue(scopes.command,scopes.roles.includes('delivery_agent')),scope_revision:scopes.revision}));
+  return scoped(session,query,'deliveries.list',correlation,async scopes=>({items:await repository.queue(scopes.command,scopes.roles.includes('delivery_agent')&&!canAdminister(scopes.roles,'deliveries.read')),scope_revision:scopes.revision}));
  }
  async function agents(session:string,query:unknown,correlation:string) {
   return scoped(session,query,'deliveries.agents',correlation,async scopes=>({items:(await repository.agents(scopes.command)).map(a=>({id:a.id,label:`Agent ${a.id.slice(0,8)}`}))}));

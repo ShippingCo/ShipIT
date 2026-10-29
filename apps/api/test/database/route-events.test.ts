@@ -84,9 +84,18 @@ await test('delivered and RTO members receive skipped evidence without status or
   await assert.rejects(s.pool.query('UPDATE shipit.route_parcel_effects SET outcome=$1',['updated']));
   await assert.rejects(s.db.adminQuery('DELETE FROM shipit.route_parcel_effects'));
 });
-await test('W18 cannot bypass dispatcher T04, and foreign manifests/scopes and read-only fail without effects',{timeout:30000},async t=>{
+for(const role of ['org_admin','franchise_admin'])await test(`#190 ${role} records actual route departure without a dispatcher membership`,{timeout:30000},async t=>{
+ const s=await setup(t),actor=role==='org_admin'?s.admin:s.local,key=randomUUID();
+ const response=await s.post(s.input,actor,key);assert.equal(response.statusCode,200,response.body);
+ assert.equal(response.json().updated_count,2);
+ assert.deepEqual((await s.post(s.input,actor,key)).json(),response.json());
+ assert.ok((await s.db.adminQuery('SELECT status FROM shipit.parcels')).rows.every(row=>row.status==='in_transit'));
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.memberships WHERE user_id=$1',[actor.id])).rows[0]!.n,1);
+});
+
+await test('W18 restricted staff cannot bypass T04, and foreign manifests/scopes and read-only fail without effects',{timeout:30000},async t=>{
   const s=await setup(t),before=await s.counts();
-  for(const actor of [s.operator,s.local,await s.grant('read_only',[A]),await s.grant('accountant',[A])])assert.equal((await s.post(s.input,actor)).json().error.code,'ACTION_FORBIDDEN');
+  for(const actor of [s.operator,await s.grant('read_only',[A]),await s.grant('accountant',[A])])assert.equal((await s.post(s.input,actor)).json().error.code,'ACTION_FORBIDDEN');
   for(const [o,f] of [[org,B],[otherOrg,C]]){
     const r=await s.request('POST',`routes/${s.route.id}/events`,s.input,s.dispatcher,randomUUID(),o,f);assert.equal(r.statusCode,404,r.body);
   }

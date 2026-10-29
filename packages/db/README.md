@@ -987,3 +987,7 @@ future migrations. See [settings operations](../../docs/architecture/settings-op
 ## Monthly account statements (#142)
 
 Forward migration `1793379600000-monthly-account-statements.cjs` adds nullable account/lineage metadata to existing immutable statements and preserves all released migrations and legacy JSON. No sale, debt, receipt or historical account is backfilled. Runtime readers also need SELECT on account identities/revisions/bookings, receipt commands/receipts and `cod_receipt_positions`, alongside existing finance/report grants. See [rollout, equations and private export recovery](../../docs/architecture/account-statements.md).
+
+## Issue #190 policy-v2 upgrade
+
+Migration 56 (`1793552400000-owner-business-authority.cjs`) is additive and changes no existing memberships or business records. It adds `shipit.business_membership_scopes`, a security-invoker view of explicit scopes plus real Owner memberships joined to organization-owned franchises. Grant the runtime role SELECT only on this view, retaining existing underlying membership/franchise read grants. Existing function ACLs are preserved. Apply it before deploying the compatible API/UI pair; do not enable feature flags implicitly. Roll back compatible API/UI to restore the previous action ceiling; retain additive schema and business history. See [qualification](../../docs/architecture/issue-190-verification.md).

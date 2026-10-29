@@ -154,7 +154,7 @@ await test('accepted HTTP followed by database failure recovers uncertain withou
 await test('redrive HTTP enforces current roles, CSRF, expected revision and same-key intent',{timeout:30000},async t=>{
  const s=await outboundSetup(t),{id}=await s.enqueue();s.setSend(async()=>({kind:'permanent_failure',reason:'template_rejected'}));await s.worker.tick();
  const detail=await s.detail(id),body={expected_version:detail.message.version,reason_code:'dependency_repaired'};
- assert.equal((await s.request('outbound/'+id+'/redrive',body,s.admin.token)).statusCode,403);
+ assert.equal((await s.request('outbound/'+id+'/redrive',{...body,expected_version:body.expected_version+1},s.admin.token)).statusCode,409);
  for(const role of ['read_only','accountant','operator','dispatcher','delivery_agent']) {
   const actor=await s.grant(role,[A]);assert.equal((await s.request('outbound/'+id+'/redrive',body,actor.token)).statusCode,403);
  }

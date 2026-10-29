@@ -162,7 +162,7 @@ await test('Issue 67: one shop cycle reconciles independent sources; INR 2000 CO
   const call=(path:string,actor:{id:string;token:string}=s.local,scope:Record<string,string>=q,body?:unknown,key=randomUUID())=>s.app.inject({method:body===undefined?'GET':'POST',url:'/api/v1/'+path+'?'+new URLSearchParams(scope),headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(actor.token),...(body===undefined?{}:{payload:JSON.stringify(body)})});
   const response=await call('reports/sales/'+sales.snapshot.id);assert.equal(response.statusCode,200,response.body);assert.deepEqual(response.json(),sales);assert.equal(response.headers['cache-control'],'no-store');
   assert.equal((await call('finance/bookings/'+s.first.id)).json().collections,'7000');assert.deepEqual((await call('finance/statements/'+s.statement.id)).json(),s.statement);
-  const adminReport=await call('reports/sales',s.admin,q,s.filter);assert.equal(adminReport.statusCode,200,adminReport.body);assert.equal((await call('reports/sales/'+adminReport.json().snapshot.id+'/export',s.admin)).statusCode,403);
+  const adminReport=await call('reports/sales',s.admin,q,s.filter);assert.equal(adminReport.statusCode,200,adminReport.body);assert.equal((await call('reports/sales/'+adminReport.json().snapshot.id+'/export',s.admin)).statusCode,200);
   assert.equal((await call('reports/sales',s.reader,q,s.filter)).statusCode,403);
   assert.equal((await call('finance/bookings/'+s.first.id,s.accountant)).statusCode,200);assert.equal((await call('finance/bookings/'+s.first.id,s.reader)).statusCode,403);
   const detail=await createFinancialAuditService(s.pool).auditDetail(s.local.token,q,audit.snapshot.id,audit.rows[0]!.id,randomUUID());assert.deepEqual(detail.row,audit.rows[0]);

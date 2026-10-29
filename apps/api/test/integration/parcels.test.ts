@@ -32,10 +32,10 @@ it('implements the exact W07-W09/W12/W14 role ceilings without inheritance',()=>
   const franchise=id(),roles:readonly Role[]=['org_admin','franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only'];
   const membership=(role:Role)=>({role,franchiseIds:[franchise],lifecycle:'active'} as Membership);
   const expected={
-    'parcels.check_in':['operator'],'parcels.dispatch':['franchise_admin','operator','dispatcher'],
-    'parcels.transit':['dispatcher'],'parcels.fail_delivery':['delivery_agent'],'parcels.approve_rto':['franchise_admin'],
+    'parcels.check_in':['org_admin','franchise_admin','operator'],'parcels.dispatch':['org_admin','franchise_admin','operator','dispatcher'],
+    'parcels.transit':['org_admin','franchise_admin','dispatcher'],'parcels.fail_delivery':['delivery_agent'],'parcels.approve_rto':['org_admin','franchise_admin'],
   } as const;
   for(const [action,allowed] of Object.entries(expected))for(const role of roles)
-    expect(parcelCommandScope(action as keyof typeof expected,[membership(role)]),`${action}:${role}`).toEqual(allowed.includes(role as never)?[franchise]:[]);
+    expect(parcelCommandScope(action as keyof typeof expected,[membership(role)],[franchise]),`${action}:${role}`).toEqual(allowed.includes(role as never)?[franchise]:[]);
   expect(parcelCommandScope('parcels.dispatch',[{...membership('dispatcher'),lifecycle:'revoked'}])).toEqual([]);
 });

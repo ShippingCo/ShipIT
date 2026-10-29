@@ -85,3 +85,5 @@ Live authentication delivery setup remains deferred to M3.
 - [0042 — Reviewed carrier rate imports](0042-reviewed-carrier-rates.md)
 - [0043 — Manual carrier qualification](0043-manual-carrier-qualification.md)
 - [0044 — Bounded report snapshots](0044-bounded-report-snapshots.md)
+
+- [0046: Owner and local administrator business authority](0046-owner-and-local-administrator-authority.md) — #190 policy v2; independent review pending.

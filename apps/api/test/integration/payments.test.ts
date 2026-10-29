@@ -55,7 +55,7 @@ describe('payment closed command contract',()=>{
  });
  it.each(['org_admin','franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only'] as Role[])('enforces W20/W21 and R11 for %s',role=>{
   const m={role,lifecycle:'active',franchiseIds:[booking]} as Membership;
-  for(const action of ['payments.collect','payments.reverse'] as const)expect(paymentScope(action,[m],[booking])).toEqual(role==='franchise_admin'?[booking]:[]);
+  for(const action of ['payments.collect','payments.reverse'] as const)expect(paymentScope(action,[m],[booking])).toEqual(['org_admin','franchise_admin'].includes(role)?[booking]:[]);
   expect(paymentScope('payments.read',[m],[booking])).toEqual(['org_admin','franchise_admin','accountant'].includes(role)?[booking]:[]);
  });
 });

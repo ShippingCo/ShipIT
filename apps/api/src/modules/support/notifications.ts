@@ -30,8 +30,8 @@ export async function authorize(scope:TenantAccess,deps:WhatsappDependencies,m:O
  AND e.event_type='responded' AND c.state='claimed' AND c.assigned_staff_id::text=e.actor_id
  AND NOT EXISTS(SELECT 1 FROM shipit.support_events later WHERE later.organization_id=e.organization_id AND later.franchise_id=e.franchise_id
   AND later.case_id=e.case_id AND later.version>e.version AND later.event_type IN ('assigned','resolved','reopened'))
- AND EXISTS(SELECT 1 FROM shipit.memberships member JOIN shipit.membership_franchise_scopes s ON s.organization_id=member.organization_id AND s.membership_id=member.id
-  WHERE member.organization_id=c.organization_id AND s.franchise_id=c.franchise_id AND member.user_id=c.assigned_staff_id AND member.lifecycle='active' AND member.role IN ('franchise_admin','operator'))
+ AND EXISTS(SELECT 1 FROM shipit.memberships member JOIN shipit.business_membership_scopes s ON s.organization_id=member.organization_id AND s.membership_id=member.id
+  WHERE member.organization_id=c.organization_id AND s.franchise_id=c.franchise_id AND member.user_id=c.assigned_staff_id AND member.lifecycle='active' AND member.role IN ('org_admin','franchise_admin','operator'))
  FOR SHARE OF c`,[m.source_id,m.affected_entity_id,i.id,m.contact_key])).rows[0];
  if(!row)return null;
  const consent=await state(scope,i.id,m.contact_key);

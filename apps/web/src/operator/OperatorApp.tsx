@@ -10,6 +10,7 @@ import { connectInvalidation } from '../data-access/invalidation';
 import { ApiFailure } from '../data-access/errors';
 import { createScopeController } from './scope';
 import './operator.css';
+import {Msym} from '../components/m3/Icon';
 
 export default function OperatorApp() {
   const [controller] = useState(() => createScopeController());
@@ -25,7 +26,7 @@ export default function OperatorApp() {
     });
     return () => { crossTab.current?.close(); };
   }, [controller]);
-  const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState(''),[profileOpen,setProfileOpen]=useState(false);
   const refresh = (resetSelection=false) => {if(!settingsDeparture(controller.runtime.ticket()))return Promise.resolve();if(resetSelection)selected.current=undefined;return controller.load(selected.current, latestPath.current);};
   useEffect(() => {
     latestPath.current = location.pathname;
@@ -45,7 +46,7 @@ export default function OperatorApp() {
   }, [state.context]);
   useEffect(() => {
     if (state.status === 'signed_out') {
-      selected.current = undefined; setInvitation('');
+      selected.current = undefined; setInvitation(''); setProfileOpen(false);
       document.getElementById('signin-title')?.focus();
     }
   }, [state.status]);
@@ -59,11 +60,11 @@ export default function OperatorApp() {
       setMessage('Invitation accepted. Your permitted workspace has been refreshed.');
     } catch (error) {
       if (error instanceof ApiFailure && error.code === 'UNAUTHENTICATED') { controller.clear('signed_out', latestPath.current); return; }
-      await refresh(); setMessage('Invitation could not be confirmed. Refresh workspace access; otherwise ask the sender for a new invitation for your verified identity.');
+      await refresh(); setMessage('Invitation could not be confirmed. Check your access or ask the sender for a new invitation for your verified identity.');
     } finally { setBusy(false); }
   }
   async function logout() {
-    if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage(''); setInvitation(''); controller.clear(); crossTab.current?.publish();
+    if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage(''); setInvitation(''); setProfileOpen(false); controller.clear(); crossTab.current?.publish();
     try { await controller.source.logout(); selected.current = undefined; controller.clear('signed_out', latestPath.current); crossTab.current?.publish(); }
     catch { controller.clear('error', latestPath.current); setMessage('Sign-out could not be confirmed. Retry when the connection returns.'); }
     finally { setBusy(false); }
@@ -71,29 +72,33 @@ export default function OperatorApp() {
   const context = state.context;
   // A changed route never renders data from the previous authorization check, even before effects run.
   const loading = state.status === 'loading' || state.path !== location.pathname;
+  const profile=<details className="operator-account-details" open={profileOpen} onKeyDown={event=>{
+    if(event.key==='Escape'&&profileOpen){event.stopPropagation();setProfileOpen(false);event.currentTarget.querySelector('summary')?.focus();}
+  }} onBlur={event=>{if(event.relatedTarget instanceof Node&&!event.currentTarget.contains(event.relatedTarget))setProfileOpen(false);}}>
+    <summary onClick={event=>{event.preventDefault();setProfileOpen(open=>!open);}}><span className="operator-profile-avatar"><Msym name="account_circle"/></span><span className="operator-profile-label"><strong>Profile</strong><small>Account and invitations</small></span><Msym name="unfold_more"/></summary>
+    <div className="operator-account-panel" hidden={!profileOpen}><h2>Your profile</h2>
+      {context&&<><p>Verified account reference: <span className="ops-mono">{context.user_id}</span></p><form onSubmit={event=>{void accept(event);}} className="operator-invitation">
+        <TextField label="Invitation code" type="password" value={invitation} onChange={setInvitation} autoComplete="off" required disabled={busy}/>
+        <button className="btn btn-outlined" disabled={busy||!invitation}>Accept invitation</button>
+      </form></>}
+      <div className="operator-profile-session"><button className="btn btn-text" disabled={busy} onClick={()=>{void logout();}}><Msym name="logout"/>Sign out</button></div>
+    </div>
+  </details>;
   return <div className="operator-root"><SettingsNavigationGuard controller={controller}/>
     {loading ? <main className="operator-center" role="status">Checking workspace access…</main> : state.status === 'signed_out' ?
       <main className="operator-center"><SignIn source={controller.source} complete={async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); }} /></main> :
       state.status === 'error' ? <main className="operator-center"><section className="card operator-card">
-        <h1 className="t-headline-sm">Workspace access unavailable</h1>
+        <span className="workspace-state-icon"><Msym name="lock_reset"/></span><h1 className="t-headline-sm">Workspace access unavailable</h1>
         <p role="alert">Your session or access may have changed, or the service is unavailable. Private workspace data has been cleared.</p>
-        <button className="btn btn-filled" disabled={busy} onClick={() => { void refresh(true); }}>Refresh workspace access</button>
+        <button className="btn btn-filled" disabled={busy} onClick={() => { void refresh(true); }}>Try again</button>
       </section></main> : context?.state === 'ready' ? <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
-      }} /> : <main className="operator-center">
+      }} profile={profile}/> : <main className="operator-center">
         {context?.state === 'onboarding_required' ? <Onboarding key={context.user_id} controller={controller} userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /> :
-          <section className="card operator-card"><h1 className="t-headline-sm">No available workspace</h1><p role="alert">Ask an administrator to restore access or send an invitation. Disabled locations and revoked memberships cannot be used.</p></section>}
+          <section className="card operator-card"><span className="workspace-state-icon"><Msym name="storefront"/></span><h1 className="t-headline-sm">No available workspace</h1><p role="alert">Ask an administrator to restore access or send an invitation. Disabled locations and revoked memberships cannot be used.</p><button className="btn btn-outlined" disabled={busy} onClick={()=>{void refresh(true);}}>Check access</button></section>}
       </main>}
     {state.notice && <p role="status" className="operator-message">{state.notice}</p>}
-    {!loading && state.status !== 'signed_out' && <footer className="operator-actions">
-      <button className="btn btn-text" disabled={busy} onClick={() => { void refresh(true); }}>Refresh workspace access</button>
-      <button className="btn btn-text" disabled={busy} onClick={() => { void logout(); }}>Sign out</button>
-      {context && <p>Verified account reference: {context.user_id}</p>}
-      {context && <form onSubmit={event => { void accept(event); }} className="operator-invitation">
-        <TextField label="Invitation code" type="password" value={invitation} onChange={setInvitation} autoComplete="off" required disabled={busy} />
-        <button className="btn btn-outlined" disabled={busy || !invitation}>Accept invitation</button>
-      </form>}
-    </footer>}
+    {!loading && state.status !== 'signed_out' && context?.state!=='ready' && <footer className="operator-actions">{profile}</footer>}
     {message && <p className="operator-message" role="status">{message}</p>}
   </div>;
 }

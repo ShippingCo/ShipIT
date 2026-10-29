@@ -1,3 +1,5 @@
+import {PageHeader,RecordTable,SectionHeader,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import {Link} from 'react-router-dom';
 import React,{useMemo,useState} from 'react';
 import type { OperatorRole } from '@shippingco/shared';
@@ -11,18 +13,22 @@ import { TextField,SelectField } from '../components/m3/Input';
 import { Msym } from '../components/m3/Icon';
 import { ApiFailure } from '../data-access/errors';
 
+const challengeTones={pending:'warning',active:'info',expired:'warning',locked:'danger',consumed:'success',superseded:'neutral',closed:'neutral'} as const;
 const has=(roles:readonly OperatorRole[],role:OperatorRole)=>roles.includes(role);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export default function Deliveries({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>deliveries(api),[api]);
- const paymentHelp=<section className="card ops-card"><h2>Payment collected at delivery</h2><p>Completing delivery does not mark a bill paid. An operator or franchise admin records actual To-Pay money in Money receipts, selects the bill and names the receiving agent as custodian. Agents use cash handovers for money already recorded; a handover does not create another customer payment.</p>{roles.some(r=>r==='operator'||r==='franchise_admin')&&<Link className="btn btn-outlined" to="/business/money-receipts">Record collected To-Pay payment</Link>}{roles.includes('delivery_agent')&&<Link className="btn btn-outlined" to="/business/agent-settlements">Open my cash handovers and daily statement</Link>}</section>;
+ const paymentHelp=<section className="card ops-card"><h2>Payment collected at delivery</h2><p>Completing delivery does not mark a bill paid. An owner, franchise admin or operator records actual To-Pay money in Money receipts, selects the bill and names the receiving agent as custodian. Agents use cash handovers for money already recorded; a handover does not create another customer payment.</p>{(canAdminister(roles,'money_receipts.record')||roles.includes('operator'))&&<Link className="btn btn-outlined" to="/business/money-receipts">Record collected To-Pay payment</Link>}{roles.includes('delivery_agent')&&<Link className="btn btn-outlined" to="/business/agent-settlements">Open my cash handovers and daily statement</Link>}</section>;
  const queue=useResource('delivery-queue',signal=>source.list(signal),value=>value.items.length===0),[selected,setSelected]=useState<string|null>(null);
- if(queue.phase==='loading')return <Loading label="Loading assigned delivery work…"/>;
- if(queue.phase==='error')return <Failure retry={queue.reload} label="Delivery work could not be loaded."/>;
- if(queue.phase==='empty')return <>{paymentHelp}<Empty icon="local_shipping" title="No active deliveries" body="Only current assignments in this franchise appear here."/></>;
- return <div className="ops-page">{paymentHelp}<section className="card ops-card"><div className="u-between"><div><h1 className="t-headline-sm">Delivery work</h1><p className="ops-note">Server-authorized active attempts only. Challenge values are never displayed.</p></div><button className="btn btn-outlined" onClick={queue.reload}><Msym name="refresh"/>Refresh</button></div>
-  <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Docket</th><th>Attempt</th><th>Expires</th><th></th></tr></thead><tbody>{queue.value!.items.map(item=><tr key={item.attempt_id}><td className="ops-mono">{item.docket}</td><td>{item.attempt_number} of 2</td><td>{formatKolkata(item.expires_at)}</td><td><button className="btn btn-text" onClick={()=>setSelected(item.parcel_id)}>Open</button></td></tr>)}</tbody></table></div></section>
-  {selected&&<DeliveryDetail key={selected} parcelId={selected} roles={roles} source={source} close={()=>setSelected(null)} refreshQueue={queue.reload}/>}</div>;
+ return <div className="ops-page logistics-workspace"><PageHeader title="Delivery work" eyebrow="Last-mile operations" description="Review active attempts, recipient proof and delivery outcomes." actions={<button className="btn btn-outlined" onClick={queue.reload}><Msym name="refresh"/>Refresh</button>}/>
+  {paymentHelp}
+  {queue.phase==='loading'?<Loading label="Loading assigned delivery work…"/>:queue.phase==='error'?<Failure retry={queue.reload} label="Delivery work could not be loaded."/>:queue.phase==='empty'?<Empty icon="local_shipping" title="No active deliveries" body="Only current assignments in this franchise appear here."/>:<section className="card ops-card logistics-records"><SectionHeader title="Active attempts" description="Current authorized attempts. Challenge values are never displayed."/><RecordTable label="Delivery work" rows={queue.value!.items} rowKey={item=>item.attempt_id} selectedKey={queue.value!.items.find(item=>item.parcel_id===selected)?.attempt_id} columns={[
+   {key:'docket',label:'Docket',cell:item=><strong className="ops-mono">{item.docket}</strong>},
+   {key:'attempt',label:'Attempt',align:'right',cell:item=>item.attempt_number+' of 2'},
+   {key:'expires',label:'Expires',cell:item=>formatKolkata(item.expires_at)},
+   {key:'actions',label:'Actions',className:'record-actions',cell:item=><button className="btn btn-text" onClick={()=>setSelected(item.parcel_id)}>Open</button>},
+  ]}/></section>}
+  {selected&&queue.phase==='ready'&&<DeliveryDetail key={selected} parcelId={selected} roles={roles} source={source} close={()=>setSelected(null)} refreshQueue={queue.reload}/>}</div>;
 }
 
 function DeliveryDetail({parcelId,roles,source,close,refreshQueue}:{parcelId:string;roles:readonly OperatorRole[];source:ReturnType<typeof deliveries>;close:()=>void;refreshQueue:()=>void}){
@@ -30,10 +36,10 @@ function DeliveryDetail({parcelId,roles,source,close,refreshQueue}:{parcelId:str
  if(detail.phase==='loading')return <Loading label="Loading current delivery state…"/>;
  if(detail.phase==='error')return <Failure retry={detail.reload} label="Delivery state is no longer available."/>;
  const current=detail.value!,refresh=()=>{detail.reload();refreshQueue();};
- return <section className="card ops-card ops-detail" aria-labelledby="delivery-detail-title"><div className="u-between"><div><h2 id="delivery-detail-title" className="t-headline-sm">{current.docket}</h2><span className="ops-pill">{current.status.replaceAll('_',' ')}</span></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
+ return <section className="card ops-card ops-detail logistics-selected" aria-labelledby="delivery-detail-title"><div className="u-between"><div><h2 id="delivery-detail-title" className="t-headline-sm">{current.docket}</h2><StatusBadge tone={challengeTones[current.status]}>{current.status.replaceAll('_',' ')}</StatusBadge></div><button className="btn btn-text" onClick={close}>Close detail</button></div>
   <div className="ops-facts"><Fact label="Physical attempt" value={`${current.attempt_number} of 2`}/><Fact label="Expires" value={formatKolkata(current.expires_at)}/><Fact label="Proof attempts left" value={current.verification_attempts_remaining}/><Fact label="Resends left" value={current.resends_remaining}/></div>
   <p role="status" aria-live="polite">Send state: {current.send_state.replaceAll('_',' ')} · {current.send_reason.replaceAll('_',' ')}</p>
-  {has(roles,'delivery_agent')&&<AgentActions current={current} source={source} confirmed={refresh}/>} {has(roles,'franchise_admin')&&current.exception?.state==='pending'&&<Approval current={current} source={source} confirmed={refresh}/>} </section>;
+  {has(roles,'delivery_agent')&&<AgentActions current={current} source={source} confirmed={refresh}/>} {canAdminister(roles,'deliveries.exception.approve')&&current.exception?.state==='pending'&&<Approval current={current} source={source} confirmed={refresh}/>} </section>;
 }
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>}
 

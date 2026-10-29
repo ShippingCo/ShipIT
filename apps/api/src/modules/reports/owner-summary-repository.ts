@@ -38,8 +38,8 @@ export async function permitted(scope:TenantAccess,user:string,ids:readonly stri
    WHERE {{franchise:sf.organization_id:sf.id}} AND sf.id=f.id AND sf.lifecycle='active' AND o.lifecycle='active')
   OR NOT EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
    WHERE {{organization:m.organization_id}} AND m.user_id=$1 AND m.lifecycle='active' AND
-    ((NOT $3::boolean AND m.role='org_admin') OR m.role=ANY(CASE WHEN $3 THEN ARRAY['franchise_admin'] ELSE ARRAY['franchise_admin','accountant'] END)
-     AND EXISTS(SELECT 1 FROM shipit.membership_franchise_scopes s WHERE s.organization_id=m.organization_id AND s.membership_id=m.id AND s.franchise_id=f.id)))) allowed`,[user,ids,admin])).rows[0]!;
+    ((m.role='org_admin') OR m.role=ANY(CASE WHEN $3 THEN ARRAY['franchise_admin'] ELSE ARRAY['franchise_admin','accountant'] END)
+     AND EXISTS(SELECT 1 FROM shipit.business_membership_scopes s WHERE s.organization_id=m.organization_id AND s.membership_id=m.id AND s.franchise_id=f.id)))) allowed`,[user,ids,admin])).rows[0]!;
  return ids.length>0&&result.allowed;
 }
 export async function requireAdmin(scope:TenantAccess) {
