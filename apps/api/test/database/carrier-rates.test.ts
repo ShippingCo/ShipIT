@@ -66,7 +66,7 @@ await test('rates expose unit, mapping, overlap, lane and stale-state failures w
 });
 await test('rate sheets enforce admin permissions and nested ownership on reads, approval and replay',{timeout:60000},async t=>{
   const s=await setup(t),key=randomUUID(),run=(await s.upload(s.body(),key)).json(),before=(await s.db.adminQuery('SELECT count(*)::int AS n FROM shipit.carrier_rate_imports')).rows;
-  assert.equal((await s.request('GET',`carriers/rates/${run.id}`,undefined,s.admin.token)).statusCode,403);
+  assert.equal((await s.request('GET',`carriers/rates/${run.id}`,undefined,s.admin.token)).statusCode,200);
   for(const role of ['operator','dispatcher','read_only','accountant','delivery_agent']){
     const actor=await s.grant(role,[A]);
     assert.equal((await s.request('GET',`carriers/rates/${run.id}`,undefined,actor.token)).statusCode,403);

@@ -87,7 +87,10 @@ await test('A/B/C SQL matrix isolates details, joins, counts, keysets, exact sea
   const second=await read(scope=>list(scope,first.rows[1]!.id));assert.equal(second.rows.length,1);
   const exported=await withStaffTenantScope(pool,token('alpha1FranchiseAdmin'),a.organization_id,'operations.export',scope=>exportProjection(scope));
   assert.equal(exported.rows.length,3);assert.deepEqual(Object.keys(exported.rows[0]!).sort(),['id','label']);
-  for(const role of ['alphaOrgAdmin','alpha1ReadOnly','alpha1Operator','alpha1Dispatcher','alpha1DeliveryAgent','alpha1Accountant'] as const) {
+  const ownerExport=await withStaffTenantScope(pool,token('alphaOrgAdmin'),a.organization_id,'operations.export',scope=>exportProjection(scope));
+  assert.equal(ownerExport.rows.length,53);
+  assert.ok(ownerExport.rows.every(row=>typeof row.label==='string'&&!row.label.includes(c.id)));
+  for(const role of ['alpha1ReadOnly','alpha1Operator','alpha1Dispatcher','alpha1DeliveryAgent','alpha1Accountant'] as const) {
     await assert.rejects(withStaffTenantScope(pool,token(role),a.organization_id,'operations.export',scope=>exportProjection(scope)),denied('ACTION_FORBIDDEN'));
   }
   await assert.rejects(withStaffTenantScope(pool,token('alpha1ReadOnly'),a.organization_id,'franchise.profile.update',scope=>update(scope,fixtureId(15001))),denied('ACTION_FORBIDDEN'));

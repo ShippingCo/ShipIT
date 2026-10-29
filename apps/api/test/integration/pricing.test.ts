@@ -65,7 +65,7 @@ it('R21 W27 W01 W43 matrix grants only existing current roles/scopes',()=>{
   for(const role of ['org_admin','franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only'] as const) {
     const m={role,franchiseIds:['A'],lifecycle:'active'} as Membership;
     expect(pricingScope('pricing.quote',[m],['A','B'])).toEqual(role==='org_admin'?['A','B']:['franchise_admin','operator','dispatcher','accountant'].includes(role)?['A']:[]);
-    for(const action of ['pricing.draft','pricing.publish','pricing.override.approve'] as const)expect(pricingScope(action,[m],['A','B'])).toEqual(role==='franchise_admin'?['A']:[]);
+    for(const action of ['pricing.draft','pricing.publish','pricing.override.approve'] as const)expect(pricingScope(action,[m],['A','B'])).toEqual(role==='org_admin'?['A','B']:role==='franchise_admin'?['A']:[]);
     expect(pricingScope('pricing.override',[m],[])).toEqual(['franchise_admin','operator','dispatcher'].includes(role)?['A']:[]);
     expect(pricingScope('pricing.quote',[{...m,lifecycle:'revoked'}],['A','B'])).toEqual([]);
   }

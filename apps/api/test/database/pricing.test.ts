@@ -40,7 +40,7 @@ await test('persisted deterministic slabs, gaps and exact paise survive pool/ser
   assert.deepEqual(await restarted.read(s.local.token,org,A,v.id,randomUUID()),v);
   assert.deepEqual(await restarted.validate(s.operator.token,org,A,q.id,input,randomUUID()),q);
 });
-await test('W27 only local franchise_admin; R21 explicit role matrix; no implicit org writes',{timeout:30000},async t=>{
+await test('W27 scoped owner and local admin writes; R21 explicit restricted-role matrix',{timeout:30000},async t=>{
   const s=await pricingSetup(t);await s.published();
   const siblingAdmin=await s.grant('franchise_admin',[B]),sibling=(await s.create(draft,siblingAdmin.token,randomUUID(),B)).json();
   assert.equal((await s.publish(sibling.id,{expected_version:1},siblingAdmin.token,randomUUID(),B)).statusCode,200);
@@ -52,9 +52,9 @@ await test('W27 only local franchise_admin; R21 explicit role matrix; no implici
     const allowed=!['delivery_agent','read_only'].includes(role);
     assert.equal((await s.quote(input,actor.token)).statusCode,allowed?200:403,role);
     const get=await s.app.inject({url:pricingPath(),cookies:s.cookies(actor.token)});assert.equal(get.statusCode,allowed?200:403,role);
-    assert.equal((await s.create(draft,actor.token)).statusCode,role==='franchise_admin'?201:403,role);
+    assert.equal((await s.create(draft,actor.token)).statusCode,['org_admin','franchise_admin'].includes(role)?201:403,role);
     const over=await s.quote({...input,override:{freight_paise:12552,reason_code:'customer_agreement'}},actor.token);
-    assert.equal(over.statusCode,['franchise_admin','operator','dispatcher'].includes(role)?200:403,role);
+    assert.equal(over.statusCode,['org_admin','franchise_admin','operator','dispatcher'].includes(role)?200:403,role);
   }
 });
 await test('sibling B and unrelated C IDs/nested scopes cannot expose or mutate pricing',{timeout:30000},async t=>{

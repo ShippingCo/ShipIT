@@ -1,3 +1,4 @@
+import {SectionHeader,RecordTable} from '../components/workspace/Workspace';
 import React,{useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import type {EffectivenessPage,EffectivenessSection} from '@shippingco/shared';
@@ -19,10 +20,10 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
     void source.page(id,abort.signal,(section||null) as EffectivenessSection|null,category||null).then(p=>{if(!abort.signal.aborted){setResult(p);setWeek(p.snapshot.filter.week);}}).catch(e=>{if(!abort.signal.aborted)fail(e);}).finally(()=>{if(!abort.signal.aborted)setBusy(false);});return()=>abort.abort();
   },[id,source,revision,section,category]);
   async function create(retry=false){if(pending)return;setNotice('');try{const p=await(retry?command.retry():command.run(source.intent({week})));if(p){setSection('');setCategory('');setParams({effectiveness_snapshot:p.snapshot.id});}}catch(e){fail(e);}}
-  return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">Messaging and assistant effectiveness</h1>
+  return <section className="service-report-view" aria-label="Messaging and assistant effectiveness"><SectionHeader title="Messaging and assistant effectiveness"/>
     <p>Fixed closed Monday-to-Monday weeks in UTC. Logical messages and known customers are counted once; recorded send attempts are separate. Accepted, sent and uncertain do not establish delivery.</p>
     <p>Tool success, thanks and staff resolution are separate signals. Calls saved and ROI are unmeasured.</p>
-    <form onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
+    <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
       <TextField label="Week beginning Monday (UTC)" type="date" value={week} onChange={setWeek}/><p>Up to 53 weeks of history. The week must have closed at least 15 minutes ago. Snapshots expire after 24 hours.</p>
       <button className="btn btn-filled">Create effectiveness snapshot</button></fieldset></form>
     {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void create(true)}>Retry same effectiveness request</button>}
@@ -35,13 +36,13 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
       <SelectField label="Report section" value={section} disabled={pending} onChange={v=>{setSection(v);setCategory('');}} options={[{value:'',label:'All sections'},...(['messaging','assistant','queue'] as const).map(value=>({value,label:human(value)}))]}/>
       {category&&<><p>Selected category: {human(category)}</p><button className="btn btn-outlined" disabled={pending} onClick={()=>setCategory('')}>Back to all categories</button></>}
       {result.items.every(r=>r.count===0)&&<p role="status">No measured events in this selection.</p>}
-      <ul className="ops-list">{result.items.map(r=><li className="ops-row" key={r.section+':'+r.category}><div>
-        <b>{human(r.section)} · {label(r.category)}</b><p className="t-headline-sm">{r.suppressed?'Suppressed':r.count===null?'Unknown':r.count.toLocaleString('en-IN')}</p>
-        <p>Eligible {human(r.denominator_kind)}: {r.denominator===null?'Unavailable':r.denominator} · excluded: {r.excluded===null?'Unavailable':r.excluded}</p>
-        {r.latency_ms!==null&&<p>Mean receipt-to-record latency: {r.latency_ms} ms</p>}
-        {r.section==='queue'&&<p>Mean business age: {r.age_suppressed?'Suppressed':r.business_minutes===null?'Unknown':r.business_minutes.toFixed(1)+' minutes'}</p>}
-        <button className="btn btn-text" disabled={pending} onClick={()=>{setSection(r.section);setCategory(r.category);}}>Inspect {human(r.category)}</button>
-      </div></li>)}</ul><p>Drill-through contains aggregate evidence only. No transcript, phone, docket or customer list is included.</p>
+      <RecordTable label="Messaging and assistant measurements" rows={result.items} rowKey={r=>r.section+':'+r.category} columns={[
+ {key:'category',label:'Measurement',cell:r=><span className="service-cell-stack"><strong>{label(r.category)}</strong><span className="ops-note">{human(r.section)}</span></span>},
+ {key:'count',label:'Count',align:'right',cell:r=><strong>{r.suppressed?'Suppressed':r.count===null?'Unknown':r.count.toLocaleString('en-IN')}</strong>},
+ {key:'eligible',label:'Eligible / excluded',cell:r=><span className="service-cell-stack">Eligible {human(r.denominator_kind)}: {r.denominator===null?'Unavailable':r.denominator}<span className="ops-note">Excluded: {r.excluded===null?'Unavailable':r.excluded}</span></span>},
+ {key:'timing',label:'Timing evidence',cell:r=><span className="service-cell-stack">{r.latency_ms!==null?<span>Mean receipt-to-record latency: {r.latency_ms} ms</span>:'Latency unavailable'}{r.section==='queue'&&<span>Mean business age: {r.age_suppressed?'Suppressed':r.business_minutes===null?'Unknown':r.business_minutes.toFixed(1)+' minutes'}</span>}</span>},
+ {key:'action',label:'Action',cell:r=><button className="btn btn-text" disabled={pending} onClick={()=>{setSection(r.section);setCategory(r.category);}}>Inspect {human(r.category)}</button>},
+ ]}/><p>Drill-through contains aggregate evidence only. No transcript, phone, docket or customer list is included.</p>
     </>}
   </section>;
 }

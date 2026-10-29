@@ -1,3 +1,4 @@
+import {PageHeader} from '../components/workspace/Workspace';
 import React,{useMemo} from 'react';
 import { Link } from 'react-router-dom';
 import type { OperatorRole } from '@shippingco/shared';
@@ -33,10 +34,10 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
    routes:rs?{items:rs.items.length,more:rs.page.has_more,planning:rs.items.filter(item=>item.state==='planning').length}:null,
    eway:es?{items:es.items.length,more:es.page.has_more,attention:es.items.filter(item=>item.state.reminder_reasons.length>0).length}:null};
  },value=>Object.values(value).every(item=>item===null));
- const header=<section className="card ops-card" aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm" tabIndex={-1}>{workspaceName}</h1><h2 className="t-title-lg">Operational workspace</h2><p>Server-backed work for parcels, grouping, dispatch and external e-way records.</p><p className="ops-note">Every figure below is explicitly a loaded bounded page, not a franchise-wide total. Open a work area for authoritative pagination and detail.</p></section>;
- if(resource.phase==='loading')return <div className="ops-page">{header}<Loading label="Loading operational workspace…"/></div>;
- if(resource.phase==='error')return <div className="ops-page">{header}<Failure retry={resource.reload} label="Operational summaries could not be loaded."/></div>;
- if(resource.phase==='empty')return <div className="ops-page">{header}<Empty icon="lock" title="No operational views for this role" body="Your current memberships do not include these operational read projections."/></div>;
+ const header=<><PageHeader title={workspaceName} eyebrow="Operational workspace" description="Review your current workspace and open an available work area."/><p className="ops-note service-page-note">Counts cover the records loaded here. Open a work area to see more records and details.</p></>;
+ if(resource.phase==='loading')return <div className="ops-page service-dashboard">{header}<Loading label="Loading operational workspace…"/></div>;
+ if(resource.phase==='error')return <div className="ops-page service-dashboard">{header}<Failure retry={resource.reload} label="Operational summaries could not be loaded."/></div>;
+ if(resource.phase==='empty')return <div className="ops-page service-dashboard">{header}<Empty icon="lock" title="No operational views for this role" body="Your current memberships do not include these operational read projections."/></div>;
  const s=resource.value!;
  const metrics=[
   s.parcels&&{to:'/business/packages',icon:'inventory_2',number:s.parcels.items,label:'Parcels loaded',note:`${s.parcels.attention} need recovery review${s.parcels.more?' · more pages available':''}`},
@@ -44,10 +45,10 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
   s.routes&&{to:'/business/routes',icon:'alt_route',number:s.routes.items,label:'Routes loaded',note:`${s.routes.planning} still in planning${s.routes.more?' · more routes available':''}`},
   s.eway&&{to:'/business/eway',icon:'fact_check',number:s.eway.attention,label:'E-way checks need review',note:`From ${s.eway.items} loaded reminders${s.eway.more?' · more reminders available':''}`},
  ].filter(Boolean) as {to:string;icon:string;number:number;label:string;note:string}[];
- return <div className="ops-page">
+ return <div className="ops-page service-dashboard">
   {header}
   {allowed(roles,parcelRead)&&<Link className="btn btn-outlined" to="/business/packages?booked=today">Booked today</Link>}
-  <section aria-label="Current operational summaries" className="ops-grid">{metrics.map(metric=><Link className="card ops-kpi" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
+  <section aria-label="Current operational summaries" className="service-summary-grid">{metrics.map(metric=><Link className="card ops-kpi service-summary" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
   {metrics.every(metric=>metric.number===0)&&<Empty icon="inventory_2" title="No records on the current pages" body="Create a booking or operational record, then retry this dashboard."/>}
  </div>;
 }

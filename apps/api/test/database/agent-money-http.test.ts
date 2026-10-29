@@ -21,7 +21,7 @@ await test('owner HTTP records versioned beneficiaries and agreed fees without c
 });
 await test('owner money HTTP rechecks roles, nested ownership, csrf, optimistic revision and mass assignment before mutation',{timeout:60000},async t=>{
  const s=await setupAgentMoney(t),app=server(s);t.after(()=>app.close());const post=request(s,app),accountant=await s.grant('accountant',[A]),sibling=await s.grant('franchise_admin',[B]),body={expected_version:0,name:'Synthetic isolated seller',active:true};
- for(const actor of [s.operator,s.agent,s.admin,accountant]){const result=await request(s,app,actor)('/cod-beneficiaries',body);assert.equal(result.statusCode,403,result.body);}
+ for(const actor of [s.operator,s.agent,accountant]){const result=await request(s,app,actor)('/cod-beneficiaries',body);assert.equal(result.statusCode,403,result.body);}
  assert.equal((await request(s,app,sibling)('/cod-beneficiaries',body)).statusCode,404);
  const missingCsrfPaths=['/cod-beneficiaries','/cod-beneficiaries/'+randomUUID()+'/revisions','/cod-obligations','/cod-obligations/'+randomUUID()+'/revisions','/cod-allocations','/agents/'+s.agent.id+'/fee-terms','/fee-earnings/delivery','/fee-earnings/agreed'];for(const path of missingCsrfPaths)assert.equal((await post(path,{},randomUUID(),q,false)).statusCode,403);
  assert.equal((await post('/cod-beneficiaries',{...body,organization_id:org})).statusCode,422);const key=randomUUID(),created=await post('/cod-beneficiaries',body,key);assert.equal(created.statusCode,201,created.body);

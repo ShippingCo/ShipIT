@@ -1,3 +1,5 @@
+import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import React,{useMemo,useRef,useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { OperatorRole } from '@shippingco/shared';
@@ -10,21 +12,27 @@ import { TextField,SelectField } from '../components/m3/Input';
 
 export default function Pickups({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const source=useMemo(()=>pickups(scopedApi(controller)),[controller]);
- if(!roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)))return <p role="alert">Pickup requests are unavailable for this role.</p>;
- return <Queue source={source} canDecide={roles.some(r=>['franchise_admin','operator'].includes(r))}/>;
+ if(!(canAdminister(roles,'pickups.decide')||roles.some(r=>['org_admin','franchise_admin','operator'].includes(r))))return <p role="alert">Pickup requests are unavailable for this role.</p>;
+ return <Queue source={source} canDecide={(canAdminister(roles,'pickups.decide')||roles.some(r=>['franchise_admin','operator'].includes(r)))}/>;
 }
 export function Queue({source,canDecide}:{source:PickupSource;canDecide:boolean}) {
- const page=usePagedResource('pickups',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null);
- return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm" tabIndex={-1}>Pickup requests</h1>
-  <p className="ops-note">Review capacity before accepting. A pickup request does not book a shipment or guarantee courier arrival.</p>
-  <button className="btn btn-outlined" onClick={page.reload}>Refresh pickups</button>
+ const page=usePagedResource('pickups',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
+ return <section className="service-workspace" aria-labelledby="workspace-title"><PageHeader title="Pickup requests" eyebrow="Customer service" description="Review capacity before accepting. A pickup request does not book a shipment or guarantee courier arrival." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh pickups</button>}/>
   {page.phase==='loading'?<Loading/>:page.phase==='error'?<Failure retry={page.reload}/>:page.phase==='empty'?<Empty title="No pickup requests" body="Customer requests will appear here."/>:
-   <ul className="ops-list">{page.items.map(p=><li className="ops-row" key={p.id}><div className="ops-row-main"><b>{p.state}</b><span>{new Date(p.requested_window.start).toLocaleString()}</span>{p.review_reason&&<span>Manual review required</span>}</div><button className="btn btn-outlined" onClick={e=>{trigger.current=e.currentTarget;setSelected(p.id);}}>Review pickup {p.id.slice(0,8)}</button></li>)}</ul>}
+   <RecordTable label="Pickup requests" caption="Current authorized requests · private contact and address appear in review" rows={page.items} rowKey={p=>p.id} selectedKey={selected} columns={[
+    {key:'reference',label:'Request',cell:p=><strong className="service-reference">{p.id.slice(0,8)}</strong>},
+    {key:'state',label:'State',cell:p=><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{p.state}</StatusBadge>},
+    {key:'requested',label:'Requested window',cell:p=><span className="service-cell-stack"><time dateTime={p.requested_window.start}>{new Date(p.requested_window.start).toLocaleString()}</time><span className="ops-note">to {new Date(p.requested_window.end).toLocaleString()}</span></span>},
+    {key:'agreed',label:'Agreed window',cell:p=>p.agreed_window?<span className="service-cell-stack">{new Date(p.agreed_window.start).toLocaleString()}<span className="ops-note">to {new Date(p.agreed_window.end).toLocaleString()}</span></span>:'Not agreed'},
+    {key:'review',label:'Review',cell:p=>p.review_reason?<StatusBadge tone="warning">Manual review required</StatusBadge>:'Standard handling'},
+    {key:'action',label:'Action',cell:p=><button className="btn btn-text" aria-label={`Review pickup ${p.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(p.id);}}>Review pickup {p.id.slice(0,8)}</button>},
+   ]}/>}
   {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more pickups</button>}
-  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog" onCloseAutoFocus={e=>{e.preventDefault();trigger.current?.focus();}}>
+  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+   <Dialog.Close className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    <Dialog.Title>Review pickup</Dialog.Title><Dialog.Description>Private address and requested shipment. Accept only after checking capacity and agreeing the window with the customer.</Dialog.Description>
    {selected&&<Detail key={selected} id={selected} source={source} canDecide={canDecide} changed={page.reload}/>}
-   <Dialog.Close className="btn btn-text">Close</Dialog.Close>
+
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </section>;
 }
@@ -47,7 +55,7 @@ function Decision({value:p,source,canDecide,changed}:{value:PickupDetail;source:
   <p>Requested: {new Date(p.requested_window.start).toLocaleString()} – {new Date(p.requested_window.end).toLocaleString()}</p>
   {p.review_reason&&<p role="status">Manual review: {p.review_reason.replaceAll('_',' ')}</p>}
   {p.agreed_window&&<p role="status">Agreed: {new Date(p.agreed_window.start).toLocaleString()} – {new Date(p.agreed_window.end).toLocaleString()}</p>}
-  {p.notification&&<p role="status">Customer message: {p.notification.state} · attempts {p.notification.attempts}. {['failed','uncertain','suppressed'].includes(p.notification.state)?'Franchise admin must review messaging recovery. The pickup decision remains saved.':''}</p>}
+  {p.notification&&<p role="status">Customer message: {p.notification.state} · attempts {p.notification.attempts}. {['failed','uncertain','suppressed'].includes(p.notification.state)?'An administrator must review messaging recovery. The pickup decision remains saved.':''}</p>}
   {canDecide&&p.state==='submitted'&&<form onSubmit={e=>{void submit(e);}}><fieldset disabled={busy} className="ops-form-grid"><legend>Staff decision</legend>
    <SelectField aria-label="Decision" label="Decision" value={decision} onChange={setDecision} options={[{value:'accepted',label:'Accept'},{value:'declined',label:'Decline'}]}/>
    {decision==='accepted'&&<><TextField label="Agreed start (your local time)" type="datetime-local" value={start} onChange={setStart} required aria-describedby="pickup-window-help"/><TextField label="Agreed end (your local time)" type="datetime-local" value={end} onChange={setEnd} required aria-describedby="pickup-window-help"/>

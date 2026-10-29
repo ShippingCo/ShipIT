@@ -32,7 +32,7 @@ describe('sales report UI',()=>{
   document.source_digest='a'.repeat(64);document.lines[0]!.payment_ids=[f.id(91)];document.lines[0]!.payment_evidence=[{id:f.id(91),kind:'collection',amount:'1000',recorded_at:f.now}];document.lines[0]!.adjustment_ids=[f.id(92)];document.lines[0]!.adjustment_evidence=[{id:f.id(92),kind:'refund',reason:'customer_refund',credit:'0',refund:'400',recorded_at:f.now}];
   const controller=createScopeController();await controller.load();const source=sales(scopedApi(controller));
   render(<MemoryRouter initialEntries={['/?sales_snapshot='+id]}><SalesView source={source} canExport={false} canManage={false} franchises={[{id:f.A,name:'Synthetic shop'}]}/></MemoryRouter>);
-  fireEvent.click(await screen.findByRole('button',{name:'View saved evidence'}));
+  fireEvent.click(await screen.findByRole('button',{name:'View saved evidence for booking '+f.bookingId}));
   expect(await screen.findByText(/Refund record reduced by ₹1.00 \(no new transfer\)/)).toBeVisible();
   fireEvent.click(screen.getByRole('button',{name:'Open account statement '+document.id}));
   expect(await screen.findByText(/Revision 2 · Previous/)).toBeVisible();expect(screen.getByText(/= closing ₹94.00/)).toBeVisible();expect(screen.getByText('Separate unallocated advance ₹2.00')).toBeVisible();

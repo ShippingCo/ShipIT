@@ -40,3 +40,7 @@ membership/invitation tables, controlled role/lifecycle/version/timestamp UPDATE
 DELETE only on membership scope rows, and INSERT only on `membership_audit_events`. It
 receives no audit UPDATE or DELETE. Rollback disables the routes while retaining the
 additive schema; do not reverse an applied migration.
+
+## Issue #190: administrative policy v2
+
+[ADR 0046](../adr/0046-owner-and-local-administrator-authority.md) amends the original action ceiling: Owner (`org_admin`) operates across organization-owned franchises; franchise administrators operate only within explicit grants. Staff roles and actor-bound proof/independence rules retain their restrictions. See the [current matrix](authorization-contract.md) and [verification/setup](issue-190-verification.md). Earlier no-inheritance examples are policy-v1 history, not a denial of the approved v2 business actions.

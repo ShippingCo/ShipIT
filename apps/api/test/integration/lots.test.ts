@@ -45,7 +45,7 @@ describe('lot strict contract',()=>{
   it('R08/W04 role sets do not inherit operational rights',()=>{
     for(const role of ['org_admin','franchise_admin','operator','dispatcher','delivery_agent','accountant','read_only'] as const){
       const m=[{id,userId:id,organizationId:id,role,franchiseIds:[id],lifecycle:'active' as const,version:1,createdAt:new Date(0),updatedAt:new Date(0),revokedAt:null}];
-      expect(lotScope('lots.create',m,[id]).length>0).toBe(['franchise_admin','operator','dispatcher'].includes(role));
+      expect(lotScope('lots.create',m,[id]).length>0).toBe(['org_admin','franchise_admin','operator','dispatcher'].includes(role));
       expect(lotScope('lots.read',m,[id]).length>0).toBe(!['delivery_agent','accountant'].includes(role));
     }
   });

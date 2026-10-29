@@ -130,10 +130,11 @@ await test('canonical role denials, finance-only audit/read projections and live
    const page=await s.list(actor.token,{limit:'1'});assert.equal(page.json().page.has_more,false);
   }
  }
- assert.equal((await s.request('POST',s.bookingId+'/payments',collectionInput(1),s.admin)).statusCode,403);
- assert.equal((await s.request('POST',s.bookingId+'/payments/'+paid.json().entry.id+'/reversals',{amount_paise:1,currency:'INR',reason_code:'incorrect_amount'},s.admin)).statusCode,403);
- assert.equal((await s.request('GET',s.bookingId+'/payments',undefined,s.admin)).statusCode,200);
  assert.deepEqual(await s.paymentCounts(),before);
+ assert.equal((await s.request('POST',s.bookingId+'/payments',collectionInput(1),s.admin)).statusCode,200);
+ assert.equal((await s.request('POST',s.bookingId+'/payments/'+paid.json().entry.id+'/reversals',{amount_paise:1,currency:'INR',reason_code:'incorrect_amount'},s.admin)).statusCode,200);
+ assert.equal((await s.request('GET',s.bookingId+'/payments',undefined,s.admin)).statusCode,200);
+ assert.deepEqual(await s.paymentCounts(),{...before,commands:before!.commands+2,entries:before!.entries+2,audits:before!.audits+2});
  assert.ok(!/Synthetic Recipient|Fictional Street|collection_reference|amount_paise/.test(JSON.stringify((await s.list(s.local.token)).json())));
  assert.ok(!/Synthetic Recipient|Fictional Street|idempotency-key|cookie|authorization|collection_reference|amount_paise|SYN_SECRET/i.test(s.logs.join('\n')));
 });

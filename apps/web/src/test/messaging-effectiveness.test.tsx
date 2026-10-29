@@ -1,6 +1,6 @@
 import React from 'react';
 import {describe,it,expect,vi} from 'vitest';
-import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {render,screen,fireEvent,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {EffectivenessView} from '../operations/Effectiveness';
 import type {EffectivenessSource} from '../data-access/effectiveness';
@@ -19,18 +19,18 @@ describe('production effectiveness snapshot UI',()=>{
     const source=fixture();render(<MemoryRouter><EffectivenessView source={source}/></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Week beginning Monday (UTC)'),{target:{value:'2026-09-28'}});
     const button=screen.getByRole('button',{name:'Create effectiveness snapshot'});button.focus();expect(button).toHaveFocus();fireEvent.submit(button.closest('form')!);
-    expect(await screen.findByText('messaging · Accepted · delivery unknown')).toBeVisible();expect(screen.getByText('Suppressed')).toBeVisible();expect(screen.getByText(/current weekly schedule in Asia\/Kolkata/)).toBeVisible();
+    const measurements=await screen.findByRole('table',{name:'Messaging and assistant measurements'});expect(within(measurements).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['Measurement','Count','Eligible / excluded','Timing evidence','Action']);const acceptedCells=within(within(measurements).getByRole('row',{name:/Accepted · delivery unknown/})).getAllByRole('cell');expect(acceptedCells[0]).toHaveTextContent('Accepted · delivery unknown');expect(acceptedCells[0]).toHaveTextContent('messaging');expect(acceptedCells[1]).toHaveTextContent(/^5$/);const thanksCells=within(within(measurements).getByRole('row',{name:/thanks/})).getAllByRole('cell');expect(thanksCells[0]).toHaveTextContent('assistant');expect(thanksCells[1]).toHaveTextContent(/^Suppressed$/);expect(screen.getByText(/current weekly schedule in Asia\/Kolkata/)).toBeVisible();
     expect(screen.getByText(/Calls saved and ROI are unmeasured/)).toBeVisible();
     await waitFor(()=>expect(source.page).toHaveBeenCalledWith(id,expect.any(AbortSignal),null,null));
     fireEvent.click(screen.getByRole('button',{name:'Inspect accepted'}));
     await waitFor(()=>expect(source.page).toHaveBeenLastCalledWith(id,expect.any(AbortSignal),'messaging','accepted'));
-    expect(await screen.findByText('Selected category: accepted')).toBeVisible();expect(screen.queryByText('assistant · thanks')).not.toBeInTheDocument();
+    expect(await screen.findByText('Selected category: accepted')).toBeVisible();expect(within(screen.getByRole('table',{name:'Messaging and assistant measurements'})).queryByRole('row',{name:/thanks/})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Back to all categories'}));await waitFor(()=>expect(source.page).toHaveBeenLastCalledWith(id,expect.any(AbortSignal),'messaging',null));
   });
   it('retries saved failures and reuses the exact uncertain capture while keeping filters disabled',async()=>{
     const source=fixture();vi.mocked(source.page).mockRejectedValueOnce(new ApiFailure('RESOURCE_NOT_FOUND'));
     render(<MemoryRouter initialEntries={['/?effectiveness_snapshot='+id]}><EffectivenessView source={source}/></MemoryRouter>);
-    expect(await screen.findByText(/Report unavailable or expired/)).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Retry saved effectiveness'}));expect(await screen.findByText('messaging · Accepted · delivery unknown')).toBeVisible();
+    expect(await screen.findByText(/Report unavailable or expired/)).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Retry saved effectiveness'}));const measurements=await screen.findByRole('table',{name:'Messaging and assistant measurements'});const accepted=within(measurements).getByRole('row',{name:/Accepted · delivery unknown/});expect(within(accepted).getAllByRole('cell')[0]).toHaveTextContent('messaging');expect(within(accepted).getAllByRole('cell')[1]).toHaveTextContent(/^5$/);
     vi.mocked(source.execute).mockRejectedValueOnce(new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network',dispatched:true}));
     fireEvent.click(screen.getByRole('button',{name:'Create effectiveness snapshot'}));const retry=await screen.findByRole('button',{name:'Retry same effectiveness request'});
     expect(screen.getByLabelText('Week beginning Monday (UTC)')).toBeDisabled();fireEvent.click(retry);

@@ -55,7 +55,7 @@ await test('WhatsApp denies foreign bindings and real foreign resources, checks 
   assert.equal((await s.request('installation',undefined,s.local.token,B)).statusCode,404);
   assert.equal((await s.request('installation',undefined,s.local.token,C,otherOrg)).statusCode,404);
   assert.equal((await s.request('installation',undefined,s.admin.token,B)).json().installation.id,b.json().id);
-  assert.equal((await s.request(`installations/${id}/disable`,{expected_version:1},s.admin.token)).statusCode,403);
+  assert.equal((await s.request(`installations/${id}/disable`,{expected_version:99},s.admin.token)).statusCode,409);
   for(const role of ['operator','dispatcher','delivery_agent','accountant','read_only']) {
     const user=await s.grant(role,[A]);
     assert.equal((await s.request('installation',undefined,user.token)).statusCode,403);

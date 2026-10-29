@@ -80,7 +80,7 @@ await test('sales authorization, filters, persistence, failures and replay use t
  for(const actor of [s.operator,await s.grant('read_only',[A]),await s.grant('accountant',[B])])assert.notEqual((await s.call('reports/sales',s.filter,actor)).statusCode,200);
  for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])assert.equal((await s.call('reports/sales/'+p.snapshot.id+'/export',undefined,s.local,randomUUID(),query)).statusCode,404);
  assert.equal((await s.call('reports/sales',{...s.filter,franchise_ids:[A,B]})).statusCode,404);
- const aggregate=await s.call('reports/sales',{...s.filter,franchise_ids:[A,B]},s.admin);assert.equal(aggregate.statusCode,200,aggregate.body);assert.equal(aggregate.json().snapshot.count,1);assert.equal((await s.call('reports/sales/'+aggregate.json().snapshot.id+'/export',undefined,s.admin)).statusCode,403);
+ const aggregate=await s.call('reports/sales',{...s.filter,franchise_ids:[A,B]},s.admin);assert.equal(aggregate.statusCode,200,aggregate.body);assert.equal(aggregate.json().snapshot.count,1);assert.equal((await s.call('reports/sales/'+aggregate.json().snapshot.id+'/export',undefined,s.admin)).statusCode,200);
  assert.equal((await s.call('reports/sales',{...s.filter,franchise_ids:[A,C]},s.admin)).statusCode,404);
  const empty=await s.call('reports/sales',{...s.filter,rate:'0/1'});assert.equal(empty.statusCode,200,empty.body);assert.equal(empty.json().snapshot.totals.gst,'0');
  for(const body of [{...s.filter,rate:'1/0'},{...s.filter,to_day:'bad'},{...s.filter,franchise_ids:[A,A]}])assert.equal((await s.call('reports/sales',body)).statusCode,422);

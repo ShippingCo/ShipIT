@@ -60,7 +60,7 @@ await test('report denies sibling/foreign IDs, read-only roles, revoked access a
   }
   const ownOther=await s.grant('accountant',[A]);assert.equal((await s.report('GET','/'+id,undefined,ownOther)).statusCode,404);
   const adminSnapshot=await s.report('POST','',s.filter,s.admin);assert.equal(adminSnapshot.statusCode,200,adminSnapshot.body);
-  assert.equal((await s.report('GET','/'+adminSnapshot.json().snapshot.id+'/export',undefined,s.admin)).statusCode,403);
+  assert.equal((await s.report('GET','/'+adminSnapshot.json().snapshot.id+'/export',undefined,s.admin)).statusCode,200);
   // Test-only owner operation advances both timestamps; production runtime cannot alter a snapshot.
   await s.db.adminQuery('ALTER TABLE shipit.report_snapshots DISABLE TRIGGER USER');
   await s.db.adminQuery("UPDATE shipit.report_snapshots SET created_at=created_at-interval '2 days',expires_at=expires_at-interval '2 days' WHERE id=$1",[id]);

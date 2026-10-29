@@ -187,7 +187,7 @@ await test('qualification: uncertain recovery reauthorizes revoked membership, f
   const detail = await s.history(id), path = 'whatsapp/outbound/'+id+'/redrive';
   const body = {expected_version:detail.message.version,reason_code:'retry_uncertain_confirmed'}, key = randomUUID();
   const before = (await s.db.adminQuery("SELECT count(*)::int n FROM shipit.audit_history WHERE action='whatsapp.redrive'")).rows;
-  for (const actor of [s.admin,s.operator,await s.grant('read_only',[A])]) {
+  for (const actor of [s.operator,await s.grant('read_only',[A])]) {
     assert.equal((await s.request(path,body,actor.token)).statusCode,403);
   }
   for (const [actor,query] of [[await s.grant('franchise_admin',[B]),{organization_id:org,franchise_id:B}],

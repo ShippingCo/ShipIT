@@ -1,3 +1,5 @@
+import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import React,{useMemo,useRef,useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { OperatorRole } from '@shippingco/shared';
@@ -10,21 +12,27 @@ import { SelectField } from '../components/m3/Input';
 
 export default function Support({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const source=useMemo(()=>support(scopedApi(controller)),[controller]);
- if(!roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)))return <p role="alert">Support cases are unavailable for this role.</p>;
- return <SupportQueue source={source} canWrite={roles.some(r=>['franchise_admin','operator'].includes(r))}/>;
+ if(!(canAdminister(roles,'support.write')||roles.some(r=>['org_admin','franchise_admin','operator'].includes(r))))return <p role="alert">Support cases are unavailable for this role.</p>;
+ return <SupportQueue source={source} canWrite={(canAdminister(roles,'support.write')||roles.some(r=>['franchise_admin','operator'].includes(r)))}/>;
 }
 export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:boolean}) {
- const page=usePagedResource('support',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null);
- return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm" tabIndex={-1}>Human support</h1>
-  <p className="ops-note">Claim a case before replying. Automated answers stay paused until the case is resolved.</p>
-  <button className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>
+ const page=usePagedResource('support',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
+ return <section className="service-workspace" aria-labelledby="workspace-title"><PageHeader title="Human support" eyebrow="Customer service" description="Claim a case before replying. Automated answers stay paused until the case is resolved." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
   {page.phase==='loading'?<Loading/>:page.phase==='error'?<Failure retry={page.reload}/>:page.phase==='empty'?<Empty title="No support cases" body="Customer requests for help will appear here."/>:
-   <ul className="ops-list">{page.items.map(c=><li className="ops-row" key={c.id}><div className="ops-row-main"><b>{c.state}</b><span>{c.reason.replaceAll('_',' ')}</span><span>Updated {new Date(c.updated_at).toLocaleString()}</span></div><button ref={button=>{if(button&&c.id===selected)trigger.current=button;}} className="btn btn-outlined" onClick={e=>{trigger.current=e.currentTarget;setSelected(c.id);}}>Review case {c.id.slice(0,8)}</button></li>)}</ul>}
+   <RecordTable label="Support cases" caption="Current authorized cases · review a case for private context" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
+    {key:'reference',label:'Case',cell:c=><strong className="service-reference">{c.id.slice(0,8)}</strong>},
+    {key:'state',label:'State',cell:c=><StatusBadge tone={c.state==='resolved'?'success':c.state==='open'?'warning':'info'}>{c.state}</StatusBadge>},
+    {key:'reason',label:'Reason',cell:c=>c.reason.replaceAll('_',' ')},
+    {key:'assigned',label:'Assigned to',cell:c=>c.assigned_staff_id?<span className="service-reference">{c.assigned_staff_id.slice(0,8)}</span>:'Unassigned'},
+    {key:'updated',label:'Updated',cell:c=><time dateTime={c.updated_at}>{new Date(c.updated_at).toLocaleString()}</time>},
+    {key:'action',label:'Action',cell:c=><button ref={button=>{if(button&&c.id===selected)trigger.current=button;}} className="btn btn-text" aria-label={`Review case ${c.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(c.id);}}>Review case {c.id.slice(0,8)}</button>},
+   ]}/>}
   {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more cases</button>}
-  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog" onCloseAutoFocus={e=>{e.preventDefault();trigger.current?.focus();}}>
+  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+   <Dialog.Close className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    <Dialog.Title>Support case</Dialog.Title><Dialog.Description>Private staff workspace. Internal notes are never sent to the customer.</Dialog.Description>
    {selected&&<Detail key={selected} id={selected} source={source} canWrite={canWrite} changed={page.reload}/>}
-   <Dialog.Close className="btn btn-text">Close</Dialog.Close>
+
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </section>;
 }

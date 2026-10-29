@@ -24,8 +24,8 @@ export function createSupportService(database:DatabasePool,deps:WhatsappDependen
      FROM shipit.support_events e LEFT JOIN shipit.whatsapp_outbound m ON m.organization_id=e.organization_id AND m.franchise_id=e.franchise_id AND m.support_event_id=e.id
      WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.case_id=$1 ORDER BY e.version DESC LIMIT 50`,[id])).rows;
     const context=(await scopedQuery<{intent:string;outcome:string;recorded_at:Date}>(scope,['support.read'],`SELECT t.intent,t.outcome,t.recorded_at FROM shipit.customer_conversation_turns t WHERE {{franchise:t.organization_id:t.franchise_id}} AND t.conversation_id=$1 ORDER BY t.recorded_at DESC LIMIT 20`,[c.conversation_id])).rows;
-    const staff=(await scopedQuery<{id:string}>(scope,['support.read'],`SELECT DISTINCT m.user_id AS id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
-     WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.lifecycle='active' AND m.role IN ('franchise_admin','operator') ORDER BY m.user_id LIMIT 100`)).rows;
+    const staff=(await scopedQuery<{id:string}>(scope,['support.read'],`SELECT DISTINCT m.user_id AS id FROM shipit.memberships m JOIN shipit.business_membership_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
+     WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.lifecycle='active' AND m.role IN ('org_admin','franchise_admin','operator') ORDER BY m.user_id LIMIT 100`)).rows;
     return {...repository.summary(c),parcel_id:c.parcel_id,current_actor_id:scope.context.actor.id,staff,
      availability:availability(deps.configuration.support_hours?.find(h=>h.franchise_id===q.franchise),new Date()),
      history:events.map(e=>({id:e.id,action:e.event_type,reason:e.reason,actor_id:e.actor_id,actor_type:e.actor_type,occurred_at:e.occurred_at.toISOString(),text:repository.privateText(deps,e),message_state:e.message_state,message_reason:e.message_reason,attempts:e.attempts})),
@@ -47,8 +47,8 @@ export function createSupportService(database:DatabasePool,deps:WhatsappDependen
     if(b.action==='claim') {if(state!=='open')throw new HttpError('VERSION_CONFLICT');state='claimed';assigned=actor;}
     else if(b.action==='assign') {
      if(state==='resolved')throw new HttpError('VERSION_CONFLICT');
-     const target=(await scopedQuery(scope,['support.write'],`SELECT m.id FROM shipit.memberships m JOIN shipit.membership_franchise_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
-      WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('franchise_admin','operator')`,[b.assigned])).rows[0];
+     const target=(await scopedQuery(scope,['support.write'],`SELECT m.id FROM shipit.memberships m JOIN shipit.business_membership_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
+      WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND m.role IN ('org_admin','franchise_admin','operator')`,[b.assigned])).rows[0];
      if(!target)throw new HttpError('RESOURCE_NOT_FOUND');state='claimed';assigned=b.assigned;
     }else if(b.action==='reopen') {if(state!=='resolved'||await repository.active(scope,c.conversation_id))throw new HttpError('VERSION_CONFLICT');state='open';assigned=null;}
     else {if(state!=='claimed'||assigned!==actor)throw new HttpError('ACTION_FORBIDDEN');if(b.action==='resolve')state='resolved';}

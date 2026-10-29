@@ -37,6 +37,22 @@ def validate():
         found = rows(matrix, prefix)
         assert set(found) == {f"{prefix}{i:02}" for i in range(1, count + 1)}
         rules.update(found)
+    # Policy v2 is the current rulebook. Preserve the original synthetic v1 scenarios
+    # as historical regression evidence, separately from the current policy comparison.
+    amended = json.loads((DOCS / "fixtures/administrative-policy.json").read_text())
+    assert amended["policy_version"] == 2 and amended["issue"] == 190
+    assert amended["roles"] == ROLES and amended["synthetic_only"] is True
+    assert {key: row[2:] for key, row in rules.items()} == amended["matrix"]
+    for key, current in amended["matrix"].items():
+        previous = amended["previous_matrix"][key]
+        expected_staff = previous[2:].copy()
+        if key == "W01":
+            # Dispatcher booking visibility was a UI bug, never a shipped API grant.
+            expected_staff[1] = "-"
+        assert current[2:] == expected_staff, f"Non-admin permission drift: {key}"
+        if key in {"W11", "W12", "W38", "W39", "W34", "W35"}:
+            assert current[:2] == ["-", "-"], f"Actor/prohibited grant drift: {key}"
+    rules = {key: row[:2] + amended["previous_matrix"][key] for key, row in rules.items()}
     for key, row in rules.items():
         assert len(row) == 9, f"Seven roles required: {key}"
         for cell in row[2:]:

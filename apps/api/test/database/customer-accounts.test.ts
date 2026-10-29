@@ -194,5 +194,5 @@ await test('identical company names remain private across franchises and organiz
  const accountant=await s.grant('accountant',[A]);assert.equal((await service.read(accountant.token,first.id,q,randomUUID())).id,first.id);
  await assert.rejects(service.configure(accountant.token,null,q,randomUUID(),headers,profile(s.source.id),randomUUID()),{code:'ACTION_FORBIDDEN'});
  assert.equal((await service.read(s.admin.token,sibling.id,siblingQuery,randomUUID())).id,sibling.id);
- await assert.rejects(service.publishRate(s.admin.token,first.id,q,randomUUID(),headers,rate,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.publishRate(s.admin.token,first.id,q,randomUUID(),headers,rate,randomUUID()),{code:'VERSION_CONFLICT'});
 });

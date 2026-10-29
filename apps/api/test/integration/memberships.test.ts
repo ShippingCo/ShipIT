@@ -20,7 +20,7 @@ describe('membership authorization boundary',()=>{
     expect(tenancyScope('franchise.profile.read',[grant('operator',['f1'])],['f1','f2'])).toEqual(['f1']);
     expect(tenancyScope('franchise.profile.read',[grant('org_admin',[])],['f1','f2'])).toEqual(['f1','f2']);
     expect(tenancyScope('franchise.profile.update',[grant('operator',['f1'])],['f1'])).toBeNull();
-    expect(tenancyScope('franchise.lifecycle.manage',[grant('org_admin',['f2'])],['f1','f2'])).toEqual(['f2']);
+    expect(tenancyScope('franchise.lifecycle.manage',[grant('org_admin',[])],['f1','f2'])).toEqual(['f1','f2']);
     expect(tenancyScope('organization.lifecycle.manage',[grant('org_admin',[])],['f1'])).toBeNull();
     const readExpectations:Record<Membership['role'],string[]|null>={
       org_admin:['f1','f2'],franchise_admin:['f1'],operator:['f1'],dispatcher:['f1'],

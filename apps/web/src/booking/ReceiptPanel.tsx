@@ -21,7 +21,7 @@ export function ReceiptPanel({ api, controller, bookingId, paymentId }: { api: S
     <h2 className="t-title-lg">{paymentId ? 'Collection acknowledgement' : 'Booking receipt'}</h2>
     <p role={phase === 'error' ? 'alert' : 'status'} aria-live="polite">{message || 'Retrieve the immutable issued snapshot when you need it.'}</p>
     <button type="button" className="btn btn-outlined" disabled={phase === 'loading'} aria-busy={phase === 'loading'} onClick={() => { void load(); }}>{phase === 'error' ? 'Retry receipt' : dto ? 'Reload receipt' : 'Load receipt'}</button>
-    {view && <><p>{view.number} · {view.customer}</p><p className="t-title-lg">{view.totalLabel}: {view.total}</p><p>{view.issuer}</p>
+    {view && <><div className="receipt-facts"><div><p className="ops-note">Issued receipt</p><p>{view.number} · {view.customer}</p><p>{view.issuer}</p></div><p className="t-title-lg">{view.totalLabel}: {view.total}</p></div>
       <button type="button" className="btn btn-filled" onClick={() => { try { printReceipt(dto!); } catch { setMessage('Print dialog unavailable. The saved receipt is unchanged.'); } }}>Print receipt</button></>}
   </section>;
 }

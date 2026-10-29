@@ -27,7 +27,7 @@ export async function captureOwnerSummary(scope:TenantAccess,period:OwnerSummary
  custody AS (SELECT l.id,l.franchise_id,'agent_custody'::text kind,NULL::timestamptz occurred_at,
   COALESCE(sum(CASE f.direction WHEN 'in' THEN f.amount_paise::numeric ELSE -f.amount_paise::numeric END),0)::text amount_paise,'recorded_known_sources'::text state
   FROM shipit.cash_locations l LEFT JOIN shipit.cashbook_source_facts f ON f.organization_id=l.organization_id AND f.franchise_id=l.franchise_id AND f.location_id=l.id AND f.occurred_at<$2
-  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.kind='cash' AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes ms ON ms.organization_id=m.organization_id AND ms.membership_id=m.id
+  WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.kind='cash' AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes ms ON ms.organization_id=m.organization_id AND ms.membership_id=m.id
    WHERE m.organization_id=l.organization_id AND ms.franchise_id=l.franchise_id AND m.user_id=l.custodian_id AND m.role='delivery_agent') GROUP BY l.id,l.franchise_id),
  counts AS (SELECT DISTINCT ON(c.session_id) c.session_id id,c.franchise_id,'cash_difference'::text kind,(c.result->'count'->>'counted_at')::timestamptz occurred_at,
   c.result->'count'->>'variance_paise' amount_paise,'recorded_count'::text state

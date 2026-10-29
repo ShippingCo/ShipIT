@@ -71,6 +71,8 @@ function passes<R extends DataRow>(col: Column<R>, row: R, f: FilterValue) {
 }
 
 export interface DataTableProps<R extends DataRow = DataRow> {
+  /** This component operates on the supplied local rows, not a complete server cursor result. */
+  caption?: string;
   columns: Array<Column<R>>;
   rows: R[];
   /** Receives the filtered, sorted rows so Export writes what is on screen. */
@@ -78,7 +80,8 @@ export interface DataTableProps<R extends DataRow = DataRow> {
   empty?: React.ReactNode;
 }
 
-export default function DataTable<R extends DataRow = DataRow>({ columns, rows, viewRef, empty }: DataTableProps<R>) {
+export default function DataTable<R extends DataRow = DataRow>({ columns, rows, viewRef, empty, caption='Records in this view' }: DataTableProps<R>) {
+  const filterId=React.useId();
   const [filters, setFilters] = useState<Record<string, FilterValue>>({});
   const [sort, setSort] = useState<SortState | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -99,7 +102,8 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
       out = [...out].sort((a, b) => {
         const va = val(col, a); const vb = val(col, b);
         const na = col.type === 'num' || col.type === 'money' || col.type === 'date';
-        const cmp = na ? (Number(va) || 0) - (Number(vb) || 0) : String(va ?? '').localeCompare(String(vb ?? ''));
+        const numeric=(value:unknown)=>col.type==='date'?(typeof value==='number'?value:Date.parse(String(value))||0):Number(value)||0;
+        const cmp = na ? numeric(va) - numeric(vb) : String(va ?? '').localeCompare(String(vb ?? ''));
         return cmp * sort.dir;
       });
     }
@@ -123,11 +127,11 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
   return (
     <>
       <div className="dt-bar">
-        <button type="button" className={`dt-toggle${showFilters ? ' on' : ''}`} onClick={() => setShowFilters((v) => !v)}>
+        <button type="button" aria-expanded={showFilters} aria-controls={filterId} className={`dt-toggle${showFilters ? ' on' : ''}`} onClick={() => setShowFilters((v) => !v)}>
           <Msym name="filter_alt" />
           Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
         </button>
-        <span className="dt-count">
+        <span className="dt-count" aria-live="polite">
           {view.length === rows.length ? `${rows.length} rows` : `${view.length} of ${rows.length} rows`}
         </span>
         {activeFilters > 0 && (
@@ -135,12 +139,13 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
         )}
       </div>
 
-      <div className="tbl-wrap">
+      <div className="tbl-wrap" role="region" aria-label={`${caption} table`} tabIndex={0}>
         <table className="tbl dt">
+          <caption className="workspace-visually-hidden">{caption}</caption>
           <thead>
             <tr>
               {columns.map((c) => (
-                <th key={c.key} className={c.type === 'num' || c.type === 'money' ? 'ta-r' : undefined}>
+                <th key={c.key} scope="col" aria-sort={sort?.key===c.key?(sort.dir===1?'ascending':'descending'):'none'} className={c.type === 'num' || c.type === 'money' ? 'ta-r' : undefined}>
                   <button type="button" className={`th-sort${c.type === 'num' || c.type === 'money' ? ' is-r' : ''}`}
                     onClick={() => toggleSort(c.key)}>
                     {c.label} <Msym name={sortIcon(c.key)} />
@@ -149,23 +154,23 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
               ))}
             </tr>
             {showFilters && (
-              <tr className="dt-filters">
+              <tr id={filterId} className="dt-filters">
                 {columns.map((c) => (
                   <th key={c.key}>
                     {c.type === 'enum' ? (
-                      <select value={asText(filters[c.key])} onChange={(e) => setFilters((f) => ({ ...f, [c.key]: e.target.value }))}>
+                      <select aria-label={`Filter ${typeof c.label==='string'?c.label:c.key}`} value={asText(filters[c.key])} onChange={(e) => setFilters((f) => ({ ...f, [c.key]: e.target.value }))}>
                         <option value="">All</option>
                         {(enums[c.key] ?? []).map((v) => <option key={v} value={v}>{v}</option>)}
                       </select>
                     ) : c.type === 'num' || c.type === 'money' ? (
                       <span className="dt-range">
-                        <input type="number" placeholder="min" value={asRange(filters[c.key]).min ?? ''}
+                        <input aria-label={`${typeof c.label==='string'?c.label:c.key} minimum`} type="number" placeholder="min" value={asRange(filters[c.key]).min ?? ''}
                           onChange={(e) => setFilters((f) => ({ ...f, [c.key]: { ...asRange(f[c.key]), min: e.target.value } }))} />
-                        <input type="number" placeholder="max" value={asRange(filters[c.key]).max ?? ''}
+                        <input aria-label={`${typeof c.label==='string'?c.label:c.key} maximum`} type="number" placeholder="max" value={asRange(filters[c.key]).max ?? ''}
                           onChange={(e) => setFilters((f) => ({ ...f, [c.key]: { ...asRange(f[c.key]), max: e.target.value } }))} />
                       </span>
                     ) : (
-                      <input type="text" placeholder="contains" value={asText(filters[c.key])}
+                      <input aria-label={`Filter ${typeof c.label==='string'?c.label:c.key}`} type="text" placeholder="contains" value={asText(filters[c.key])}
                         onChange={(e) => setFilters((f) => ({ ...f, [c.key]: e.target.value }))} />
                     )}
                   </th>
@@ -174,6 +179,7 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
             )}
           </thead>
           <tbody>
+            {view.length===0&&<tr><td className="dt-empty" colSpan={columns.length}>{empty??(rows.length?'Nothing matches these filters.':'No records yet. Records will appear here when added.')}</td></tr>}
             {view.map((r, i) => (
               <tr key={typeof (r as { id?: unknown }).id === 'string' ? String((r as { id?: unknown }).id) : i}>
                 {columns.map((c) => (
@@ -184,7 +190,7 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
               </tr>
             ))}
           </tbody>
-          {totals.some(Boolean) && view.length > 0 && (
+          {columns.some(column=>column.total) && view.length > 0 && (
             <tfoot>
               <tr>
                 {columns.map((c, i) => (
@@ -196,7 +202,6 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
             </tfoot>
           )}
         </table>
-        {view.length === 0 && <div className="dt-empty">{empty || 'Nothing matches these filters.'}</div>}
       </div>
     </>
   );

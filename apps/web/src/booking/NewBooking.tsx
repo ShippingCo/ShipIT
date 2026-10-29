@@ -15,6 +15,7 @@ import { ReceiptPanel } from './ReceiptPanel';
 import { receiptMoney } from '../utils/receipt';
 import './counter.css';
 import {BookingPreference} from '../operations/SettingsPreferences';
+import {PageHeader} from '../components/workspace/Workspace';
 const stateOptions = [{ value: '', label: 'Not supplied' }, ...[
   ['02','Himachal Pradesh'],['03','Punjab'],['05','Uttarakhand'],['06','Haryana'],['08','Rajasthan'],['09','Uttar Pradesh'],['10','Bihar'],['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],['16','Tripura'],['17','Meghalaya'],['18','Assam'],['19','West Bengal'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],['23','Madhya Pradesh'],['24','Gujarat'],['27','Maharashtra'],['29','Karnataka'],['30','Goa'],['32','Kerala'],['33','Tamil Nadu'],['36','Telangana'],['37','Andhra Pradesh'],
 ].map(([value, label]) => ({ value, label }))];
@@ -65,10 +66,11 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     <section className="card counter-section"><h2 className="t-title-lg">Private attachments</h2><p>Booking is saved independently of each upload. Files are saved only after server safety validation.</p>{attachmentClient && <AttachmentUploader client={attachmentClient} runtime={controller.runtime} />}</section>
   </div>;
   return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); }} aria-label="New booking">
-    <h1 className="t-headline-sm">New Booking</h1>
+    <PageHeader title="New Booking" eyebrow="Counter" description="Enter the customer, packages and tax facts, then review the server price before confirming."/>
     {creditNavigationBlocked&&creditPending&&<p role="alert">Retry the retained credit request before leaving or changing franchise.</p>}
     {state.quote?.account&&<p role="status">Price source: {state.quote.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate (no matching negotiated rule)'}</p>}
-    <section className="card counter-section"><h2 className="t-title-lg">1 · Customer / sender</h2><p>The booking customer supplies the sender snapshot. Enter the parcel recipient separately.</p>
+    <div className="counter-workbench-layout"><div className="counter-entry">
+    <section className="card counter-section"><h2 className="t-title-lg" aria-label="1 · Customer / sender"><span className="counter-step" aria-hidden="true">1</span>Customer / sender</h2><p>The booking customer supplies the sender snapshot. Enter the parcel recipient separately.</p>
       <CustomerLookup workflow={workflow} disabled={disabled} />
       <div className="counter-grid">{field('name', 'Customer name')}{field('phone', 'Customer phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('address', 'Customer address', 'Optional single-line contact address.')}</div>
       {state.customer && <p>Selected customer: {state.customer.name} · {state.customer.phone_display} · {state.customer.address} (version {state.customer.version})</p>}
@@ -78,7 +80,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       </div><p role="status">Customer: {state.customerPhase}</p>
       <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
     </section>
-    <section className="card counter-section"><h2 className="t-title-lg">2 · Packages and service</h2><p>One booking can contain up to 50 packages. Each has its own recipient, weight and tracking docket. All use the selected service and destination; pricing and payment cover the whole booking.</p><BookingPreference workflow={workflow}/><div className="counter-grid">
+    <section className="card counter-section"><h2 className="t-title-lg" aria-label="2 · Packages and service"><span className="counter-step" aria-hidden="true">2</span>Packages and service</h2><p>One booking can contain up to 50 packages. Each has its own recipient, weight and tracking docket. All use the selected service and destination; pricing and payment cover the whole booking.</p><BookingPreference workflow={workflow}/><div className="counter-grid">
       {field('recipientName', 'Recipient name')}{field('recipientPhone', 'Recipient phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('recipientAddress', 'Recipient address')}
       {field('destination', 'Destination key', 'Use the franchise rate-card key, not a tax jurisdiction.')}
       {select('service', 'Service', [{ value: 'standard', label: 'Standard' }, { value: 'express', label: 'Express' }, { value: 'same_city', label: 'Same-city' }])}
@@ -90,7 +92,7 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       <button type="button" className="btn btn-outlined" disabled={disabled||state.additionalParcels.length>=49} onClick={()=>workflow.addParcel()}>Add package</button>
       <p>{state.additionalParcels.length+1} package(s) · Combined weight: {totalWeight(d,state.additionalParcels)||'Check package weights'} g. Request fresh pricing after changing packages.</p>
     </section>
-    <section className="card counter-section"><h2 className="t-title-lg">3 · Tax facts</h2><p>These facts describe the service recipient. They are not inferred from the parcel destination, sender, recipient or payer. Ordinary domestic state supplies only.</p><div className="counter-grid">
+    <section className="card counter-section"><h2 className="t-title-lg" aria-label="3 · Tax facts"><span className="counter-step" aria-hidden="true">3</span>Tax facts</h2><p>These facts describe the service recipient. They are not inferred from the parcel destination, sender, recipient or payer. Ordinary domestic state supplies only.</p><div className="counter-grid">
       {field('recipientRef', 'Service recipient reference', 'Actual reference to the party receiving the courier service; no personal narrative.')}
       {select('registration', 'Service recipient registration', [{ value: 'unregistered', label: 'Unregistered' }, { value: 'registered', label: 'Registered' }])}
       {select('recipientState', 'Service recipient state', stateOptions)}
@@ -101,7 +103,8 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
     </div><button type="button" className="btn btn-outlined" disabled={state.busy || state.bookingPhase === 'uncertain' || state.customerPhase === 'uncertain'} aria-busy={state.pricingPhase === 'loading' || state.taxPhase === 'loading'} onClick={() => { void workflow.preview(); }}>{state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' ? 'Retry same price and tax request' : 'Get server price and tax'}</button>
       <p role="status">Pricing: {state.pricingPhase}. Tax: {state.taxPhase}.</p>
     </section>
-    <section className="card counter-section"><h2 className="t-title-lg">4 · Review and confirm</h2>
+    </div><section className="card counter-section counter-review"><h2 className="t-title-lg" aria-label="4 · Review and confirm"><span className="counter-step" aria-hidden="true">4</span>Review and confirm</h2>
+      <div className="counter-review-summary"><span>Packages</span><strong>{1+state.additionalParcels.length}</strong></div>
       {state.quote && <><p>Server freight suggestion {receiptMoney(state.quote.freight_suggestion_paise)} · Freight {receiptMoney(state.quote.freight_paise)} · Packing {receiptMoney(state.quote.packing_paise)}</p><p>Override: {state.quote.override_status.replaceAll('_', ' ')} · Rate version {state.quote.rate_version_number}</p></>}
       {state.tax ? <><p>CGST {receiptMoney(state.tax.cgst_paise)} · SGST {receiptMoney(state.tax.sgst_paise)} · IGST {receiptMoney(state.tax.igst_paise)}</p><p>Tax {receiptMoney(state.tax.tax_total_paise)} · Rounding {receiptMoney(state.tax.rounding_adjustment_paise)}</p><p className="t-headline-sm">Server payable {receiptMoney(state.tax.final_payable_paise)}</p><p>Quote valid until {state.quote?.expires_at}. Tax valid until {state.tax.expires_at}. Final validation occurs at confirmation.</p></> : <p>Totals are not yet confirmed. Request server pricing and tax.</p>}
       <div className="counter-grid">{select('paymentMode', 'Payment choice', [{ value: 'to_pay', label: 'To Pay' }, { value: 'paid_counter', label: 'Paid now' }])}{d.paymentMode === 'paid_counter' && select('method', 'Payment method', [{ value: '', label: 'Select method' }, { value: 'cash', label: 'Cash' }, { value: 'upi', label: 'UPI (manual recording)' }])}</div>
@@ -109,6 +112,6 @@ function BookingForm({ controller, startAnother }: { controller: ScopeController
       <p role={['error', 'uncertain', 'stale'].some(p => [state.customerPhase, state.pricingPhase, state.taxPhase, state.bookingPhase].includes(p as typeof state.bookingPhase)) || Object.values(state.errors).some(Boolean) ? 'alert' : 'status'} aria-live="polite">{state.message}</p>
       <button type="button" onClick={()=>{void workflow.save();}} className="btn btn-filled" disabled={state.busy || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} aria-busy={state.bookingPhase === 'loading'}>{state.bookingPhase === 'uncertain' ? 'Retry same booking' : 'Save booking'}</button>
       <p>Files can be attached after the booking is confirmed. Printing is optional.</p>
-    </section>
+    </section></div>
   </form>;
 }

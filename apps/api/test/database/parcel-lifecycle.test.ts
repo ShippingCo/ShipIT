@@ -88,7 +88,7 @@ await test('foreign parcels, wrong roles, generic status writes and stale versio
     assert.equal(response.statusCode,404,response.body);const error=response.json().error;delete error.correlation_id;errors.push(error);
   }
   assert.ok(errors.every(e=>JSON.stringify(e)===JSON.stringify(errors[0])));
-  for(const actor of [s.local,s.admin,await s.grant('read_only',[A]),await s.grant('dispatcher',[A]),await s.grant('delivery_agent',[A])])assert.equal((await s.post('check-in',body(1,{location_ref:randomUUID()}),actor)).statusCode,403);
+  for(const actor of [await s.grant('read_only',[A]),await s.grant('dispatcher',[A]),await s.grant('delivery_agent',[A])])assert.equal((await s.post('check-in',body(1,{location_ref:randomUUID()}),actor)).statusCode,403);
   assert.equal((await s.post('check-in',body(2,{location_ref:randomUUID()}))).json().error.code,'VERSION_CONFLICT');
   const patch=await s.app.inject({method:'PATCH',url:`/api/v1/parcels/${s.parcel.id}?`+new URLSearchParams({organization_id:org,franchise_id:A}),
     headers:s.headers,cookies:s.cookies(s.operator.token),payload:JSON.stringify({status:'delivered'})});assert.equal(patch.statusCode,404,patch.body);

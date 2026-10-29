@@ -29,7 +29,7 @@ await test('accountant snapshot independently reconciles one sale, partial recei
  assert.equal(corrected.json<AccountantPage>().rows.find(r=>r.family==='booking_positions'&&r.fields.position==='closing')?.fields.outstanding_paise,'10000');
  assert.equal(corrected.json<AccountantPage>().rows.filter(r=>r.family==='sales').length,1);
  assert.deepEqual((await s.call('GET','/'+p.snapshot.id+'/export')).json(),e);
- assert.equal((await s.call('GET','/'+p.snapshot.id+'/export',undefined,s.admin)).statusCode,403);
+ assert.equal((await s.call('GET','/'+p.snapshot.id+'/export',undefined,s.admin)).statusCode,404);
  for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C}])assert.equal((await s.call('GET','/'+p.snapshot.id+'/export',undefined,s.local,randomUUID(),query)).statusCode,404);
  const count=await s.paymentCounts();assert.equal(count!.entries,3);
 });
@@ -83,7 +83,7 @@ await test('accountant access, exact concurrent recovery and expiry protect ever
  const accountant=await s.grant('accountant',[A]);assert.equal((await s.call('GET','/'+p.snapshot.id,undefined,accountant)).statusCode,404);
  const own=await s.call('POST','',s.filter,accountant);assert.equal(own.statusCode,200,own.body);assert.equal((await s.call('GET','/'+own.json().snapshot.id+'/export',undefined,accountant)).statusCode,200);
  assert.equal((await s.call('POST','',{...s.filter,franchise_ids:[A,B]})).statusCode,404);
- const multi=await s.call('POST','',{...s.filter,franchise_ids:[A,B]},s.admin);assert.equal(multi.statusCode,200,multi.body);assert.equal((await s.call('GET','/'+multi.json().snapshot.id+'/export',undefined,s.admin)).statusCode,403);
+ const multi=await s.call('POST','',{...s.filter,franchise_ids:[A,B]},s.admin);assert.equal(multi.statusCode,200,multi.body);assert.equal((await s.call('GET','/'+multi.json().snapshot.id+'/export',undefined,s.admin)).statusCode,200);
  for(const body of [{...s.filter,to_day:'bad'},{...s.filter,franchise_ids:[A,A]},{...s.filter,from_day:'2026-02-30'}])assert.equal((await s.call('POST','',body)).statusCode,422);
  await s.db.adminQuery('ALTER TABLE shipit.report_snapshots DISABLE TRIGGER USER');
  await s.db.adminQuery("UPDATE shipit.report_snapshots SET created_at=created_at-interval '2 days',expires_at=expires_at-interval '2 days' WHERE id=$1",[p.snapshot.id]);await s.db.adminQuery('ALTER TABLE shipit.report_snapshots ENABLE TRIGGER USER');

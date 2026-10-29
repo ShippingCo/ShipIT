@@ -1,0 +1,39 @@
+/* Logistics worklists share the workspace primitives; these rules organize their
+   existing filters, exact commands and evidence without changing mounted state. */
+.logistics-workspace .record-identity { display: grid; gap: 4px; min-width: 0; }
+.logistics-workspace .record-identity > span { font-size: 13px; }
+.logistics-reference { display: inline-block; max-inline-size: 34ch; overflow-wrap: anywhere; }
+.logistics-workspace .record-table td:has(.logistics-reference),
+.logistics-workspace .record-table td:has(.record-identity) { min-width: 180px; }
+.logistics-workspace .logistics-package-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+.logistics-workspace .logistics-package-filters .tf { min-width: 0; width: 100%; }
+.logistics-filter-actions { display: flex; align-items: center; align-self: end; flex-wrap: wrap; gap: 8px; min-height: 44px; }
+.logistics-records > .workspace-section-header { margin-bottom: 16px; }
+.logistics-pagination { display: flex; align-items: center; justify-content: flex-end; padding-top: 16px; }
+.logistics-records > .btn { margin-top: 16px; }
+.logistics-selected { border-top: 2px solid var(--md-primary); scroll-margin-block-start: 88px; }
+.logistics-selected > section { padding-top: 20px; border-top: 1px solid var(--md-outline-variant); }
+.logistics-selected > section > h3 { margin-bottom: 12px; }
+.logistics-create { border-style: solid; }
+.logistics-create > .ops-form { max-inline-size: 980px; }
+.logistics-custody-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+.logistics-custody-form > fieldset, .logistics-custody-form > p { grid-column: 1/-1; }
+.logistics-custody-form > fieldset { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--md-outline-variant); border-radius: 8px; }
+.logistics-custody-form > fieldset > div { padding-block: 10px; border-bottom: 1px solid var(--md-outline-variant); }
+.logistics-custody-form > fieldset label { display: flex; align-items: center; gap: 10px; }
+.logistics-custody-form > .btn { justify-self: start; }
+.logistics-notices:empty { display: none; }
+.logistics-transfer-detail { display: grid; gap: 14px; padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--md-outline-variant); }
+.logistics-transfer-detail .btn { justify-self: start; }
+.logistics-candidates > .ops-form-grid { margin-block: 16px; }
+.logistics-reference-lookup .tf { flex: 1 1 320px; max-inline-size: 560px; }
+.logistics-report-totals dt { color: var(--md-on-surface-variant); font-size: 13px; }
+.logistics-report-totals dd { margin: 4px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media(min-width:1100px) { .logistics-workspace .logistics-package-filters { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media(max-width:700px) {
+  .logistics-workspace .logistics-package-filters, .logistics-custody-form { grid-template-columns: minmax(0,1fr); }
+  .logistics-filter-actions { justify-content: flex-start; }
+  .logistics-pagination { justify-content: flex-start; }
+  .logistics-reference-lookup .tf { flex-basis: 100%; max-inline-size: none; }
+  .logistics-transfer-detail .btn { max-inline-size: 100%; height: auto; min-height: 44px; white-space: normal; }
+}

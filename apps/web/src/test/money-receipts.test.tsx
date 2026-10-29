@@ -1,10 +1,14 @@
 import React from 'react';
 import {afterEach,describe,it,expect,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import MoneyReceipts from '../operations/MoneyReceipts';
 import {createScopeController} from '../operator/scope';
 import type {MoneyReceiptResult,MoneyReceiptHistoryEntry,OperatorRole,ReceivingAccountDto} from '@shippingco/shared';
+function evidenceCell(table:HTMLElement,row:HTMLElement,column:string){
+ const headers=within(table).getAllByRole('columnheader'),index=headers.indexOf(within(table).getByRole('columnheader',{name:column}));
+ return within(row).getAllByRole('cell')[index]!;
+}
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const org=id(1),franchise=id(2),user=id(3),customerId=id(4),accountId=id(5),receiptId=id(6),booking1=id(7),booking2=id(8),booking3=id(9),now='2026-10-01T12:00:00.000Z';
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
@@ -44,7 +48,7 @@ function fixture(initial?:MoneyReceiptResult){
  vi.stubGlobal('fetch',fetcher);return {fetcher,writes,uncertain(){uncertain=true;},saved:()=>saved};
 }
 function view(roles:OperatorRole[],path='/business/money-receipts'){const controller=createScopeController();controller.runtime.bind({userId:user,organizationId:org,franchiseId:franchise,permissions:roles.join(',')});return render(<MemoryRouter initialEntries={[path]}><a href="/business">Workspace link</a><MoneyReceipts controller={controller} roles={roles}/></MemoryRouter>);}
-async function chooseCustomer(){fireEvent.change(screen.getByLabelText(/^Customer name prefix/),{target:{value:'Syn'}});fireEvent.submit(screen.getByRole('form',{name:'Find receipt customer'}));fireEvent.click(await screen.findByRole('button',{name:'Synthetic customer · •••0101'}));await screen.findByText('Customer bills');await screen.findByText('Booking '+booking1);}
+async function chooseCustomer(){fireEvent.change(screen.getByLabelText(/^Customer name prefix/),{target:{value:'Syn'}});fireEvent.submit(screen.getByRole('form',{name:'Find receipt customer'}));fireEvent.click(await screen.findByRole('button',{name:'Synthetic customer · •••0101'}));await screen.findByRole('heading',{name:'Customer bills'});await within(await screen.findByRole('table',{name:'Customer bills'})).findByText('Booking '+booking1);}
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 describe('production money receipt workflows',()=>{
  it('retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation',async()=>{
@@ -60,7 +64,7 @@ fireEvent.change(screen.getByLabelText(/^Receiving account \/ cash drawer/),{tar
   expect(screen.getByLabelText('Amount received (₹)')).toHaveValue('');expect(screen.queryByText('PRIVATE-SYNTHETIC-REF')).not.toBeInTheDocument();expect(f.fetcher.mock.calls.some(([path])=>String(path).split('?')[0]==='/api/v1/money-receipts/'+receiptId)).toBe(false);
  });
  it('records one receipt across two current bill versions and displays the residual advance',async()=>{
-  const f=fixture();view(['operator'],'/business/money-receipts?'+new URLSearchParams({customer_id:customerId,booking_id:booking1,context:'paid_counter'}));await screen.findByText('Booking '+booking1);fireEvent.change(screen.getByLabelText('Amount received (₹)'),{target:{value:'1000'}});fireEvent.change(screen.getByLabelText(/^Receiving account \/ cash drawer/),{target:{value:accountId}});
+  const f=fixture();view(['operator'],'/business/money-receipts?'+new URLSearchParams({customer_id:customerId,booking_id:booking1,context:'paid_counter'}));await within(await screen.findByRole('table',{name:'Customer bills'})).findByText('Booking '+booking1);fireEvent.change(screen.getByLabelText('Amount received (₹)'),{target:{value:'1000'}});fireEvent.change(screen.getByLabelText(/^Receiving account \/ cash drawer/),{target:{value:accountId}});
   fireEvent.change(screen.getByLabelText(new RegExp('^Apply to booking '+booking1)),{target:{value:'400'}});fireEvent.change(screen.getByLabelText(new RegExp('^Apply to booking '+booking2)),{target:{value:'500'}});fireEvent.click(screen.getByLabelText('I confirm this money was actually collected'));const button=screen.getByRole('button',{name:'Confirm money received'});await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);await screen.findByText('Receipt '+receiptId);
   expect(f.writes).toHaveLength(1);expect(f.writes[0].body).toMatchObject({customer_id:customerId,account_id:accountId,expected_account_version:1,amount_paise:100000,method:'cash',receiver_id:user,custodian_id:user,allocations:[{booking_id:booking1,amount_paise:40000,context:'paid_counter',expected_payment_version:1},{booking_id:booking2,amount_paise:50000,context:'paid_counter',expected_payment_version:2}]});expect(f.saved()).toMatchObject({allocated_paise:90000,unallocated_paise:10000});
  });
@@ -72,17 +76,31 @@ fireEvent.change(screen.getByLabelText(/^Receiving account \/ cash drawer/),{tar
  it('uses the original allocation history for an admin release and keeps private finance evidence role-scoped',async()=>{
   const initial:MoneyReceiptResult={receipt_id:receiptId,customer_id:customerId,version:2,currency:'INR',received_paise:100000,allocated_paise:100000,unallocated_paise:0,allocations:[]};const f=fixture(initial);view(['franchise_admin']);await chooseCustomer();fireEvent.click(await screen.findByRole('button',{name:'Open receipt'}));await screen.findByText('PRIVATE-SYNTHETIC-REF');
   fireEvent.change(await screen.findByLabelText(/^Original allocation/),{target:{value:id(40)}});fireEvent.change(screen.getByLabelText('Release amount (₹)'),{target:{value:'100'}});fireEvent.click(screen.getByRole('button',{name:'Release allocation (admin)'}));await waitFor(()=>expect(f.saved()?.version).toBe(3));expect(f.writes[0].body).toEqual({expected_version:2,allocation_id:id(40),amount_paise:10000,currency:'INR',reason_code:'incorrect_amount'});expect(f.saved()).toMatchObject({received_paise:100000,unallocated_paise:10000});
-  for(const role of ['accountant','org_admin'] as OperatorRole[]){
+  for(const role of ['accountant'] as OperatorRole[]){
    cleanup();f.fetcher.mockClear();view([role]);
    expect(screen.queryByRole('form',{name:'Find receipt customer'})).not.toBeInTheDocument();
    fireEvent.change(screen.getByLabelText(/^Receipt reference/),{target:{value:receiptId}});fireEvent.submit(screen.getByRole('form',{name:'Open finance receipt'}));
-   await screen.findByText('PRIVATE-SYNTHETIC-REF');await screen.findByText('Booking '+booking1);
+   await screen.findByText('PRIVATE-SYNTHETIC-REF');
+   const allocations=await screen.findByRole('table',{name:'Receipt allocation history'}),originalRow=(await within(allocations).findByText('Version 1 · '+id(40))).closest('tr')!;
+   expect(evidenceCell(allocations,originalRow,'Booking / evidence')).toHaveTextContent('Booking '+booking1);
+   expect(evidenceCell(allocations,originalRow,'Action')).toHaveTextContent(/^Applied$/);
+   expect(evidenceCell(allocations,originalRow,'Amount')).toHaveTextContent(/^₹400\.00$/);
+   expect(evidenceCell(allocations,originalRow,'Correction link')).toHaveTextContent(/^Released ₹100\.00$/);
+   const releaseRow=within(allocations).getByText('Version 3 · '+id(60)).closest('tr')!;
+   expect(evidenceCell(allocations,releaseRow,'Action')).toHaveTextContent(/^Released$/);
+   expect(evidenceCell(allocations,releaseRow,'Amount')).toHaveTextContent(/^₹100\.00$/);
+   expect(evidenceCell(allocations,releaseRow,'Correction link')).toHaveTextContent('Original '+id(40));
    expect(screen.queryByRole('button',{name:'Confirm money received'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Release allocation (admin)'})).not.toBeInTheDocument();
    expect(f.fetcher.mock.calls.some(([path])=>new URL(path,'https://synthetic.example.test').pathname.includes('/customers'))).toBe(false);
   }
   cleanup();const calls=f.fetcher.mock.calls.length;view(['read_only']);expect(screen.getByText('Receipt access unavailable')).toBeVisible();expect(f.fetcher.mock.calls).toHaveLength(calls);
  });
  it('configures a named other receiving method through an append-only administrator account revision',async()=>{
-  const f=fixture();view(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Edit account'}));fireEvent.click(screen.getByRole('checkbox',{name:'Named other method'}));fireEvent.change(screen.getByRole('textbox',{name:'Named other method'}),{target:{value:'Synthetic cheque'}});fireEvent.click(screen.getByRole('button',{name:'Save receiving account'}));await waitFor(()=>expect(f.writes).toHaveLength(1));expect(f.writes[0].path).toBe('/api/v1/receiving-accounts/'+accountId+'/revisions');expect(f.writes[0].body).toEqual({name:'Synthetic cash drawer',methods:['other'],other_method_name:'Synthetic cheque',active:true,expected_version:1});await screen.findByText(/^Synthetic cash drawer.*Active.*version 2$/);
+  const f=fixture();view(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Edit account'}));fireEvent.click(screen.getByRole('checkbox',{name:'Named other method'}));fireEvent.change(screen.getByRole('textbox',{name:'Named other method'}),{target:{value:'Synthetic cheque'}});fireEvent.click(screen.getByRole('button',{name:'Save receiving account'}));await waitFor(()=>expect(f.writes).toHaveLength(1));expect(f.writes[0].path).toBe('/api/v1/receiving-accounts/'+accountId+'/revisions');expect(f.writes[0].body).toEqual({name:'Synthetic cash drawer',methods:['other'],other_method_name:'Synthetic cheque',active:true,expected_version:1});await waitFor(()=>{
+   const accounts=screen.getByRole('table',{name:'Receiving accounts'}),accountRow=within(accounts).getByText('Synthetic cash drawer').closest('tr')!;
+   expect(evidenceCell(accounts,accountRow,'Account / drawer')).toHaveTextContent(/^Synthetic cash drawer$/);
+   expect(evidenceCell(accounts,accountRow,'Availability')).toHaveTextContent(/^Active$/);
+   expect(evidenceCell(accounts,accountRow,'Revision')).toHaveTextContent(/^2$/);
+  });
  });
 });

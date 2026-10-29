@@ -72,3 +72,7 @@ DB tests. No production schema, RBAC, API, money engine, timer, data migration o
 integration is implemented here. Existing prototype behavior remains intact. Reverting
 these documents has no runtime/data rollback effect. Changing an accepted policy requires
 a reviewed amendment/superseding ADR and downstream compatibility evidence.
+
+## Amendment: administrative policy v2
+
+Issue #190 / [ADR 0046](0046-owner-and-local-administrator-authority.md) expands declared Owner and franchise-admin business actions. Original tenant, proof, financial evidence and actor invariants remain mandatory.

@@ -1,3 +1,4 @@
+import {SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {DatePresets} from './DatePresets';
 import React,{useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
@@ -25,10 +26,10 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset,undefined,destination||null,route||null);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const p=await source.export(result.snapshot.id,destination||null,route||null),url=URL.createObjectURL(new Blob([p.csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`performance-${p.snapshot.id}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('Matching CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   const s=result?.selection.summary;
-  return <section aria-labelledby="workspace-title"><h1 id="workspace-title" className="t-headline-sm">Delivery and route performance</h1>
+  return <section className="service-report-view" aria-label="Delivery and route performance"><SectionHeader title="Delivery and route performance"/>
     <p>Booking-date parcel cohort · Asia/Kolkata. One parcel is counted once, including overlapping lot and direct route membership.</p>
     <p>On-time uses delivered parcels with actual proof and the chosen saved ETA version. Open parcels and RTO are separate; missing timing is excluded explicitly.</p>
-    <form onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
+    <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
       <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
       <SelectField label="ETA basis" value={eta} onChange={v=>setEta(v as typeof eta)} options={[{value:'original',label:'Original dispatch-route ETA'},{value:'revised',label:'Last applied ETA before delivery'}]}/>
       <p>Up to 31 days and 5,000 parcels. Snapshots expire after 24 hours.</p><button className="btn btn-filled">Create performance snapshot</button>
@@ -45,7 +46,13 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
       <p>Dispatch-to-delivery mean: {s.duration.denominator?`${(s.duration.total_seconds/s.duration.denominator/3600).toFixed(2)} hours`:'Unknown'} · {s.duration.denominator} eligible; {s.duration.excluded} excluded. Unknown destination: {s.unknown_destination}; unknown courier: {s.unknown_courier}.</p>
       <button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching performance CSV</button>
       {!canExport&&<p>Your role can read performance but cannot export it.</p>}
-      {result.selection.count===0?<p role="status">No parcels match this selection. CSV contains headers.</p>:<ul className="ops-list">{result.rows.map(r=><li className="ops-row" key={r.id}><div><b>Parcel {r.id}</b><p>{r.destination??'Unknown destination'} · {r.service??'Unknown service'} · {r.courier??'Unknown courier'}</p><p>{r.status.replaceAll('_',' ')} · {r.failed_attempts} failed attempts · {r.outcome.replaceAll('_',' ')}</p><p>Actual delivered: {r.delivered_at??'Unknown'}; original estimate: {r.original_eta_at??'Unknown'} (version {r.original_eta_version??'unknown'}); revised estimate: {r.revised_eta_at??'Unknown'} (version {r.revised_eta_version??'unknown'}).</p><p>Route {r.route_id??'Unknown'} · actual departed {r.route_departed_at??'Unknown'} · actual arrived {r.route_arrived_at??'Unknown'}</p></div></li>)}</ul>}
+      {result.selection.count===0?<p role="status">No parcels match this selection. CSV contains headers.</p>:<RecordTable label="Parcel performance evidence" rows={result.rows} rowKey={r=>r.id} columns={[
+ {key:'parcel',label:'Parcel',cell:r=><strong className="service-reference">Parcel {r.id}</strong>},
+ {key:'route',label:'Destination / service',cell:r=><span className="service-cell-stack">{r.destination??'Unknown destination'}<span className="ops-note">{r.service??'Unknown service'} · {r.courier??'Unknown courier'}</span></span>},
+ {key:'status',label:'State / outcome',cell:r=><span className="service-cell-stack"><StatusBadge>{r.status.replaceAll('_',' ')}</StatusBadge><span>{r.outcome.replaceAll('_',' ')}</span></span>},
+ {key:'failed',label:'Failed attempts',align:'right',cell:r=>r.failed_attempts},
+ {key:'timing',label:'Timing evidence',cell:r=><details><summary>Saved timing and route</summary><p>Actual delivered: {r.delivered_at??'Unknown'}; original estimate: {r.original_eta_at??'Unknown'} (version {r.original_eta_version??'unknown'}); revised estimate: {r.revised_eta_at??'Unknown'} (version {r.revised_eta_version??'unknown'}).</p><p>Route {r.route_id??'Unknown'} · actual departed {r.route_departed_at??'Unknown'} · actual arrived {r.route_arrived_at??'Unknown'}</p></details>},
+ ]}/>}
       {result.next_offset!==null&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void more()}>Load more parcels</button>}
     </>}
   </section>;

@@ -23,7 +23,7 @@ export async function latest(scope:TenantAccess,id:string){
 }
 export async function eligibleAgent(scope:TenantAccess,id:string){
  const row=(await scopedQuery(scope,[...actions],`SELECT u.id FROM shipit.auth_users u JOIN shipit.memberships m ON m.user_id=u.id
- JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
  WHERE {{franchise:f.organization_id:f.franchise_id}} AND u.id=$1 AND u.lifecycle='active' AND m.lifecycle='active' AND m.role='delivery_agent'`,[id])).rows[0];
  if(!row)throw new HttpError('RESOURCE_NOT_FOUND');
 }
@@ -74,8 +74,8 @@ export async function receive(scope:TenantAccess,p:ParcelRow,source:ReceiptRow|n
 
 export async function eligibleStaff(scope:TenantAccess,id:string,role:'franchise_admin'|'delivery_agent'|'dispatcher'){
  return (await scopedQuery(scope,[...actions],`SELECT u.id FROM shipit.auth_users u JOIN shipit.memberships m ON m.user_id=u.id
- JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
- WHERE {{franchise:f.organization_id:f.franchise_id}} AND u.id=$1 AND u.lifecycle='active' AND m.lifecycle='active' AND m.role=$2`,[id,role])).rows.length>0;
+ JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ WHERE {{franchise:f.organization_id:f.franchise_id}} AND u.id=$1 AND u.lifecycle='active' AND m.lifecycle='active' AND (m.role=$2 OR m.role IN ('org_admin','franchise_admin') AND $2 IN ('franchise_admin','dispatcher'))`,[id,role])).rows.length>0;
 }
 export async function release(scope:TenantAccess,source:string,manifestId:string){
  return (await scopedQuery<{id:string;grant_id:string}>(scope,[...actions],`SELECT id,grant_id FROM shipit.custody_releases
@@ -173,7 +173,7 @@ export async function manifests(scope:TenantAccess,agentOnly:boolean,cursor:stri
 export async function agents(scope:TenantAccess,agentOnly:boolean,cursor:string|null){
  const c=assertTenantAccess(scope,['custody.read']);
  const rows=(await scopedQuery<{id:string}>(scope,['custody.read'],`SELECT DISTINCT u.id FROM shipit.auth_users u JOIN shipit.memberships m ON m.user_id=u.id
- JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
  WHERE {{franchise:f.organization_id:f.franchise_id}} AND u.lifecycle='active' AND m.lifecycle='active' AND m.role='delivery_agent' AND (NOT $1::boolean OR u.id=$2) AND ($3::uuid IS NULL OR u.id>$3)
  ORDER BY u.id LIMIT 101`,[agentOnly,c.actor.id,cursor])).rows;
  const agents=rows.slice(0,100);return {agents,next_cursor:rows.length>100?agents.at(-1)!.id:null};
@@ -195,15 +195,15 @@ export async function transfers(scope:TenantAccess,agentOnly:boolean,cursor:stri
  LEFT JOIN LATERAL(SELECT i.id FROM shipit.custody_assignment_instructions i JOIN shipit.custody_commands command ON command.organization_id=i.organization_id AND command.franchise_id=i.franchise_id AND command.id=i.command_id
   WHERE i.organization_id=p.organization_id AND i.franchise_id=p.franchise_id AND i.parcel_id=p.id AND i.attempt_id=a.id AND i.assignment_id=a.assignment_id
   AND i.from_agent_id=a.agent_id AND i.to_agent_id=g.destination_agent_id AND i.expected_parcel_version=p.version
-  AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+  AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
    JOIN shipit.auth_users u ON u.id=m.user_id WHERE m.organization_id=p.organization_id AND f.franchise_id=p.franchise_id AND m.user_id=command.actor_id
-   AND m.lifecycle='active' AND m.role='dispatcher' AND u.lifecycle='active') ORDER BY i.id LIMIT 1) instruction ON p.assigned_agent_id<>g.destination_agent_id
+   AND m.lifecycle='active' AND m.role IN ('org_admin','franchise_admin','dispatcher') AND u.lifecycle='active') ORDER BY i.id LIMIT 1) instruction ON p.assigned_agent_id<>g.destination_agent_id
  WHERE {{franchise:g.organization_id:g.franchise_id}} AND (NOT $1::boolean OR g.agent_id=$2) AND ($3::uuid IS NULL OR g.id>$3) AND ($4::uuid IS NULL OR g.id=$4)
  AND NOT EXISTS(SELECT 1 FROM shipit.custody_grant_revocations r WHERE r.organization_id=g.organization_id AND r.franchise_id=g.franchise_id AND r.grant_id=g.id)
- AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ AND EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
   JOIN shipit.auth_users u ON u.id=m.user_id WHERE m.organization_id=g.organization_id AND f.franchise_id=g.franchise_id AND m.user_id=g.agent_id
   AND m.role='delivery_agent' AND m.lifecycle='active' AND u.lifecycle='active')
- AND (g.destination_kind='office' OR EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ AND (g.destination_kind='office' OR EXISTS(SELECT 1 FROM shipit.memberships m JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
   JOIN shipit.auth_users u ON u.id=m.user_id WHERE m.organization_id=g.organization_id AND f.franchise_id=g.franchise_id AND m.user_id=g.destination_agent_id
   AND m.role='delivery_agent' AND m.lifecycle='active' AND u.lifecycle='active'))
  ORDER BY g.id LIMIT 51`,[agentOnly,c.actor.id,cursor,id])).rows;

@@ -42,7 +42,7 @@ await test('financial request/approval services enforce roles, scopes, exact ret
  await assert.rejects(request(s.operator.token,{...input,actor_id:s.local.id}),{code:'VALIDATION_FAILED'});
  await assert.rejects(request(s.operator.token,{...input,expected_version:1}),{code:'VERSION_CONFLICT'});
  const accountant=await s.grant('accountant',[A]),reader=await s.grant('read_only',[A]);
- for(const actor of [accountant,reader,s.admin])await assert.rejects(request(actor.token),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [accountant,reader])await assert.rejects(request(actor.token),{code:'ACTION_FORBIDDEN'});
  await assert.rejects(request(s.operator.token,input,randomUUID(),{organization_id:org,franchise_id:B}),{code:'RESOURCE_NOT_FOUND'});
  for(const booking_id of [randomUUID()])await assert.rejects(request(s.operator.token,{...input,booking_id}),{code:'RESOURCE_NOT_FOUND'});
  const legacy=createFinanceService(s.pool),legacyKey=randomUUID();
@@ -50,6 +50,10 @@ await test('financial request/approval services enforce roles, scopes, exact ret
  const own=await request(s.local.token),decision={expected_version:0,outcome:'approved'},decisionKey=randomUUID();
  const decide=(id:string,token=s.local.token,body:unknown=decision,key=randomUUID(),impl=service)=>impl.decide(token,q,id,key,['idempotency-key',key],body,randomUUID());
  await assert.rejects(decide(own.id),{code:'ACTION_FORBIDDEN'});
+ const ownerRequest=await request(s.admin.token);
+ await assert.rejects(decide(ownerRequest.id,s.admin.token),{code:'ACTION_FORBIDDEN'});
+ await decide(ownerRequest.id,s.local.token);
+ await decide(own.id,s.admin.token);
  await assert.rejects(decide(saved.id,s.operator.token),{code:'ACTION_FORBIDDEN'});
  await assert.rejects(decide(randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  const approved=await decide(saved.id,s.local.token,decision,decisionKey);
@@ -95,12 +99,14 @@ await test('financial request/approval services enforce roles, scopes, exact ret
  await assert.rejects(service.ownRequest(s.operator.token,q,own.id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.ownRequest(s.operator.token,q,randomUUID(),randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.ownRequest(s.operator.token,{organization_id:org,franchise_id:B},edited.id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
- for(const actor of [accountant,reader,s.admin])await assert.rejects(service.ownRequest(actor.token,q,edited.id,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [accountant,reader])await assert.rejects(service.ownRequest(actor.token,q,edited.id,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.ownRequest(s.admin.token,q,edited.id,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  assert.equal((await owner.query("SELECT count(*)::int n FROM shipit.financial_access_events WHERE actor_id=$1 AND resource_id=$2 AND action='financial.read'",[s.operator.id,booking])).rows[0]!.n,1);
  const proposalContext=await disabled.proposalContext(s.operator.token,q,booking,randomUUID()),financialCurrent=await createFinanceService(s.pool).read(s.local.token,q,booking,randomUUID());
  assert.equal(proposalContext.booking_id,booking);assert.equal(proposalContext.expected_version,0);assert.equal(proposalContext.payment_version,0);assert.equal(proposalContext.position.gross,financialCurrent.gross);assert.equal(proposalContext.position.outstanding,financialCurrent.gross);assert.deepEqual(proposalContext.refund_targets,[]);
  assert.deepEqual(Object.keys(proposalContext).sort(),['booking_id','components','expected_version','payment_version','position','refund_targets']);
- for(const actor of [accountant,reader,s.admin])await assert.rejects(service.proposalContext(actor.token,q,booking,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ for(const actor of [accountant,reader])await assert.rejects(service.proposalContext(actor.token,q,booking,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ assert.equal((await service.proposalContext(s.admin.token,q,booking,randomUUID())).booking_id,booking);
  await assert.rejects(service.proposalContext(s.operator.token,q,randomUUID(),randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.proposalContext(s.operator.token,{organization_id:org,franchise_id:B},booking,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
 
@@ -111,7 +117,7 @@ await test('financial request/approval services enforce roles, scopes, exact ret
  await assert.rejects(withFinancialScope(s.pool,s.operator.token,org,A,'finance.request',randomUUID(),scope=>finance.append(scope,randomUUID(),digest(),digest(),{...input,approval_ref:'synthetic',returned_to_ref:null,cgst:0,sgst:0,igst:0,rounding:0,refund:0})),{code:'ACTION_FORBIDDEN'});
  assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.financial_changes')).rows[0]!.n,0);
  assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.payment_entries')).rows[0]!.n,0);
- assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.financial_adjustment_requests')).rows[0]!.n,7);
+ assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.financial_adjustment_requests')).rows[0]!.n,8);
  // Once policy governance exists, disabling it must not reopen unreviewed legacy effects.
  await owner.query(`INSERT INTO shipit.financial_policy_revisions
  (id,organization_id,franchise_id,version,discount_review_threshold_paise,allow_self_approval,enabled,actor_id,correlation_id,key_digest,fingerprint)
@@ -376,9 +382,10 @@ await test('financial audit captures complete scoped source lineage, filters, fr
  const accountantPage=await capture({...filter,kind:'receipt_correction'},accountant.token);assert.equal(accountantPage.snapshot.count,1);
  const accountantExport=await service.readAudit(accountant.token,q,accountantPage.snapshot.id,randomUUID(),true) as FinancialAuditExport;assert.equal(accountantExport.csv.split('\r\n').length,3);
  const organizationPage=await capture({...filter,kind:'discount'},s.admin.token);assert.equal(organizationPage.snapshot.count,2);
+ const ownerExport=await service.readAudit(s.admin.token,q,organizationPage.snapshot.id,randomUUID(),true) as FinancialAuditExport;assert.ok(ownerExport.csv.includes('discount'));
  await assert.rejects(service.readAudit(foreign.token,q,captured.snapshot.id,randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.readAudit(accountant.token,q,captured.snapshot.id,randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
- await assert.rejects(service.readAudit(s.admin.token,q,captured.snapshot.id,randomUUID(),true),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(service.readAudit(s.admin.token,q,captured.snapshot.id,randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.readAudit(s.local.token,{...q,franchise_id:B},captured.snapshot.id,randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.auditDetail(s.local.token,q,captured.snapshot.id,'request:'+randomUUID(),randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.readAudit(s.local.token,{...q,offset:'1'},captured.snapshot.id,randomUUID()),{code:'VALIDATION_FAILED'});
@@ -409,7 +416,7 @@ await test('explicit financial policy configuration enforces approved baseline, 
  const body={expected_version:0,enabled:true,discount_review_threshold_paise:null,allow_self_approval:false},key=randomUUID();
  const configure=(token=s.local.token,input:unknown=body,idempotency=key,query=q)=>service.configurePolicy(token,query,idempotency,['idempotency-key',idempotency],input,randomUUID());
  const accountant=await s.grant('accountant',[A]),reader=await s.grant('read_only',[A]);
- for(const actor of [s.operator,s.admin,accountant,reader]){await assert.rejects(configure(actor.token),{code:'ACTION_FORBIDDEN'});await assert.rejects(service.readPolicy(actor.token,q,randomUUID()),{code:'ACTION_FORBIDDEN'});}
+ for(const actor of [s.operator,accountant,reader]){await assert.rejects(configure(actor.token),{code:'ACTION_FORBIDDEN'});await assert.rejects(service.readPolicy(actor.token,q,randomUUID()),{code:'ACTION_FORBIDDEN'});}
  await assert.rejects(configure(s.local.token,body,key,{organization_id:org,franchise_id:B}),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(configure(s.local.token,{...body,allow_self_approval:true}),{code:'VALIDATION_FAILED'});
  await assert.rejects(configure(s.local.token,{...body,discount_review_threshold_paise:50000}),{code:'VALIDATION_FAILED'});

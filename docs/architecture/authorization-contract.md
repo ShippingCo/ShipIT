@@ -2,10 +2,8 @@
 
 [Architecture index](README.md) · [Domain and custody](domain-contract.md) · [State commands](parcel-lifecycle.md) · [Synthetic assertions](domain-scenarios.md)
 
-Issue #3 / v1, amended by [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) for Issue #8 W37–W40 and [ADR 0010](../adr/0010-organization-franchise-tenancy.md) for Issue #12 W41. Server-side authorization is authoritative; frontend filters are not
-security. This is a closed permission contract, not production RBAC middleware. No role
-inherits another role. All seven columns apply independently. Multiple roles require
-explicit memberships; org_admin is not a superuser. Future additions require a reviewed
+Issue #190 / policy v2 ([ADR 0046](../adr/0046-owner-and-local-administrator-authority.md)), building on Issue #3 / v1, amended by [ADR 0009](../adr/0009-money-tax-proof-and-privacy-policy.md) for Issue #8 W37–W40 and [ADR 0010](../adr/0010-organization-franchise-tenancy.md) for Issue #12 W41. Server-side authorization is authoritative; frontend filters are not
+security. This is a closed permission contract, not production RBAC middleware. Owner and franchise-admin business actions are explicitly expanded in policy v2. All seven columns apply independently; administrative authority never fabricates another staff identity. org_admin is confined to its own organization. Future additions require a reviewed
 matrix change, not an ad hoc eighth role or a wildcard admin check.
 
 ## Reading the matrices
@@ -19,7 +17,7 @@ resource scope, permitted projection **and** the command's state/preconditions. 
 | C | Same-org current custodial franchise, **only the relevant parcel/shipment projection**, never parent booking/customer traversal |
 | A | Current explicit agent assignment to that parcel; unassigned parcels, other agents' assignments and historical assignment browsing denied |
 | G | Assigned agent **plus** separately granted `parcel.custody.transfer` from current responsible franchise owner/admin; scoped destination limits apply |
-| O | Explicitly declared own-organization cross-franchise read/audit; never unrelated organization |
+| O | Explicitly declared own-organization action, applied to organization-owned franchises; never unrelated organization |
 | V | O with recorded verification purpose and minimum customer fields; no general customer-directory browse |
 | S | Authenticated self only; no business scope implied |
 | P | Receiving-org adoption-plan approval only; redacted plan, dual-approval process, no pre-migration source customer access |
@@ -50,7 +48,7 @@ The rows cover every private concept in #2's module/data ownership table.
 | R02 | Franchise/location safe profile | O | F | F | F | A | F | F |
 | R03 | User/session safe self view; no secrets/session tokens | S | S | S | S | S | S | S |
 | R04 | Membership/invitation safe roster and grant audit | O | F | - | - | - | - | - |
-| R05 | Customer profile/directory and owned relationship history | V | F | F | - | - | - | - |
+| R05 | Customer profile/directory and owned relationship history | O | F | F | - | - | - | - |
 | R06 | Booking commercial detail, necessary customer snapshot | O | F | F | F | - | - | F |
 | R07 | Parcel lifecycle, ETA, safe timeline, shipment parties | O | F,C | F,C | F,C | A | - | F,C |
 | R08 | Lot and parcel membership; agent only their parcel's lot label | O | F | F | F | A | - | F |
@@ -69,7 +67,7 @@ The rows cover every private concept in #2's module/data ownership table.
 | R21 | Pricing/tax effective quote or approved policy view | O | F | F | F | - | F | - |
 | R22 | Pickup/escalation/conversation minimum service context | O | F | F | - | - | - | - |
 | R23 | Operations/booking reports with permitted booking fields | O | F | F | F | - | - | F |
-| R24 | Customer/contact report (directory permission required) | V | F | F | - | - | - | - |
+| R24 | Customer/contact report (directory permission required) | O | F | F | - | - | - | - |
 | R25 | Financial/GST report and reconciliation artifact | O | F | - | - | - | F | - |
 | R26 | Delivery/route report; own assignments only for agent | O | F | F | F | A | - | F |
 | R27 | Messaging/assistant safe aggregate report | O | F | - | - | - | - | - |
@@ -85,8 +83,8 @@ The rows cover every private concept in #2's module/data ownership table.
 | R38 | Administrative settings defaults/history (`settings.organization.read`; local history under `settings.franchise.read`); organization endpoint org_admin only | O | F | - | - | - | - | - |
 | R39 | Monthly account profile, terms, contact attestation and negotiated-rate history (`customer_accounts.read`) | O | F | - | - | - | F | - |
 | R40 | Explicit shipping-customer account choices and credit/source amounts (`customer_accounts.select`); no contact directory | O | F | F | - | - | F | - |
-| R41 | Own credit exception request status (`customer_accounts.request`); exact actor only | - | - | F | - | - | - | - |
-| R42 | Pending credit exception review and exact requested shipment (`customer_accounts.approve`) | - | F | - | - | - | - | - |
+| R41 | Own credit exception request status (`customer_accounts.request`); exact actor only | O | F | F | - | - | - | - |
+| R42 | Pending credit exception review and exact requested shipment (`customer_accounts.approve`) | O | F | - | - | - | - | - |
 | R43 | Private statement imports, mappings, deterministic suggestions and reconciliation history (`reconciliation.read`); reports use R11 and E03 | O | F | - | - | - | F | - |
 | R35 | Dedicated cash handover selection/detail/history (`cashbook.handover.select`); delivery agents see only their immutable source/target participation and permitted minimum recipient choices in their currently granted franchise | O | F | F | - | S | F | - |
 
@@ -94,10 +92,8 @@ R31 maps `money_receipts.select` and `receiving_accounts.read` to bounded own-cu
 
 Projection qualifiers are mandatory:
 
-- org_admin has declared organization reads/audit in these rows only. Customer details
-  require verification purpose (V); audit does not dump raw conversations, proof bytes,
-  secret configuration or unnecessary PII. R14 grants metadata/review outcome only for
-  org_admin; sensitive attachment byte review requires a later explicit #6/#31 permission.
+- org_admin has declared organization reads/audit in these rows only. Policy v2 permits the owner to use the own-organization customer directory (O); audit does not dump raw conversations, proof bytes,
+  secret configuration or unnecessary PII. R14 permits the owner the same validated operational attachment bytes as local administrators; purpose/category, quarantine and scoped download checks still apply.
 - Accountant R01/R02/R13/R15/R20/R21/R25/R28 is **finance-only/minimum-data**: invoicing
   identity/GST identifiers, amounts and reconciliation references. Phone/address is denied
   unless a specific financial artifact genuinely requires the minimum value. R28 permits
@@ -121,14 +117,14 @@ from a bulk export, and cannot be looped through an unscoped directory.
 
 | ID | Export category | org_admin | franchise_admin | operator | dispatcher | delivery_agent | accountant | read_only |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| E01 | Operations / booking export | - | F | - | - | - | - | - |
-| E02 | Customer / contact export | - | F | - | - | - | - | - |
-| E03 | Financial / GST export | - | F | - | - | - | F | - |
-| E04 | Delivery / route export | - | F | - | - | - | - | - |
+| E01 | Operations / booking export | O | F | - | - | - | - | - |
+| E02 | Customer / contact export | O | F | - | - | - | - | - |
+| E03 | Financial / GST export | O | F | - | - | - | F | - |
+| E04 | Delivery / route export | O | F | - | - | - | - | - |
 
 All other private resource exports (raw audit/outbox/messages/provider payload/credentials,
 configuration, staff lists, imports) are denied unless an approved category explicitly
-includes a safe own-franchise projection. No cross-franchise org_admin export privilege.
+includes a safe own-franchise projection. Policy v2 permits owner exports only across currently owned and authorized organization franchises.
 
 ## Commands, transitions, jobs and configuration
 
@@ -138,85 +134,85 @@ that policy exists. No blanket local-administrator permission bypasses the lifec
 
 | ID | Action / resource / action class | org_admin | franchise_admin | operator | dispatcher | delivery_agent | accountant | read_only |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| W01 | Booking + initial parcels create, ordinary pre-movement input edit | - | F | F | F | - | - | - |
-| W02 | Whole Booking cancel with all-child historical movement guard | - | F | F | F | - | - | - |
-| W03 | Customer create/edit own relationship; never merge across scope | - | F | F | - | - | - | - |
-| W04 | Lot create/edit and parcel membership assignment/removal | - | F | F | F | - | - | - |
-| W05 | Route create/edit and validated lot/parcel assignment | - | F | F | F | - | - | - |
-| W06 | Lot/route destructive removal | - | F | - | - | - | - | - |
-| W07 | Parcel initial check-in T02 | - | - | F | - | - | - | - |
-| W08 | Parcel dispatch T03 | - | F,C | F,C | F,C | - | - | - |
-| W09 | Parcel transit T04 | - | - | - | F,C | - | - | - |
-| W10 | Start/retry delivery T05/T08; assign delivery or office-collection agent | - | - | - | F,C | - | - | - |
+| W01 | Booking and initial parcels create; edits use the owning guarded workflow | O | F | F | - | - | - | - |
+| W02 | Whole Booking cancel with all-child historical movement guard | O | F | F | F | - | - | - |
+| W03 | Customer create/edit own relationship; never merge across scope | O | F | F | - | - | - | - |
+| W04 | Lot create/edit and parcel membership assignment/removal | O | F | F | F | - | - | - |
+| W05 | Route create/edit and validated lot/parcel assignment | O | F | F | F | - | - | - |
+| W06 | Lot/route destructive removal | O | F | - | - | - | - | - |
+| W07 | Parcel initial check-in T02 | O | F | F | - | - | - | - |
+| W08 | Parcel dispatch T03 | O | F,C | F,C | F,C | - | - | - |
+| W09 | Parcel transit T04 | O | F | - | F,C | - | - | - |
+| W10 | Start/retry delivery T05/T08; assign delivery or office-collection agent | O | F | - | F,C | - | - | - |
 | W11 | Complete delivery/office collection T06/T10 | - | - | - | - | A | - | - |
 | W12 | Failed delivery with reason T07 | - | - | - | - | A | - | - |
-| W13 | Office collection intake T09 | - | - | F,C | - | - | - | - |
-| W14 | Approve RTO T11/T12 | - | F,C | - | - | - | - | - |
-| W15 | Delivered reversal T13 | - | F | - | - | - | - | - |
-| W16 | Independent custody transfer | - | C | - | - | G | - | - |
-| W17 | Grant/revoke agent custody-transfer capability | - | F | - | - | - | - | - |
-| W18 | Typed route event/delay and coordinated ETA command | - | F | F | F | - | - | - |
-| W19 | Authorized route-delay reminder job | - | F | F | F | - | - | - |
-| W20 | Payment collection command; approved finance contract required | - | F | - | - | - | - | - |
-| W21 | Financial reversal/adjustment command; approved finance contract required | - | F | - | - | - | - | - |
-| W22 | Shipment attachment upload/metadata edit with validation | - | F,C | F,C | - | A | - | - |
-| W23 | E-way externally issued record create/edit with provenance | - | F | F | - | - | - | - |
-| W24 | Safe local messaging preferences/configuration | - | F | - | - | - | - | - |
-| W25 | Controlled notification retry/reconciliation job | - | F | - | - | - | - | - |
-| W26 | Carrier manual reference/import job; reviewed mapping only | - | F | - | - | - | - | - |
-| W27 | Effective local pricing/tax configuration with approved policy | - | F | - | - | - | - | - |
-| W28 | Pickup acceptance / escalation handling / authorized service reply | - | F | F | - | - | - | - |
-| W29 | Franchise profile and local settings configuration | - | F | - | - | - | - | - |
-| W30 | Local memberships/invites/grants create/revoke | - | F | - | - | - | - | - |
+| W13 | Office collection intake T09 | O | F | F,C | - | - | - | - |
+| W14 | Approve RTO T11/T12 | O | F,C | - | - | - | - | - |
+| W15 | Delivered reversal T13 | O | F | - | - | - | - | - |
+| W16 | Independent custody transfer | O | C | - | - | G | - | - |
+| W17 | Grant/revoke agent custody-transfer capability | O | F | - | - | - | - | - |
+| W18 | Typed route event/delay and coordinated ETA command | O | F | F | F | - | - | - |
+| W19 | Authorized route-delay reminder job | O | F | F | F | - | - | - |
+| W20 | Payment collection command; approved finance contract required | O | F | - | - | - | - | - |
+| W21 | Financial reversal/adjustment command; approved finance contract required | O | F | - | - | - | - | - |
+| W22 | Shipment attachment upload/metadata edit with validation | O | F,C | F,C | - | A | - | - |
+| W23 | E-way externally issued record create/edit with provenance | O | F | F | - | - | - | - |
+| W24 | Safe local messaging preferences/configuration | O | F | - | - | - | - | - |
+| W25 | Controlled notification retry/reconciliation job | O | F | - | - | - | - | - |
+| W26 | Carrier manual reference/import job; reviewed mapping only | O | F | - | - | - | - | - |
+| W27 | Effective local pricing/tax configuration with approved policy | O | F | - | - | - | - | - |
+| W28 | Pickup acceptance / escalation handling / authorized service reply | O | F | F | - | - | - | - |
+| W29 | Franchise profile and local settings configuration | O | F | - | - | - | - | - |
+| W30 | Local memberships/invites/grants create/revoke | O | F | - | - | - | - | - |
 | W31 | Self profile/session revoke | S | S | S | S | S | S | - |
 | W32 | Adoption franchise-side approval / conflict resolution proposal | - | F | - | - | - | - | - |
 | W33 | Receiving-organization adoption approval only | P | - | - | - | - | - | - |
 | W34 | Customer delete/merge, consent override, raw ledger/receipt/audit edit, arbitrary outbox redrive, direct org ownership edit | - | - | - | - | - | - | - |
 | W35 | Organization configuration or org-wide membership escalation | - | - | - | - | - | - | - |
-| W36 | Export generation job | - | F | - | - | - | F | - |
-| W37 | Resolve draft tax jurisdiction using approved rule/evidence | - | F | - | - | - | - | - |
+| W36 | Export generation job | O | F | - | - | - | F | - |
+| W37 | Resolve draft tax jurisdiction using approved rule/evidence | O | F | - | - | - | - | - |
 | W38 | Delivery challenge resend/replacement request under proof policy | - | - | - | - | A | - | - |
 | W39 | Exceptional delivery proof request with evidence | - | - | - | - | A | - | - |
-| W40 | Independently approve exceptional proof; current responsible custody required | - | F,C | - | - | - | - | - |
-| W41 | Franchise lifecycle disable/reactivate with explicit target grant | F | F | - | - | - | - | - |
+| W40 | Independently approve exceptional proof; current responsible custody required | O | F,C | - | - | - | - | - |
+| W41 | Franchise lifecycle disable/reactivate with explicit target grant | O | F | - | - | - | - | - |
 | W42 | Organization memberships/invites/grants create/revoke with no-self and final-admin guards | O | - | - | - | - | - | - |
-| W43 | Above-tolerance freight override approval (`pricing.override.approve`), with structured reason | - | F | - | - | - | - | - |
-| W44 | Quarantined outbox job redrive with expected revision, original identity and closed repair reason (`outbox.redrive`) | - | F | - | - | - | - | - |
-| W45 | WhatsApp installation connect, rotate, disable and template synchronization | - | F | - | - | - | - | - |
-| W46 | Verify/rebind/revoke explicit parcel customer tracking access (`customer.access.manage`), with independent evidence | - | F | - | - | - | - | - |
-| W47 | Approved charge/tax reduction or actual refund evidence (`finance.adjust`) | - | F | - | - | - | - | - |
-| W48 | Issue immutable account statement (`finance.statement`) | - | F | - | - | - | - | - |
-| W49 | Record an actual receipt and its same-customer allocations (`money_receipts.record`) | - | F | F | - | - | - | - |
-| W50 | Apply existing unallocated receipt funds (`money_receipts.allocate`) | - | F | F | - | - | - | - |
-| W51 | Release a linked allocation with recorded reason (`money_receipts.correct`); no refund | - | F | - | - | - | - | - |
-| W52 | Configure a named receiving account/drawer revision (`receiving_accounts.configure`) | - | F | - | - | - | - | - |
-| W53 | Request/amend a reviewed post-booking financial change and read only own proposals (`finance.request`); no charge/payment effect | - | F | F | - | - | - | - |
-| W54 | Approve/reject an owned financial request (`finance.approve`), under current explicit policy | - | F | - | - | - | - | - |
-| W55 | Apply an approved request and record actual refund evidence (`finance.apply`); server computes capacity | - | F | - | - | - | - | - |
-| W56 | Read/configure an immutable franchise financial policy revision (`finance.policy.configure`); current approved baseline forbids self-approval and presets no monetary threshold | - | F | - | - | - | - | - |
-| W57 | Configure immutable current-account cash/noncash locations (`cashbook.configure`) | - | F | - | - | - | - | - |
-| W58 | Submit own expense, agent advance, float/fund, transfer/movement or correction request (`cashbook.request`); no requester-provided approval; own-sender/admin cancellation releases only unaccepted handover remainder | - | F | F | - | - | - | - |
-| W59 | Approve/reject the exact owned expense/movement request (`cashbook.approve`), with different-admin approval under D140-1 | - | F | - | - | - | - | - |
-| W60 | Apply the exact approved expense/movement/correction (`cashbook.apply`); no new refund producer | - | F | - | - | - | - | - |
-| W61 | Named active receiving custodian partially accept or reject an owned handover; one linked out/in identity; implemented through W63 | - | F | F | - | - | - | - |
-| W62 | Own-source cash handover request/cancellation (`cashbook.handover.request`); current franchise admin may recover historical agent custody into an active current recipient | - | F | F | - | S | - | - |
-| W64 | Capture source-backed agent cash count (`agent_statement.capture`); admin may capture historical agent evidence, operator targets a current local agent, agent captures self only; no settlement approval or monetary effect | - | F | F | - | S | - | - |
-| W65 | Submit exact agent settlement/correction capture; operator own prepared evidence, agent self only | - | F | F | - | S | - | - |
-| W66 | Approve/reject current agent settlement revision; different submitting actor, no self-approval exception | - | F | - | - | - | - | - |
-| W63 | Named receiving custodian acknowledgement or permitted cancellation (`cashbook.handover.acknowledge`); no acknowledgement for another recipient | - | F | F | - | S | - | - |
-| W67 | Open/count/submit and revise initial opening evidence; operators assigned drawer only; exact counter submits own capture | - | F | F | - | - | - | - |
-| W68 | Review exact initial opening or closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | - | F | - | - | - | - | - |
-| W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | - | F | - | - | - | - | - |
-| W70 | Record/revise shipment cost evidence and preview/apply cost imports; exact owned source/version and explicit allocations | - | F | - | - | - | - | - |
+| W43 | Above-tolerance freight override approval (`pricing.override.approve`), with structured reason | O | F | - | - | - | - | - |
+| W44 | Quarantined outbox job redrive with expected revision, original identity and closed repair reason (`outbox.redrive`) | O | F | - | - | - | - | - |
+| W45 | WhatsApp installation connect, rotate, disable and template synchronization | O | F | - | - | - | - | - |
+| W46 | Verify/rebind/revoke explicit parcel customer tracking access (`customer.access.manage`), with independent evidence | O | F | - | - | - | - | - |
+| W47 | Approved charge/tax reduction or actual refund evidence (`finance.adjust`) | O | F | - | - | - | - | - |
+| W48 | Issue immutable account statement (`finance.statement`) | O | F | - | - | - | - | - |
+| W49 | Record an actual receipt and its same-customer allocations (`money_receipts.record`) | O | F | F | - | - | - | - |
+| W50 | Apply existing unallocated receipt funds (`money_receipts.allocate`) | O | F | F | - | - | - | - |
+| W51 | Release a linked allocation with recorded reason (`money_receipts.correct`); no refund | O | F | - | - | - | - | - |
+| W52 | Configure a named receiving account/drawer revision (`receiving_accounts.configure`) | O | F | - | - | - | - | - |
+| W53 | Request/amend a reviewed post-booking financial change and read only own proposals (`finance.request`); no charge/payment effect | O | F | F | - | - | - | - |
+| W54 | Approve/reject an owned financial request (`finance.approve`), under current explicit policy | O | F | - | - | - | - | - |
+| W55 | Apply an approved request and record actual refund evidence (`finance.apply`); server computes capacity | O | F | - | - | - | - | - |
+| W56 | Read/configure an immutable franchise financial policy revision (`finance.policy.configure`); current approved baseline forbids self-approval and presets no monetary threshold | O | F | - | - | - | - | - |
+| W57 | Configure immutable current-account cash/noncash locations (`cashbook.configure`) | O | F | - | - | - | - | - |
+| W58 | Submit own expense, agent advance, float/fund, transfer/movement or correction request (`cashbook.request`); no requester-provided approval; own-sender/admin cancellation releases only unaccepted handover remainder | O | F | F | - | - | - | - |
+| W59 | Approve/reject the exact owned expense/movement request (`cashbook.approve`), with different-admin approval under D140-1 | O | F | - | - | - | - | - |
+| W60 | Apply the exact approved expense/movement/correction (`cashbook.apply`); no new refund producer | O | F | - | - | - | - | - |
+| W61 | Named active receiving custodian partially accept or reject an owned handover; one linked out/in identity; implemented through W63 | O | F | F | - | - | - | - |
+| W62 | Own-source cash handover request/cancellation (`cashbook.handover.request`); current franchise admin may recover historical agent custody into an active current recipient | O | F | F | - | S | - | - |
+| W64 | Capture source-backed agent cash count (`agent_statement.capture`); admin may capture historical agent evidence, operator targets a current local agent, agent captures self only; no settlement approval or monetary effect | O | F | F | - | S | - | - |
+| W65 | Submit exact agent settlement/correction capture; operator own prepared evidence, agent self only | O | F | F | - | S | - | - |
+| W66 | Approve/reject current agent settlement revision; different submitting actor, no self-approval exception | O | F | - | - | - | - | - |
+| W63 | Named receiving custodian acknowledgement or permitted cancellation (`cashbook.handover.acknowledge`); no acknowledgement for another recipient | O | F | F | - | S | - | - |
+| W67 | Open/count/submit and revise initial opening evidence; operators assigned drawer only; exact counter submits own capture | O | F | F | - | - | - | - |
+| W68 | Review exact initial opening or closing submission; independent admin or explicitly acknowledged current sole-admin self review under D137 | O | F | - | - | - | - | - |
+| W69 | Reasoned linked cash-close reopen/correction; retains accepted predecessor until replacement review | O | F | - | - | - | - | - |
+| W70 | Record/revise shipment cost evidence and preview/apply cost imports; exact owned source/version and explicit allocations | O | F | - | - | - | - | - |
 | W71 | Version organization settings defaults (`settings.organization.update`); safe common keys only, no W52/W56/agent-money financial configuration | O | - | - | - | - | - | - |
-| W72 | Append monthly account terms, shipping links and contact-authority attestation (`customer_accounts.configure`) | - | F | - | - | - | - | - |
-| W73 | Publish an effective negotiated rate schedule (`customer_accounts.rates`) | - | F | - | - | - | - | - |
-| W74 | Request a limit exception for own exact unexpired booking (`customer_accounts.request`) | - | - | F | - | - | - | - |
-| W75 | Approve one exact credit-limit exception with a reason (`customer_accounts.approve`); cannot bypass holds or overdue debt | - | F | - | - | - | - | - |
-| W76 | Explicit franchise opt-in/out and versioned CSV mapping (`reconciliation.configure`) | - | F | - | - | - | - | - |
-| W77 | Inspect selected CSV, preview/import and resolve row identities (`reconciliation.import`) | - | F | - | - | - | F | - |
-| W78 | Confirm exact/manual matches, revise card batches, classify and review discrepancies (`reconciliation.reconcile`); no ledger grant | - | F | - | - | - | F | - |
-| W79 | Append destructive unmatch revision (`reconciliation.unmatch`); preserve prior evidence | - | F | - | - | - | - | - |
+| W72 | Append monthly account terms, shipping links and contact-authority attestation (`customer_accounts.configure`) | O | F | - | - | - | - | - |
+| W73 | Publish an effective negotiated rate schedule (`customer_accounts.rates`) | O | F | - | - | - | - | - |
+| W74 | Request a limit exception for own exact unexpired booking (`customer_accounts.request`) | O | F | F | - | - | - | - |
+| W75 | Approve one exact credit-limit exception with a reason (`customer_accounts.approve`); cannot bypass holds or overdue debt | O | F | - | - | - | - | - |
+| W76 | Explicit franchise opt-in/out and versioned CSV mapping (`reconciliation.configure`) | O | F | - | - | - | - | - |
+| W77 | Inspect selected CSV, preview/import and resolve row identities (`reconciliation.import`) | O | F | - | - | - | F | - |
+| W78 | Confirm exact/manual matches, revise card batches, classify and review discrepancies (`reconciliation.reconcile`); no ledger grant | O | F | - | - | - | F | - |
+| W79 | Append destructive unmatch revision (`reconciliation.unmatch`); preserve prior evidence | O | F | - | - | - | - | - |
 
 W70 is the #147 cost-evidence command ceiling. Neither organization administration nor
 accountant financial read access grants this write capability. Current membership is
@@ -684,3 +680,7 @@ The #150 [accountant register](accountant-exports.md) consumes existing R11 read
 E03 exports. Technical capture does not grant financial mutation. Every selected
 franchise is reauthorized, including saved-artifact reads, exact replay and downloads;
 org-admin preview alone never confers E03. Artifacts remain actor-owned.
+
+## Policy v2 actor restrictions and rollout
+
+See ADR 0046 for the actor-bound delivery/custody/handover actions, independent financial approvals, feature flags and rollout/rollback. Administrative permission never overrides those invariants. The browser-safe `administrativeActions` catalogue lists shipped administrative actions; internal worker/event capabilities remain server-only. W01 booking creation is now owner/admin/operator; dispatcher has quote preparation and shipment reads, but no customer directory or booking-create grant. Historical unimplemented lifecycle ceilings are not newly activated. #71 must requalify this policy; #76 must bind deployed artifact and migration evidence to the tested revision before release.

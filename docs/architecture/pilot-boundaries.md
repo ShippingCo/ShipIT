@@ -67,3 +67,7 @@ adds M6 #137–#150 (21 total M6 issues) and extends M5/M7 as follows:
 Regular shop account-customer billing (#141/#142) is required M6 scope, distinct from
 M8 SaaS subscriptions. No completed foundation is reopened merely to host the new work.
 All new issues are ancestors of #76, and no M8 issue enters the pilot prerequisite graph.
+
+## Issue #190 deployment blocker
+
+Policy-v2 owner/franchise-admin access requires independent review and exact final-head CI. #71 must rerun the seven-role/tenant/actor matrix, revocation, files/exports/jobs, independent financial approvals and real delivery assignment/proof qualification. #76 must record the deployed artifact and migration 56 against that tested revision. Issue creation, local tests or an earlier policy-v1 audit do not approve deployment.

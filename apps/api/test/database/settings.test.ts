@@ -22,7 +22,7 @@ await test('settings start unconfigured, inherit explicit org values, clear over
 await test('current own-scope role authority conceals sibling and foreign settings and never promotes financial writes',{timeout:60000},async t=>{
  const s=await settingsSetup(t),accountant=await s.grant('accountant',[A]),readonly=await s.grant('read_only',[A]);
  for(const token of [s.local.token,s.operator.token,accountant.token,readonly.token])await assert.rejects(s.update(input({language:{locale:'hi'}}),'organization',token),{code:'ACTION_FORBIDDEN'});
- for(const token of [s.admin.token,s.operator.token,accountant.token,readonly.token])await assert.rejects(s.update(input({language:{locale:'hi'}}),'franchise',token),{code:'ACTION_FORBIDDEN'});
+ for(const token of [s.operator.token,accountant.token,readonly.token])await assert.rejects(s.update(input({language:{locale:'hi'}}),'franchise',token),{code:'ACTION_FORBIDDEN'});
  for(const query of [{organization_id:org,franchise_id:B},{organization_id:otherOrg,franchise_id:C},{organization_id:randomUUID(),franchise_id:randomUUID()}]){await assert.rejects(s.read('franchise',s.local.token,query),{code:'RESOURCE_NOT_FOUND'});await assert.rejects(s.update(input({language:{locale:'hi'}}),'franchise',s.local.token,randomUUID(),query),{code:'RESOURCE_NOT_FOUND'});}
  await assert.rejects(s.read('organization',s.admin.token,{organization_id:otherOrg}),{code:'RESOURCE_NOT_FOUND'});
  assert.equal((await s.read('franchise',s.admin.token,{organization_id:org,franchise_id:B})).version,0);
@@ -57,7 +57,7 @@ await test('explicit synthetic calendar and close intent never activate lifecycl
 await test('report scope choices use current R11/E03 grants and revoked saved defaults become unavailable without expansion',{timeout:60000},async t=>{
  const s=await settingsSetup(t),multi=await s.grant('accountant',[A,B]);
  assert.deepEqual((await s.service.scopes(s.local.token,q,randomUUID())).items.map(i=>i.id),[A]);
- const orgOptions=await s.service.scopes(s.admin.token,q,randomUUID());assert.deepEqual(orgOptions.items.map(i=>i.id).sort(),[A,B].sort());assert.ok(orgOptions.items.every(i=>!i.can_export));
+ const orgOptions=await s.service.scopes(s.admin.token,q,randomUUID());assert.deepEqual(orgOptions.items.map(i=>i.id).sort(),[A,B].sort());assert.ok(orgOptions.items.every(i=>i.can_export));
  assert.ok((await s.service.scopes(multi.token,q,randomUUID())).items.every(i=>i.can_export));await assert.rejects(s.service.scopes(s.operator.token,q,randomUUID()),{code:'ACTION_FORBIDDEN'});
  await assert.rejects(s.service.scopes(s.local.token,{...q,cursor:C},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await s.update(input({report_scope:{franchise_ids:[A,B]},reporting_schedule:{report:'sales',franchise_ids:[A,B],timezone:'Asia/Kolkata',weekday:2,minute:600}}),'organization',s.admin.token);

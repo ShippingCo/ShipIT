@@ -19,6 +19,33 @@ const selector={organization_id:org,franchise_id:A};
 // A fixed wrong-code literal can randomly equal the cryptographically generated challenge.
 const wrongProof=(code:string)=>String((Number(code)+1)%1000000).padStart(6,'0');
 const headers=(key:string)=>['idempotency-key',key];
+
+await test('#190 mixed roles preserve staff assignment restrictions while real local administrators and owners gain delivery oversight',{timeout:30000},async t=>{
+ const s=await setup(t),mixed=await s.grant('dispatcher',[A]);
+ async function addRole(actor:{id:string;token:string},role:string,franchiseIds:string[],inviter=s.admin.token){
+  const invitation=await s.memberships.createInvitation(inviter,{organization_id:org,invitee_user_id:actor.id,role,franchise_ids:franchiseIds});
+  return s.memberships.acceptInvitation(actor.token,{token:invitation.acceptance_token});
+ }
+ await addRole(mixed,'delivery_agent',[A]);
+ const hidden=async()=>{
+  await assert.rejects(s.service.read(mixed.token,s.parcel.id,selector,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+  assert.deepEqual((await s.service.list(mixed.token,selector,randomUUID())).items,[]);
+ };
+ await hidden();
+ const local=await addRole(mixed,'franchise_admin',[B]);
+ await hidden(); // An administrator grant elsewhere cannot expand the agent view here.
+ await s.memberships.updateMembership(s.admin.token,local.id,{expected_version:local.version,role:'franchise_admin',franchise_ids:[A,B]});
+ await addRole(s.admin,'delivery_agent',[A],s.local.token);
+ for(const actor of [mixed,s.admin]){
+  assert.equal((await s.service.read(actor.token,s.parcel.id,selector,randomUUID())).parcel_id,s.parcel.id);
+  assert.equal((await s.service.list(actor.token,selector,randomUUID())).items.length,1);
+  const key=randomUUID();
+  await assert.rejects(s.service.complete(actor.token,s.parcel.id,selector,key,headers(key),{
+   expected_version:5,challenge_ref:s.state.challenge_ref,challenge_version:s.state.challenge_version,proof:s.code,
+  },false,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ }
+});
+
 async function setup(t:Parameters<typeof bookingSetup>[0]){
  const s=await bookingSetup(t),booked=await s.book();assert.equal(booked.statusCode,201,booked.body);const parcel=booked.json().parcels[0],agent=await s.grant('delivery_agent',[A]);
  const started=await startTestDelivery(s,parcel.id,agent),code=await testDeliveryCode(s,parcel.id);

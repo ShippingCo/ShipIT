@@ -6,7 +6,7 @@
    Read tokens.css first: it is the source of truth. Nothing here invents a colour.
    Every variable below is one of those tokens restated as the HSL triplet that
    shadcn components expect, so a component pulled straight from the 21st catalog
-   comes out wearing this app's palette — white surfaces, one hairline, royal blue —
+   comes out wearing this app's palette — white surfaces, one hairline, muted blue —
    with no per-component overriding.
 
    Loaded LAST in main.jsx so utilities can win, and harmless to the existing CSS
@@ -49,7 +49,7 @@
   --muted-foreground: 217 13% 40%;
 
   /* ---- Brand ---- */
-  --primary: 221 83% 53%;               /* --md-primary  #2563eb */
+  --primary: 201.23 33% 38.63%;         /* --md-primary  #426c83 */
   --primary-foreground: 0 0% 100%;
 
   /* ---- Interaction ----
@@ -71,7 +71,7 @@
   /* ---- Line and focus ---- */
   --border: 218 17% 91%;                /* --md-outline-variant  #e3e6eb — THE hairline */
   --input: 218 17% 91%;
-  --ring: 221 83% 53%;                  /* focus ring matches base.css :focus-visible */
+  --ring: 201.23 33% 38.63%;            /* focus ring matches base.css :focus-visible */
 
   /* Matches --shape-md, so imported cards share the M3 shape scale. */
   --radius: 12px;

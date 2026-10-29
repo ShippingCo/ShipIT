@@ -34,7 +34,7 @@ await test('cash locations enforce immutable scoped account/custodian/current re
  const revision=await add(operator.id,'cash',admin.id,location),before=(await owner.query('SELECT * FROM shipit.cash_location_revisions WHERE id=$1',[revision])).rows[0];
  assert.ok(before,'Committed revision must exist');
  assert.equal(before.version,1);assert.ok(before.recorded_at instanceof Date);assert.equal((await owner.query('SELECT version::text v FROM shipit.cashbook_source_versions WHERE organization_id=$1 AND franchise_id=$2',[org,A])).rows[0]!.v,'1');
- await assert.rejects(add(operator.id));await assert.rejects(add(sibling.id));await assert.rejects(add(null,'noncash'));await assert.rejects(add(admin.id,'cash',operator.id));await assert.rejects(add(admin.id,'cash',s.admin.id));
+ await assert.rejects(add(operator.id));await assert.rejects(add(sibling.id));await assert.rejects(add(null,'noncash'));await assert.rejects(add(admin.id,'cash',operator.id));await assert.rejects(add(sibling.id,'cash',s.admin.id)); // Owner authority cannot register an unassigned sibling custodian.
  const attempts=await Promise.allSettled([withTransaction(owner,tx=>locationRevision(tx,location,a,admin.id,2)),withTransaction(owner,tx=>locationRevision(tx,location,a,admin.id,2))]);
  assert.equal(attempts.filter(r=>r.status==='fulfilled').length,1);assert.equal(attempts.filter(r=>r.status==='rejected').length,1);
  assert.deepEqual((await owner.query('SELECT * FROM shipit.cash_location_revisions WHERE id=$1',[revision])).rows[0],before);
@@ -75,7 +75,7 @@ await test('populated pre-140 upgrade retains all collection evidence and create
  await db.adminQuery("UPDATE shipit.attachments SET state='ready',scan_state='clean',actual_size=10,detected_type='image/png',digest=expected_digest,validated_at=clock_timestamp(),linked_at=clock_timestamp(),cleanup_due_at=NULL,version=version+1 WHERE id=$1",[evidenceId]);
  await db.adminQuery(`INSERT INTO shipit.attachment_commands(id,organization_id,franchise_id,booking_id,attachment_id,principal_id,operation,key_digest,fingerprint,result,created_at) VALUES($1,$2,$3,$4,$5,$6,'grant',$7,$8,$9,$10)`,[randomUUID(),org,A,s.bookingId,evidenceId,s.operator.id,evidenceKey,'e'.repeat(64),{url:'/synthetic-retained-booking-grant',expires_at:evidenceNow},evidenceNow]);
  const snapshot=async()=>Object.fromEntries(await Promise.all(['bookings','booking_obligations','payment_entries','payment_commands','domain_events','attachments','attachment_commands','attachment_audit_events'].map(async table=>[table,(await db.adminQuery(`SELECT to_jsonb(t)-'expense_request_id' AS row FROM shipit.${table} t ORDER BY 1`)).rows])));
- const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:10});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:11});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
  for(const table of ['cash_locations','cash_location_revisions','cashbook_source_versions','cashbook_requests','cashbook_request_decisions','cashbook_effects','cashbook_effect_legs','cash_handovers','cash_handover_commands','cash_handover_legs'])assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
  assert.deepEqual(await payment.execute(s.local.token,s.bookingId,null,q,key,headers(key),input,'payments.collect',randomUUID()),paid);
  const sources=async()=>(await db.adminQuery('SELECT source_kind,location_id,account_id,direction,amount_paise::text amount,unknown_reason FROM shipit.cashbook_source_facts ORDER BY recorded_at,source_id')).rows;
@@ -114,7 +114,7 @@ await test('pre-140 refund upgrade preserves original evidence and exact retaine
  });
  const oldEvidence=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE id=$1',[change])).rows[0]!;
  const snapshot=async()=>Object.fromEntries(await Promise.all(['financial_changes','financial_adjustment_requests','financial_request_decisions','payment_entries','bookings'].map(async table=>[table,(await owner.query(`SELECT * FROM shipit.${table} ORDER BY 1`)).rows])));
- const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:10});assert.deepEqual(await db.migrate(),{applied:0});
+ const before=await snapshot();db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:11});assert.deepEqual(await db.migrate(),{applied:0});
  const after=(await owner.query('SELECT * FROM shipit.financial_refund_evidence WHERE id=$1',[change])).rows[0]!;
  assert.deepEqual(Object.fromEntries(Object.keys(oldEvidence).map(field=>[field,after[field]])),oldEvidence);assert.equal(after.cash_location_id,null);assert.equal(after.cash_location_revision_id,null);assert.deepEqual(await snapshot(),before);
  for(const table of ['cash_locations','cash_location_revisions','cashbook_source_versions','cashbook_requests','cashbook_request_decisions','cashbook_effects','cashbook_effect_legs','cash_handovers','cash_handover_commands','cash_handover_legs'])assert.equal((await owner.query(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);

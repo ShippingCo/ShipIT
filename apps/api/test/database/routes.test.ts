@@ -94,9 +94,10 @@ await test('all seven roles enforce R09 W05 W06, live revocation and disabled-ro
   const actors=[s.admin,s.local,s.operator,await s.grant('dispatcher',[A]),await s.grant('delivery_agent',[A]),await s.grant('accountant',[A]),await s.grant('read_only',[A])];
   for(const [i,actor] of actors.entries()){
     const read=await s.request('GET',`routes/${route.id}`,undefined,actor);assert.equal(read.statusCode,[0,1,2,3,6].includes(i)?200:403,read.body);
-    const write=await s.request('POST','routes',routeMetadata,actor);assert.equal(write.statusCode,[1,2,3].includes(i)?201:403,write.body);
+    const write=await s.request('POST','routes',routeMetadata,actor);assert.equal(write.statusCode,[0,1,2,3].includes(i)?201:403,write.body);
     const archive=await s.request('POST',`routes/${route.id}/archive`,{expected_version:0},actor);assert.equal(archive.statusCode,422);
-    if(i!==1)assert.equal((await s.request('POST',`routes/${route.id}/archive`,{expected_version:1},actor)).json().error.code,'ACTION_FORBIDDEN');
+    if(i===0||i===1)assert.equal((await s.request('POST',`routes/${write.json().id}/archive`,{expected_version:1},actor)).statusCode,200);
+    else assert.equal((await s.request('POST',`routes/${route.id}/archive`,{expected_version:1},actor)).json().error.code,'ACTION_FORBIDDEN');
   }
   const key=randomUUID(),created=await s.request('POST','routes',routeMetadata,s.operator,key);assert.equal(created.statusCode,201,created.body);
   await s.memberships.revokeMembership(s.admin.token,s.operator.member.id,{expected_version:1});

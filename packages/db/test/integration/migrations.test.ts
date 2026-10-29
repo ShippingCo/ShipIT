@@ -8,6 +8,27 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { DatabaseError, migrationLockId } from '../../src/index.ts';
 import { provisionDatabase, type DisposableDatabase } from '../support.ts';
+import {randomUUID} from 'node:crypto';
+
+await test('#190 populated policy upgrade preserves real grants and confines owner/local scope without agent impersonation',{timeout:20000},async t=>{
+ const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:55}),{applied:55});
+ const owner=db.ownerPool(),org=randomUUID(),foreign=randomUUID(),a=randomUUID(),b=randomUUID(),c=randomUUID(),user=randomUUID(),local=randomUUID(),ownerGrant=randomUUID(),localGrant=randomUUID();
+ await owner.query("INSERT INTO shipit.organizations(id,display_name) VALUES($1,'Synthetic A'),($2,'Synthetic B')",[org,foreign]);
+ await owner.query("INSERT INTO shipit.franchises(id,organization_id,franchise_code,display_name) VALUES($1,$2,'A1','Synthetic A1'),($3,$2,'A2','Synthetic A2'),($4,$5,'B1','Synthetic B1')",[a,org,b,c,foreign]);
+ await owner.query('INSERT INTO shipit.auth_users(id) VALUES($1),($2)',[user,local]);
+ await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin'),($4,$5,$3,'franchise_admin')",[ownerGrant,user,org,localGrant,local]);
+ await owner.query('INSERT INTO shipit.membership_franchise_scopes(membership_id,organization_id,franchise_id) VALUES($1,$2,$3)',[localGrant,org,a]);
+ const before=(await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows;
+ assert.deepEqual(await db.migrate(),{applied:1});assert.deepEqual(await db.migrate(),{applied:0});
+ assert.deepEqual((await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows,before);
+ const rows=(await owner.query<{membership_id:string;franchise_id:string}>('SELECT membership_id,franchise_id FROM shipit.business_membership_scopes')).rows;
+ assert.deepEqual(rows.filter(r=>r.membership_id===ownerGrant).map(r=>r.franchise_id).sort(),[a,b].sort());
+ assert.deepEqual(rows.filter(r=>r.membership_id===localGrant).map(r=>r.franchise_id),[a]);
+ for(const [actor,franchise,role,expected]of [[user,a,'dispatcher',true],[user,b,'franchise_admin',true],[user,c,'franchise_admin',false],[local,b,'franchise_admin',false],[user,a,'delivery_agent',false]] as const)
+  assert.equal((await owner.query<{allowed:boolean}>('SELECT shipit.custody_member($1,$2,$3,$4) allowed',[org,franchise,actor,role])).rows[0]!.allowed,expected);
+ await owner.query("UPDATE shipit.memberships SET lifecycle='revoked',revoked_at=clock_timestamp(),version=version+1 WHERE id=$1",[ownerGrant]);
+ assert.equal((await owner.query<{allowed:boolean}>("SELECT shipit.custody_member($1,$2,$3,'franchise_admin') allowed",[org,a,user])).rows[0]!.allowed,false);
+});
 
 async function migrationFixture(t: TestContext, files: Record<string, string>): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), 'shipit-migrations-'));
@@ -60,9 +81,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 55 });
+  assert.deepEqual(await database.migrate(), { applied: 56 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 55);
+  assert.equal(initial.length, 56);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -87,7 +108,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 54 });
+  assert.deepEqual(await database.migrate(), { applied: 55 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -110,7 +131,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1792947600000-cash-closing',
     '1793034000000-shipment-costs',
     '1793120400000-versioned-settings',
-    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules',
+    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority',
   ]);
 });
 
@@ -200,7 +221,7 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 55 });
+  assert.deepEqual(await database.migrate(), { applied: 56 });
   const installedOwner = database.ownerPool(), held = await installedOwner.connect();
   try {
     await held.query('SELECT pg_advisory_lock($1::bigint)', [migrationLockId]);

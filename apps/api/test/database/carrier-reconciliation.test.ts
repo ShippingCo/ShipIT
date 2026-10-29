@@ -139,14 +139,16 @@ await test('out-of-order observations, equal-time conflict, reference correction
   assert.equal(wrongCursor.statusCode,422);assert.equal(wrongCursor.json().error.code,'CURSOR_INVALID');
 });
 
-await test('admin-only approval cannot inherit dispatcher authority and revoked membership denies replay',{timeout:60000},async t=>{
+await test('local admin-only carrier movement approval needs no fake dispatcher role and revoked membership denies replay',{timeout:60000},async t=>{
   const s=await setup(t);await s.dispatch();await s.ingest(s.page());const id=(await s.list()).json().items[0].id;
   const admin=await s.grant('franchise_admin',[A]);
-  assert.equal((await s.request('POST',`carriers/reconciliation/${id}/resolve`,s.input,admin.token)).statusCode,403);
-  const key=randomUUID();assert.equal((await s.resolve(id,s.input,key)).statusCode,200);
+  assert.equal((await s.request('POST',`carriers/reconciliation/${id}/resolve`,s.input,s.operator.token)).statusCode,403);
+  const key=randomUUID(),resolve=()=>s.request('POST',`carriers/reconciliation/${id}/resolve`,s.input,admin.token,key);
+  const approved=await resolve();assert.equal(approved.statusCode,200,approved.body);
+  assert.deepEqual((await resolve()).json(),approved.json());
   // Existing membership revocation is also checked on replay, before the saved decision is returned.
-  await s.memberships.revokeMembership(s.admin.token,s.local.member.id,{expected_version:1});
-  assert.equal((await s.resolve(id,s.input,key)).statusCode,403);
+  await s.memberships.revokeMembership(s.admin.token,admin.member.id,{expected_version:1});
+  assert.equal((await resolve()).statusCode,404);
 });
 
 await test('different carrier installations keep separate identities but conflicting same-parcel claims require review',{timeout:60000},async t=>{

@@ -1,3 +1,5 @@
+import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {canAdminister} from '@shippingco/shared';
 import {AccountStatements} from './AccountStatements';
 import {retainAccountNavigation} from '../data-access/account-navigation';
 import {AccountCreditEvidence} from './AccountCreditEvidence';
@@ -15,7 +17,7 @@ import {failureMessage} from '../booking/failures';
 type Source=ReturnType<typeof customerAccounts>;
 const paged=<T,>(p:{items:T[];next_cursor:string|null})=>({items:p.items,page:{has_more:p.next_cursor!==null,next_cursor:p.next_cursor}});
 export default function CustomerAccounts({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
- if(!roles.some(role=>['franchise_admin','org_admin','accountant'].includes(role)))return <Empty title="Customer account access unavailable" body="This role cannot manage or read billing profiles."/>;
+ if(!(canAdminister(roles,'customer_accounts.configure')||roles.some(role=>['franchise_admin','org_admin','accountant'].includes(role))))return <Empty title="Customer account access unavailable" body="This role cannot manage or read billing profiles."/>;
  return <AccountWorkspace controller={controller} roles={roles}/>;
 }
 function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
@@ -25,12 +27,15 @@ function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:r
  const [locked,setLocked]=useState(false),[blocked,setBlocked]=useState(false);
  useEffect(()=>{const leave=(e:BeforeUnloadEvent)=>{if(locked){e.preventDefault();e.returnValue='';}};const navigate=(e:MouseEvent)=>{if(locked&&e.target instanceof Element&&e.target.closest('a[href]')){e.preventDefault();e.stopPropagation();setBlocked(true);}};const change=(e:Event)=>{if(locked&&e.target instanceof Element&&e.target.matches('select[aria-label="Franchise"]')){e.stopPropagation();(e.target as HTMLSelectElement).value=api.franchise;setBlocked(true);}};window.addEventListener('beforeunload',leave);document.addEventListener('click',navigate,true);document.addEventListener('change',change,true);return()=>{window.removeEventListener('beforeunload',leave);document.removeEventListener('click',navigate,true);document.removeEventListener('change',change,true);};},[locked,api.franchise]);
  useEffect(()=>locked?retainAccountNavigation(api.scope,()=>setBlocked(true)):undefined,[locked,api.scope]);
- const admin=roles.includes('franchise_admin');
+ const admin=canAdminister(roles,'customer_accounts.configure');
  const saved=(account:CustomerAccountDto)=>{setSelected(account);setEditing(false);list.reload();setRevision(n=>n+1);};
- return <div className="ops-page customer-accounts-workspace"><section className="card ops-card"><h1 id="workspace-title" tabIndex={-1} className="t-headline-sm">Customer accounts</h1>
-  <p>Monthly customer terms and negotiated rates belong to this franchise. Credit permits deferred payment; it is not a collection.</p>
-  {admin&&<button className="btn btn-filled" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
-  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty title="No customer accounts" body="An administrator can link an existing customer and attest the billing contact."/>:<ul className="ops-list">{list.items.map(a=><li key={a.id}><button className="btn btn-text" disabled={locked} onClick={()=>{setSelected(a);setEditing(false);}}>{a.name} · {a.state==='held'?'Held':'Active'} · Limit {formatMoney(a.credit_limit_paise)}</button></li>)}</ul>}
+ return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader title="Customer accounts" description="Monthly customer terms and negotiated rates belong to this franchise. Credit permits deferred payment; it is not a collection." eyebrow="Finance workspace"/>
+  {admin&&<button className="btn btn-filled finance-account-create" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
+  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty title="No customer accounts" body="An administrator can link an existing customer and attest the billing contact."/>:<RecordTable label="Customer accounts" rows={list.items} rowKey={a=>a.id} selectedKey={selected?.id} columns={[
+ {key:'account',label:'Account',cell:a=><button className="btn btn-text" disabled={locked} aria-label={a.name+' · '+(a.state==='held'?'Held':'Active')+' · Limit '+formatMoney(a.credit_limit_paise)} onClick={()=>{setSelected(a);setEditing(false);}}>{a.name}</button>},
+ {key:'state',label:'Status',cell:a=><StatusBadge tone={a.state==='held'?'warning':'success'}>{a.state==='held'?'Held':'Active'}</StatusBadge>},
+ {key:'limit',label:'Credit limit',align:'right',cell:a=>formatMoney(a.credit_limit_paise)},
+ ]}/>}
   {list.page.has_more&&<button className="btn btn-text" onClick={list.loadMore}>More accounts</button>}
  </section>
  {blocked&&locked&&<p role="alert">Resolve the retained command before leaving or changing accounts.</p>}
@@ -62,7 +67,7 @@ function AccountEditor({controller,source,selected,saved,cancel,busyChanged}:{bu
   const body:CustomerAccountInput={expected_version:selected?.version??0,debtor_customer_id:debtor,shipping_customer_ids:links.map(c=>c.id),name,billing_contact:{name:contact,phone,authorization_ref:reference},closing_day:Number(closing),due_days:Number(due),credit_limit_paise:paise,state,reason};
   try{const result=await command.run(source.configure(selected?.id??null,body));saved(result);}catch(e){setError(failureMessage(e));}
  }
- return <section className="card ops-card"><h2 className="t-title-lg">{selected?'Revise customer account':'New customer account'}</h2><form className="ops-form" onSubmit={e=>{e.preventDefault();void submit();}}>
+ return <section className="card ops-card"><h2 className="t-title-lg">{selected?'Revise customer account':'New customer account'}</h2><form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();void submit();}}>
   <fieldset disabled={locked}><TextField label="Account name" value={name} onChange={setName} required/>
    <p>Bill-to customer: {debtorName||'Select below'}. The debtor identity is fixed once created.</p>
    <CustomerPicker controller={controller} disabled={locked} onSelect={(id,label)=>{if(!debtor){setDebtor(id);setDebtorName(label);}setLinks(rows=>rows.some(r=>r.id===id)?rows:[...rows,{id,name:label}]);}}/>
@@ -99,7 +104,7 @@ function RateEditor({source,account,parentLocked,busyChanged,refreshed}:{source:
   if(parsed.some(r=>r.freight_paise===null||r.packing_paise===null)){setMessage('Enter money with at most two decimal places.');return;}
   try{await command.run(source.rate(account.id,{expected_version:Math.max(0,...history.items.map(r=>r.version)),effective_from:start,effective_to:end,approval_ref:reference,rules:parsed as PricingRuleInput[]}));history.reload();refreshed();setMessage('Negotiated rate version saved. Existing bookings retain their original price.');}catch(e){setMessage(failureMessage(e));}
  }
- return <form className="ops-form" onSubmit={e=>{e.preventDefault();void submit();}}><h3 className="t-title-md">Publish negotiated rate version</h3><p>Each version replaces the previous schedule from its effective time. If no rule matches, normal franchise pricing applies.</p>
+ return <form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();void submit();}}><h3 className="t-title-md">Publish negotiated rate version</h3><p>Each version replaces the previous schedule from its effective time. If no rule matches, normal franchise pricing applies.</p>
   {history.phase==='error'&&<><p role="alert">Rate history unavailable.</p><button type="button" className="btn btn-text" onClick={history.reload}>Retry rate history</button></>}{command.phase==='error'&&<button type="button" className="btn btn-text" onClick={()=>{command.reset();history.reload();refreshed();setMessage('Review current history and the retained rate draft before publishing again.');}}>Reload after rejected rate command</button>}
   {history.page.has_more&&<button type="button" className="btn btn-text" onClick={history.loadMore}>Load remaining rate versions before publishing</button>}
   <fieldset disabled={locked||history.phase==='loading'||history.phase==='error'||history.page.has_more}><div className="ops-grid"><TextField label="Effective from (Asia/Kolkata)" type="datetime-local" value={from} onChange={setFrom} required/><TextField label="Effective until (Asia/Kolkata)" type="datetime-local" value={to} onChange={setTo} required/><TextField label="Rate approval reference" value={reference} onChange={setReference} required/></div>
@@ -117,7 +122,7 @@ function CreditApprovals({source,parentLocked,busyChanged}:{source:Source;parent
   {pending.phase==='loading'?<Loading/>:pending.phase==='error'?<Failure retry={pending.reload}/>:!pending.items.length?<p>No unexpired requests waiting for approval.</p>:<ul className="ops-list">{pending.items.map(r=><li key={r.id}><label><input type="radio" name="credit-request" checked={selected===r.id} disabled={locked} onChange={()=>setSelected(r.id)}/>{r.name} · {formatMoney(r.total_paise)} · Expires {formatKolkata(r.expires_at)} · Operator {r.operator_id}</label></li>)}</ul>}
   {pending.page.has_more&&<button className="btn btn-text" onClick={pending.loadMore}>More requests</button>}
   {selected&&(review.phase==='loading'?<Loading label="Loading exact booking intent…"/>:review.phase==='error'?<Failure retry={review.reload}/>:review.value&&<div><h3 className="t-title-md">Review requested booking</h3><p>Shipping customer {review.value.customer_id}, version {review.value.customer_version} · {review.value.destination_key} · {review.value.service}</p><ul>{review.value.parcels.map((p,i)=><li key={i}>{p.recipient_name} · {p.weight_grams} g · Docket {p.docket??'Generated at booking'}</li>)}</ul><p>Credit limit {formatMoney(review.value.credit.credit_limit_paise)} · Available {formatMoney(review.value.credit.available_paise)} · Overdue {formatMoney(review.value.credit.overdue_paise)} · {review.value.account.state}</p><p>Quote {review.value.quote_id} · Tax calculation {review.value.tax_calculation_id}</p><AccountCreditEvidence source={source} account={review.value.account.id} cutoff={review.value.credit.as_of}/></div>)}
-  <form className="ops-form" onSubmit={e=>{e.preventDefault();void command.run(source.approve(selected,reason)).then(()=>{pending.reload();setSelected('');setReason('');}).catch(()=>{});}}><TextField label="Credit exception approval reason" value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!selected||review.phase!=='ready'||!review.value||!!review.value.approval_id||reason.trim().length<3}>Approve this booking only</button></form>
+  <form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();void command.run(source.approve(selected,reason)).then(()=>{pending.reload();setSelected('');setReason('');}).catch(()=>{});}}><TextField label="Credit exception approval reason" value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!selected||review.phase!=='ready'||!review.value||!!review.value.approval_id||reason.trim().length<3}>Approve this booking only</button></form>
   {command.phase==='error'&&command.error&&<><p role="alert">{failureMessage(command.error)}</p><button type="button" className="btn btn-text" onClick={()=>{command.reset();pending.reload();review.reload();}}>Reload after rejected approval</button></>}
   <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(()=>pending.reload()).catch(()=>{});}:undefined}/>
  </section>;

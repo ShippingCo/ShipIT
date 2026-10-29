@@ -13,7 +13,7 @@ await test('populated released49 upgrades to51 with immutable money and physical
  const s=await setupCashClose(t,{database:db});await s.receipt();await s.expense(1000,new Date(Date.parse(s.counted)-1000).toISOString());const opening=await s.command('open',null,s.openBody);
  const before=(await db.adminQuery("SELECT jsonb_build_object('money',(SELECT jsonb_agg(to_jsonb(f) ORDER BY source_kind,source_id,location_id,direction) FROM shipit.cashbook_source_facts f),'physical',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM shipit.cash_close_commands c)) value")).rows[0]!.value;
  assert.equal((await db.adminQuery('SELECT count(*)::int n FROM shipit_migrations.pgmigrations')).rows[0]!.n,49);
- db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:6});assert.deepEqual(await db.migrate(),{applied:0});
+ db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:7});assert.deepEqual(await db.migrate(),{applied:0});
  const after=(await db.adminQuery("SELECT jsonb_build_object('money',(SELECT jsonb_agg(to_jsonb(f) ORDER BY source_kind,source_id,location_id,direction) FROM shipit.cashbook_source_facts f),'physical',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM shipit.cash_close_commands c)) value")).rows[0]!.value;assert.deepEqual(after,before);assert.ok(opening.session_id);
  for(const table of ['shipment_cost_sources','shipment_cost_revisions','shipment_cost_allocations','shipment_cost_aliases','shipment_cost_commands']){assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);assert.equal((await db.adminQuery('SELECT has_table_privilege($1,$2,\'INSERT\') allowed',[db.runtimeRole,'shipit.'+table])).rows[0]!.allowed,false);}
 });

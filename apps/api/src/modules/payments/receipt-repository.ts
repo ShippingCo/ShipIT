@@ -14,9 +14,9 @@ export async function customer(scope:TenantAccess,id:string) {
 }
 export async function receiver(scope:TenantAccess,id:string,allowAgentCustody=false) {
  if(!(await scopedQuery(scope,['money_receipts.record'],`SELECT m.user_id FROM shipit.memberships m
- JOIN shipit.membership_franchise_scopes s ON s.membership_id=m.id AND s.organization_id=m.organization_id
+ JOIN shipit.business_membership_scopes s ON s.membership_id=m.id AND s.organization_id=m.organization_id
  JOIN shipit.auth_users u ON u.id=m.user_id AND u.lifecycle='active'
- WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND (m.role IN ('operator','franchise_admin') OR ($2::boolean AND m.role='delivery_agent'))`,[id,allowAgentCustody])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.user_id=$1 AND m.lifecycle='active' AND (m.role IN ('operator','franchise_admin','org_admin') OR ($2::boolean AND m.role='delivery_agent'))`,[id,allowAgentCustody])).rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
 }
 export async function account(scope:TenantAccess,id:string) {
  const row=(await scopedQuery<{id:string;account_id:string;version:number;methods:ReceiptMethod[];active:boolean}>(scope,['money_receipts.record'],`SELECT id,account_id,version,methods,active
@@ -108,8 +108,8 @@ export async function history(scope:TenantAccess,id:string,cursor:string|null,li
 export async function receivers(scope:TenantAccess,cursor:string|null,limit:number) {
  const c=assertTenantAccess(scope,['money_receipts.select']);
  const rows=(await scopedQuery<{id:string}>(scope,['money_receipts.select'],`SELECT DISTINCT u.id FROM shipit.auth_users u JOIN shipit.memberships m ON m.user_id=u.id
- JOIN shipit.membership_franchise_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
- WHERE {{franchise:m.organization_id:f.franchise_id}} AND m.lifecycle='active' AND u.lifecycle='active' AND m.role IN ('franchise_admin','operator') AND ($1::uuid IS NULL OR u.id>$1) ORDER BY u.id LIMIT $2`,[cursor,limit])).rows;
+ JOIN shipit.business_membership_scopes f ON f.organization_id=m.organization_id AND f.membership_id=m.id
+ WHERE {{franchise:m.organization_id:f.franchise_id}} AND m.lifecycle='active' AND u.lifecycle='active' AND m.role IN ('franchise_admin','operator','org_admin') AND ($1::uuid IS NULL OR u.id>$1) ORDER BY u.id LIMIT $2`,[cursor,limit])).rows;
  return rows.map(row=>({id:row.id,label:row.id===c.actor.id?'You (signed-in staff)':'Staff '+row.id.slice(-8)}));
 }
 

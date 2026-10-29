@@ -80,9 +80,9 @@ await test('strict mass-assignment including foreign lot_id produces no booking 
   }
   assert.deepEqual(await s.counts(),before);assert.deepEqual((await s.db.adminQuery('SELECT count(*) FROM shipit.audit_history')).rows,audit);
 });
-await test('only operator is activated; sibling and unrelated customer IDs are indistinguishable from unknown; guessed selectors cannot widen scope',{timeout:30000},async t=>{
+await test('restricted staff remain denied; sibling and unrelated customer IDs are indistinguishable from unknown; guessed selectors cannot widen scope',{timeout:30000},async t=>{
   const s=await bookingSetup(t),before=await s.counts();
-  for(const actor of [s.local,s.admin,await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('dispatcher',[A]),await s.grant('delivery_agent',[A])])assert.equal((await s.book(s.body,randomUUID(),actor.token)).statusCode,403);
+  for(const actor of [await s.grant('read_only',[A]),await s.grant('accountant',[A]),await s.grant('dispatcher',[A]),await s.grant('delivery_agent',[A])])assert.equal((await s.book(s.body,randomUUID(),actor.token)).statusCode,403);
   const sibling=await s.grant('operator',[B]),foreign=await s.beta();
   const b=await s.customer.create(sibling.token,org,B,randomUUID(),contact,randomUUID()),c=await s.customer.create(foreign.token,otherOrg,C,randomUUID(),contact,randomUUID());
   const errors=[];

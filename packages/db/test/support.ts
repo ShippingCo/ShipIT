@@ -294,6 +294,17 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       validate(); await handle.prepareTenancy(); await handle.prepareAuth();
       const owner=handle.ownerPool();
       try {
+        // Historical upgrade tests deliberately pin a pre-v2 schema while using current
+        // producer adapters. This test-only compatibility view exposes ORIGINAL explicit
+        // scopes; migration 56 replaces it with the real owner projection. No grants/roles
+        // or migration-ledger entries are synthesized, and a broken current schema fails.
+        const businessView=(await owner.query("SELECT to_regclass('shipit.business_membership_scopes') present")).rows[0]?.present;
+        if(!businessView){
+          const applied=(await owner.query("SELECT EXISTS(SELECT 1 FROM shipit_migrations.pgmigrations WHERE name='1793552400000-owner-business-authority') present")).rows[0]?.present;
+          if(applied)throw new Error('DB_TEST_POLICY_VIEW_MISSING');
+          await owner.query('CREATE VIEW shipit.business_membership_scopes WITH (security_invoker=true) AS SELECT membership_id,organization_id,franchise_id FROM shipit.membership_franchise_scopes');
+        }
+        await owner.query(`GRANT SELECT ON shipit.business_membership_scopes TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.memberships,shipit.membership_franchise_scopes,
           shipit.membership_invitations,shipit.invitation_franchise_scopes,shipit.onboarding_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE (role,lifecycle,version,updated_at,revoked_at) ON shipit.memberships

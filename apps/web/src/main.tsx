@@ -4,6 +4,10 @@ import App from './App';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
+import './styles/workspace.css';
+import './operations/logistics-layouts.css';
+import './operations/finance-layouts.css';
+import './operations/service-layouts.css';
 import './styles/tailwind.css'; // last: utilities must be able to win
 
 const container = document.getElementById('root');
