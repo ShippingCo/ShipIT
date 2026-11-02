@@ -1421,3 +1421,7 @@ focus restoration, preserved drafts and immutable uncertain retries.
 | apps/web/src/test/logistics-parity.test.tsx: plans a route only after explicit submission and retains its retry identity when the response is lost | preserve | seam |
 
 | apps/web/src/test/logistics-parity.test.tsx: retains a delivery assignment after a lost response and retries the same handover evidence | preserve | proof | Retain server-authorized assignment, handover evidence and the original command identity through an uncertain response; do not claim delivery or payment. |
+
+| apps/web/src/test/service-parity.test.tsx: filters receipts by the IST booking date and preserves applied bounds while paging an edited draft | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
+| apps/web/src/test/service-parity.test.tsx: rejects an inverted receipt date range without sending a new read | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
+| apps/web/src/test/service-parity.test.tsx: shows queued provider work as waiting in the feed and uses scoped notification filters without send claims | preserve | messaging | Provider waiting state stays truthful and filtering remains scoped. |

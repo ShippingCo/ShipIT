@@ -1,3 +1,4 @@
+import {ReportCard} from '../../components/workspace/ServiceCards';
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Msym } from '../../components/m3/Icon';
@@ -97,14 +98,7 @@ function ReportsIndex() {
       <FilterChips options={PERIODS} value={period} onChange={setPeriod} />
       <div className="repgrid">
         {REPORTS.map((r) => (
-          <button key={r.id} type="button" className="repcard" onClick={() => nav(`/business/reports/${r.id}`)}>
-            <IconTile name={r.icon} size="lg" />
-            <span className="repcard-v">{headline[r.id].v}</span>
-            <span className="repcard-l">{headline[r.id].l}</span>
-            <span className="repcard-t">{r.title}</span>
-            <span className="repcard-d">{r.desc}</span>
-            <span className="repcard-go">Open <Msym name="arrow_forward" /></span>
-          </button>
+          <ReportCard key={r.id} icon={r.icon} title={r.title} description={r.desc} metric={headline[r.id].v} detail={headline[r.id].l} onClick={()=>nav(`/business/reports/${r.id}`)}/>
         ))}
       </div>
     </div>

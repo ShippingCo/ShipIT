@@ -15,9 +15,7 @@ const page:ContributionPage={snapshot:{id:id(4),schema_version:1,definition:'shi
 const json=(value:unknown)=>Response.json(value);
 function History(){const navigate=useNavigate(),location=useLocation();return <><output data-testid="current-report-route">{location.pathname+location.search}</output><button onClick={()=>navigate('/business/settings')}>Leave resolved report</button><button onClick={()=>navigate('/business/reports?contribution_snapshot='+id(6))}>Open explicit saved report</button><button onClick={()=>navigate('/business/reports?contribution_snapshot='+id(6),{replace:true})}>Replace with explicit saved report</button><button onClick={()=>navigate(-1)}>History Back</button><button onClick={()=>navigate(1)}>History Forward</button></>;}
 async function chooseShipmentReport(){
- const picker=await screen.findByText(/^Choose a report/,{selector:'summary'});
- fireEvent.click(picker);
- fireEvent.click(screen.getByRole('button',{name:/What did each shipment cost\?/}));
+ fireEvent.click(await screen.findByRole('button',{name:/Shipment costs/}));
 }
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();});
 it('retains uncertain identity through actual OperatorApp history reauthorization and reconciles a response completed while away',async()=>{

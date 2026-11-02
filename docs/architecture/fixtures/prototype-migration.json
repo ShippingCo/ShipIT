@@ -198,7 +198,7 @@
       "apps/web/src/pages/business/MiscPages.tsx": "d7da7d40536c529b73d768d679b5e09cd07a2385114ee2ee67842eb2d59e9a77",
       "apps/web/src/pages/business/NewBookingPage.tsx": "8d725ca24750053333fa49dfc23ad3d8f32d6fca3e29d08f72c292b1ee9b0915",
       "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
-      "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
+      "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
@@ -710,6 +710,10 @@
         }
       ],
       "apps/web/src/pages/business/ReportsPage.tsx": [
+        {
+          "target": "apps/web/src/components/workspace/ServiceCards.tsx",
+          "syntax": "import {ReportCard} from '../../components/workspace/ServiceCards';"
+        },
         {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../../components/m3/Icon';"
@@ -2731,6 +2735,21 @@
       {
         "file": "apps/web/src/test/segmented-payment.test.tsx",
         "name": "chooses a payment segment without submitting its surrounding booking form",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/service-parity.test.tsx",
+        "name": "filters receipts by the IST booking date and preserves applied bounds while paging an edited draft",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/service-parity.test.tsx",
+        "name": "rejects an inverted receipt date range without sending a new read",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/service-parity.test.tsx",
+        "name": "shows queued provider work as waiting in the feed and uses scoped notification filters without send claims",
         "cases": null
       },
       {
@@ -7108,6 +7127,30 @@
       "group": "booking",
       "disposition": "preserve",
       "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
+    },
+    {
+      "file": "apps/web/src/test/service-parity.test.tsx",
+      "name": "filters receipts by the IST booking date and preserves applied bounds while paging an edited draft",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
+    },
+    {
+      "file": "apps/web/src/test/service-parity.test.tsx",
+      "name": "rejects an inverted receipt date range without sending a new read",
+      "cases": null,
+      "group": "receipts",
+      "disposition": "preserve",
+      "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
+    },
+    {
+      "file": "apps/web/src/test/service-parity.test.tsx",
+      "name": "shows queued provider work as waiting in the feed and uses scoped notification filters without send claims",
+      "cases": null,
+      "group": "messaging",
+      "disposition": "preserve",
+      "reason": "Provider waiting state stays truthful and filtering remains scoped."
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",

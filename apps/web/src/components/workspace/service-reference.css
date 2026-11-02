@@ -1,0 +1,26 @@
+.reference-service .workspace-page-heading h1 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.reference-service .workspace-page-description { margin:0; }
+.reference-service .btn { border-radius:var(--shape-full); }
+.reference-service .card { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); box-shadow:none; }
+.reference-service .repgrid { margin-block:20px 28px; }
+.reference-service .repcard { border:1px solid var(--md-outline-variant); box-shadow:none; background:var(--md-surface); }
+.reference-service .repcard[aria-pressed="true"] { border-color:var(--md-primary); }
+.reference-service .repcard:disabled { opacity:.55; cursor:default; }
+.reference-message-feed { list-style:none; padding:6px; margin:0; border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); }
+.reference-message-row { display:flex; align-items:flex-start; gap:14px; padding:16px; border-bottom:1px solid var(--md-outline-variant); }
+.reference-message-row:last-child { border-bottom:0; }
+.reference-message-row>.msym { color:var(--md-on-surface-variant); margin-top:2px; flex:none; }
+.reference-message-main { flex:1; min-width:0; }
+.reference-message-title { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+.reference-message-evidence { margin-top:8px; font-size:14px; }
+.reference-message-action { flex:none; }
+.reference-receipt-dates { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-block:16px; }
+.reference-receipt-dates .tf { flex:1 1 180px; }
+.reference-service .receipt-search { align-items:start; }
+@media(max-width:600px) { .reference-message-row { flex-wrap:wrap; gap:10px; padding:14px 10px; } .reference-message-action { margin-left:30px; } }
+
+.reference-service .receipt-search { display:flex; flex-direction:row; flex-wrap:wrap; align-items:start; }
+.reference-service .receipt-search>.tf { flex:1 1 280px; }
+.reference-service .reference-receipt-dates { flex:1 0 100%; width:100%; min-width:0; }
+.reference-service .reference-receipt-dates .tf { flex:1 1 180px; max-width:none; }
+.reference-receipt-dates>p { flex-basis:100%; margin:0; }

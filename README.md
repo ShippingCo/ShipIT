@@ -68,6 +68,19 @@ and shell variables override the files. Keep real credentials in these ignored f
 and use `.env.example` as the configuration reference. Placeholder values must be replaced
 or omitted when an earlier file already supplies the real value.
 
+To review the current staff UI before connecting your own database, run
+`pnpm preview:workflow` with Docker running, then open
+[the workflow preview](http://localhost:3033/_fixture/session). It runs the **same
+operator app and four-step booking flow** as production with a disposable test
+API/database on ports 3033/5174. It does not load your root `.env` credentials or
+send real messages. Stop with Ctrl+C; the disposable database is removed. The
+existing test wrapper also stops it after 30 minutes.
+
+The standalone `VITE_DATA_MODE=demo` build is the historical fictional prototype,
+including its older booking form. Use it as a visual reference, not to approve
+current operational workflows. Use `preview:workflow` for that comparison; the
+production entry stays the same when you later run against your own configuration.
+
 `pnpm dev` also starts the web UI. The aliases `pnpm dev:api`, `pnpm dev:web`,
 `pnpm dev:worker` and `pnpm db:start` are available. The web launcher imports only
 `VITE_*` and `SHIPIT_API_PROXY` from root env files; Vite also supports its own
