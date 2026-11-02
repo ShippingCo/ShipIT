@@ -205,3 +205,4 @@ export * from './accountant.ts';
 export * from './admin-actions.ts';
 
 export type {BookingParcelDetails} from './booking-details.ts';
+export * from './operational-dashboard.ts';

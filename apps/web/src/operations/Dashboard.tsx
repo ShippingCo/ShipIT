@@ -1,56 +1,86 @@
-import WeeklyBusiness from './WeeklyBusiness';
-import {PageHeader} from '../components/workspace/Workspace';
 import React,{useMemo} from 'react';
-import { Link } from 'react-router-dom';
-import type { OperatorRole } from '@shippingco/shared';
-import {canAdminister} from '@shippingco/shared';
-import type { ScopeController } from '../operator/scope';
-import { scopedApi } from '../data-access/scoped-api';
-import { parcels } from '../data-access/parcels';
-import { lots } from '../data-access/lots';
-import { routes } from '../data-access/routes';
-import { eway } from '../data-access/eway';
-import { useResource } from './hooks';
-import { Empty,Failure,Loading } from './AsyncState';
-import { Msym } from '../components/m3/Icon';
+import {Link} from 'react-router-dom';
+import {canAdminister,type OperatorRole} from '@shippingco/shared';
+import type {ScopeController} from '../operator/scope';
+import {DashboardView,type DashboardQueueItem} from '../components/workspace/DashboardView';
+import {Card} from '../components/m3/Surface';
+import {Msym} from '../components/m3/Icon';
+import {scopedApi} from '../data-access/scoped-api';
+import {operationalDashboard} from '../data-access/operational-dashboard';
+import {parcels} from '../data-access/parcels';
+import {routes} from '../data-access/routes';
+import {messaging} from '../data-access/messaging';
+import {support} from '../data-access/support';
+import {useResource} from './hooks';
+import {Loading,Failure,Empty} from './AsyncState';
+import {businessDay} from './business-dates';
+import {formatKolkata,formatMoney} from './format';
+import {useDashboardMoney} from './dashboard-money';
+import WeeklyBusiness from './WeeklyBusiness';
 
-const parcelRead=new Set<OperatorRole>(['org_admin','franchise_admin','operator','dispatcher','read_only']);
-const lotRead=new Set<OperatorRole>(['org_admin','franchise_admin','operator','dispatcher','read_only']);
-const routeRead=new Set<OperatorRole>(['org_admin','franchise_admin','operator','dispatcher','read_only']);
-const ewayRead=new Set<OperatorRole>(['org_admin','franchise_admin','operator','dispatcher','accountant']);
-const allowed=(roles:readonly OperatorRole[],set:Set<OperatorRole>)=>roles.some(role=>set.has(role));
-type Summary={parcels:{items:number;more:boolean;attention:number}|null;lots:{items:number;more:boolean;members:number}|null;routes:{items:number;more:boolean;planning:number}|null;eway:{items:number;more:boolean;attention:number}|null};
+const stages=[{key:'booked',label:'Booked',icon:'receipt_long'},{key:'checked_in',label:'At hub',icon:'warehouse'},{key:'dispatched',label:'Dispatched',icon:'local_shipping'},{key:'in_transit',label:'On the way',icon:'alt_route'},{key:'out_for_delivery',label:'Out for delivery',icon:'moped'}] as const;
+const icons={road:'local_shipping',rail:'train',air:'flight',sea:'directions_boat'};
+const has=(roles:readonly OperatorRole[],allowed:string[])=>roles.some(role=>allowed.includes(role));
 
-export default function OperationsDashboard({controller,roles,workspaceName}:{controller:ScopeController;roles:readonly OperatorRole[];workspaceName:string}){
- const api=useMemo(()=>scopedApi(controller),[controller]),p=useMemo(()=>parcels(api),[api]),l=useMemo(()=>lots(api),[api]),r=useMemo(()=>routes(api),[api]),e=useMemo(()=>eway(api),[api]);
- const key=roles.slice().sort().join(',');
- const resource=useResource<Summary>(key,async signal=>{
-  const [ps,ls,rs,es]=await Promise.all([
-   allowed(roles,parcelRead)?p.list({limit:100},signal):null,
-   allowed(roles,lotRead)?l.list({state:'active',limit:100},signal):null,
-   allowed(roles,routeRead)?r.list({limit:100},signal):null,
-   allowed(roles,ewayRead)?e.reminders({limit:100},signal):null,
-  ]);
-  return {parcels:ps?{items:ps.items.length,more:ps.page.has_more,attention:ps.items.filter(item=>item.status==='failed_attempt'||item.status==='held_at_office').length}:null,
-   lots:ls?{items:ls.items.length,more:ls.page.has_more,members:ls.items.reduce((sum,item)=>sum+item.active_member_count,0)}:null,
-   routes:rs?{items:rs.items.length,more:rs.page.has_more,planning:rs.items.filter(item=>item.state==='planning').length}:null,
-   eway:es?{items:es.items.length,more:es.page.has_more,attention:es.items.filter(item=>item.state.reminder_reasons.length>0).length}:null};
- },value=>Object.values(value).every(item=>item===null));
- const header=<><PageHeader title="Your business, at a glance." eyebrow={workspaceName} description="Track your bookings, check your money and plan the next delivery."/></>;
- if(resource.phase==='loading')return <div className="ops-page service-dashboard">{header}<Loading label="Loading operational workspace…"/></div>;
- if(resource.phase==='error')return <div className="ops-page service-dashboard">{header}<Failure retry={resource.reload} label="Operational summaries could not be loaded."/></div>;
- if(resource.phase==='empty')return <div className="ops-page service-dashboard">{header}<Empty icon="lock" title="No operational views for this role" body="Your role does not include these delivery views. Open an available task from the sidebar."/></div>;
- const s=resource.value!;
- const metrics=[
-  s.parcels&&{to:'/business/packages',icon:'inventory_2',number:s.parcels.items,label:'Parcels',note:`${s.parcels.attention} need attention${s.parcels.more?' · more pages available':''}`},
-  s.lots&&{to:'/business/lots',icon:'layers',number:s.lots.items,label:'Active lots',note:`${s.lots.members} parcels grouped for dispatch${s.lots.more?' · more lots available':''}`},
-  s.routes&&{to:'/business/routes',icon:'alt_route',number:s.routes.items,label:'Routes',note:`${s.routes.planning} still in planning${s.routes.more?' · more routes available':''}`},
-  s.eway&&{to:'/business/eway',icon:'fact_check',number:s.eway.attention,label:'E-way checks need review',note:`From ${s.eway.items} loaded reminders${s.eway.more?' · more reminders available':''}`},
- ].filter(Boolean) as {to:string;icon:string;number:number;label:string;note:string}[];
- return <div className="ops-page service-dashboard">
-  {header}
-  <div className="studio-quick-actions">{(canAdminister(roles,'bookings.create')||roles.includes('operator'))&&<Link className="btn btn-filled" to="/business/new-booking"><Msym name="add"/>New booking</Link>}{allowed(roles,parcelRead)&&<Link className="btn btn-outlined" to="/business/packages?booked=today">Booked today</Link>}{roles.some(role=>['org_admin','franchise_admin','operator','accountant'].includes(role))&&<Link className="btn btn-outlined" to="/business/money-receipts">Record payment</Link>}</div>{roles.some(role=>['org_admin','franchise_admin','accountant'].includes(role))&&<WeeklyBusiness controller={controller} autoLoad/>}<h2 className="t-title-lg">Delivery at a glance</h2><p className="ops-note">Current work across all dates. Counts show the first 100 records; open a work area for the full list.</p>
-  <section aria-label="Current operational summaries" className="studio-next-up">{metrics.map(metric=><Link className="card ops-kpi service-summary" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
-  {metrics.every(metric=>metric.number===0)&&<Empty icon="inventory_2" title="No records on the current pages" body="Start with a booking, or refresh to check for records created by your team." action={<><button type="button" className="btn btn-outlined" onClick={resource.reload}>Refresh workspace</button>{(canAdminister(roles,'bookings.create')||roles.includes('operator'))&&<Link className="btn btn-filled" to="/business/new-booking">Create a booking</Link>}</>}/>}
- </div>;
+export default function OperationsDashboard({controller,roles,workspaceName}:{controller:ScopeController;roles:readonly OperatorRole[];workspaceName:string}) {
+ const api=useMemo(()=>scopedApi(controller),[controller]);
+ const canRead=has(roles,['org_admin','franchise_admin','operator','dispatcher','read_only']);
+ const canFinance=has(roles,['org_admin','franchise_admin','accountant']);
+ const canMessages=has(roles,['org_admin','franchise_admin','operator','dispatcher']);
+ const canSupport=has(roles,['org_admin','franchise_admin','operator']);
+ const money=useDashboardMoney(controller,canFinance&&canRead);
+ const resource=useResource(roles.join(','),async signal=>{
+   if(!canRead)return null;
+   const [summary,recent,dispatch]=await Promise.all([operationalDashboard(api).read(signal),parcels(api).list({limit:6},signal),routes(api).list({limit:100},signal)]);
+   return {summary,recent,dispatch};
+ });
+ const assistance=useResource('assistant-'+roles.join(','),async signal=>{
+   const [history,cases]=await Promise.all([canMessages?messaging(api).list('messages',{},signal):null,canSupport?support(api).list(null,signal):null]);
+   return {history,cases};
+ });
+ const title=<h1 className="workspace-visually-hidden" id="workspace-title" tabIndex={-1}>Dashboard</h1>;
+ if(!canRead)return <div className="page">{title}<Empty icon="space_dashboard" title={workspaceName} body="Choose an available task from the navigation. Financial reports and assigned delivery work retain their own access rules."/></div>;
+ if(resource.phase==='loading')return <div className="page">{title}<Loading label="Loading dashboard…"/></div>;
+ if(resource.phase==='error'||!resource.value)return <div className="page">{title}<Failure retry={resource.reload} label="The dashboard could not be loaded."/></div>;
+ const {summary,recent,dispatch}=resource.value;
+ const counts=summary.stages,moving=stages.reduce((sum,stage)=>sum+counts[stage.key],0);
+ const queue:DashboardQueueItem[]=[];
+ if(counts.failed_attempt)queue.push({key:'failed',icon:'assignment_return',tone:'error',title:`${counts.failed_attempt} parcels need delivery follow-up`,cta:'Review',go:'/business/packages?status=failed_attempt'});
+ if(counts.held_at_office)queue.push({key:'held',icon:'storefront',tone:'warning',title:`${counts.held_at_office} parcels are held at the office`,cta:'Review',go:'/business/packages?status=held_at_office'});
+ if(counts.out_for_delivery)queue.push({key:'delivery',icon:'moped',title:`${counts.out_for_delivery} parcels are out for delivery`,cta:'View parcels',go:'/business/packages?status=out_for_delivery'});
+ const openCases=assistance.value?.cases?.items.filter(item=>item.state!=='resolved').length??0;
+ if(openCases)queue.push({key:'support',icon:'support_agent',tone:'error',title:`${assistance.value?.cases?.page.has_more?'At least ':''}${openCases} customer cases need a person`,cta:'Reply',go:'/business/support'});
+ const snapshot=money.snapshot,amount=snapshot?.totals.outstanding;
+ if(amount&&BigInt(amount)>0n)queue.push({key:'money',icon:'currency_rupee',tone:'warning',title:`${formatMoney(amount)} outstanding on bookings with delivered parcels`,cta:'Review payments',go:'/business/reports?ageing_snapshot='+snapshot!.id});
+ const moneyLink=snapshot?'/business/reports?ageing_snapshot='+snapshot.id:canFinance?'/business/reports':'/business/packages';
+ const moneyAge=<Card>{canFinance?<>
+   {money.busy&&<p className="dashboard-note" role="status">Loading payment balances…</p>}
+   {money.error&&<p className="dashboard-note" role="alert">Payment balances could not be loaded. No paid or unpaid total is assumed.</p>}
+   {snapshot&&<><div className="age">{Object.entries(snapshot.buckets).map(([key,value])=><div className="age-row" key={key}><div className="age-top"><span className="age-dot"/><span className="age-lbl">{({'0_30':'0–30 days','31_60':'31–60 days','61_plus':'61 days or more',unknown:'Date unavailable',future:'Future booking date'})[key]}</span><span className="age-val">{formatMoney(value)}</span></div></div>)}</div><p className="dashboard-note">Age follows the accounting report's booking-date rule. Each booking balance is counted once, including corrections. Captured {formatKolkata(snapshot.as_of)}.</p></>}
+   <button className="card-foot-link" type="button" disabled={money.busy} onClick={money.reload}>{money.error?'Retry payment balances':snapshot?'Refresh payment balances':'Load payment balances'}</button>
+ </>:<p className="dashboard-note">Financial summaries are available to the owner and accounting team. Use a parcel's payment record for permitted counter work.</p>}</Card>;
+ const accepted=assistance.value?.history?.items.filter(row=>row.message&&row.message.progress!=='none').length;
+ const assistant=<Card pad className="agent">
+   {assistance.phase==='loading'?<p role="status">Loading customer activity…</p>:assistance.phase==='error'?<><p role="alert">Customer activity could not be loaded.</p><button className="btn btn-outlined" type="button" onClick={assistance.reload}>Retry customer activity</button></>:<>
+    <div className="bot-grid">{[{icon:'send',label:'Updates accepted',value:accepted===undefined?'—':String(accepted)+(assistance.value?.history?.page.has_more?'+':'')},{icon:'support_agent',label:'Need a person',value:assistance.value?.cases?String(openCases)+(assistance.value.cases.page.has_more?'+':''):'—'}].map(cell=><div className="bot-cell" key={cell.label}><div className="bot-top"><span className="bot-ic"><Msym name={cell.icon}/></span><span className="bot-l">{cell.label}</span></div><div className="bot-n">{cell.value}</div></div>)}</div>
+    <p className="dashboard-note">Accepted means the provider accepted the message. Counts cover the latest message and support pages; a plus means more records are available. Customer reach and thank-you counts are not inferred.</p>
+   </>}
+   {canMessages&&<Link className="card-foot-link agent-cta" to="/business/automation">Open conversations</Link>}
+ </Card>;
+ const todayRoutes=dispatch.items.filter(route=>route.state!=='archived'&&businessDay(new Date(route.scheduled_departure_at))===summary.day);
+ const bookingAllowed=canAdminister(roles,'bookings.create')||roles.includes('operator');
+ return <>
+  <DashboardView date={formatKolkata(summary.as_of,{weekday:'long',day:'numeric',month:'long'})} contextAction={<button className="btn btn-text" type="button" onClick={resource.reload}><Msym name="refresh"/>Refresh</button>} queue={queue} queueNote="Parcel counts cover the selected franchise. Customer cases and payment balances are checked separately." emptyQueueTitle="No flagged parcels in this snapshot" emptyQueueNote="Review customer messages and payment balances for other work." assistant={assistant}
+   metrics={[
+    {key:'moving',icon:'local_shipping',label:'Parcels moving',tone:'info',value:moving,foot:'active parcel stages',go:'/business/packages'},
+    {key:'money',icon:'currency_rupee',label:'Money to collect',tone:'warning',value:amount===undefined?'—':formatMoney(amount),foot:snapshot?`${snapshot.count} bookings with delivered parcels`:canFinance?'Loading or awaiting a verified report':'Open permitted payment records',go:moneyLink},
+    {key:'booked',icon:'note_add',label:'Booked today',tone:'info',value:summary.booked_today,delta:summary.booked_today-summary.booked_yesterday,foot:'bookings, including multi-parcel bookings',go:'/business/packages?booked=today'},
+    {key:'delivered',icon:'task_alt',label:'Delivered today',tone:'ok',value:summary.delivered_today,foot:'parcels with recorded delivery proof',go:'/business/packages?status=delivered'},
+   ]}
+   stages={stages.map(stage=>({...stage,n:counts[stage.key],go:'/business/packages?status='+stage.key}))}
+   week={summary.week.map(day=>({day:day.day,n:day.bookings,today:day.day===summary.day,label:formatKolkata(day.day+'T12:00:00Z',{weekday:'narrow'}),full:formatKolkata(day.day+'T12:00:00Z',{weekday:'long',day:'numeric',month:'short'})}))} moneyAge={moneyAge}
+   routes={todayRoutes.map(route=>({id:route.id,icon:icons[route.mode],title:route.origin+' → '+route.destination,detail:formatKolkata(route.scheduled_departure_at),status:route.state,go:'/business/routes'}))} routesNote={dispatch.page.has_more?'Scheduled today among the latest 100 routes. Open all routes for the complete list.':undefined}
+   recent={recent.items.map(parcel=>({id:parcel.id,icon:stages.find(stage=>stage.key===parcel.status)?.icon??'inventory_2',title:<><span className="mono bk-dk">{parcel.docket}</span>{parcel.details&&<span className="bk-to">to {parcel.details.city}</span>}</>,detail:parcel.sender.name+' · '+parcel.sender.phone_display+' · '+formatKolkata(parcel.confirmed_at),status:parcel.status.replaceAll('_',' '),go:'/business/packages?parcel='+parcel.id}))} recentNote="Latest booked parcels across days. A multi-parcel booking appears once per tracking number; Booked today counts bookings." newBooking={bookingAllowed?'/business/new-booking':undefined}/>
+  {canFinance&&<details className="dashboard-supplement"><summary>Custom booking trends</summary><WeeklyBusiness controller={controller}/></details>}
+ </>;
 }

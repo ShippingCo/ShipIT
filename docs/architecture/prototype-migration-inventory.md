@@ -601,8 +601,6 @@ production Packages composition; it is disposed with the active component/scope.
 | apps/web/src/test/operations.test.tsx: executes only the three exact canonical route-event identities and rejects a generic or mismatched operation | preserve | routes |
 | apps/web/src/test/operations.test.tsx: shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state | preserve | proof |
 | apps/web/src/test/operations.test.tsx: round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary | preserve | routes |
-| apps/web/src/test/operations.test.tsx: announces dashboard loading then renders bounded accessible cards and an honest empty result | preserve | seam |
-| apps/web/src/test/operations.test.tsx: offers controlled dashboard retry after an API failure without local fallback | preserve | seam |
 | apps/web/src/test/operations.test.tsx: uses guarded package actions and directs new money recording to receipt evidence without OTP or delivery bypasses | preserve | parcels |
 | apps/web/src/test/operations.test.tsx: removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server | preserve | lots |
 | apps/web/src/test/operations.test.tsx: loads an authoritative active target lot and sends its server version in the move command | preserve | lots |
@@ -1388,3 +1386,22 @@ Reviewed the extraction of presentation and keyboard listeners from the fictiona
 | apps/web/src/test/workspace-controls.test.tsx: exposes only permitted creation destinations as direct links | preserve | seam |
 | apps/web/src/test/workspace-navigation.test.tsx: keeps reference tasks directly accessible in the same order in both compositions | preserve | presentation |
 | apps/web/src/test/workspace-navigation.test.tsx: does not add unauthorized links and keeps additional operations reachable | preserve | presentation |
+
+
+### Shared dashboard repair (#193)
+
+The prior bounded-card dashboard loading/retry tests are replaced by the scoped
+aggregate and unavailable-state tests below. Demo composition now shares the
+reference layout without adding a production Store consumer. Existing authentication
+tests retain scope checks with the restored Dashboard heading.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/operational-dashboard.test.tsx: uses complete scoped counts, distinct booking totals and Monday week dates without guessing payment balances | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: shows failed summaries as unavailable and retries without substituting mockup data | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: does not request operational or money data for a delivery agent | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: rejects unsafe counts, incomplete weeks and inconsistent business dates | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: applies dashboard stage links to the scoped package query | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: discards a payment capture completed after the franchise scope changes | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: counts provider acceptance from durable progress and never calls a queued message sent | preserve | seam |

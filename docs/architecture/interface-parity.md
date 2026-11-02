@@ -51,7 +51,7 @@ This delivery is not full workflow parity. Do not close #193 on its basis.
 | --- | --- | --- |
 | Navigation/layout | Shared with demo; extra authorized tools retained | Compare future changes in both compositions. |
 | Booking | Current step-by-step production flow retained | Demo still has its older fictional booking form. Bring preview coverage onto the retained flow without importing fictional state into production. |
-| Dashboard | Existing API operational summary, saved-report trend and daily sales | Restore reference attention queue, parcel journey, recent bookings and daily dispatch presentation with real authorized projections. First-page counts cannot become claimed totals. |
+| Dashboard | Shared reference layout; complete scoped parcel/booking totals, Monday chart, recent parcels, dispatch and verified payment report | Provider/assistant summaries identify their bounded pages; no invented reach/satisfaction numbers. |
 | Global search | Real scoped task/tracking/customer lookup | Reference's combined lot/route search needs compatible API search contracts. |
 | Packages | Current API search, detail, transitions and bulk commands | Reference chips/list/detail presentation; map booking-level payments and cancellation explicitly because a booking can contain multiple parcels. |
 | Lots/routes | Current API eligibility, versioned membership and dispatch flows | Reference composition and action placement; retain server eligibility and finalized manifest restrictions. |
@@ -60,10 +60,36 @@ This delivery is not full workflow parity. Do not close #193 on its basis.
 | E-way/settings | Current versioned API workflows | Reference presentation while retaining official-vs-estimated evidence, administrative permissions and draft protection. |
 | Temporary agents/cash | Existing custody, handovers, statements, review, cashbook and close | Keep accessible; no duplicate attendance/payroll or financial ledger. |
 
-The latest production trend defaults to a rolling seven-day range; the selected
-reference and earlier feedback use a Monday-start business week. Resolve that
-in the dashboard delivery using `operations/business-dates.ts`, retaining custom
-ranges. Do not label rolling seven days as “This week.”
+## Dashboard delivery
+
+`DashboardView` is the shared presentation for both adapters. Production uses
+`GET /api/v1/parcels/summary?organization_id=…&franchise_id=…` for complete
+counts, using the existing `parcels.list` permission, rate limit and scoped SQL.
+One statement counts bookings separately from parcels, all current parcel
+stages, and distinct parcels with persisted delivery proof today. It never
+collects payment or changes parcel state. No migration or permission expansion
+is needed.
+
+Business days use **Asia/Kolkata** and weeks start **Monday**. The chart contains
+Monday through Sunday, including zero-count days. Custom booking trends and the
+existing daily sales report remain available below the reference dashboard.
+
+“Money to collect” reuses the saved ageing report with outstanding balances on
+bookings containing delivered parcels. This is booking-level debt, counted once
+with existing corrections; it must not be multiplied by parcel count. The
+existing accounting age buckets (0–30, 31–60, 61+ days, unknown/future) replace the
+fictional mockup's 3/7-day delivery buckets. The UI explains the booking-date
+anchor and capture time. Only financial-report roles request it. A capture
+creates a report artifact, not a financial posting; an uncertain retry retains
+the same idempotency intent. Errors display unavailable amounts, never paid/zero.
+
+Recent bookings lists the latest six **parcels** across dates with tracking and
+actual status; no payment state is guessed from parcel state. Booked today opens
+today's packages; stage links apply their status to the package query. Today's
+dispatch uses the existing bounded route list and explicitly says when further
+routes may exist. Customer activity uses only authorized message/support APIs:
+provider acceptance is not recipient delivery. No reach or satisfaction metric
+is invented from message counts.
 
 ## Verification and local preview
 

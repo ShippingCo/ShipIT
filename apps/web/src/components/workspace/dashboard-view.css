@@ -1,0 +1,14 @@
+.dashboard-reference .dashboard-section { margin-top:22px; }
+.dashboard-reference .dashboard-week-labels { height:auto; padding:0 20px; }
+.dashboard-reference .dashboard-record-detail { display:block; }
+.dashboard-note { padding:12px 20px; font-size:13px; color:var(--md-on-surface-variant); }
+.dashboard-reference .card { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); }
+.dashboard-reference .btn { border-radius:var(--shape-full); }
+.dashboard-reference .pipe-step { color:inherit; }
+.dashboard-reference .bk,.dashboard-reference .li { color:inherit; }
+.dashboard-reference .kpi4 { margin-top:22px; }
+.operator-workspace:has(>.dashboard-reference) { display:block; max-width:none; padding:0; }
+.operator-workspace .dashboard-reference { max-width:1440px; }
+.dashboard-supplement { margin:24px; }
+.dashboard-supplement>summary { cursor:pointer; padding:12px 0; }
+.dashboard-reference .card-foot-link { display:block; text-align:center; }

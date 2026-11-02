@@ -18,9 +18,15 @@ import { fingerprint, keyDigest } from './idempotency.ts';
 import { envelope, persist } from './events.ts';
 import * as r from './repository.ts';
 import { parcelCursorCodec } from './cursor.ts';
+import {operationalDashboard} from './dashboard.ts';
+import {selection} from './validation.ts';
 export function createBookingService(database: DatabasePool, cursorKey:Buffer, clock?: () => Date,customerAccountsEnabled=false) {
   const codec=parcelCursorCodec(cursorKey);
   return {
+    async dashboard(session:string,input:unknown,correlation:string) {
+      const selected=selection(input);
+      return withShipmentReadScope(database,session,selected.organizationId,selected.franchiseId,'parcels.list',correlation,scope=>operationalDashboard(scope,clock?.()));
+    },
     async list(session:string,input:unknown,correlation:string) {
       const filter=parcelList(input);
       return withShipmentReadScope(database,session,filter.organizationId,filter.franchiseId,'parcels.list',correlation,async (scope,revision)=>{

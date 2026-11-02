@@ -30,14 +30,16 @@ export default function Packages({controller,roles}:{controller:ScopeController;
  const [params,setParams]=useSearchParams();
  const customer=params.get('customer_id')??'';
  const [destination,setDestination]=useState(''),[from,setFrom]=useState(params.get('booked')==='today'?businessDay():''),[to,setTo]=useState(params.get('booked')==='today'?businessDay():'');
- const [docket,setDocket]=useState(''),[status,setStatus]=useState(''),[query,setQuery]=useState({docket:'',status:'',destination:'',from,to});
+ const requestedStatus=params.get('status')??params.get('filter')??'';
+ const initialStatus=parcelStatuses.includes(requestedStatus as ParcelStatus)?requestedStatus:'';
+ const [docket,setDocket]=useState(''),[status,setStatus]=useState(initialStatus),[query,setQuery]=useState({docket:'',status:initialStatus,destination:'',from,to});
  const [filterError,setFilterError]=useState('');
  const filterPanel=useRef<HTMLDetailsElement>(null);
  const key=JSON.stringify({...query,customer});const page=usePagedResource(key,(cursor,signal)=>source.list({customer_id:customer||undefined,destination_key:query.destination||undefined,from:query.from?dayStart(query.from):undefined,to:query.to?dayStart(shiftDay(query.to,1)):undefined,docket:query.docket||undefined,status:query.status as ParcelStatus||undefined,limit:50,cursor},signal));
  const selected=params.get('parcel'),remember=useDetailReturn(selected);
  const setSelected=(id:string|null)=>{const next=new URLSearchParams(params);if(id)next.set('parcel',id);else next.delete('parcel');setParams(next);};
  const select=(id:string)=>{remember();setSelected(id);};
- const clearFilters=()=>{setDocket('');setStatus('');setDestination('');setFrom('');setTo('');setFilterError('');setQuery({docket:'',status:'',destination:'',from:'',to:''});const next=new URLSearchParams(params);next.delete('customer_id');next.delete('booked');setParams(next);};
+ const clearFilters=()=>{setDocket('');setStatus('');setDestination('');setFrom('');setTo('');setFilterError('');setQuery({docket:'',status:'',destination:'',from:'',to:''});const next=new URLSearchParams(params);next.delete('customer_id');next.delete('booked');next.delete('status');next.delete('filter');setParams(next);};
  const hasFilters=Object.values(query).some(Boolean)||Boolean(customer);
  const appliedFilters=[query.docket&&`Tracking ${query.docket}`,customer&&'Selected customer',query.status&&query.status.replaceAll('_',' '),query.destination,query.from&&`From ${query.from}`,query.to&&`Through ${query.to}`].filter(Boolean);
  return <div className="ops-page logistics-workspace">

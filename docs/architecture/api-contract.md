@@ -143,6 +143,7 @@ recipient-entry or proof policy. No generic status-setter is permitted.
 | `POST /api/v1/bookings` | W01 operator/dispatcher/franchise_admin in own F; `Idempotency-Key`; validated customer/commercial input plus one or more parcels | 201 Booking DTO with all child IDs/dockets/versions, all or none; original 201/body on authorized replay; changed intent 409 |
 | `POST /api/v1/parcels/{parcel_id}/dispatch` | W08/T03 roles and proven F/C scope; `Idempotency-Key`; `expected_version`, `manifest_id`, `evidence_ref` | 200 Parcel DTO at committed version; stale new command 409 VERSION_CONFLICT; wrong state 409 PARCEL_STATE_CONFLICT |
 | `GET /api/v1/parcels` | R07 projection with current membership; normalized filters, cursor and limit | 200 list DTO; read_only gets permitted basic fields; no directory/history through custody |
+| `GET /api/v1/parcels/summary` | Same R07 parcel-read ceiling; required organization/franchise; 30/min shared search budget | Complete scoped stage counts, distinct bookings today/yesterday, distinct proven deliveries today, seven Monday-start Asia/Kolkata days; no customer or money projection. See [interface parity](interface-parity.md#dashboard-delivery). |
 | `GET /api/v1/parcels/{parcel_id}` | R07 current visibility | 200 permitted Parcel DTO; foreign/unknown 404, including docket lookup |
 
 Dispatch fragment (expected current revision 3):

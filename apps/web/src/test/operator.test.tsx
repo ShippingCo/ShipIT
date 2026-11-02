@@ -34,7 +34,7 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();});
 async function workspaceReady(id=A,name='Counter A') {
   await waitFor(()=>{
-    expect(screen.getByRole('heading',{name:'Your business, at a glance.'})).toBeVisible();
+    expect(screen.getByRole('heading',{name:'Dashboard'})).toBeVisible();
     expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveValue(id);
     expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveDisplayValue('Synthetic shop \u00b7 '+name);
   });
@@ -94,7 +94,7 @@ describe('production operator flow',()=>{
     view.unmount();sessionStorage.clear();localStorage.clear();render(<App/>);
     await workspaceReady();
     expect(calls.filter(c=>c.path==='/api/v1/onboarding')).toHaveLength(1);
-    expect(screen.getByRole('heading',{name:'Your business, at a glance.'})).toHaveFocus();
+    expect(screen.getByRole('heading',{name:'Dashboard'})).toHaveFocus();
   });
   it('associates required validation with focusable inputs and completes a form submit',async()=>{
     render(<App/>);await screen.findByRole('button',{name:'Create workspace'});
@@ -111,7 +111,7 @@ describe('production operator flow',()=>{
     render(<App/>);await workspaceReady();
     const options=within(screen.getByLabelText('Franchise')).getAllByRole('option');expect(options).toHaveLength(2);expect(options.map(option=>(option as HTMLOptionElement).value)).toEqual([A,B]);
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});
-    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Checking workspace access');
     await act(async()=>slow.resolve(json({...ready,active_franchise_id:B})));
     await workspaceReady(B,'Counter B');
@@ -132,7 +132,7 @@ describe('production operator flow',()=>{
     responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({error:{code:'RESOURCE_NOT_FOUND'}},404)):undefined;
     fireEvent.click(screen.getByRole('link',{name:'Settings'}));
     await screen.findByRole('heading',{name:'Workspace access unavailable'});
-    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Private workspace data has been cleared');
     responseOverride=undefined;context={...empty,state:'scope_unavailable'};
     fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);
@@ -223,7 +223,7 @@ describe('production operator flow',()=>{
     fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(document.title).toBe('Sign in · ShippingCo');
-    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();
   });
   it('does not fall back to localStorage on an API outage',async()=>{
     localStorage.setItem('shippingco_v1',JSON.stringify({business:{name:'Forbidden cached shop'}}));
@@ -263,7 +263,7 @@ describe('production operator flow',()=>{
     render(<App/>);await workspaceReady();
     fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));
-    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     await act(async()=>logout.resolve(json({ok:true})));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(calls.filter(c=>c.path==='/auth/logout')).toHaveLength(1);
   });
@@ -290,7 +290,7 @@ describe('production operator flow',()=>{
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});await workspaceReady(B,'Counter B');
     const reload=deferred<Response>();responseOverride=path=>path.endsWith(A)?reload.promise:undefined;
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:A}});
-    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByRole('combobox',{name:'Franchise'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();expect(screen.queryByRole('combobox',{name:'Franchise'})).not.toBeInTheDocument();
     await act(async()=>reload.resolve(json({...ready,franchises:[franchise(A,'Fresh Counter A')]})));
     await workspaceReady(A,'Fresh Counter A');
   });
@@ -299,7 +299,7 @@ describe('production operator flow',()=>{
     vi.stubGlobal('BroadcastChannel',class {set onmessage(handler:(event:{data:unknown})=>void){receive=handler;}postMessage=publish;close=close;});
     context=ready;const view=render(<App/>);await workspaceReady();
     const slow=deferred<Response>();responseOverride=path=>path.startsWith('/api/v1/operator-context')?slow.promise:undefined;
-    act(()=>receive({data:'invalidate'}));expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
+    act(()=>receive({data:'invalidate'}));expect(screen.queryByRole('heading',{name:'Dashboard'})).not.toBeInTheDocument();
     await act(async()=>slow.resolve(json({error:{code:'UNAUTHENTICATED'}},401)));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(publish).not.toHaveBeenCalled();expect(calls.filter(c=>c.path.startsWith('/api/v1/operator-context'))).toHaveLength(2);
     view.unmount();expect(close).toHaveBeenCalledOnce();
