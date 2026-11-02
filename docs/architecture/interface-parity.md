@@ -45,7 +45,7 @@ new global search API. The UI states that limitation.
 
 ## Remaining parity work
 
-This delivery is not full workflow parity. Do not close #193 on its basis.
+These deliveries are not full workflow parity. Keep the tracking issue open until the remaining surfaces are verified.
 
 | Surface | Current production implementation | Work still required |
 | --- | --- | --- |
@@ -53,8 +53,8 @@ This delivery is not full workflow parity. Do not close #193 on its basis.
 | Booking | Current step-by-step production flow retained | Demo still has its older fictional booking form. Bring preview coverage onto the retained flow without importing fictional state into production. |
 | Dashboard | Shared reference layout; complete scoped parcel/booking totals, Monday chart, recent parcels, dispatch and verified payment report | Provider/assistant summaries identify their bounded pages; no invented reach/satisfaction numbers. |
 | Global search | Real scoped task/tracking/customer lookup | Reference's combined lot/route search needs compatible API search contracts. |
-| Packages | Current API search, detail, transitions and bulk commands | Reference chips/list/detail presentation; map booking-level payments and cancellation explicitly because a booking can contain multiple parcels. |
-| Lots/routes | Current API eligibility, versioned membership and dispatch flows | Reference composition and action placement; retain server eligibility and finalized manifest restrictions. |
+| Packages | Reference chips, customer/destination columns, server ordering and detail dialog; existing transitions/bulk commands retained | Free-text/global and financial filters remain limited to authorized API contracts; no first-page totals or per-parcel payment guesses. |
+| Lots/routes | Shared reference cards, create/plan dialogs and focused detail actions | Route planning state is distinct from movement events; delivery/progress and arbitrary broadcasts are not invented from membership counts. |
 | Automation | Real durable feed, conversations and provider states | Reference feed presentation, without fictional send success or staff OTP exposure. Live provider verification remains in #186. |
 | Receipts/reports | Issued receipts and saved scoped reports | Reference discovery/filters/layout while retaining exact money, correction history and report snapshots. |
 | E-way/settings | Current versioned API workflows | Reference presentation while retaining official-vs-estimated evidence, administrative permissions and draft protection. |
@@ -91,6 +91,30 @@ routes may exist. Customer activity uses only authorized message/support APIs:
 provider acceptance is not recipient delivery. No reach or satisfaction metric
 is invented from message counts.
 
+## Packages, lots and routes delivery
+
+Both adapters use the same lot and route card frames. Production creates lots and
+plans routes through explicit dialogs, retaining drafts when dismissed and preserving
+uncertain commands until the original request is retried. Initial keyboard focus
+lands in the first field; closing detail returns focus and the saved list position.
+Creation retries clear completed drafts just like first-attempt success. Package
+status chips and ordering use the existing scoped server query, preserving customer
+and date filters; chip counts are omitted because a list page is not a total.
+
+The package list shows actual sender and destination fields. The detail dialog keeps
+lot membership, timeline, guarded transitions, delivery assignment, whole-booking
+cancellation guidance and permission-filtered accounting together. Delivery-start
+uncertain outcomes now expose the existing same-intent retry instead of permitting
+another creation request. Pending/uncertain detail commands block dialog dismissal.
+
+The reference includes fictional shortcuts that cannot become production authority:
+per-parcel payment amounts cannot replace whole-booking receipt balances, “finalized”
+is not “departed/arrived”, and generic lot/route broadcast buttons cannot promise
+provider delivery. The existing receipt, route-event and automation/support flows
+remain the authoritative paths. Production preserves eligibility, expected versions,
+manifest locks, audit and current role ceilings; this delivery changes no API grants
+or SQL. These are intentional business-rule differences, not sample data to copy.
+
 ## Verification and local preview
 
 Use the pinned toolchain and normal `pnpm db:local quality` gate. Tests cover
@@ -114,8 +138,9 @@ Never use that fixture session route in a deployed application.
 
 Browser verification on this delivery used the real API fixture: the retained
 booking dialog and shared navigation at 1440×900, the drawer at 390×844, and an
-exact tracking lookup that returned the fixture's persisted parcel. No live
-provider delivery was exercised.
+exact tracking lookup that returned the fixture's persisted parcel. The package, lot and route delivery was also checked at desktop and mobile sizes,
+including persisted synthetic lot/route creation and parcel-detail focus return.
+No live provider delivery was exercised.
 
 Rollback is a code revert; this change adds no production schema migration,
 changes no permission grant and does not change stored financial records.

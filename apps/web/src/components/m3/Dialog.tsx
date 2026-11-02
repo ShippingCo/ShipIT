@@ -11,15 +11,16 @@ export interface DialogProps {
   actions?: React.ReactNode;
   size?: 'lg';
   hideClose?: boolean;
+  initialFocusId?: string;
 }
 
-export function Dialog({ open, onClose, title, children, actions, size, hideClose }: DialogProps) {
+export function Dialog({ open, onClose, title, children, actions, size, hideClose, initialFocusId }: DialogProps) {
   const returnFocus = useRef<HTMLElement | null>(null);
   return (
     <DialogPrimitive.Root open={!!open} onOpenChange={next => { if (!next) onClose?.(); }}>
       <DialogPrimitive.Portal><DialogPrimitive.Overlay className="scrim">
       <DialogPrimitive.Content className={cx('dialog', size === 'lg' && 'dialog-lg')} aria-describedby={undefined}
-        onOpenAutoFocus={() => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onOpenAutoFocus={event => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; const field=initialFocusId?document.getElementById(initialFocusId):null;if(field){event.preventDefault();field.focus();} }}
         onCloseAutoFocus={event => { event.preventDefault(); if (returnFocus.current?.isConnected) returnFocus.current.focus(); }}>
         {title != null ? (
           <div className={cx('dlg-title', 'left')}>

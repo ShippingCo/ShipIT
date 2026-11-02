@@ -1,3 +1,4 @@
+import {RouteCardView} from '../../components/workspace/DispatchCards';
 import React, { useState } from 'react';
 import { Msym } from '../../components/m3/Icon';
 import { TextField, SelectField } from '../../components/m3/Input';
@@ -82,19 +83,7 @@ function RouteCard({ r }) {
   const [histOpen, setHistOpen] = useState(false);
 
   return (
-    <Card>
-      <div className="rt">
-        <div className="rt-head">
-          <Msym name={MODE_ICON[r.mode] || 'route'} className="rt-mode" />
-          <div className="u-grow" style={{ minWidth: 0 }}>
-            <div className="rt-title">{r.origin} → {r.destination}</div>
-            <div className="rt-meta">
-              <span className="mono">{r.code}</span> · {r.carrierCode} · leaves {fmtDT(r.departAt)}
-            </div>
-          </div>
-          <span className={`pill ${st.cls}`}>{st.label}</span>
-        </div>
-
+    <><RouteCardView icon={MODE_ICON[r.mode] || 'route'} title={r.origin+' → '+r.destination} meta={<><span className="mono">{r.code}</span> · {r.carrierCode} · leaves {fmtDT(r.departAt)}</>} status={<span className={`pill ${st.cls}`}>{st.label}</span>}>
         {/* The reason to press any button on this card: how many people get told. */}
         <div className="rt-reach">
           <Msym name="group" />
@@ -144,7 +133,7 @@ function RouteCard({ r }) {
             )}
           </>
         )}
-      </div>
+      </RouteCardView>
 
       {/* depart / arrive note dialogs */}
       <NoteDialog
@@ -180,7 +169,7 @@ function RouteCard({ r }) {
 
       {/* broadcast */}
       <BroadcastDialog open={bcOpen} onClose={() => setBcOpen(false)} r={r} />
-    </Card>
+    </>
   );
 }
 

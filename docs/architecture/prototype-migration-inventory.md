@@ -1405,3 +1405,19 @@ tests retain scope checks with the restored Dashboard heading.
 | apps/web/src/test/operational-dashboard.test.tsx: uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent | preserve | seam |
 | apps/web/src/test/operational-dashboard.test.tsx: discards a payment capture completed after the franchise scope changes | preserve | seam |
 | apps/web/src/test/operational-dashboard.test.tsx: counts provider acceptance from durable progress and never calls a queued message sent | preserve | seam |
+
+
+### Operational reference dialogs and cards (#193)
+
+Shared lot/route frames preserve fictional actions while production retains scoped
+versions, manifests and payment rules. Four regressions verify applied filters,
+focus restoration, preserved drafts and immutable uncertain retries.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/logistics-parity.test.tsx: filters and sorts packages through scoped server queries while retaining the applied customer and date range | preserve | seam |
+| apps/web/src/test/logistics-parity.test.tsx: opens package detail in a dialog and restores keyboard focus to its list action | preserve | seam |
+| apps/web/src/test/logistics-parity.test.tsx: keeps a lot draft on dismissal and preserves its uncertain creation intent until the original request succeeds | preserve | seam |
+| apps/web/src/test/logistics-parity.test.tsx: plans a route only after explicit submission and retains its retry identity when the response is lost | preserve | seam |
+
+| apps/web/src/test/logistics-parity.test.tsx: retains a delivery assignment after a lost response and retries the same handover evidence | preserve | proof | Retain server-authorized assignment, handover evidence and the original command identity through an uncertain response; do not claim delivery or payment. |

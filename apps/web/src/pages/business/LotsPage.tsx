@@ -1,9 +1,9 @@
+import {LotCardView} from '../../components/workspace/DispatchCards';
 import React, { useEffect, useState } from 'react';
 import { Msym } from '../../components/m3/Icon';
 import { TextField, TextArea, SelectField } from '../../components/m3/Input';
 import { Button, IconButton, Checkbox } from '../../components/m3/Button';
 import { Card, EmptyState, StatusPill } from '../../components/m3/Surface';
-import { IconTile } from '../../components/m3/Controls';
 import { Dialog, ConfirmDialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
 import { useDB } from '../../context/AppContext';
@@ -34,27 +34,10 @@ export default function LotsPage() {
           const delivered = members.length - live;
           const pct = members.length ? Math.round((delivered / members.length) * 100) : 0;
           return (
-            <Card key={l.id} className="lot">
-              <div className="lot-head">
-                <IconTile name="layers" size="lg" />
-                <div className="u-grow" style={{ minWidth: 0 }}>
-                  <div className="lot-name">{l.name}</div>
-                  <div className="lot-code mono">{l.code}</div>
-                </div>
-                <IconButton icon="delete" label="Delete lot" size="sm" onClick={() => setDelLot(l)} />
-              </div>
-
-              {/* A lot exists to ride a route. Say which one, or say it is stranded. */}
-              <div className={`lot-route${route ? '' : ' is-warn'}`}>
-                <Msym name={route ? 'alt_route' : 'error_outline'} />
-                {route ? (
-                  <span><b className="mono">{route.code}</b> → {route.destination} · {fmtDT(route.departAt)}</span>
-                ) : (
-                  <span>{members.length ? 'Not on a route yet' : 'Empty lot'}</span>
-                )}
-              </div>
-
-              <div className="lot-body">
+            <LotCardView key={l.id} name={l.name} code={l.code} adornment={<IconButton icon="delete" label="Delete lot" size="sm" onClick={() => setDelLot(l)} />} warning={!route} route={route?<span><b className="mono">{route.code}</b> → {route.destination} · {fmtDT(route.departAt)}</span>:<span>{members.length?'Not on a route yet':'Empty lot'}</span>} actions={<>
+                <Button size="sm" icon="playlist_add" onClick={() => setAddForLot(l)}>Add parcels</Button>
+                <Button size="sm" variant="outlined" icon="forward_to_inbox" disabled={!live} onClick={() => { setMsgForLot(l); setMsgText(''); }}>Message{live > 0 ? ` ${live}` : ''}</Button>
+              </>}>
                 <div className="lot-figs">
                   <div>
                     <span className="lot-fig">{members.length}</span>
@@ -82,19 +65,7 @@ export default function LotsPage() {
                     <span>{dests.slice(0, 3).join(' · ')}{dests.length > 3 ? ` +${dests.length - 3}` : ''}</span>
                   </div>
                 )}
-              </div>
-
-              <div className="lot-actions">
-                <Button size="sm" icon="playlist_add" onClick={() => setAddForLot(l)}>Add parcels</Button>
-                <Button
-                  size="sm" variant="outlined" icon="forward_to_inbox"
-                  disabled={!live}
-                  onClick={() => { setMsgForLot(l); setMsgText(''); }}
-                >
-                  Message{live > 0 ? ` ${live}` : ''}
-                </Button>
-              </div>
-            </Card>
+            </LotCardView>
           );
         })}
       </div>
