@@ -20,6 +20,10 @@ try {
  const s=await attachmentSetup(t);await s.db.prepareRoutes();await s.db.preparePayments();await s.db.prepareReceipts();await s.db.prepareEway();
  // Dashboard uses the same reporting and customer-activity projections as production.
  await s.db.prepareMoneyReceipts();await s.db.prepareReports();await s.db.prepareNotificationAutomation();await s.db.prepareSupport();
+ // The canonical workflow preview includes preferences, finance and custody tools.
+ // These grants affect only this disposable fixture role; application authorization still applies.
+ await s.db.prepareSettings();await s.db.prepareCustomerAccounts();await s.db.prepareCustody();
+ await s.db.prepareShipmentCosts();await s.db.prepareOwnerReports();await s.db.preparePickups();
  const actor=await s.grant('operator',[A,B]);
  const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'franchise_admin',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:invite.acceptance_token});
  const dispatchInvite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'dispatcher',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:dispatchInvite.acceptance_token});

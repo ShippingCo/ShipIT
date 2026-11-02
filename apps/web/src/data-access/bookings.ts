@@ -32,7 +32,7 @@ const parcelReference = object({ id: uuid, booking_id: uuid, docket: text, confi
 export type ReceiptReference = ReturnType<typeof parcelReference>;
 /** #23 discovery only: no lifecycle, bulk, lot or route operations. */
 export function receiptDiscovery(api: ScopedApi) {
-  return (docket = '', cursor?: string, signal?: AbortSignal) => api.read(api.path('/api/v1/parcels') + '&' + new URLSearchParams({
-    limit: '20', ...(docket ? { docket } : {}), ...(cursor ? { cursor } : {}),
+  return (docket = '', cursor?: string, signal?: AbortSignal, dates: {from?:string;to?:string} = {}) => api.read(api.path('/api/v1/parcels') + '&' + new URLSearchParams({
+    limit: '20', ...(dates.from?{from:dates.from}:{}), ...(dates.to?{to:dates.to}:{}), ...(docket ? { docket } : {}), ...(cursor ? { cursor } : {}),
   }).toString().replaceAll('+', '%20'), list(parcelReference), signal);
 }

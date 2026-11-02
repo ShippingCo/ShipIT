@@ -43,21 +43,21 @@ failures, old queries are cancelled, and stale-scope responses are rejected.
 Lot/route record lookup is still reached through those work areas, not a
 new global search API. The UI states that limitation.
 
-## Remaining parity work
+## Parity status and remaining decisions
 
-These deliveries are not full workflow parity. Keep the tracking issue open until the remaining surfaces are verified.
+The production console now uses the reference composition across the core staff surfaces. Keep the tracking issue open for the remaining intake decision and acceptance review; the historical mockup has intentional authority/privacy differences below.
 
 | Surface | Current production implementation | Work still required |
 | --- | --- | --- |
 | Navigation/layout | Shared with demo; extra authorized tools retained | Compare future changes in both compositions. |
-| Booking | Current step-by-step production flow retained | Demo still has its older fictional booking form. Bring preview coverage onto the retained flow without importing fictional state into production. |
+| Booking | Current step-by-step production flow retained | Use `pnpm preview:workflow` for the current operator app and API-backed four-step flow. The standalone demo is explicitly the historical prototype, not a current workflow preview. |
 | Dashboard | Shared reference layout; complete scoped parcel/booking totals, Monday chart, recent parcels, dispatch and verified payment report | Provider/assistant summaries identify their bounded pages; no invented reach/satisfaction numbers. |
 | Global search | Real scoped task/tracking/customer lookup | Reference's combined lot/route search needs compatible API search contracts. |
 | Packages | Reference chips, customer/destination columns, server ordering and detail dialog; existing transitions/bulk commands retained | Free-text/global and financial filters remain limited to authorized API contracts; no first-page totals or per-parcel payment guesses. |
 | Lots/routes | Shared reference cards, create/plan dialogs and focused detail actions | Route planning state is distinct from movement events; delivery/progress and arbitrary broadcasts are not invented from membership counts. |
-| Automation | Real durable feed, conversations and provider states | Reference feed presentation, without fictional send success or staff OTP exposure. Live provider verification remains in #186. |
-| Receipts/reports | Issued receipts and saved scoped reports | Reference discovery/filters/layout while retaining exact money, correction history and report snapshots. |
-| E-way/settings | Current versioned API workflows | Reference presentation while retaining official-vs-estimated evidence, administrative permissions and draft protection. |
+| Automation | Real durable feed, conversations and provider states | Reference message rows and notification chips retain actual provider status; automation decisions keep their separate table. Live provider verification remains in #186. |
+| Receipts/reports | Issued receipts and saved scoped reports | Shared report cards and IST receipt-date filters retain exact money, correction history and report snapshots. The receipt list does not invent totals or payment state from parcel references. |
+| E-way/settings | Current versioned API workflows | Reference surface styling retains official-vs-estimated evidence, administrative permissions and draft protection. Field content follows the current server contracts. |
 | Temporary agents/cash | Existing custody, handovers, statements, review, cashbook and close | Keep accessible; no duplicate attendance/payroll or financial ledger. |
 
 ## Dashboard delivery
@@ -114,6 +114,44 @@ provider delivery. The existing receipt, route-event and automation/support flow
 remain the authoritative paths. Production preserves eligibility, expected versions,
 manifest locks, audit and current role ceilings; this delivery changes no API grants
 or SQL. These are intentional business-rule differences, not sample data to copy.
+
+## Physical intake decision
+
+The reference mockup has a one-click status change. Current T02 requires physical
+receipt/scan evidence and an intake office/hub reference; the production UI currently
+accepts their UUIDs. No intake evidence/location lookup was found in this UI.
+Do not generate arbitrary references or infer physical receipt from a booking to
+imitate that shortcut. The user has been asked whether to retain the existing
+reference-based workflow or add a manual physical-intake workflow. That decision
+is separate from this presentation repair; no new intake data model is assumed.
+
+## Service screens and canonical workflow preview
+
+Report discovery now uses the reference report cards, with no invented headline
+amounts before a report is captured. Demo and production share the card component.
+Authorized reports, saved snapshots, date presets, exports and uncertain cost
+commands remain available. Message history uses reference feed rows and server
+notification filters; automation decisions remain separately inspectable. Queued,
+accepted, delivered and read are distinct states. Safe evidence replaces fictional
+message bodies and staff OTP exposure; retained history cannot be cleared.
+
+Receipt discovery filters the existing authorized parcel API by booking confirmation
+date, using IST inclusive days and Monday presets. Subsequent pages retain the
+applied range even if the next filter draft is edited. Dates do not change receipt
+contents; issued amounts remain read from the receipt service. The reference's
+per-row payment/total claims are not guessed from parcel status or a partial page.
+Settings and external e-way records keep their existing version, correction,
+permission and evidence flows inside the reference surface treatment.
+
+`pnpm preview:workflow` starts the same production UI with the guarded disposable
+API fixture on ports 5174/3033. This is the canonical local workflow preview and
+includes the retained booking wizard. It ignores root environment files, fixes the
+UI to production composition and a loopback API proxy, and forwards no live
+credentials. The fixture prepares the existing settings, custody, customer-account and financial read paths as well as booking. These are disposable runtime-role grants, not production permission changes. The fixture has no live messaging provider. Ctrl+C stops both services;
+the database wrapper also limits a preview to 30 minutes and cleans up its container.
+The historical `VITE_DATA_MODE=demo` composition remains available for the original
+fictional mockup/customer chat. It is deliberately not a promise of current server
+behavior. Production failures never fall back to it.
 
 ## Verification and local preview
 
