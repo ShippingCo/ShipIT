@@ -194,12 +194,12 @@
       "apps/web/src/pages/business/Dashboard.tsx": "d0a4ebaf488a3964a99051a83186e11d625d45e574aa7a3e24c75c1bc8b97f88",
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "71441335d4ae999e3af7701ea99823a66f43be3102a70e52a87227c8a134450b",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
-      "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
+      "apps/web/src/pages/business/LotsPage.tsx": "f5e012d3b31907167544479c1c5d35013ab626bfacd8db78802b9159a95c9f6e",
       "apps/web/src/pages/business/MiscPages.tsx": "d7da7d40536c529b73d768d679b5e09cd07a2385114ee2ee67842eb2d59e9a77",
       "apps/web/src/pages/business/NewBookingPage.tsx": "8d725ca24750053333fa49dfc23ad3d8f32d6fca3e29d08f72c292b1ee9b0915",
       "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
-      "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
+      "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
@@ -503,6 +503,10 @@
       ],
       "apps/web/src/pages/business/LotsPage.tsx": [
         {
+          "target": "apps/web/src/components/workspace/DispatchCards.tsx",
+          "syntax": "import {LotCardView} from '../../components/workspace/DispatchCards';"
+        },
+        {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../../components/m3/Icon';"
         },
@@ -517,10 +521,6 @@
         {
           "target": "apps/web/src/components/m3/Surface.tsx",
           "syntax": "import { Card, EmptyState, StatusPill } from '../../components/m3/Surface';"
-        },
-        {
-          "target": "apps/web/src/components/m3/Controls.tsx",
-          "syntax": "import { IconTile } from '../../components/m3/Controls';"
         },
         {
           "target": "apps/web/src/components/m3/Dialog.tsx",
@@ -752,6 +752,10 @@
         }
       ],
       "apps/web/src/pages/business/RoutesPage.tsx": [
+        {
+          "target": "apps/web/src/components/workspace/DispatchCards.tsx",
+          "syntax": "import {RouteCardView} from '../../components/workspace/DispatchCards';"
+        },
         {
           "target": "apps/web/src/components/m3/Icon.tsx",
           "syntax": "import { Msym } from '../../components/m3/Icon';"
@@ -2147,6 +2151,31 @@
       {
         "file": "apps/web/src/test/logistics-design.test.tsx",
         "name": "recovers an empty filtered route list using the server all-states query",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "filters and sorts packages through scoped server queries while retaining the applied customer and date range",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "opens package detail in a dialog and restores keyboard focus to its list action",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "retains a delivery assignment after a lost response and retries the same handover evidence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "keeps a lot draft on dismissal and preserves its uncertain creation intent until the original request succeeds",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "plans a route only after explicit submission and retains its retry identity when the response is lost",
         "cases": null
       },
       {
@@ -6151,6 +6180,46 @@
       "group": "routes",
       "disposition": "preserve",
       "reason": "Preserve explicit empty-filter recovery and the scoped server query without a fabricated local result."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "filters and sorts packages through scoped server queries while retaining the applied customer and date range",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "opens package detail in a dialog and restores keyboard focus to its list action",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "retains a delivery assignment after a lost response and retries the same handover evidence",
+      "cases": null,
+      "group": "proof",
+      "disposition": "preserve",
+      "reason": "Retain server-authorized assignment, handover evidence and the original command identity through an uncertain response; do not claim delivery or payment."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "keeps a lot draft on dismissal and preserves its uncertain creation intent until the original request succeeds",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "plans a route only after explicit submission and retains its retry identity when the response is lost",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
       "file": "apps/web/src/test/lot-candidates.test.tsx",
