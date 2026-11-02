@@ -14,6 +14,7 @@ import * as validate from './validation.ts';
 import * as repository from './repository.ts';
 import { assertRules } from './calculation.ts';
 import { digest, fingerprint, keyDigest } from './idempotency.ts';
+import {listServices,createService} from './service-options.ts';
 async function active(scope:TenantAccess) {
   const c=assertTenantAccess(scope);
   try {await lockActiveFranchiseForOperationalWrite(scope,{organizationId:c.organizationId!,franchiseId:c.permittedFranchiseIds[0]!});}
@@ -103,6 +104,8 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
     return result;
   }
   return {
+    services(session:string,organization:unknown,franchise:unknown,correlationId:string,cursor:unknown=null){return scoped(session,organization,franchise,'pricing.read',correlationId,false,scope=>listServices(scope,cursor===null?null:validate.uuid(cursor)));},
+    createService(session:string,organization:unknown,franchise:unknown,key:unknown,input:unknown,correlationId:string){return scoped(session,organization,franchise,'pricing.publish',correlationId,false,async scope=>{await active(scope);return createService(scope,validate.idempotencyKey(key),input);});},
     effective(session:string,organization:unknown,franchise:unknown,correlationId:string) {
       return scoped(session,organization,franchise,'pricing.read',correlationId,false,scope=>current(scope,clock()));
     },

@@ -8,5 +8,5 @@ it('filters candidates by server destination, ungrouped state and IST booking da
  await screen.findByRole('button',{name:'Select SYN-DEST'});
  fireEvent.change(screen.getByLabelText('Lot selection booked from'),{target:{value:'2026-10-26'}});fireEvent.change(screen.getByLabelText('Lot selection booked through'),{target:{value:'2026-10-26'}});
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith(expect.objectContaining({destination_key:'MUMBAI',status:'booked',ungrouped:true,from:'2026-10-25T18:30:00.000Z',to:'2026-10-26T18:30:00.000Z',cursor:null}),expect.any(AbortSignal)));
- expect(select).not.toHaveBeenCalled();fireEvent.click(await screen.findByRole('button',{name:'Select SYN-DEST'}));expect(select).toHaveBeenCalledWith('parcel-reference');
+ expect(select).not.toHaveBeenCalled();fireEvent.click(await screen.findByRole('button',{name:'Select SYN-DEST'}));expect(select).toHaveBeenCalledWith('parcel-reference','SYN-DEST');
 });

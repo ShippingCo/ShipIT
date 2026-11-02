@@ -1,0 +1,426 @@
+{
+  "guides": 40,
+  "screenshots": 70,
+  "errors": [],
+  "features": [
+    {
+      "file": "start-here.html",
+      "title": "Start here",
+      "summary": "Learn the order of work, from setting up your shop to checking the day\u2019s money.",
+      "sources": [
+        "apps/web/src/components/workspace/WorkspaceNavigation.tsx"
+      ]
+    },
+    {
+      "file": "sign-in-and-profile.html",
+      "title": "Sign in, join a shop and sign out",
+      "summary": "Open your shop securely and leave it safely.",
+      "sources": [
+        "apps/web/src/operator/SignIn.tsx",
+        "apps/web/src/operator/Onboarding.tsx",
+        "apps/web/src/operator/OperatorApp.tsx"
+      ]
+    },
+    {
+      "file": "dashboard.html",
+      "title": "Overview and daily figures",
+      "summary": "See bookings, billed amounts, payments and work waiting for your team.",
+      "sources": [
+        "apps/web/src/operations/Dashboard.tsx",
+        "apps/web/src/operations/WeeklyBusiness.tsx",
+        "apps/web/src/operations/DailyDashboard.tsx"
+      ]
+    },
+    {
+      "file": "find-customers.html",
+      "title": "Find a customer",
+      "summary": "Reuse the right customer details and avoid selecting the wrong person.",
+      "sources": [
+        "apps/web/src/operations/Customers.tsx"
+      ]
+    },
+    {
+      "file": "reports.html",
+      "title": "Choose and read a report",
+      "summary": "Answer a business question using saved figures and the records behind them.",
+      "sources": [
+        "apps/web/src/operations/Reports.tsx"
+      ]
+    },
+    {
+      "file": "delivery-performance.html",
+      "title": "Delivery performance report",
+      "summary": "See which parcels were delivered and compare delivery against the expected time.",
+      "sources": [
+        "apps/web/src/operations/Performance.tsx"
+      ]
+    },
+    {
+      "file": "new-booking.html",
+      "title": "Create a booking",
+      "summary": "Save the customer, parcels, price and billing details in one booking.",
+      "sources": [
+        "apps/web/src/booking/NewBooking.tsx",
+        "apps/web/src/booking/form.ts",
+        "apps/web/src/booking/AccountSelection.tsx",
+        "apps/web/src/booking/CustomerLookup.tsx",
+        "apps/web/src/booking/RateChoices.tsx"
+      ]
+    },
+    {
+      "file": "rate-cards.html",
+      "title": "Set up a rate card",
+      "summary": "Tell the app which destinations and services you sell, and what each weight band costs.",
+      "sources": [
+        "apps/web/src/operations/BookingPolicySetup.tsx"
+      ]
+    },
+    {
+      "file": "tax-policies.html",
+      "title": "Set up a tax policy",
+      "summary": "Give the app the reviewed tax rules it should use when pricing a booking.",
+      "sources": [
+        "apps/web/src/operations/BookingPolicySetup.tsx",
+        "apps/web/src/operations/DomesticCourierTemplate.tsx",
+        "apps/web/src/booking/form.ts"
+      ]
+    },
+    {
+      "file": "business-settings.html",
+      "title": "Change business settings",
+      "summary": "Save business preferences in clear sections. Some preferences are suggestions only.",
+      "sources": [
+        "apps/web/src/operations/Settings.tsx",
+        "apps/web/src/operations/SettingEditor.tsx",
+        "apps/web/src/operations/SettingsPreferences.tsx"
+      ]
+    },
+    {
+      "file": "booking-receipts-files.html",
+      "title": "Booking receipts and files",
+      "summary": "View or print the saved booking receipt and attach supporting files.",
+      "sources": [
+        "apps/web/src/booking/ReceiptPanel.tsx",
+        "apps/web/src/components/m3/AttachmentUploader.tsx"
+      ]
+    },
+    {
+      "file": "sales-and-gst.html",
+      "title": "Sales and GST",
+      "summary": "See how much you billed, the saved tax amounts and later financial changes.",
+      "sources": [
+        "apps/web/src/operations/Sales.tsx",
+        "apps/web/src/operations/Reports.tsx",
+        "apps/web/src/operations/DatePresets.tsx",
+        "apps/web/src/data-access/sales.ts"
+      ]
+    },
+    {
+      "file": "pickups.html",
+      "title": "Pickup requests",
+      "summary": "Agree a time to collect a customer\u2019s parcel.",
+      "sources": [
+        "apps/web/src/operations/Pickups.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-pickups.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\pickups-desktop.png",
+        "sha256": "51008ce179193ed240b7821b1e2fd5451b5c4552463e915bab06d254a15907b3"
+      }
+    },
+    {
+      "file": "packages.html",
+      "title": "Packages",
+      "summary": "Find parcels and record what has really happened to them.",
+      "sources": [
+        "apps/web/src/operations/Packages.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-packages.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\packages-desktop.png",
+        "sha256": "5199e33be6985077436f8dd229a5cb3fada2611236e797c813a3f7081f9646eb"
+      }
+    },
+    {
+      "file": "lots.html",
+      "title": "Lots \u2014 parcel groups",
+      "summary": "Keep parcels for the same destination together.",
+      "sources": [
+        "apps/web/src/operations/Lots.tsx",
+        "apps/web/src/operations/LotCandidates.tsx",
+        "apps/api/src/modules/lots/validation.ts"
+      ],
+      "screenshot": {
+        "file": "images/ops-lots.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\lots-desktop.png",
+        "sha256": "90b7bb1d6252772db5594d5dda94f3be4e7a440ece893347166bee7fcc8b339e"
+      }
+    },
+    {
+      "file": "routes.html",
+      "title": "Routes and dispatch lists",
+      "summary": "Plan a journey and keep its parcel list together.",
+      "sources": [
+        "apps/web/src/operations/Routes.tsx",
+        "apps/api/src/modules/routes/validation.ts",
+        "apps/api/src/modules/routes/event-validation.ts"
+      ],
+      "screenshot": {
+        "file": "images/ops-routes.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\operations-details\\route-detail-desktop.png",
+        "sha256": "62ea7622bb2bdfc825643806e424dc0c59d1e131acbd9f3c2a1e98829404593e"
+      }
+    },
+    {
+      "file": "custody.html",
+      "title": "Parcel handovers and custody",
+      "summary": "Record who physically holds each parcel.",
+      "sources": [
+        "apps/web/src/operations/Custody.tsx",
+        "apps/web/src/operations/CustodyActions.tsx",
+        "apps/web/src/operations/CustodyTransfers.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-custody.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\custody-desktop.png",
+        "sha256": "da441aa6963f6f6cc6d9e590e1357f460544dbe7b4e0370d3169de91bce5337a"
+      }
+    },
+    {
+      "file": "deliveries.html",
+      "title": "Delivery work",
+      "summary": "Complete delivery using the recipient\u2019s proof.",
+      "sources": [
+        "apps/web/src/operations/Deliveries.tsx",
+        "apps/web/src/operations/Packages.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-deliveries.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\deliveries-desktop.png",
+        "sha256": "c40dcf202a3485e093159a32a653d2de2ce5bd762f6a32c5b94b1db605ce57f9"
+      }
+    },
+    {
+      "file": "eway-records.html",
+      "title": "External e-way records",
+      "summary": "Keep the details of an existing external document with a booking.",
+      "sources": [
+        "apps/web/src/operations/Eway.tsx",
+        "apps/api/src/modules/eway/validation.ts"
+      ],
+      "screenshot": {
+        "file": "images/ops-eway-records.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\eway-desktop.png",
+        "sha256": "4b285ae1389c28e34227ad6f9c445bdc1f2389e69ff3d234fc0864f82e8fc8b4"
+      }
+    },
+    {
+      "file": "messaging.html",
+      "title": "Automation and messages",
+      "summary": "See whether shipment messages were queued, sent or delivered.",
+      "sources": [
+        "apps/web/src/operations/Messaging.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-messaging.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\automation-desktop.png",
+        "sha256": "ee3e85efc4289c8ed0b351a6c40a1cd50af928081c77a5cc8e401f1ddeefd4fe"
+      }
+    },
+    {
+      "file": "messaging-effectiveness.html",
+      "title": "Messaging and assistant results",
+      "summary": "Review a saved weekly count of messages, assistant outcomes and support work.",
+      "sources": [
+        "apps/web/src/operations/Effectiveness.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-messaging-effectiveness.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\report-view-0.png",
+        "sha256": "78cc474c9c728f29915fff67db7cb57ff054d0b9f96fde14d8b106463e4ef85c"
+      }
+    },
+    {
+      "file": "support.html",
+      "title": "Human support",
+      "summary": "Help customers and keep staff follow-up in one place.",
+      "sources": [
+        "apps/web/src/operations/Support.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-support.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\support-desktop.png",
+        "sha256": "7ed9578b60dd2fd68bce77df03a1f2bae216acb39ebf29500261ae8cd9a90b41"
+      }
+    },
+    {
+      "file": "agent-access.html",
+      "title": "Temporary agent access",
+      "summary": "Allow a verified person to work as a delivery agent in this branch.",
+      "sources": [
+        "apps/web/src/operations/AgentAccess.tsx",
+        "apps/web/src/operations/Custody.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-agent-access.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\operations-details\\agent-revoke-desktop.png",
+        "sha256": "c62882f3aa05b0d1155d4cee3f53d547b5b2cbb1a60cdafb638aeebd1515315e"
+      }
+    },
+    {
+      "file": "owner-summaries.html",
+      "title": "Owner summaries and alerts",
+      "summary": "Get a regular business report and see overdue customer payments.",
+      "sources": [
+        "apps/web/src/operations/OwnerSummaries.tsx",
+        "apps/web/src/operations/Reports.tsx"
+      ],
+      "screenshot": {
+        "file": "images/ops-owner-summaries.png",
+        "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\owner-reports-settled.png",
+        "sha256": "c75d418242e3bcb64c86535ce3a95d6abf9743386d43973c27e1ba0cb1bbc6f2"
+      }
+    },
+    {
+      "file": "customer-accounts.html",
+      "title": "Customer accounts",
+      "summary": "Keep monthly billing terms for a regular customer.",
+      "sources": [
+        "apps/web/src/operations/CustomerAccounts.tsx",
+        "apps/web/src/operations/AccountCreditEvidence.tsx"
+      ]
+    },
+    {
+      "file": "account-statements.html",
+      "title": "Customer statements",
+      "summary": "See the bookings and payments included in a customer billing period.",
+      "sources": [
+        "apps/web/src/operations/AccountStatements.tsx"
+      ]
+    },
+    {
+      "file": "money-receipts.html",
+      "title": "Money received",
+      "summary": "Record money that a customer has actually paid.",
+      "sources": [
+        "apps/web/src/operations/MoneyReceipts.tsx"
+      ]
+    },
+    {
+      "file": "cashbook.html",
+      "title": "Expenses and fund requests",
+      "summary": "Record what was paid and where money moved.",
+      "sources": [
+        "apps/web/src/operations/Cashbook.tsx",
+        "apps/web/src/operations/CashbookFilters.tsx",
+        "apps/web/src/operations/CashbookSources.tsx",
+        "apps/web/src/operations/ExpenseProofs.tsx"
+      ]
+    },
+    {
+      "file": "cash-locations.html",
+      "title": "Cash locations",
+      "summary": "Name the places or people that hold cash.",
+      "sources": [
+        "apps/web/src/operations/CashLocations.tsx"
+      ]
+    },
+    {
+      "file": "cash-handovers.html",
+      "title": "Handing over cash",
+      "summary": "Record cash passed from one person or location to another.",
+      "sources": [
+        "apps/web/src/operations/CashHandovers.tsx",
+        "apps/web/src/operations/AgentCashHandovers.tsx"
+      ]
+    },
+    {
+      "file": "cash-closing.html",
+      "title": "Closing a cash drawer",
+      "summary": "Compare counted cash with the cash records.",
+      "sources": [
+        "apps/web/src/operations/CashClosing.tsx"
+      ]
+    },
+    {
+      "file": "agent-money.html",
+      "title": "Agent money and seller COD",
+      "summary": "Keep agent fees, agent advances and seller collections separate.",
+      "sources": [
+        "apps/web/src/operations/AgentMoney.tsx",
+        "apps/web/src/operations/AgentMoneyRequests.tsx"
+      ]
+    },
+    {
+      "file": "agent-settlements.html",
+      "title": "Agent daily statements",
+      "summary": "Check an agent\u2019s daily cash and saved money records.",
+      "sources": [
+        "apps/web/src/operations/AgentSettlements.tsx",
+        "apps/web/src/operations/AgentStatementEvidence.tsx"
+      ]
+    },
+    {
+      "file": "advance-refunds.html",
+      "title": "Returning unused customer advance",
+      "summary": "Record a request to return customer money that was not used for bills.",
+      "sources": [
+        "apps/web/src/operations/AdvanceRefunds.tsx"
+      ]
+    },
+    {
+      "file": "shipment-costs.html",
+      "title": "Shipment costs",
+      "summary": "Record the purchase costs that belong to a shipment.",
+      "sources": [
+        "apps/web/src/operations/ShipmentCosts.tsx",
+        "apps/web/src/operations/ShipmentCostEditor.tsx"
+      ]
+    },
+    {
+      "file": "contribution.html",
+      "title": "Revenue less shipment costs",
+      "summary": "Compare selling revenue with the shipment costs recorded against it.",
+      "sources": [
+        "apps/web/src/operations/Contribution.tsx"
+      ]
+    },
+    {
+      "file": "reconciliation.html",
+      "title": "Checking bank records",
+      "summary": "Compare imported bank entries with money already recorded in the app.",
+      "sources": [
+        "apps/web/src/operations/reconciliation/Imports.tsx",
+        "apps/web/src/operations/reconciliation/Matching.tsx",
+        "apps/web/src/operations/reconciliation/Review.tsx"
+      ]
+    },
+    {
+      "file": "financial-approvals.html",
+      "title": "Approvals and refunds",
+      "summary": "Review changes to booking charges and refund records.",
+      "sources": [
+        "apps/web/src/operations/Financials.tsx",
+        "apps/web/src/operations/FinancialAudit.tsx"
+      ]
+    },
+    {
+      "file": "accountant-register.html",
+      "title": "Accountant register",
+      "summary": "Give your accountant a saved set of financial records.",
+      "sources": [
+        "apps/web/src/operations/AccountantRegister.tsx"
+      ]
+    },
+    {
+      "file": "ageing.html",
+      "title": "Outstanding balances by age",
+      "summary": "See which unpaid balances have been waiting longest.",
+      "sources": [
+        "apps/web/src/operations/Ageing.tsx"
+      ]
+    }
+  ],
+  "revised": "2026-11-02",
+  "pdf": "../../output/pdf/ShippingCo-client-guide.pdf"
+}

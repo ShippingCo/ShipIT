@@ -1,3 +1,4 @@
+import {formatKolkata} from './format';
 import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import React,{useMemo,useRef,useState} from 'react';
@@ -17,20 +18,20 @@ export default function Pickups({controller,roles}:{controller:ScopeController;r
 }
 export function Queue({source,canDecide}:{source:PickupSource;canDecide:boolean}) {
  const page=usePagedResource('pickups',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <section className="service-workspace" aria-labelledby="workspace-title"><PageHeader title="Pickup requests" eyebrow="Customer service" description="Review capacity before accepting. A pickup request does not book a shipment or guarantee courier arrival." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh pickups</button>}/>
+ return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Pickup requests" eyebrow="Customer service" description="Review requests and agree a collection time." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh pickups</button>}/>
   {page.phase==='loading'?<Loading/>:page.phase==='error'?<Failure retry={page.reload}/>:page.phase==='empty'?<Empty title="No pickup requests" body="Customer requests will appear here."/>:
-   <RecordTable label="Pickup requests" caption="Current authorized requests · private contact and address appear in review" rows={page.items} rowKey={p=>p.id} selectedKey={selected} columns={[
+   <RecordTable mobile="stack" label="Pickup requests" caption="Current authorized requests · private contact and address appear in review" rows={page.items} rowKey={p=>p.id} selectedKey={selected} columns={[
     {key:'reference',label:'Request',cell:p=><strong className="service-reference">{p.id.slice(0,8)}</strong>},
     {key:'state',label:'State',cell:p=><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{p.state}</StatusBadge>},
-    {key:'requested',label:'Requested window',cell:p=><span className="service-cell-stack"><time dateTime={p.requested_window.start}>{new Date(p.requested_window.start).toLocaleString()}</time><span className="ops-note">to {new Date(p.requested_window.end).toLocaleString()}</span></span>},
-    {key:'agreed',label:'Agreed window',cell:p=>p.agreed_window?<span className="service-cell-stack">{new Date(p.agreed_window.start).toLocaleString()}<span className="ops-note">to {new Date(p.agreed_window.end).toLocaleString()}</span></span>:'Not agreed'},
+    {key:'requested',label:'Requested window',cell:p=><span className="service-cell-stack"><time dateTime={p.requested_window.start}>{formatKolkata(p.requested_window.start)}</time><span className="ops-note">to {formatKolkata(p.requested_window.end)}</span></span>},
+    {key:'agreed',label:'Agreed window',cell:p=>p.agreed_window?<span className="service-cell-stack">{formatKolkata(p.agreed_window.start)}<span className="ops-note">to {formatKolkata(p.agreed_window.end)}</span></span>:'Not agreed'},
     {key:'review',label:'Review',cell:p=>p.review_reason?<StatusBadge tone="warning">Manual review required</StatusBadge>:'Standard handling'},
     {key:'action',label:'Action',cell:p=><button className="btn btn-text" aria-label={`Review pickup ${p.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(p.id);}}>Review pickup {p.id.slice(0,8)}</button>},
    ]}/>}
   {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more pickups</button>}
   <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
    <Dialog.Close className="btn btn-outlined service-detail-close">Close</Dialog.Close>
-   <Dialog.Title>Review pickup</Dialog.Title><Dialog.Description>Private address and requested shipment. Accept only after checking capacity and agreeing the window with the customer.</Dialog.Description>
+   <Dialog.Title>Review pickup</Dialog.Title><Dialog.Description>Check the address and parcel, then agree a pickup time with the customer. Accepting does not create a booking or guarantee courier arrival.</Dialog.Description>
    {selected&&<Detail key={selected} id={selected} source={source} canDecide={canDecide} changed={page.reload}/>}
 
   </Dialog.Content></Dialog.Portal></Dialog.Root>
@@ -51,15 +52,15 @@ function Decision({value:p,source,canDecide,changed}:{value:PickupDetail;source:
   if(decision==='accepted'&&(!Number.isFinite(a)||!Number.isFinite(b)||a<=Date.now()||a>Date.now()+30*86400000||b<=a||b-a>86400000||!capacity||p.review_reason&&!reviewed)) {setError('Choose a future start within 30 days and an end within 24 hours. Confirm capacity and any manual review.');return;}
   try {await command.run(source.decide(p.id,{expected_version:p.version,decision,...(decision==='accepted'?{agreed_start:new Date(a).toISOString(),agreed_end:new Date(b).toISOString(),capacity_checked:capacity,manual_reviewed:reviewed}:{})}));changed();}catch{/* safe notice below */}
  }
- return <><p><b>{p.state}</b> · version {p.version}</p><p>{p.address}</p><p>Verified WhatsApp contact: {p.contact??'Unavailable; review the original customer conversation.'}</p><p>{p.shipment.origin_key} → {p.shipment.destination_key} · {p.shipment.weight_grams} g · {p.shipment.service}</p>
-  <p>Requested: {new Date(p.requested_window.start).toLocaleString()} – {new Date(p.requested_window.end).toLocaleString()}</p>
+ return <><section className="logistics-pickup-summary" aria-label="Pickup details"><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{p.state}</StatusBadge>
+  <dl className="logistics-pickup-facts"><div><dt>Collection address</dt><dd>{p.address}</dd></div><div><dt>Verified WhatsApp contact</dt><dd>{p.contact??'Unavailable; review the original customer conversation.'}</dd></div><div><dt>Shipment</dt><dd>{p.shipment.origin_key} → {p.shipment.destination_key}<span className="ops-note">{p.shipment.weight_grams.toLocaleString('en-IN')} g · {p.shipment.service}</span></dd></div><div><dt>Requested time</dt><dd>{formatKolkata(p.requested_window.start)} – {formatKolkata(p.requested_window.end)}</dd></div></dl><p className="ops-note">Record version {p.version}</p></section>
   {p.review_reason&&<p role="status">Manual review: {p.review_reason.replaceAll('_',' ')}</p>}
-  {p.agreed_window&&<p role="status">Agreed: {new Date(p.agreed_window.start).toLocaleString()} – {new Date(p.agreed_window.end).toLocaleString()}</p>}
+  {p.agreed_window&&<p role="status">Agreed: {formatKolkata(p.agreed_window.start)} – {formatKolkata(p.agreed_window.end)}</p>}
   {p.notification&&<p role="status">Customer message: {p.notification.state} · attempts {p.notification.attempts}. {['failed','uncertain','suppressed'].includes(p.notification.state)?'An administrator must review messaging recovery. The pickup decision remains saved.':''}</p>}
-  {canDecide&&p.state==='submitted'&&<form onSubmit={e=>{void submit(e);}}><fieldset disabled={busy} className="ops-form-grid"><legend>Staff decision</legend>
+  {canDecide&&p.state==='submitted'&&<form onSubmit={e=>{void submit(e);}}><fieldset disabled={busy} className="ops-form-grid"><legend>Your pickup decision</legend>
    <SelectField aria-label="Decision" label="Decision" value={decision} onChange={setDecision} options={[{value:'accepted',label:'Accept'},{value:'declined',label:'Decline'}]}/>
-   {decision==='accepted'&&<><TextField label="Agreed start (your local time)" type="datetime-local" value={start} onChange={setStart} required aria-describedby="pickup-window-help"/><TextField label="Agreed end (your local time)" type="datetime-local" value={end} onChange={setEnd} required aria-describedby="pickup-window-help"/>
-    <p id="pickup-window-help">Choose a future window agreed with the customer. At most 24 hours long and starting within 30 days.</p>
+   {decision==='accepted'&&<><TextField label="Agreed start (your local time)" type="datetime-local" value={start} onChange={setStart} required aria-describedby="pickup-window-help"/><TextField label="Agreed end (your local time)" type="datetime-local" value={end} onChange={setEnd} min={start||undefined} required aria-describedby="pickup-window-help"/>
+    <p id="pickup-window-help">Start within 30 days. Maximum window: 24 hours.</p>
     <label><input type="checkbox" checked={capacity} onChange={e=>setCapacity(e.target.checked)} required/> I checked capacity and agreed this window with the customer.</label>
     {p.review_reason&&<label><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)} required/> I reviewed the shipment requiring manual handling.</label>}</>}
    {error&&<p role="alert">{error}</p>}<button className="btn btn-filled" type="submit">Save decision</button>

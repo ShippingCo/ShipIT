@@ -21,7 +21,7 @@ export default function Onboarding({ userId, complete, controller }: { userId: s
   const [intent, setIntent] = useState(() => pending(userId));
   const [name, setName] = useState(intent?.body.display_name ?? '');
   const [location, setLocation] = useState(intent?.body.franchise.display_name ?? '');
-  const [code, setCode] = useState(intent?.body.franchise.franchise_code ?? '');
+  const [code, setCode] = useState(intent?.body.franchise.franchise_code ?? 'MAIN');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   async function submit(event: React.FormEvent) {
@@ -44,23 +44,26 @@ export default function Onboarding({ userId, complete, controller }: { userId: s
       if (error instanceof ApiFailure && recoveryFor(error, true) === 'validate') {
         setIntent(null); clearPending(userId); setMessage('Check the business and location details, then try again.');
       } else if (error instanceof ApiFailure && ['conflict', 'refresh'].includes(recoveryFor(error, true))) {
-        setMessage('The request conflicts with current state. Check your workspace access before reviewing a new action.');
+        setMessage('Workspace access has changed. Reload this page to check whether your workspace was created.');
       } else {
-        setMessage('We could not confirm your workspace. Retry the same request, or refresh workspace access.');
+        setMessage('Workspace creation could not be confirmed. Retry the same request to check the result without creating a duplicate.');
       }
     } finally { setBusy(false); }
   }
   return <section className="card operator-card operator-auth-card" aria-labelledby="onboarding-title">
-    <span className="workspace-auth-mark"><Msym name="storefront"/></span><p className="workspace-eyebrow">Your workspace</p>
-    <h1 id="onboarding-title" className="t-headline-sm">Set up your shop</h1>
-    <p className="muted">Create your independent business and its first location.</p>
-    <form onSubmit={event => { void submit(event); }} noValidate>
-      <TextField id="onboarding-name" label="Business name" value={name} onChange={setName} required disabled={busy || !!intent} aria-describedby={errors.name ? 'error-name' : undefined} aria-invalid={!!errors.name} />
+    <span className="workspace-auth-mark"><Msym name="storefront"/></span>
+    <h1 id="onboarding-title" tabIndex={-1} className="t-headline-sm">Set up your shop</h1>
+    <p className="muted">Add your business and the first place you book parcels from.</p>
+    <form aria-label="Set up your shop" onSubmit={event => { void submit(event); }} noValidate>
+      <TextField id="onboarding-name" name="organization" autoComplete="organization" maxLength={120} label="Business name" placeholder="Shree Balaji Courier" helper="The name your customers know." value={name} onChange={setName} required disabled={busy || !!intent} aria-describedby={errors.name ? 'error-name' : undefined} aria-invalid={!!errors.name} />
       {errors.name && <p id="error-name" className="operator-error">{errors.name}</p>}
-      <TextField id="onboarding-location" label="Location name" value={location} onChange={setLocation} required disabled={busy || !!intent} aria-describedby={errors.location ? 'error-location' : undefined} aria-invalid={!!errors.location} />
+      <fieldset className="operator-onboarding-location"><legend>Your first location</legend>
+      <TextField id="onboarding-location" name="location" autoComplete="off" maxLength={120} label="Location name" placeholder="Pune main shop" helper="A name that helps your team recognise this shop or branch." value={location} onChange={setLocation} required disabled={busy || !!intent} aria-describedby={errors.location ? 'error-location' : undefined} aria-invalid={!!errors.location} />
       {errors.location && <p id="error-location" className="operator-error">{errors.location}</p>}
-      <TextField id="onboarding-code" label="Location code" value={code} onChange={setCode} required disabled={busy || !!intent} aria-describedby="code-help" aria-invalid={!!errors.code} />
-      <p id="code-help" className={errors.code ? 'operator-error' : 'muted'}>{errors.code ?? 'A short permanent code, for example MAIN or PUNE_1.'}</p>
+      <details open={!!errors.code} className="operator-branch-code"><summary>Branch code · optional</summary><TextField id="onboarding-code" name="location-code" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={32} label="Location code" placeholder="PUNE_1" value={code} onChange={setCode} required disabled={busy || !!intent} aria-describedby="code-help" aria-invalid={!!errors.code} />
+      <p id="code-help" className={errors.code ? 'operator-error' : 'muted'}>{errors.code ?? 'MAIN is filled in for your first branch. Change it only if your business uses another code.'}</p></details>
+      </fieldset>
+      {!!intent&&!busy&&<p className="operator-intent-note">Your details are kept unchanged while the earlier request is checked.</p>}
       {message && <p role="alert">{message}</p>}
       <button className="btn btn-filled" disabled={busy}>{busy ? 'Creating workspace…' : intent ? 'Retry same request' : 'Create workspace'}</button>
       <p role="status" aria-live="polite">{busy ? 'Saving your business and location securely…' : ''}</p>

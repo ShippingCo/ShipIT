@@ -4,7 +4,7 @@ import {fireEvent,render,screen,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {WorkspaceNavigation} from '../components/workspace/WorkspaceNavigation';
 
-it('groups permitted destinations once, expands folders independently and reveals the active route',()=>{
+it('shows shallow permitted task areas and reveals tools for the current area',()=>{
  const onNavigate=vi.fn(),links=[
   {area:'workspace',to:'/business',icon:'space_dashboard',label:'Workspace'},
   {area:'booking',to:'/business/new-booking',icon:'add_box',label:'New Booking'},
@@ -13,18 +13,16 @@ it('groups permitted destinations once, expands folders independently and reveal
  ];
  const view=render(<MemoryRouter><WorkspaceNavigation links={links} area="workspace" onNavigate={onNavigate}/></MemoryRouter>);
  const nav=screen.getByRole('navigation',{name:'Workspace navigation'});
- expect(within(nav).getAllByRole('button').map(button=>button.textContent)).toHaveLength(3);
- expect(within(nav).queryByRole('button',{name:'Shipments'})).not.toBeInTheDocument();
- const booking=within(nav).getByRole('button',{name:'Booking & pickups'});
- expect(booking).toHaveAttribute('aria-expanded','false');
- expect(within(nav).queryByRole('link',{name:'New Booking'})).not.toBeInTheDocument();
- fireEvent.click(booking);expect(booking).toHaveAttribute('aria-expanded','true');
- expect(document.getElementById(booking.getAttribute('aria-controls')!)).toBeVisible();
+ expect(within(nav).getByRole('link',{name:'Overview'})).toHaveAttribute('aria-current','page');
+ expect(within(nav).getByRole('link',{name:'Bookings'})).toHaveAttribute('href','/business/new-booking');
+ expect(within(nav).queryByRole('link',{name:'Delivery'})).not.toBeInTheDocument();
+ expect(within(nav).queryByRole('link',{name:'Receipts'})).not.toBeInTheDocument();
+ view.rerender(<MemoryRouter><WorkspaceNavigation links={links} area="booking" onNavigate={onNavigate}/></MemoryRouter>);
+ expect(within(nav).getByRole('group',{name:'Bookings tools'})).toBeVisible();
  fireEvent.click(within(nav).getByRole('link',{name:'Receipts'}));expect(onNavigate).toHaveBeenCalledOnce();
- fireEvent.click(booking);expect(within(nav).queryByRole('link',{name:'Receipts'})).not.toBeInTheDocument();
  view.rerender(<MemoryRouter><WorkspaceNavigation links={links} area="cashbook" onNavigate={onNavigate}/></MemoryRouter>);
- expect(within(nav).getByRole('button',{name:'Finance'})).toHaveAttribute('aria-expanded','true');
+ expect(within(nav).getByRole('group',{name:'Money tools'})).toBeVisible();
  expect(within(nav).getByRole('link',{name:'Expenses and cashbook'})).toHaveAttribute('aria-current','page');
- expect(within(nav).getByRole('link',{name:'Workspace'})).not.toHaveAttribute('aria-current');
- expect(within(nav).getAllByRole('link')).toHaveLength(2);
+ expect(within(nav).getByRole('link',{name:'Overview'})).not.toHaveAttribute('aria-current');
+ expect(within(nav).queryByRole('link',{name:'Receipts'})).not.toBeInTheDocument();
 });

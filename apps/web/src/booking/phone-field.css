@@ -1,0 +1,6 @@
+.counter-phone-controls{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,1.6fr);gap:12px;align-items:start}
+.counter-phone-controls .tf{min-width:0}
+.counter-phone-field{min-width:0}
+.workspace-filterbar>.counter-phone-field{flex:2 1 340px}
+.workspace-filterbar .counter-phone-controls .tf{min-width:0}
+@media(max-width:420px){.counter-phone-controls{grid-template-columns:minmax(115px,.85fr) minmax(0,1.15fr);gap:8px}}

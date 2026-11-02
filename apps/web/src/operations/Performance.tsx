@@ -27,8 +27,8 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
   async function download(){if(!result||pending)return;setBusy(true);try{const p=await source.export(result.snapshot.id,destination||null,route||null),url=URL.createObjectURL(new Blob([p.csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`performance-${p.snapshot.id}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('Matching CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   const s=result?.selection.summary;
   return <section className="service-report-view" aria-label="Delivery and route performance"><SectionHeader title="Delivery and route performance"/>
-    <p>Booking-date parcel cohort · Asia/Kolkata. One parcel is counted once, including overlapping lot and direct route membership.</p>
-    <p>On-time uses delivered parcels with actual proof and the chosen saved ETA version. Open parcels and RTO are separate; missing timing is excluded explicitly.</p>
+    <details className="form-secondary-options"><summary>How delivery performance is measured</summary><p>Booking-date parcel cohort · Asia/Kolkata. One parcel is counted once, including overlapping lot and direct route membership.</p>
+    <p>On-time uses delivered parcels with actual proof and the chosen saved ETA version. Open parcels and RTO are separate; missing timing is excluded explicitly.</p></details>
     <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
       <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
       <SelectField label="ETA basis" value={eta} onChange={v=>setEta(v as typeof eta)} options={[{value:'original',label:'Original dispatch-route ETA'},{value:'revised',label:'Last applied ETA before delivery'}]}/>

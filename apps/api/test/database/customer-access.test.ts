@@ -18,7 +18,7 @@ import { automationSetup,routeDelayFixture } from '../automation-support.ts';
 import { normalizeBusinessWebhook } from '../../src/modules/whatsapp/webhook-payload.ts';
 import { persistBusinessWebhook } from '../../src/modules/security/jobs.ts';
 import { createRouteEventService } from '../../src/modules/routes/event-service.ts';
-import { provisionDatabase } from '../../../../packages/db/test/support.ts';
+import { provisionDatabase,preBookingParcel } from '../../../../packages/db/test/support.ts';
 import { createDeliveryService } from '../../src/modules/deliveries/service.ts';
 import { deliveryProofConfiguration } from '../delivery-support.ts';
 
@@ -27,9 +27,9 @@ await test('forward migration preserves populated shipments and never backfills 
   const migrate=db.migrate;db.migrate=async()=>({applied:0});const s=await bookingSetup(t,db);
   const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
   const snapshot=async()=>Object.fromEntries(await Promise.all(['customers','bookings','parcels'].map(async table=>
-    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY id`)).rows])));
+    [table,(await db.adminQuery(`SELECT * FROM shipit.${table} ORDER BY id`)).rows.map(row=>table==='parcels'?preBookingParcel(row):row)])));
   const before=await snapshot();db.migrate=migrate;
-  assert.deepEqual(await db.migrate(),{applied:27});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await db.migrate(),{applied:30});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);
   for(const table of ['customer_access_bindings','customer_access_commands','customer_tracking_grants']) {
     assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
     await assert.rejects(s.pool.query(`SELECT * FROM shipit.${table}`));

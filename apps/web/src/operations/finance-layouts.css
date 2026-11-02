@@ -59,3 +59,81 @@
 }
 
 .finance-account-create { margin-block-end: 16px; }
+.finance-account-editor { margin-block: 16px; max-width: 760px; }
+.finance-account-editor > h3 { margin-bottom: 16px; scroll-margin-top: 100px; }
+.finance-account-editor > h3:focus { outline: none; }
+
+/* Blue Studio: familiar tasks on an open reading surface. */
+.finance-workspace-intro { padding-block-end: 24px; }
+.finance-workspace-intro > .workspace-page-header { margin-bottom: 12px; }
+.finance-workspace-intro > .ops-note { max-width: 76ch; }
+.finance-filter-panel { padding: 18px 0; border-inline: 0; border-radius: 0; background: transparent; }
+.finance-composer.card { border: 0; border-radius: 0; padding: 24px 0; box-shadow: none; }
+.finance-composer > .finance-grouped-form { max-inline-size: 760px; }
+.finance-grouped-form { gap: 20px; }
+.finance-grouped-form > fieldset, .finance-receipt-entry > fieldset { border: 0; border-top: 1px solid var(--workspace-border); border-radius: 0; padding: 20px 0 0; }
+.finance-grouped-form legend { font-size: 15px; font-weight: 600; padding: 0 0 12px; }
+.finance-summary { border-inline: 0; border-radius: 0; background: white; }
+.finance-summary > div { padding: 20px; }
+.finance-summary > div:first-child { padding-inline-start: 0; }
+.finance-summary > div:last-child { padding-inline-end: 0; }
+.finance-match-side > fieldset { border: 0; border-top: 1px solid var(--workspace-border); border-radius: 0; padding: 18px 0; }
+.finance-refund-events > li { padding: 18px 0; border: 0; border-bottom: 1px solid var(--workspace-border); border-radius: 0; }
+.finance-receipt-form { display: block; }
+.operator-workspace .finance-receipt-form { display: block; }
+.finance-next-payment { justify-self: start; margin-block: 20px 4px; }
+.finance-saved-receipt-heading { scroll-margin-top: 100px; overflow-wrap: anywhere; }
+.finance-saved-receipt-heading:focus { outline: none; }
+.finance-receipt-entry { display: grid; gap: 20px; }
+.finance-receipt-entry[hidden] { display: none; }
+.finance-receipt-entry > .btn { justify-self: start; }
+.finance-receipt-entry > label { display: flex; align-items: flex-start; gap: 10px; }
+.finance-payment-review { max-width: 640px; }
+.finance-payment-review h3 { font-size: 20px; margin: 0 0 8px; }
+.finance-payment-review h3:focus { outline: none; }
+.finance-review-list { margin: 20px 0; }
+.finance-review-list > div { display: grid; grid-template-columns: minmax(130px,1fr) minmax(0,1.3fr); gap: 18px; border-bottom: 1px solid var(--workspace-border); padding: 14px 0; }
+.finance-review-list dt { color: var(--workspace-muted); font-size: 13px; }
+.finance-review-list dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.finance-review-allocations h4 { font-size: 14px; margin-block: 24px 8px; }
+.finance-review-allocations ul { margin: 12px 0 20px; padding: 0; list-style: none; }
+.finance-review-allocations li { display: flex; justify-content: space-between; align-items: start; gap: 16px; padding-block: 12px; border-bottom: 1px solid var(--workspace-border); }
+.finance-review-allocations strong { flex-shrink: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.finance-review-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--workspace-border); }
+.finance-filter-disclosure { margin-block: 14px; }
+.finance-form-section-title { grid-column: 1/-1; margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--workspace-border); font-size: 14px; font-weight: 600; }
+.finance-grouped-form > .finance-form-section-title:first-child { margin-top: 0; padding-top: 0; border: 0; }
+.finance-account-fields > .finance-form-section { margin: 24px 0 0; padding: 18px 0 0; border: 0; border-top: 1px solid var(--workspace-border); border-radius: 0; min-width: 0; }
+.finance-account-fields > .finance-form-section > legend { font-size: 14px; font-weight: 600; padding: 0 0 12px; }
+.finance-refund-request { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 22px; }
+.finance-refund-request .tf { flex: 1 1 220px; max-width: 400px; }
+.finance-refund-request .btn { margin-bottom: 0; }
+.finance-filter-disclosure > [hidden] { display: none; }
+.finance-request-list>.tf { max-width:360px; }
+.finance-request-list.card { border:0; border-radius:0; padding:20px 0; }
+.finance-request-list .ops-state.ops-empty { margin:12px 0; padding:24px 0; }
+.finance-filter-disclosure .finance-filter-panel { margin-block: 12px 0; }
+@media(max-width:640px){
+ .finance-summary > div { padding: 16px 0; }
+ .finance-filter-panel { padding-inline: 0; }
+ .finance-grouped-form { gap: 18px; }
+ .finance-review-list > div { grid-template-columns: minmax(0,1fr); gap: 5px; }
+ .finance-review-actions > .btn { min-height: 44px; }
+}
+
+/* Long cost entry asks for the source before allocating it to bookings. */
+.shipment-cost-workspace .finance-cost-flow>fieldset[hidden],.shipment-cost-workspace .cost-read-view[hidden]{display:none}
+.finance-flow-steps{display:flex;gap:24px;list-style:none;padding:0 0 16px;margin:0;border-bottom:1px solid var(--workspace-border);color:var(--workspace-muted);font-size:13px}
+.finance-flow-steps [aria-current=step]{color:var(--workspace-text);font-weight:650}
+.finance-cost-flow>h3{font-size:18px;margin:20px 0 4px;outline:none}
+.finance-cost-flow>fieldset{border:0;padding:0;min-width:0}
+.finance-cost-flow>fieldset>legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.finance-flow-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding-top:20px;border-top:1px solid var(--workspace-border)}
+.finance-flow-actions>.btn-filled{margin-left:auto}
+.finance-cost-flow .service-allocation-row{padding:18px 0;border-bottom:1px solid var(--workspace-border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.finance-catalog-switcher{padding-block:24px 8px;max-width:440px}
+.finance-secondary-action{margin-block:18px}
+.finance-secondary-action>summary{cursor:pointer;font-size:13px;font-weight:600;padding:10px 0}
+@media(max-width:640px){.finance-cost-flow .service-allocation-row{grid-template-columns:1fr}.finance-flow-actions>.btn-filled{margin-left:0}}
+
+.cost-source-choices{margin:12px 0}.cost-source-choices>p{font-size:12px;color:var(--workspace-muted);margin:0}.shipment-cost-workspace .service-cost-editor{margin-top:0;padding-top:10px}

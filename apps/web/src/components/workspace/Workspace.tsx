@@ -1,10 +1,9 @@
 import React from 'react';
 
-export function PageHeader({title,description,eyebrow,actions,id='workspace-title'}:{
+export function PageHeader({title,description,actions,id='workspace-title'}:{
   title:React.ReactNode;description?:React.ReactNode;eyebrow?:string;actions?:React.ReactNode;id?:string;
 }){
   return <div className="workspace-page-header"><div className="workspace-page-heading">
-    {eyebrow&&<p className="workspace-eyebrow">{eyebrow}</p>}
     <h1 id={id} tabIndex={-1}>{title}</h1>
     {description&&<p className="workspace-page-description">{description}</p>}
   </div>{actions&&<div className="workspace-header-actions">{actions}</div>}</div>;
@@ -24,17 +23,17 @@ export interface RecordColumn<Row>{
 }
 
 /** Presentational server worklist. Pagination, ordering and financial totals belong to its producer. */
-export function RecordTable<Row>({label,columns,rows,rowKey,caption,empty,selectedKey}:{
+export function RecordTable<Row>({label,columns,rows,rowKey,caption,empty,selectedKey,mobile='scroll'}:{
   label:string;columns:readonly RecordColumn<Row>[];rows:readonly Row[];rowKey:(row:Row)=>React.Key;
-  caption?:React.ReactNode;empty?:React.ReactNode;selectedKey?:React.Key|null;
+  caption?:React.ReactNode;empty?:React.ReactNode;selectedKey?:React.Key|null;mobile?:'scroll'|'stack';
 }){
-  return <div className="record-table-region" role="region" aria-label={`${label} table`} tabIndex={0}>
-    <table className="ops-table record-table">
+  return <div className={`record-table-region${mobile==='stack'?' record-table-responsive':''}`} role="region" aria-label={`${label} table`} tabIndex={0}>
+    <table role="table" className="ops-table record-table">
       <caption className={caption?'record-table-caption':'workspace-visually-hidden'}>{caption??label}</caption>
-      <thead><tr>{columns.map(column=><th key={column.key} scope="col" className={`${column.align==='right'?'record-numeric ':''}${column.className??''}`}>{column.label}</th>)}</tr></thead>
-      <tbody>{rows.length?rows.map(row=><tr key={rowKey(row)} data-selected={selectedKey!=null&&rowKey(row)===selectedKey||undefined}>
-        {columns.map(column=><td key={column.key} className={`${column.align==='right'?'record-numeric ':''}${column.className??''}`}>{column.cell(row)}</td>)}
-      </tr>):<tr><td colSpan={columns.length} className="record-table-empty">{empty??'No records on this page.'}</td></tr>}</tbody>
+      <thead role="rowgroup"><tr role="row">{columns.map(column=><th role="columnheader" key={column.key} scope="col" className={`${column.align==='right'?'record-numeric ':''}${column.className??''}`}>{column.label}</th>)}</tr></thead>
+      <tbody role="rowgroup">{rows.length?rows.map(row=><tr role="row" key={rowKey(row)} data-selected={selectedKey!=null&&rowKey(row)===selectedKey||undefined}>
+        {columns.map(column=><td role="cell" key={column.key} data-label={typeof column.label==='string'?column.label:undefined} className={`${column.align==='right'?'record-numeric ':''}${column.className??''}`}>{column.cell(row)}</td>)}
+      </tr>):<tr role="row"><td role="cell" colSpan={columns.length} className="record-table-empty">{empty??'No records on this page.'}</td></tr>}</tbody>
     </table>
   </div>;
 }

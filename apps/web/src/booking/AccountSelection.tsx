@@ -11,11 +11,12 @@ export function AccountSelection({workflow,disabled}:{workflow:BookingWorkflow;d
   const page=customer?await workflow.accountApi.choices(customer.id,cursor??undefined,signal):{items:[],next_cursor:null};return {items:page.items,page:{has_more:page.next_cursor!==null,next_cursor:page.next_cursor}};
  });
  const credit=useResource(state.accountId??'none',signal=>state.accountId?workflow.accountApi.credit(state.accountId,signal):Promise.resolve(null));
- if(!customer)return <p>Confirm the shipping customer to choose an authorized monthly account.</p>;
+ if(!customer)return null;
+ if(!state.accountId&&choices.phase==='empty')return <p className="counter-help">Bill to {customer.name}. No monthly account is linked.</p>;
  return <section aria-label="Bill-to account"><h3 className="t-title-md">Bill-to account</h3>
-  <p>Only accounts explicitly linked to this shipping customer are available. Credit means pay later; it records no receipt.</p>
+  <p>Choose a linked monthly account to pay later. This does not record a payment.</p>
   {choices.phase==='loading'?<Loading label="Loading linked accounts…"/>:choices.phase==='error'?<div><p role="alert">Account lookup unavailable. Retry before choosing an account.</p><button type="button" disabled={disabled} onClick={choices.reload}>Retry account lookup</button></div>:<>
-   <SelectField label="Bill-to account" aria-label="Bill-to account" disabled={disabled} value={state.accountId??''} onChange={workflow.selectAccount} options={[{value:'',label:'Ordinary booking customer'},...choices.items.map(a=>({value:a.id,label:a.name+(a.state==='held'?' · Held':'')}))]}/>{choices.page.has_more&&<button type="button" className="btn btn-text" disabled={disabled} onClick={choices.loadMore}>More linked accounts</button>}
+   <SelectField label="Bill-to account" aria-label="Bill-to account" disabled={disabled} value={state.accountId??''} onChange={id=>workflow.selectAccount(id,choices.items.find(a=>a.id===id)?.name)} options={[{value:'',label:'This booking’s customer'},...choices.items.map(a=>({value:a.id,label:a.name+(a.state==='held'?' · Held':'')}))]}/>{choices.page.has_more&&<button type="button" className="btn btn-text" disabled={disabled} onClick={choices.loadMore}>More linked accounts</button>}
    {!choices.items.length&&<p>No linked monthly accounts.</p>}
   </>}
   {state.accountId&&(credit.phase==='loading'?<Loading label="Checking available credit…"/>:credit.phase==='error'?<div><p role="alert">Credit unavailable. Retry the check.</p><button type="button" disabled={disabled} onClick={credit.reload}>Retry credit check</button></div>:credit.value&&<>

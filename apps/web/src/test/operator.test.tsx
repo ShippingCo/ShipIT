@@ -32,6 +32,13 @@ beforeEach(()=>{
   }));
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();});
+async function workspaceReady(id=A,name='Counter A') {
+  await waitFor(()=>{
+    expect(screen.getByRole('heading',{name:'Your business, at a glance.'})).toBeVisible();
+    expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveValue(id);
+    expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveDisplayValue('Synthetic shop \u00b7 '+name);
+  });
+}
 async function fill() {
   await screen.findByRole('heading',{name:'Set up your shop'});
   fireEvent.change(screen.getByLabelText('Business name'),{target:{value:'Synthetic shop'}});
@@ -41,11 +48,19 @@ async function fill() {
 
 describe('production operator flow',()=>{
   it('opens workspace navigation with keyboard focus and returns focus on Escape',async()=>{
-    context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    context=ready;render(<App/>);await workspaceReady();
     const toggle=screen.getByRole('button',{name:'Open workspace navigation'});
     expect(toggle).toHaveAttribute('aria-expanded','false');fireEvent.click(toggle);
     const menu=screen.getByRole('navigation',{name:'Workspace navigation'});
-    expect(within(menu).getByRole('link',{name:'Workspace'})).toHaveFocus();
+    expect(within(menu).getByRole('link',{name:'Overview'})).toHaveFocus();
+    const create=within(menu).getByRole('button',{name:'Create'});
+    act(()=>create.focus());fireEvent.keyDown(create,{key:'Enter'});
+    const booking=await screen.findByRole('menuitem',{name:'New booking'});
+    act(()=>booking.focus());
+    expect(booking).toHaveFocus();expect(toggle).toHaveAttribute('aria-expanded','true');
+    fireEvent.keyDown(booking,{key:'Escape'});
+    await waitFor(()=>expect(create).toHaveFocus());
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();expect(toggle).toHaveAttribute('aria-expanded','true');
     fireEvent.keyDown(document,{key:'Escape'});
     expect(screen.getByRole('button',{name:'Open workspace navigation'})).toHaveFocus();
     expect(toggle).toHaveAttribute('aria-expanded','false');
@@ -56,11 +71,17 @@ describe('production operator flow',()=>{
   });
   it.each(['org_admin','franchise_admin'] as const)('shows booking and delivery administration with only %s',async role=>{
     context={...ready,franchises:ready.franchises.map(f=>({...f,roles:[role]}))};
-    render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
-    for(const name of ['Booking & pickups','Shipments','Administration'])fireEvent.click(screen.getByRole('button',{name}));
-    expect(screen.getAllByRole('link',{name:'New Booking'}).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link',{name:'Deliveries'}).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link',{name:'Settings'}).length).toBeGreaterThan(0);
+    render(<App/>);await workspaceReady();
+    const nav=screen.getByRole('navigation',{name:'Workspace navigation'});
+    fireEvent.keyDown(within(nav).getByRole('button',{name:'Create'}),{key:'Enter'});
+    const booking=await screen.findByRole('menuitem',{name:'New booking'});
+    expect(booking).toHaveAttribute('href','#/business/new-booking');
+    fireEvent.keyDown(booking,{key:'Escape'});
+    await waitFor(()=>expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(within(nav).getByRole('link',{name:'Settings & help'})).toHaveAttribute('href','#/business/settings');
+    fireEvent.click(within(nav).getByRole('link',{name:'Delivery'}));
+    await screen.findByRole('heading',{name:'Delivery work'});
+    expect(within(screen.getByRole('main')).getByRole('link',{name:/^Deliveries/})).toHaveAttribute('href','#/business/deliveries');
     expect(context.franchises[0]!.roles).toEqual([role]);
   });
   it('denies dispatcher direct booking routes without loading counter prerequisites',async()=>{
@@ -73,35 +94,35 @@ describe('production operator flow',()=>{
   it('completes onboarding, sends only approved fields and reloads server context without browser authority',async()=>{
     const view=render(<App/>);await fill();
     fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
-    await screen.findByRole('heading',{name:'Counter A'});
+    await workspaceReady();
     const command=calls.find(c=>c.path==='/api/v1/onboarding')!;
     expect(JSON.parse(command.options.body as string)).toEqual({display_name:'Synthetic shop',franchise:{display_name:'Counter A',franchise_code:'MAIN'}});
     expect((command.options.headers as Record<string,string>)['Idempotency-Key']).toBeTruthy();
     expect(screen.queryByText('Parcels moving')).not.toBeInTheDocument();
     view.unmount();sessionStorage.clear();localStorage.clear();render(<App/>);
-    await screen.findByRole('heading',{name:'Counter A'});
+    await workspaceReady();
     expect(calls.filter(c=>c.path==='/api/v1/onboarding')).toHaveLength(1);
-    expect(screen.getByRole('heading',{name:'Counter A'})).toHaveFocus();
+    expect(screen.getByRole('heading',{name:'Your business, at a glance.'})).toHaveFocus();
   });
   it('associates required validation with focusable inputs and completes a form submit',async()=>{
     render(<App/>);await screen.findByRole('button',{name:'Create workspace'});
     fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
     const input=screen.getByLabelText('Business name');expect(input).toHaveFocus();expect(input).toHaveAttribute('aria-invalid','true');
-    expect(document.getElementById(input.getAttribute('aria-describedby')!)).toHaveTextContent('Enter a business name');
-    expect(screen.getByLabelText('Location code')).toHaveAccessibleDescription('Start with A–Z; use up to 32 capital letters, digits or underscores.');
+    expect(input).toHaveAccessibleDescription(/Enter a business name/);
+    expect(screen.getByLabelText('Location code')).toHaveValue('MAIN');expect(screen.getByLabelText('Location code')).toHaveAccessibleDescription('MAIN is filled in for your first branch. Change it only if your business uses another code.');
     expect(calls.some(c=>c.path==='/api/v1/onboarding')).toBe(false);
     await fill();fireEvent.submit(screen.getByRole('button',{name:'Create workspace'}).closest('form')!);
-    await screen.findByRole('heading',{name:'Counter A'});
+    await workspaceReady();
   });
   it('lists only server scopes and clears the old shell immediately while switching',async()=>{
     context=ready;const slow=deferred<Response>();responseOverride=path=>path.endsWith(B)?slow.promise:undefined;
-    render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    render(<App/>);await workspaceReady();
     const options=within(screen.getByLabelText('Franchise')).getAllByRole('option');expect(options).toHaveLength(2);expect(options.map(option=>(option as HTMLOptionElement).value)).toEqual([A,B]);
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});
-    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Checking workspace access');
     await act(async()=>slow.resolve(json({...ready,active_franchise_id:B})));
-    await screen.findByRole('heading',{name:'Counter B'});
+    await workspaceReady(B,'Counter B');
   });
   it('late A response cannot paint after B, even when transport ignores cancellation',async()=>{
     context=ready;const controller=createScopeController();await controller.load(A);
@@ -115,12 +136,11 @@ describe('production operator flow',()=>{
     expect(controller.snapshot().context?.active_franchise_id).toBe(B);
   });
   it('protected navigation after revocation removes cached data and offers controlled recovery',async()=>{
-    context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    context=ready;render(<App/>);await workspaceReady();
     responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({error:{code:'RESOURCE_NOT_FOUND'}},404)):undefined;
-    fireEvent.click(screen.getByRole('button',{name:'Administration'}));
-    fireEvent.click(screen.getAllByRole('link',{name:'Settings'})[0]);
+    fireEvent.click(screen.getByRole('link',{name:'Settings & help'}));
     await screen.findByRole('heading',{name:'Workspace access unavailable'});
-    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Private workspace data has been cleared');
     responseOverride=undefined;context={...empty,state:'scope_unavailable'};
     fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);
@@ -138,7 +158,7 @@ describe('production operator flow',()=>{
     const view=render(<App/>);await fill();fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
     await screen.findByRole('alert');const first=calls.find(c=>c.path==='/api/v1/onboarding')!;view.unmount();
     responseOverride=undefined;render(<App/>);await screen.findByRole('button',{name:'Retry same request'});
-    fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));await workspaceReady();
     const last=calls.filter(c=>c.path==='/api/v1/onboarding').at(-1)!;
     expect(last.options.body).toBe(first.options.body);expect(last.options.headers).toEqual(first.options.headers);
   });
@@ -150,14 +170,16 @@ describe('production operator flow',()=>{
     };
     render(<App/>);await fill();fireEvent.click(screen.getByRole('button',{name:'Create workspace'}));
     await screen.findByRole('heading',{name:'Workspace access unavailable'});responseOverride=undefined;
-    fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getAllByRole('button',{name:'Try again'})[0]);await workspaceReady();
     expect(calls.filter(c=>c.path==='/api/v1/onboarding')).toHaveLength(1);
   });
   it('accepts through the existing invitation API and never stores the secret',async()=>{
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
     fireEvent.click(screen.getByText('Account and invitations'));
+    expect(screen.getByRole('button',{name:'Accept invitation'})).not.toBeVisible();
+    fireEvent.click(screen.getByText('Join another workspace'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
-    fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));await workspaceReady();
     expect(calls.find(c=>c.path==='/api/v1/membership-invitations/accept')?.options.body).toBe(JSON.stringify({token:'synthetic-invitation-secret'}));
     expect(JSON.stringify(sessionStorage)+JSON.stringify(localStorage)).not.toContain('synthetic-invitation-secret');
     expect(screen.getByLabelText('Invitation code')).toHaveValue('');
@@ -167,12 +189,14 @@ describe('production operator flow',()=>{
     responseOverride=path=>path.endsWith('/accept')?accepting.promise:undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
     fireEvent.click(screen.getByText('Account and invitations'));
+    fireEvent.click(screen.getByText('Join another workspace'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
     fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
     await act(async()=>{window.location.hash='/business/settings';});
     await screen.findByRole('heading',{name:'Set up your shop'});
     context=ready;await act(async()=>accepting.resolve(json({},201)));
-    await screen.findByRole('heading',{name:'Counter A'});
+    await screen.findByRole('heading',{name:'Business settings'});
+    expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveValue(A);
     expect(within(screen.getByRole('banner')).getByText('Settings')).toBeVisible();
     expect(screen.queryByText('Checking workspace access…')).not.toBeInTheDocument();
   });
@@ -180,6 +204,7 @@ describe('production operator flow',()=>{
     responseOverride=path=>path.endsWith('/accept')?Promise.resolve(json({error:{code:'ACTION_FORBIDDEN'}},403)):undefined;
     render(<App/>);await screen.findByRole('heading',{name:'Set up your shop'});
     fireEvent.click(screen.getByText('Account and invitations'));
+    fireEvent.click(screen.getByText('Join another workspace'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'expired-secret'}});fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
     await screen.findByText(/Invitation could not be confirmed/);expect(screen.getByLabelText('Invitation code')).toHaveValue('');
   });
@@ -190,9 +215,11 @@ describe('production operator flow',()=>{
       if(path.startsWith('/api/v1/operator-context')&&!signedIn)return Promise.resolve(json({error:{code:'UNAUTHENTICATED'}},401));
     };
     render(<App/>);await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    expect(document.title).toBe('Sign in · ShippingCo');
     fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Send sign-in code'}));
     await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'12345678'}});
-    fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await workspaceReady();
+    expect(document.title).toBe('Overview · ShippingCo');
     expect(screen.queryByRole('button',{name:'Refresh workspace access'})).not.toBeInTheDocument();
     expect(screen.queryByRole('button',{name:'Sign out'})).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Account and invitations'));
@@ -203,7 +230,8 @@ describe('production operator flow',()=>{
     expect(profile.querySelector('summary')).toHaveFocus();
     fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
-    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
+    expect(document.title).toBe('Sign in · ShippingCo');
+    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
   });
   it('does not fall back to localStorage on an API outage',async()=>{
     localStorage.setItem('shippingco_v1',JSON.stringify({business:{name:'Forbidden cached shop'}}));
@@ -240,28 +268,46 @@ describe('production operator flow',()=>{
   });
   it('logout hides private data immediately and late context cannot repaint', async () => {
     context=ready;const logout=deferred<Response>();responseOverride=path=>path==='/auth/logout'?logout.promise:undefined;
-    render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    render(<App/>);await workspaceReady();
     fireEvent.click(screen.getByText('Account and invitations'));
     fireEvent.click(screen.getByRole('button',{name:'Sign out'}));
-    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     await act(async()=>logout.resolve(json({ok:true})));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(calls.filter(c=>c.path==='/auth/logout')).toHaveLength(1);
   });
+  it('keeps private data hidden after uncertain sign-out until an explicit logout retry succeeds',async()=>{
+    context=ready;let attempts=0;
+    responseOverride=path=>path==='/auth/logout'?(++attempts===1?Promise.reject(new TypeError('Connection interrupted')):Promise.resolve(json({ok:true}))):undefined;
+    render(<App/>);await workspaceReady();
+    fireEvent.click(screen.getByText('Account and invitations'));fireEvent.click(screen.getByRole('button',{name:'Sign out'}));
+    const retry=await screen.findByRole('button',{name:'Retry sign out'});
+    expect(screen.getByRole('alert')).toHaveTextContent('your session may still be active');
+    expect(document.title).toBe('Finish signing out · ShippingCo');
+    expect(screen.queryByRole('button',{name:'Try again'})).not.toBeInTheDocument();
+    const reads=calls.filter(call=>call.path.startsWith('/api/v1/operator-context')).length;
+    await act(async()=>{window.location.hash='/business/settings';window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
+    expect(calls.filter(call=>call.path.startsWith('/api/v1/operator-context'))).toHaveLength(reads);
+    expect(screen.queryByRole('combobox',{name:'Franchise'})).not.toBeInTheDocument();
+    expect(screen.queryByText('Account and invitations')).not.toBeInTheDocument();
+    fireEvent.click(retry);await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
+    expect(calls.filter(call=>call.path==='/auth/logout')).toHaveLength(2);
+    expect(document.title).toBe('Sign in · ShippingCo');
+  });
   it('revisiting A from B shows loading until fresh authorized retrieval', async () => {
-    context=ready;render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
-    fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});await screen.findByRole('heading',{name:'Counter B'});
+    context=ready;render(<App/>);await workspaceReady();
+    fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:B}});await workspaceReady(B,'Counter B');
     const reload=deferred<Response>();responseOverride=path=>path.endsWith(A)?reload.promise:undefined;
     fireEvent.change(screen.getByLabelText('Franchise'),{target:{value:A}});
-    expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();expect(screen.queryByRole('heading',{name:'Counter B'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByRole('combobox',{name:'Franchise'})).not.toBeInTheDocument();
     await act(async()=>reload.resolve(json({...ready,franchises:[franchise(A,'Fresh Counter A')]})));
-    await screen.findByRole('heading',{name:'Fresh Counter A'});
+    await workspaceReady(A,'Fresh Counter A');
   });
   it('cross-tab invalidation immediately removes old context and revalidates without echo loops', async () => {
     let receive!:(event:{data:unknown})=>void;const publish=vi.fn(),close=vi.fn();
     vi.stubGlobal('BroadcastChannel',class {set onmessage(handler:(event:{data:unknown})=>void){receive=handler;}postMessage=publish;close=close;});
-    context=ready;const view=render(<App/>);await screen.findByRole('heading',{name:'Counter A'});
+    context=ready;const view=render(<App/>);await workspaceReady();
     const slow=deferred<Response>();responseOverride=path=>path.startsWith('/api/v1/operator-context')?slow.promise:undefined;
-    act(()=>receive({data:'invalidate'}));expect(screen.queryByRole('heading',{name:'Counter A'})).not.toBeInTheDocument();
+    act(()=>receive({data:'invalidate'}));expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();
     await act(async()=>slow.resolve(json({error:{code:'UNAUTHENTICATED'}},401)));await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     expect(publish).not.toHaveBeenCalled();expect(calls.filter(c=>c.path.startsWith('/api/v1/operator-context'))).toHaveLength(2);
     view.unmount();expect(close).toHaveBeenCalledOnce();
@@ -276,7 +322,7 @@ describe('production operator flow',()=>{
     render(<React.StrictMode><App/></React.StrictMode>);await screen.findByRole('heading',{name:'Sign in to ShippingCo'});
     fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Send sign-in code'}));
     await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'12345678'}});
-    fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await screen.findByRole('heading',{name:'Counter A'});
+    fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await workspaceReady();
     expect(calls.filter(c=>c.path==='/auth/challenges/verify')).toHaveLength(1);
   });
   it('malformed successful context becomes controlled recovery without private fields', async () => {

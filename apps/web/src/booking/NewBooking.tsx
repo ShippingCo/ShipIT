@@ -1,117 +1,120 @@
+import {useCallback,useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+import {Link,useNavigate,useSearchParams} from 'react-router-dom';
+import {Dialog} from '../components/m3/Dialog';
+import {TextField,SelectField} from '../components/m3/Input';
+import {createApiClient} from '../data-access/api-client';
+import {ApiFailure} from '../data-access/errors';
+import {createAttachmentClient} from '../data-access/attachments';
 import {retainAccountNavigation} from '../data-access/account-navigation';
+import {receipts} from '../data-access/receipts';
+import type {ScopeController} from '../operator/scope';
+import {createBookingWorkflow} from './workflow';
+import {totalWeight,validate,additionalParcelErrors,type Errors,type Field,type ParcelDraft} from './form';
+import {CustomerLookup} from './CustomerLookup';
 import {AccountSelection} from './AccountSelection';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Link } from 'react-router-dom';
-import { TextField, SelectField } from '../components/m3/Input';
-import { AttachmentUploader } from '../components/m3/AttachmentUploader';
-import { createApiClient } from '../data-access/api-client';
-import { ApiFailure } from '../data-access/errors';
-import { createAttachmentClient } from '../data-access/attachments';
-import type { ScopeController } from '../operator/scope';
-import { createBookingWorkflow } from './workflow';
-import {totalWeight, type Field, type ParcelDraft} from './form';
-import { CustomerLookup } from './CustomerLookup';
-import { ReceiptPanel } from './ReceiptPanel';
-import { receiptMoney } from '../utils/receipt';
+import {BookingPayment} from './BookingPayment';
+import {ReceiptPanel} from './ReceiptPanel';
+import {receiptMoney,printReceipt} from '../utils/receipt';
+import {useResource} from '../operations/hooks';
+import {UnitField,displayUnits} from './UnitField';
+import {RateChoices} from './RateChoices';
+import {BookingServiceSetup} from './BookingServiceSetup';
+import {PhoneField} from './PhoneField';
+import {Msym} from '../components/m3/Icon';
+import {formatKolkata} from '../operations/format';
+import {useBookingAttachments,BookingAttachments} from './BookingAttachments';
 import './counter.css';
-import {BookingPreference} from '../operations/SettingsPreferences';
-import {PageHeader} from '../components/workspace/Workspace';
+import './booking-modal.css';
 const stateOptions = [{ value: '', label: 'Not supplied' }, ...[
   ['02','Himachal Pradesh'],['03','Punjab'],['05','Uttarakhand'],['06','Haryana'],['08','Rajasthan'],['09','Uttar Pradesh'],['10','Bihar'],['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],['16','Tripura'],['17','Meghalaya'],['18','Assam'],['19','West Bengal'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],['23','Madhya Pradesh'],['24','Gujarat'],['27','Maharashtra'],['29','Karnataka'],['30','Goa'],['32','Kerala'],['33','Tamil Nadu'],['36','Telangana'],['37','Andhra Pradesh'],
 ].map(([value, label]) => ({ value, label }))];
-export default function NewBooking({ controller }: { controller: ScopeController }) {
-  const [serial, setSerial] = useState(0);
-  return <BookingForm key={serial} controller={controller} startAnother={() => setSerial(s => s + 1)} />;
+const stepFields:Field[][]=[['name','phone','address'],['recipientName','recipientPhone','recipientAddress','recipientCountry','recipientPin','recipientCity','recipientRegion'],['destination','service','weight','docket','override','reason','contentsType','contentsDescription','liquidQuantity','registration','recipientState','gstin','handoverState','recipientRef','evidenceRef','specialCase','method']];
+export default function NewBooking({controller}:{controller:ScopeController}) {
+ const [serial,setSerial]=useState(0);
+ return <BookingForm key={serial} controller={controller} startAnother={()=>setSerial(n=>n+1)}/>;
 }
-function BookingForm({ controller, startAnother }: { controller: ScopeController; startAnother: () => void }) {
-  const [workflow] = useState(() => createBookingWorkflow(controller));
-  const state = useSyncExternalStore(workflow.subscribe, workflow.snapshot), d = state.draft;
-  const [creditNavigationBlocked,setCreditNavigationBlocked]=useState(false);
-  const creditPending=state.creditPhase==='loading'||state.creditPhase==='uncertain';
-  useEffect(()=>creditPending?retainAccountNavigation(workflow.api.scope,()=>setCreditNavigationBlocked(true)):undefined,[creditPending,workflow]);
-  useEffect(() => { workflow.activate(); return () => workflow.dispose(); }, [workflow]);
-  useEffect(() => {
-    const first = Object.entries(state.errors).find(([, value]) => value)?.[0];
-    if (first) document.getElementById(`counter-${first}`)?.focus();
-    else {const index=state.parcelErrors.findIndex(errors=>Object.values(errors).some(Boolean));if(index>=0){const key=Object.keys(state.parcelErrors[index])[0];document.getElementById(`counter-package-${index}-${key}`)?.focus();}}
-  }, [state.errors,state.parcelErrors]);
-  useEffect(() => {
-    const preventLoss = (event: BeforeUnloadEvent) => { if (state.busy || [state.bookingPhase, state.customerPhase].includes('uncertain')) { event.preventDefault(); event.returnValue = ''; } };
-    window.addEventListener('beforeunload', preventLoss); return () => window.removeEventListener('beforeunload', preventLoss);
-  }, [state.busy, state.bookingPhase, state.customerPhase]);
-  const attachmentClient = useMemo(() => state.booking ? createAttachmentClient(controller.runtime, state.booking.id, {
-    async request<T>(path: string, options?: Parameters<ReturnType<typeof createApiClient>['request']>[1]): Promise<T> {
-      try { return await createApiClient().request<T>(path, options); }
-      catch (error) { if (controller.runtime.isCurrent(workflow.api.scope) && error instanceof ApiFailure && error.code === 'UNAUTHENTICATED') controller.clear('signed_out'); throw error; }
-    },
-  }) : null, [state.booking, controller, workflow]);
-  const disabled = workflow.locked();
-  const field = (key: Field, label: string, helper?: string, props: { inputMode?: 'numeric' | 'tel'; type?: string } = {}) => <div>
-    <TextField id={`counter-${key}`} label={label} value={d[key]} disabled={disabled} onChange={v => workflow.change(key, v)} className={state.errors[key] ? 'err' : undefined} aria-invalid={state.errors[key] ? true : undefined} aria-describedby={`counter-${key}-help`} {...props} />
-    <p className="counter-help" id={`counter-${key}-help`}>{state.errors[key] || helper}</p>
-  </div>;
-  const select = (key: Field, label: string, options: { value: string; label: string }[]) => <div><SelectField id={`counter-${key}`} label={label} value={d[key]} disabled={disabled} onChange={v => workflow.change(key, v)} options={options} className={state.errors[key] ? 'err' : undefined} aria-invalid={state.errors[key] ? true : undefined} aria-describedby={`counter-${key}-help`} /><p className="counter-help" id={`counter-${key}-help`}>{state.errors[key]}</p></div>;
-  if (state.recoveryBlocked) return <section className="card counter-section"><h1 className="t-headline-sm">Booking recovery required</h1><p role="alert">An earlier customer, booking or payment request may have committed. Its private draft was cleared. Do not enter it again. Use Receipts and ask your authorized franchise administrator to reconcile the original request before starting a replacement.</p><Link to="/business/receipts">Open Receipts</Link></section>;
-  if (state.booking) return <div className="counter-flow">
-    <section className="card counter-section"><h1 className="t-headline-sm" tabIndex={-1}>Booking saved</h1>
-      <p>{state.booking.parcels.map(p => p.docket).join(', ')}</p><p className="t-headline-sm">Booked total {receiptMoney(state.booking.charges.tax.final_payable_paise)}</p>
-      <p role="status" aria-live="polite">{state.message}</p>
-      {state.booking.account&&<p>Bill to {state.booking.account.debtor.name} · Due {state.booking.account.due_date} · {state.booking.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate'}</p>}
-      <p>Outstanding {receiptMoney(state.booking.payment_obligation.outstanding_paise)} at booking confirmation</p>
-      <p>{d.paymentMode === 'to_pay' ? 'To Pay: no collection was recorded.' : 'Booking saved. Record the actual received money with its receiving account and source evidence.'}</p>
-      <Link className="btn btn-filled" to={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.account?.debtor.source_customer_id??state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}>Record received money / apply advance</Link>
-      <div className="counter-actions"><button className="btn btn-outlined" disabled={state.busy} onClick={startAnother}>Start another booking</button><Link to="/business/receipts">Open Receipts</Link></div>
-    </section>
-    <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id} />
-    <section className="card counter-section"><h2 className="t-title-lg">Private attachments</h2><p>Booking is saved independently of each upload. Files are saved only after server safety validation.</p>{attachmentClient && <AttachmentUploader client={attachmentClient} runtime={controller.runtime} />}</section>
-  </div>;
-  return <form className="counter-flow" noValidate onSubmit={event => { event.preventDefault(); }} aria-label="New booking">
-    <PageHeader title="New Booking" eyebrow="Counter" description="Enter the customer, packages and tax facts, then review the server price before confirming."/>
-    {creditNavigationBlocked&&creditPending&&<p role="alert">Retry the retained credit request before leaving or changing franchise.</p>}
-    {state.quote?.account&&<p role="status">Price source: {state.quote.account.rate_source==='account'?'Negotiated account rate':'Normal franchise rate (no matching negotiated rule)'}</p>}
-    <div className="counter-workbench-layout"><div className="counter-entry">
-    <section className="card counter-section"><h2 className="t-title-lg" aria-label="1 · Customer / sender"><span className="counter-step" aria-hidden="true">1</span>Customer / sender</h2><p>The booking customer supplies the sender snapshot. Enter the parcel recipient separately.</p>
-      <CustomerLookup workflow={workflow} disabled={disabled} />
-      <div className="counter-grid">{field('name', 'Customer name')}{field('phone', 'Customer phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('address', 'Customer address', 'Optional single-line contact address.')}</div>
-      {state.customer && <p>Selected customer: {state.customer.name} · {state.customer.phone_display} · {state.customer.address} (version {state.customer.version})</p>}
-      <div className="counter-actions">
-        <button type="button" className="btn btn-outlined" disabled={state.busy || state.customerPhase === 'ready' || state.bookingPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} onClick={() => { void workflow.confirmCustomer(); }}>{state.customerPhase === 'uncertain' ? 'Retry same customer request' : state.customer ? 'Save customer changes' : 'Create customer'}</button>
-        {state.customer && <><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.newCustomer()}>Use as new customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => { void workflow.refreshCustomer(); }}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={() => workflow.useLatestCustomer()}>Use latest customer details</button></>}
-      </div><p role="status">Customer: {state.customerPhase}</p>
-      <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
-    </section>
-    <section className="card counter-section"><h2 className="t-title-lg" aria-label="2 · Packages and service"><span className="counter-step" aria-hidden="true">2</span>Packages and service</h2><p>One booking can contain up to 50 packages. Each has its own recipient, weight and tracking docket. All use the selected service and destination; pricing and payment cover the whole booking.</p><BookingPreference workflow={workflow}/><div className="counter-grid">
-      {field('recipientName', 'Recipient name')}{field('recipientPhone', 'Recipient phone', 'International format including + and country code.', { inputMode: 'tel' })}{field('recipientAddress', 'Recipient address')}
-      {field('destination', 'Destination key', 'Use the franchise rate-card key, not a tax jurisdiction.')}
-      {select('service', 'Service', [{ value: 'standard', label: 'Standard' }, { value: 'express', label: 'Express' }, { value: 'same_city', label: 'Same-city' }])}
-      {field('weight', 'Weight (grams)', 'Whole grams.', { inputMode: 'numeric' })}{field('docket', 'Manual docket', 'Leave blank for collision-safe server allocation.')}
-      {field('override', 'Freight override (paise)', 'Optional. The server checks the reason, tolerance and your permission.', { inputMode: 'numeric' })}
-      {select('reason', 'Override reason', [{ value: 'customer_agreement', label: 'Customer agreement' }, { value: 'service_recovery', label: 'Service recovery' }, { value: 'commercial_exception', label: 'Commercial exception' }])}
-    </div>
-      {state.additionalParcels.map((parcel,index)=><fieldset key={index} disabled={disabled}><legend>Package {index+2}</legend><div className="counter-grid">{([['recipientName','Recipient name'],['recipientPhone','Recipient phone'],['recipientAddress','Recipient address'],['weight','Weight (grams)'],['docket','Manual docket']] as [keyof ParcelDraft,string][]).map(([key,label])=><TextField key={key} id={`counter-package-${index}-${key}`} label={`Package ${index+2} · ${label}`} value={parcel[key]} error={state.parcelErrors[index]?.[key]} onChange={value=>workflow.changeParcel(index,key,value)} />)}</div><button type="button" className="btn btn-text" onClick={()=>workflow.removeParcel(index)}>Remove package {index+2}</button></fieldset>)}
-      <button type="button" className="btn btn-outlined" disabled={disabled||state.additionalParcels.length>=49} onClick={()=>workflow.addParcel()}>Add package</button>
-      <p>{state.additionalParcels.length+1} package(s) · Combined weight: {totalWeight(d,state.additionalParcels)||'Check package weights'} g. Request fresh pricing after changing packages.</p>
-    </section>
-    <section className="card counter-section"><h2 className="t-title-lg" aria-label="3 · Tax facts"><span className="counter-step" aria-hidden="true">3</span>Tax facts</h2><p>These facts describe the service recipient. They are not inferred from the parcel destination, sender, recipient or payer. Ordinary domestic state supplies only.</p><div className="counter-grid">
-      {field('recipientRef', 'Service recipient reference', 'Actual reference to the party receiving the courier service; no personal narrative.')}
-      {select('registration', 'Service recipient registration', [{ value: 'unregistered', label: 'Unregistered' }, { value: 'registered', label: 'Registered' }])}
-      {select('recipientState', 'Service recipient state', stateOptions)}
-      {d.registration === 'registered' && field('gstin', 'Service recipient GSTIN')}
-      {select('handoverState', 'Handover state', stateOptions)}
-      {field('evidenceRef', 'Tax evidence reference', 'Reference to the actual supporting record; no invented values.')}
-      {select('specialCase', 'Tax case', [{ value: 'none', label: 'Ordinary domestic supply' }, { value: 'unsupported', label: 'Special case / needs review' }])}
-    </div><button type="button" className="btn btn-outlined" disabled={state.busy || state.bookingPhase === 'uncertain' || state.customerPhase === 'uncertain'} aria-busy={state.pricingPhase === 'loading' || state.taxPhase === 'loading'} onClick={() => { void workflow.preview(); }}>{state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' ? 'Retry same price and tax request' : 'Get server price and tax'}</button>
-      <p role="status">Pricing: {state.pricingPhase}. Tax: {state.taxPhase}.</p>
-    </section>
-    </div><section className="card counter-section counter-review"><h2 className="t-title-lg" aria-label="4 · Review and confirm"><span className="counter-step" aria-hidden="true">4</span>Review and confirm</h2>
-      <div className="counter-review-summary"><span>Packages</span><strong>{1+state.additionalParcels.length}</strong></div>
-      {state.quote && <><p>Server freight suggestion {receiptMoney(state.quote.freight_suggestion_paise)} · Freight {receiptMoney(state.quote.freight_paise)} · Packing {receiptMoney(state.quote.packing_paise)}</p><p>Override: {state.quote.override_status.replaceAll('_', ' ')} · Rate version {state.quote.rate_version_number}</p></>}
-      {state.tax ? <><p>CGST {receiptMoney(state.tax.cgst_paise)} · SGST {receiptMoney(state.tax.sgst_paise)} · IGST {receiptMoney(state.tax.igst_paise)}</p><p>Tax {receiptMoney(state.tax.tax_total_paise)} · Rounding {receiptMoney(state.tax.rounding_adjustment_paise)}</p><p className="t-headline-sm">Server payable {receiptMoney(state.tax.final_payable_paise)}</p><p>Quote valid until {state.quote?.expires_at}. Tax valid until {state.tax.expires_at}. Final validation occurs at confirmation.</p></> : <p>Totals are not yet confirmed. Request server pricing and tax.</p>}
-      <div className="counter-grid">{select('paymentMode', 'Payment choice', [{ value: 'to_pay', label: 'To Pay' }, { value: 'paid_counter', label: 'Paid now' }])}{d.paymentMode === 'paid_counter' && select('method', 'Payment method', [{ value: '', label: 'Select method' }, { value: 'cash', label: 'Cash' }, { value: 'upi', label: 'UPI (manual recording)' }])}</div>
-      {d.paymentMode === 'paid_counter' && <p>After saving the booking, record received money with its named account and eligible receiver. A planned method alone records no money.</p>}
-      <p role={['error', 'uncertain', 'stale'].some(p => [state.customerPhase, state.pricingPhase, state.taxPhase, state.bookingPhase].includes(p as typeof state.bookingPhase)) || Object.values(state.errors).some(Boolean) ? 'alert' : 'status'} aria-live="polite">{state.message}</p>
-      <button type="button" onClick={()=>{void workflow.save();}} className="btn btn-filled" disabled={state.busy || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain'} aria-busy={state.bookingPhase === 'loading'}>{state.bookingPhase === 'uncertain' ? 'Retry same booking' : 'Save booking'}</button>
-      <p>Files can be attached after the booking is confirmed. Printing is optional.</p>
-    </section></div>
-  </form>;
+function BookingForm({controller,startAnother}:{controller:ScopeController;startAnother:()=>void}) {
+ const [workflow]=useState(()=>createBookingWorkflow(controller));
+ const state=useSyncExternalStore(workflow.subscribe,workflow.snapshot),d=state.draft;
+ const navigate=useNavigate(),[params]=useSearchParams(),requestedCustomer=params.get('customer_id');
+ const [step,setStep]=useState(0),[furthest,setFurthest]=useState(0),[newCustomer,setNewCustomer]=useState(false),[editingCustomer,setEditingCustomer]=useState(false);
+ const [stepErrors,setStepErrors]=useState<Errors>({}),[extraErrors,setExtraErrors]=useState<Errors[]>([]),[exitPrompt,setExitPrompt]=useState(false),[closeBlocked,setCloseBlocked]=useState(false);
+ const [paymentOpen,setPaymentOpen]=useState(false),[paymentPending,setPaymentPending]=useState(false);
+ const [serviceSetup,setServiceSetup]=useState(false),[serviceBusy,setServiceBusy]=useState(false),[rateRefresh,setRateRefresh]=useState(0);
+ const [printState,setPrintState]=useState<'idle'|'loading'|'error'>('idle'),[printMessage,setPrintMessage]=useState('');
+ const bodyRef=useRef<HTMLDivElement>(null),heading=useRef<HTMLHeadingElement>(null),printRequested=useRef(false);
+ const linkedCustomer=useResource(requestedCustomer??'',signal=>{
+  if(!requestedCustomer)return Promise.resolve(null);
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(requestedCustomer))return Promise.reject(new ApiFailure('VALIDATION_FAILED'));
+  return workflow.customerApi.read(requestedCustomer,signal);
+ });
+ useEffect(()=>{if(linkedCustomer.phase==='ready'&&linkedCustomer.value)workflow.select(linkedCustomer.value);},[linkedCustomer.phase,linkedCustomer.value,workflow]);
+ useEffect(()=>{workflow.activate();return()=>workflow.dispose();},[workflow]);
+ const uncertain=[state.bookingPhase,state.customerPhase,state.pricingPhase,state.taxPhase,state.creditPhase].includes('uncertain');
+ const creditPending=state.creditPhase==='loading'||state.creditPhase==='uncertain';
+ useEffect(()=>creditPending?retainAccountNavigation(workflow.api.scope,()=>setCloseBlocked(true)):undefined,[creditPending,workflow]);
+ useEffect(()=>{const prevent=(event:MouseEvent)=>{if((paymentPending||serviceBusy)&&event.target instanceof Element&&event.target.closest('a[href]')){event.preventDefault();event.stopPropagation();setCloseBlocked(true);}};document.addEventListener('click',prevent,true);return()=>document.removeEventListener('click',prevent,true);},[paymentPending,serviceBusy]);
+ const attachmentClient=useMemo(()=>state.booking?createAttachmentClient(controller.runtime,state.booking.id,{async request<T>(path:string,options?:Parameters<ReturnType<typeof createApiClient>['request']>[1]):Promise<T>{try{return await createApiClient().request<T>(path,options);}catch(error){if(controller.runtime.isCurrent(workflow.api.scope)&&error instanceof ApiFailure&&error.code==='UNAUTHENTICATED')controller.clear('signed_out');throw error;}}}):null,[state.booking,controller,workflow]);
+ const attachments=useBookingAttachments({runtime:controller.runtime,client:attachmentClient});
+ const disabled=workflow.locked()||!!requestedCustomer&&linkedCustomer.phase==='loading';
+ const dirty=!!d.name||!!d.recipientName||!!d.weight||attachments.count>0;
+ useEffect(()=>{const prevent=(event:BeforeUnloadEvent)=>{if(state.busy||uncertain||dirty&&!state.booking||attachments.uploading||paymentPending||serviceBusy){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[state.busy,uncertain,dirty,state.booking,attachments.uploading,paymentPending,serviceBusy]);
+ useEffect(()=>{heading.current?.focus();bodyRef.current?.scrollTo?.({top:0});},[step]);
+ const steps=['From','To','Parcel and Billing','Review and print'];
+
+ const locateError=useCallback((errors:Errors)=>{const first=Object.keys(errors).find(k=>errors[k as Field]) as Field|undefined;if(!first)return;const target=stepFields.findIndex(fields=>fields.includes(first));if(target>=0)setStep(target);if(target===0){setNewCustomer(!state.customer);setEditingCustomer(true);}requestAnimationFrame(()=>document.getElementById(`counter-${first}`)?.focus());},[state.customer]);
+ useEffect(()=>{if(Object.values(state.errors).some(Boolean)){locateError(state.errors);}else if(state.parcelErrors.some(e=>Object.keys(e).length)){setStep(2);requestAnimationFrame(()=>{const i=state.parcelErrors.findIndex(e=>Object.keys(e).length);document.getElementById(`counter-package-${i}-${Object.keys(state.parcelErrors[i])[0]}`)?.focus();});}},[state.errors,state.parcelErrors,locateError]);
+ function check(index:number){const errors=validate(d,'booking');const current=Object.fromEntries(Object.entries(errors).filter(([key])=>stepFields[index].includes(key as Field))) as Errors;
+  if(index===1){if(!/^[1-9][0-9]{5}$/.test(d.recipientPin))current.recipientPin='Enter a six-digit PIN code.';for(const key of ['recipientAddress','recipientCity','recipientRegion'] as const)if(!d[key].trim())current[key]='Enter this delivery detail.';}if(index===2){if(!d.contentsDescription.trim())current.contentsDescription='Describe the parcel contents.';if(['liquid','semi_liquid'].includes(d.contentsType)&&(!/^[1-9][0-9]*$/.test(d.liquidQuantity)))current.liquidQuantity='Enter the liquid quantity.';}
+  const parcelIssues=index===2?additionalParcelErrors(d,state.additionalParcels):[];
+  const extras=index===2?state.additionalParcels.map((p,i)=>({...parcelIssues[i],...(!p.contentsDescription.trim()?{contentsDescription:'Describe the parcel contents.'}:{}),...(['liquid','semi_liquid'].includes(p.contentsType)&&!p.liquidQuantity?{liquidQuantity:'Enter the liquid quantity.'}:{})})):[];setStepErrors(current);setExtraErrors(extras);
+  if(Object.keys(current).length||extras.some(e=>Object.keys(e).length)){locateError(current);if(!Object.keys(current).length && extras.some(e=>Object.keys(e).length)){const i=extras.findIndex(e=>Object.keys(e).length);setStep(2);requestAnimationFrame(()=>document.getElementById(`counter-package-${i}-${Object.keys(extras[i])[0]}`)?.focus());}return false;}return true;
+ }
+ async function next(){if(disabled)return;if(!check(step))return;
+  if(step===0&&state.customerPhase!=='ready'){await workflow.confirmCustomer();if(workflow.snapshot().customerPhase!=='ready')return;setEditingCustomer(false);setNewCustomer(false);}
+  if(step===2){if(state.taxPhase!=='ready')await workflow.preview();if(workflow.snapshot().taxPhase!=='ready')return;}
+  setStep(value=>Math.min(value+1,3));setFurthest(value=>Math.max(value,step+1));setStepErrors({});
+ }
+ function close(){if(state.busy||uncertain||attachments.uploading||paymentPending||serviceBusy||printState==='loading'){setCloseBlocked(true);return;}if(dirty&&!state.booking||state.booking&&attachments.pending){setExitPrompt(true);return;}navigate('/business/packages');}
+ function change(key:Field,value:string){setStepErrors(prev=>({...prev,[key]:undefined}));workflow.change(key,value);}
+ const field=(key:Field,label:string,helper?:string)=><TextField id={`counter-${key}`} label={label} value={d[key]} disabled={disabled} error={state.errors[key]||stepErrors[key]} helper={helper} maxLength={key==='name'||key==='recipientName'?120:key==='address'||key==='recipientAddress'?500:key==='recipientPin'?6:key==='gstin'?15:undefined} onChange={value=>change(key,value)}/>;
+ const phone=(key:'phone'|'recipientPhone',label:string)=><PhoneField id={`counter-${key}`} label={label} value={d[key]} disabled={disabled} error={state.errors[key]||stepErrors[key]} onChange={value=>change(key,value)}/>;
+ const select=(key:Field,label:string,options:{value:string;label:string}[])=><SelectField id={`counter-${key}`} label={label} value={d[key]} disabled={disabled} error={state.errors[key]||stepErrors[key]} onChange={value=>change(key,value)} options={options}/>;
+ const types=[{value:'solid',label:'Solid goods'},{value:'documents',label:'Documents'},{value:'liquid',label:'Liquid'},{value:'semi_liquid',label:'Semi-liquid'},{value:'other',label:'Other'}];
+ function parcelFields(parcel:ParcelDraft,index?:number){const first=index===undefined,errors=first?{...stepErrors,...state.errors}:{...extraErrors[index],...state.parcelErrors[index]};
+  const id=(key:string)=>first?`counter-${key}`:`counter-package-${index}-${key}`;
+  const update=(key:keyof ParcelDraft,value:string)=>{if(first)change(key,value);else{setExtraErrors([]);workflow.changeParcel(index,key,value);}};
+  return <><TextField id={id('docket')} label={first?'Docket number':`Parcel ${index+2} docket number`} value={parcel.docket} required autoComplete="off" spellCheck={false} maxLength={32} disabled={disabled} error={errors.docket} onChange={value=>update('docket',value)}/><div className="counter-grid"><SelectField id={id('contentsType')} label={first?'Contents type':`Parcel ${index+2} contents type`} value={parcel.contentsType} options={types} disabled={disabled} onChange={value=>update('contentsType',value)}/><UnitField id={id('weight')} label={first?'Weight (kg)':`Package ${index+2} · Weight (kg)`} places={3} value={parcel.weight} disabled={disabled} error={errors.weight?'Enter a positive packed weight in kg, up to 3 decimal places.':undefined} onChange={value=>update('weight',value)}/></div><TextField id={id('contentsDescription')} label={first?'Contents description':`Parcel ${index+2} contents description`} value={parcel.contentsDescription} maxLength={200} disabled={disabled} error={errors.contentsDescription} onChange={value=>update('contentsDescription',value)}/>{['liquid','semi_liquid'].includes(parcel.contentsType)&&<UnitField id={id('liquidQuantity')} label={first?'Liquid quantity (litres)':`Parcel ${index+2} liquid quantity (litres)`} places={3} value={parcel.liquidQuantity} disabled={disabled} helper="Keep the packed weight in kg. Litres describe the contents." error={errors.liquidQuantity} onChange={value=>update('liquidQuantity',value)}/>}</>;
+ }
+ const printSaved=useCallback(async()=>{const booking=workflow.snapshot().booking;if(!booking||printState==='loading')return;setPrintState('loading');setPrintMessage('Loading the issued receipt…');try{const dto=await receipts(workflow.api).booking(booking.id);if(!controller.runtime.isCurrent(workflow.api.scope))return;printReceipt(dto);setPrintState('idle');setPrintMessage('The booking is saved. You can print another copy if needed.');}catch{if(!controller.runtime.isCurrent(workflow.api.scope))return;setPrintState('error');setPrintMessage('Booking saved. The receipt could not be printed. Retry printing without creating another booking.');}},[workflow,printState,controller]);
+ useEffect(()=>{if(state.booking&&printRequested.current){printRequested.current=false;void printSaved();}},[state.booking,printSaved]);
+ async function save(print:boolean){if(state.busy)return;printRequested.current=print;await workflow.save();if(!workflow.snapshot().booking&&workflow.snapshot().bookingPhase!=='uncertain')printRequested.current=false;}
+ const summary=<aside className="booking-total"><h3>Booking total</h3><div className="counter-price-line"><span>Parcels</span><strong>{1+state.additionalParcels.length}</strong></div><div className="counter-price-line"><span>Packed weight</span><strong>{displayUnits(totalWeight(d,state.additionalParcels),3)||'—'} kg</strong></div>{state.quote&&<><div className="counter-price-line"><span>Delivery charge</span><strong>{receiptMoney(state.quote.freight_paise)}</strong></div><div className="counter-price-line"><span>Packing</span><strong>{receiptMoney(state.quote.packing_paise)}</strong></div></>}{state.tax?<><div className="counter-price-line"><span>GST</span><strong>{receiptMoney(state.tax.tax_total_paise)}</strong></div><p className="booking-total-amount">Total payable {receiptMoney(state.tax.final_payable_paise)}</p><small>CGST {receiptMoney(state.tax.cgst_paise)} · SGST {receiptMoney(state.tax.sgst_paise)} · IGST {receiptMoney(state.tax.igst_paise)}</small><p className="counter-help">Checked again when you save. Price valid until {formatKolkata(state.quote!.expires_at)}.</p></>:<p className="counter-help">Your price appears after the parcel and billing details are checked.</p>}</aside>;
+ return <><div className="booking-page-backdrop"><h1>New Booking</h1><p>Book a parcel in four simple steps.</p></div><Dialog open title={serviceSetup?'Add a service':state.booking?'Booking saved':'New booking'} onClose={close} size="lg"><div className="booking-modal">
+ <p className="booking-modal-context">{controller.snapshot().context?.franchises.find(f=>f.id===workflow.api.franchise)?.display_name??'Current branch'}</p>
+ {exitPrompt?<div className="booking-exit"><h2>{state.booking?'Leave the saved booking?':'Discard this booking draft?'}</h2><p>{state.booking?'Your booking is saved, but some selected files are not attached. Leaving clears only the remaining local files. You can attach them later from the saved booking.':'The unsaved booking and selected files will be cleared. Any customer already created remains saved.'}</p><div className="counter-actions"><button className="btn btn-filled" onClick={()=>setExitPrompt(false)}>Keep editing</button><button className="btn btn-outlined" onClick={()=>{attachments.clear();navigate('/business/packages');}}>{state.booking?'Leave saved booking':'Discard booking draft'}</button></div></div>:state.recoveryBlocked?<section><h2>Booking recovery required</h2><p role="alert">An earlier request may have saved. Check Receipts and ask your administrator to reconcile it before creating a replacement.</p><Link to="/business/receipts">Open Receipts</Link></section>:<>
+ {!state.booking&&!serviceSetup&&<nav aria-label="Booking steps" className="counter-step-nav booking-step-nav">{steps.map((label,index)=><button type="button" key={label} aria-current={step===index?'step':undefined} disabled={disabled||index>furthest} onClick={()=>{if(index<=step)setStep(index);else void next();}}><span>{index+1}</span>{label}</button>)}</nav>}
+ <div className="booking-modal-body" ref={bodyRef}>
+ {closeBlocked&&<p role="alert">Finish or retry the current request before closing this booking.</p>}
+ {requestedCustomer&&linkedCustomer.phase==='loading'&&<p role="status">Loading the selected customer…</p>}
+ {requestedCustomer&&linkedCustomer.phase==='error'&&<p role="alert">The selected customer could not be loaded in this workspace. <button type="button" onClick={linkedCustomer.reload}>Retry selected customer</button></p>}
+ {serviceSetup?<BookingServiceSetup controller={controller} destination={d.destination} onBusyChange={setServiceBusy} onCancel={()=>setServiceSetup(false)} onSaved={option=>{workflow.change('destination',option.destination_key);workflow.change('service',option.service);workflow.change('serviceOptionId',option.id);setRateRefresh(n=>n+1);setServiceSetup(false);}}/>:state.booking?<><section className="counter-confirmation"><span className="counter-confirmation-mark"><Msym name="check"/></span><h2>Ready for the next parcel</h2><p>{state.booking.parcels.map(p=>p.docket).join(', ')}</p><p className="t-headline-sm">Booked total {receiptMoney(state.booking.charges.tax.final_payable_paise)}</p><p>Outstanding {receiptMoney(state.booking.payment_obligation.outstanding_paise)} at booking confirmation</p><p role="status" aria-live="polite">{state.message}</p>{state.booking.account&&<p>Bill to {state.booking.account.debtor.name} · Due {state.booking.account.due_date}</p>}<p>{d.paymentMode==='to_pay'?'To Pay: no collection was recorded.':'Record the money received next. Choosing a payment method does not record a payment.'}</p><button type="button" className="btn btn-filled" onClick={()=>setPaymentOpen(true)}>Record received money</button><Link className="btn btn-text" to={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.account?.debtor.source_customer_id??state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}>Open payments / apply advance</Link><div className="counter-actions"><button className="btn btn-outlined" disabled={printState==='loading'} onClick={()=>{void printSaved();}}>{printState==='error'?'Retry printing':printState==='loading'?'Loading receipt…':'Print booking receipt'}</button><button className="btn btn-text" disabled={attachments.pending||paymentPending} onClick={startAnother}>Start another booking</button><Link to="/business/receipts">Open Receipts</Link></div>{printMessage&&<p role={printState==='error'?'alert':'status'}>{printMessage}</p>}</section>{paymentOpen&&<BookingPayment controller={controller} booking={state.booking} onPendingChange={setPaymentPending}/>}<ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id}/></>:<form className="counter-flow booking-four-steps" aria-label="New booking" noValidate onSubmit={e=>e.preventDefault()}>
+ <section hidden={step!==0}><h2 ref={step===0?heading:undefined} tabIndex={-1}>Who is sending?</h2><p className="booking-intro">Find a customer or add someone new.</p>{!state.customer&&!newCustomer&&<CustomerLookup workflow={workflow} disabled={disabled} onAdd={(name,phone)=>{workflow.newCustomer();workflow.change('name',name);workflow.change('phone',phone);setNewCustomer(true);}}/>}
+ {state.customer&&<div className="booking-selected"><div><strong>{state.customer.name}</strong><p>{state.customer.phone_display}</p></div><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>{workflow.newCustomer();setNewCustomer(false);setEditingCustomer(false);}}>Change</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>setEditingCustomer(v=>!v)}>Edit details</button></div>}
+ <div hidden={!newCustomer&&!editingCustomer&&state.customerPhase==='ready'||!newCustomer&&!state.customer}><div className="counter-grid">{field('name','Customer name')}{phone('phone','Customer phone')}</div>{field('address','Customer address','Optional shop or contact address.')}<div className="counter-actions"><button type="button" className="btn btn-outlined" disabled={state.busy||state.customerPhase==='ready'||state.bookingPhase==='uncertain'||state.pricingPhase==='uncertain'||state.taxPhase==='uncertain'} onClick={()=>{void workflow.confirmCustomer();}}>{state.customerPhase==='uncertain'?'Retry same customer request':state.customer?'Save customer changes':'Create customer'}</button>{state.customer&&<><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>{void workflow.refreshCustomer();}}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>workflow.useLatestCustomer()}>Use latest customer details</button></>}</div></div>{state.customerPhase==='ready'&&<p role="status">Customer details confirmed.</p>}
+ </section>
+ <section hidden={step!==1}><h2 ref={step===1?heading:undefined} tabIndex={-1}>Where is it going?</h2><p className="booking-intro">All parcels in this booking go to this receiver.</p><div className="counter-grid">{field('recipientName','Recipient name')}{phone('recipientPhone','Recipient phone')}{select('recipientCountry','Country',[{value:'IN',label:'India'}])}{field('recipientPin','PIN code')}{field('recipientCity','City')}{field('recipientRegion','State / region')}</div>{field('recipientAddress','Recipient address','Building, street and area.')}<p className="counter-help">Domestic bookings only. Enter the full delivery address.</p></section>
+ <section hidden={step!==2}><h2 ref={step===2?heading:undefined} tabIndex={-1}>Parcel and Billing</h2><p className="booking-intro">Add the packed weight, choose a service and check the bill.</p><div className="booking-parcel-layout"><div><h3>Parcel 1</h3>{parcelFields(d)}{state.additionalParcels.map((parcel,index)=><fieldset key={index} disabled={disabled}><legend>Parcel {index+2}</legend>{parcelFields(parcel,index)}<button type="button" className="btn btn-text" onClick={()=>workflow.removeParcel(index)}>Remove package {index+2}</button></fieldset>)}<button type="button" className="btn btn-outlined" disabled={disabled||state.additionalParcels.length>=49} onClick={()=>workflow.addParcel()}>Add package</button><div className="booking-section"><h3>Delivery service</h3><RateChoices workflow={workflow} refreshKey={rateRefresh} onAddService={()=>setServiceSetup(true)} disabled={disabled} destinationError={state.errors.destination||stepErrors.destination} serviceError={state.errors.service||stepErrors.service} onChange={change}/></div>
+ <details className="counter-optional"><summary>Price changes · optional</summary><UnitField id="counter-override" label="Freight override (₹)" places={2} value={d.override} disabled={disabled} error={state.errors.override||stepErrors.override} onChange={value=>change('override',value)}/>{select('reason','Override reason',[{value:'customer_agreement',label:'Customer agreement'},{value:'service_recovery',label:'Service recovery'},{value:'commercial_exception',label:'Commercial exception'}])}</details>
+ <div className="booking-section"><h3>Billing</h3><AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/><div className="counter-grid">{select('paymentMode','Payment choice',[{value:'to_pay',label:'Pay later'},{value:'paid_counter',label:'Received at counter'}])}{d.paymentMode==='paid_counter'&&select('method','Payment method',[{value:'',label:'Choose method'},{value:'cash',label:'Cash'},{value:'upi',label:'UPI'}])}</div>{d.paymentMode==='paid_counter'&&<p className="booking-inline-note">After saving, record the actual amount and receiving account in Money receipts. No payment is recorded by this selection.</p>}
+ <div className="counter-billing-details"><h3>Details for the bill</h3><div className="counter-grid">{select('registration','GST registration',[{value:'unregistered',label:'Not GST registered'},{value:'registered',label:'GST registered'}])}{select('handoverState','Parcel handed over in',stateOptions)}{d.registration==='registered'&&<>{select('recipientState','Billing state',stateOptions)}{field('gstin','GSTIN')}</>}</div><label className="booking-check"><input id="counter-evidenceRef" type="checkbox" disabled={disabled} checked={d.evidenceRef==='COUNTER_DECLARATION'} onChange={event=>workflow.confirmTaxFacts(event.target.checked)}/>I checked these billing and handover details with the customer.</label>{(state.errors.evidenceRef||stepErrors.evidenceRef)&&<p role="alert" className="counter-help">Confirm the billing details before continuing.</p>}<button type="button" className="btn btn-outlined" disabled={state.busy||state.bookingPhase==='uncertain'||state.customerPhase==='uncertain'} onClick={()=>{void workflow.preview();}}>{state.pricingPhase==='uncertain'||state.taxPhase==='uncertain'?'Retry same price and tax request':'Calculate booking price'}</button></div></div>
+ </div>{step===2&&summary}</div></section>
+ <section hidden={step!==3}><h2 ref={step===3?heading:undefined} tabIndex={-1}>Everything look right?</h2><p className="booking-intro">Check the details before creating the booking.</p><div className="booking-parcel-layout"><div>{[['Sender',d.name+' · '+d.phone,0],['Receiver',d.recipientName+' · '+d.recipientPhone,1],['Delivery address',[d.recipientAddress,d.recipientCity,d.recipientRegion,d.recipientPin].filter(Boolean).join(', '),1],['Parcels and service',`${1+state.additionalParcels.length} parcels · ${displayUnits(totalWeight(d,state.additionalParcels),3)} kg · ${state.quote?.service_option?.name??d.service.replaceAll('_',' ')}`,2],...[d,...state.additionalParcels].map((parcel,i)=>[`Parcel ${i+1} docket`,`${parcel.docket.trim().toUpperCase()} · ${displayUnits(parcel.weight,3)} kg`,2]),['Bill to',state.accountId?(state.accountName??'Monthly account'):d.name,2]].map(([title,value,index])=><div className="counter-review-row" key={String(title)}><div><h3>{title}</h3><p>{value}</p></div><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>setStep(Number(index))}>Edit {String(title).toLowerCase()}</button></div>)}<p className="counter-help">{attachments.count} attachment(s) selected. Files upload after the booking is saved.</p><p className="booking-inline-note">The booking number is generated automatically. Printing will not create a second booking.</p></div>{step===3&&summary}</div></section>
+ </form>}
+ <div hidden={serviceSetup||!state.booking&&step!==2} className="booking-attachments-section"><BookingAttachments queue={attachments} disabled={disabled&&!state.booking}/></div>
+ {state.message&&!state.booking&&<p className="booking-status" role={['error','uncertain','stale'].some(p=>[state.customerPhase,state.pricingPhase,state.taxPhase,state.bookingPhase].includes(p as typeof state.bookingPhase))||Object.values(state.errors).some(Boolean)?'alert':'status'} aria-live="polite">{state.message}</p>}
+ </div>
+ {!state.booking&&!serviceSetup&&<footer className="booking-modal-footer"><span>Step {step+1} of 4</span><div className="counter-actions"><button type="button" className="btn btn-outlined" disabled={step===0||disabled} onClick={()=>setStep(n=>n-1)}>Back</button>{step<3?<button type="button" className="btn btn-filled" disabled={disabled} onClick={()=>{void next();}}>{state.busy?'Checking…':'Continue'}</button>:<><button type="button" className="btn btn-outlined" disabled={state.busy||state.customerPhase==='uncertain'||state.pricingPhase==='uncertain'||state.taxPhase==='uncertain'} onClick={()=>{void save(false);}}>{state.bookingPhase==='uncertain'?'Retry same booking':'Create booking'}</button><button type="button" className="btn btn-filled" disabled={state.busy||uncertain} onClick={()=>{void save(true);}}>Create booking &amp; print</button></>}</div></footer>}
+ </>}
+ </div></Dialog></>;
 }

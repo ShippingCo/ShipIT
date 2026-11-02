@@ -4,12 +4,12 @@
    ============================================================ */
 
 :root {
-  /* ---- Primary (muted blue ink with light-blue surfaces) ---- */
-  --md-primary: #426c83;
+  /* ---- Primary (Blue Studio, 5.39:1 against white) ---- */
+  --md-primary: #2868c7;
   --md-on-primary: #ffffff;
-  --md-primary-container: #eaf4fb;
-  --md-on-primary-container: #355b70;
-  --md-primary-hover: #355b70;
+  --md-primary-container: #edf4ff;
+  --md-on-primary-container: #234d89;
+  --md-primary-hover: #2059ad;
 
   /* ---- Secondary (steel blue) ---- */
   --md-secondary: #4b5563;

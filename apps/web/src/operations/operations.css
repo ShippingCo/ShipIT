@@ -38,8 +38,8 @@
 .ops-fact b { display: block; font-variant-numeric: tabular-nums; }
 .ops-form { display: grid; gap: 14px; }
 .ops-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
-.ops-alert { border-left: 3px solid var(--md-error); padding: 10px 14px; background: var(--md-surface); }
-.ops-success { border-left: 3px solid var(--md-primary); padding: 10px 14px; }
+.ops-alert { border-left: 1px solid var(--md-error); padding: 10px 14px; background: var(--md-surface); }
+.ops-success { border-left: 1px solid var(--md-primary); padding: 10px 14px; }
 .ops-page button:focus-visible,.ops-page a:focus-visible,.ops-page input:focus-visible,.ops-page select:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
 @media(max-width:700px){.ops-form-grid{grid-template-columns:1fr}.ops-row{align-items:flex-start;flex-direction:column}.ops-row-actions{width:100%}.ops-row-actions .btn{flex:1}.operator-workspace.ops-workspace{padding:16px}.ops-card{padding:16px}}
 @media(prefers-reduced-motion:reduce){.ops-page *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}

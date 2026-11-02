@@ -74,6 +74,7 @@ export async function publish(scope:TenantAccess,id:string,expected:number) {
 }
 export async function saveQuote(scope:TenantAccess,result:PricingQuoteDto) {
   const c=assertTenantAccess(scope,['pricing.quote','pricing.override','pricing.override.approve']);
+  if(result.service_option){await scopedQuery(scope,['pricing.quote','pricing.override','pricing.override.approve'],`INSERT INTO shipit.pricing_quotes(id,organization_id,franchise_id,actor_id,version_id,rule_id,result,created_at,expires_at,service_option_id) SELECT $1,{{organization}},$2,$3,$4,NULL,$5,$6,$7,$8 WHERE {{franchise:$9:$2}}`,[result.id,c.permittedFranchiseIds[0],c.actor.id,result.rate_version_id,result,result.created_at,result.expires_at,result.service_option.id,c.organizationId]);return;}
   if(!result.account?.rate_revision_id){
     await scopedQuery(scope,['pricing.quote','pricing.override','pricing.override.approve'],`INSERT INTO shipit.pricing_quotes
       (id,organization_id,franchise_id,actor_id,version_id,rule_id,result,created_at,expires_at)

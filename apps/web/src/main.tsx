@@ -8,6 +8,8 @@ import './styles/workspace.css';
 import './operations/logistics-layouts.css';
 import './operations/finance-layouts.css';
 import './operations/service-layouts.css';
+import './styles/studio.css';
+import './styles/forms.css';
 import './styles/tailwind.css'; // last: utilities must be able to win
 
 const container = document.getElementById('root');

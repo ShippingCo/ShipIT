@@ -4,6 +4,7 @@ import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/reac
 import AgentAccess from '../operations/AgentAccess';
 import {agentAccess} from '../data-access/agent-access';
 import {scopedApi} from '../data-access/scoped-api';
+import {accountNavigationPending} from '../data-access/account-navigation';
 import {createScopeController} from '../operator/scope';
 const id=(n:number)=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const org=id(1),franchise=id(2),user=id(3),agent=id(4),inviteId=id(5),memberId=id(6),secret='S'.repeat(43);
@@ -27,13 +28,13 @@ describe('existing identity-bound agent access UI',()=>{
   fireEvent.change(screen.getByLabelText('Verified account reference'),{target:{value:agent}});fireEvent.submit(screen.getByRole('form',{name:'Invite temporary agent'}));
   expect(await screen.findByLabelText('One-time agent invitation code')).toHaveValue(secret);expect(writes[0]!.body).toEqual({organization_id:org,invitee_user_id:agent,role:'delivery_agent',franchise_ids:[franchise]});
   fireEvent.click(screen.getByRole('button',{name:'Hide invitation code'}));expect(screen.queryByLabelText('One-time agent invitation code')).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole('button',{name:'Revoke agent '+agent.slice(0,8)}));await screen.findByText('Agent access revoked. Custody history remains available to its owners.');expect(writes[1]).toEqual({path:'/api/v1/memberships/'+memberId+'/revoke',body:{expected_version:3}});
+  const trigger=await screen.findByRole('button',{name:'Revoke agent '+agent.slice(0,8)});trigger.focus();fireEvent.click(trigger);expect(screen.getByRole('dialog',{name:'Revoke this agent’s access?'})).toBeVisible();expect(writes).toHaveLength(1);fireEvent.click(screen.getByRole('button',{name:'Keep access unchanged'}));expect(writes).toHaveLength(1);await waitFor(()=>expect(trigger).toHaveFocus());fireEvent.click(trigger);fireEvent.click(screen.getByRole('button',{name:'Confirm revoke access'}));await screen.findByText('Agent access revoked. Custody history remains available to its owners.');expect(writes[1]).toEqual({path:'/api/v1/memberships/'+memberId+'/revoke',body:{expected_version:3}});
  });
  it('reconciles lost invitation by read and offers revocation, never replaying its unrecoverable token command',async()=>{
   const writes=fixture(true),c=controller();render(<><a href="/business">Leave workspace</a><AgentAccess controller={c} changed={()=>{}}/></>);await waitFor(()=>expect(screen.getByRole('button',{name:'Create agent invitation'})).toBeEnabled());
   fireEvent.change(screen.getByLabelText('Verified account reference'),{target:{value:agent}});fireEvent.submit(screen.getByRole('form',{name:'Invite temporary agent'}));
-  const check=await screen.findByRole('button',{name:'Check current access outcome'});expect(fireEvent.click(screen.getByRole('link',{name:'Leave workspace'}))).toBe(false);fireEvent.click(check);await screen.findByText(/one-time code cannot be recovered/);expect(writes).toHaveLength(1);expect(screen.queryByLabelText('One-time agent invitation code')).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole('button',{name:'Revoke invitation '+inviteId.slice(0,8)}));await waitFor(()=>expect(writes).toHaveLength(2));expect(writes[1]).toEqual({path:'/api/v1/membership-invitations/'+inviteId+'/revoke',body:{expected_version:1}});
+  const check=await screen.findByRole('button',{name:'Check current access outcome'});expect(accountNavigationPending(c.runtime.ticket())).toBe(true);expect(fireEvent.click(screen.getByRole('link',{name:'Leave workspace'}))).toBe(false);fireEvent.click(check);await screen.findByText(/one-time code cannot be recovered/);expect(writes).toHaveLength(1);expect(screen.queryByLabelText('One-time agent invitation code')).not.toBeInTheDocument();
+  expect(accountNavigationPending(c.runtime.ticket())).toBe(false);fireEvent.click(await screen.findByRole('button',{name:'Revoke invitation '+inviteId.slice(0,8)}));expect(writes).toHaveLength(1);fireEvent.click(screen.getByRole('button',{name:'Confirm revoke invitation'}));await waitFor(()=>expect(writes).toHaveLength(2));expect(writes[1]).toEqual({path:'/api/v1/membership-invitations/'+inviteId+'/revoke',body:{expected_version:1}});
  });
  it('rejects foreign tenant projections and never mutates a multiple-franchise grant through this screen',async()=>{
   fixture();const c=controller(),source=agentAccess(scopedApi(c));await expect(source.apply({kind:'revoke_member',member:{...membership,role:'delivery_agent',lifecycle:'active',franchise_ids:[franchise,id(22)]}})).rejects.toThrow();

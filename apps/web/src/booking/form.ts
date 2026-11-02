@@ -1,6 +1,7 @@
 import type { PricingQuoteInput, TaxFacts } from '@shippingco/shared';
 export const emptyDraft = () => ({
   name: '', phone: '', address: '', recipientName: '', recipientPhone: '', recipientAddress: '',
+  serviceOptionId:'', recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',
   destination: '', weight: '', service: 'standard', docket: '', override: '', reason: 'customer_agreement',
   registration: 'unregistered', recipientState: '', gstin: '', handoverState: '', recipientRef: '', evidenceRef: '',
   specialCase: 'none', paymentMode: 'to_pay', method: '',
@@ -8,7 +9,7 @@ export const emptyDraft = () => ({
 export type Draft = ReturnType<typeof emptyDraft>;
 export type Field = keyof Draft;
 export type Errors = Partial<Record<Field, string>>;
-export const commercialFields: Field[] = ['destination', 'weight', 'service', 'override', 'reason', 'registration', 'recipientState', 'gstin', 'handoverState', 'recipientRef', 'evidenceRef', 'specialCase'];
+export const commercialFields: Field[] = ['serviceOptionId', 'destination', 'weight', 'service', 'override', 'reason', 'registration', 'recipientState', 'gstin', 'handoverState', 'recipientRef', 'evidenceRef', 'specialCase'];
 export function validPhone(value: string) {
   const display = value.replace(/^ +| +$/g, '');
   return value.length <= 40 && /^\+[1-9][0-9]*(?:[ -][0-9]+)*$/.test(display) && /^\+[1-9][0-9]{7,14}$/.test(display.replace(/[ -]/g, ''));
@@ -19,19 +20,28 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
   const e: Errors = {};
   if (section === 'customer' || section === 'booking') {
     if (!validText(d.name, 120, true)) e.name = 'Enter a customer name, up to 120 characters.';
-    if (!validPhone(d.phone)) e.phone = 'Use an international number, for example +1 202-555-0100.';
+    if (!validPhone(d.phone)) e.phone = 'Choose the country code and enter the phone number, or paste the full number with +.';
     if (!validText(d.address, 500, false)) e.address = 'Use a single-line address up to 500 characters.';
   }
   if (section === 'booking') {
     if (!validText(d.recipientName, 120, true)) e.recipientName = 'Enter the recipient name.';
-    if (!validPhone(d.recipientPhone)) e.recipientPhone = 'Enter an international recipient number.';
+    if (!validPhone(d.recipientPhone)) e.recipientPhone = 'Choose the country code and enter the receiver’s phone number.';
     if (!validText(d.recipientAddress, 500, false)) e.recipientAddress = 'Use a single-line address up to 500 characters.';
+    if(d.recipientPin||d.contentsDescription){
+      if(d.recipientCountry!=='IN')e.recipientCountry='Only India is supported for this booking.';
+      if(!/^[1-9][0-9]{5}$/.test(d.recipientPin))e.recipientPin='Enter a six-digit PIN code.';
+      if(!validText(d.recipientCity,80,true))e.recipientCity='Enter the receiver city.';
+      if(!validText(d.recipientRegion,80,true))e.recipientRegion='Enter the receiver state.';
+      if(!validText(d.recipientAddress,500,true))e.recipientAddress='Enter the delivery address.';
+    }
     const docket = d.docket.replace(/^[ \t]+|[ \t]+$/g, '').toUpperCase();
-    if (d.docket && (docket.length > 32 || !/^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(docket))) e.docket = 'Use up to 32 letters, digits and internal hyphens, or leave blank for allocation.';
+    if (!docket) e.docket = 'Enter the docket number on this parcel.';
+    else if (docket.length > 32 || !/^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(docket)) e.docket = 'Use up to 32 letters, numbers or hyphens. Start and end with a letter or number.';
     if (d.paymentMode === 'paid_counter' && !['cash', 'upi'].includes(d.method)) e.method = 'Select how the payment was received.';
   }
   if (section !== 'customer') {
-    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Enter the configured destination key.';
+    if(!['standard','express','same_city'].includes(d.service))e.service='Choose a delivery service.';
+    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Choose a destination from the published rates. If none are available, ask your branch administrator to set up rates.';
     if (!/^[1-9][0-9]*$/.test(d.weight) || !Number.isSafeInteger(Number(d.weight))) e.weight = 'Enter a positive whole number of grams.';
     if (d.override && (!/^(0|[1-9][0-9]*)$/.test(d.override) || !Number.isSafeInteger(Number(d.override)))) e.override = 'Enter whole paise, zero or greater.';
     for (const key of ['recipientRef', 'evidenceRef'] as const) if (!/^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/.test(d[key])) e[key] = 'Enter the actual record reference (letters, digits, colon, underscore or hyphen).';
@@ -43,7 +53,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
   return e;
 }
 export function pricingInput(d: Draft): PricingQuoteInput {
-  return { destination_key: d.destination, service: d.service as PricingQuoteInput['service'], weight_grams: Number(d.weight),
+  return { ...(d.serviceOptionId?{service_option_id:d.serviceOptionId}:{}),destination_key: d.destination, service: d.service as PricingQuoteInput['service'], weight_grams: Number(d.weight),
     ...(d.override ? { override: { freight_paise: Number(d.override), reason_code: d.reason as NonNullable<PricingQuoteInput['override']>['reason_code'] } } : {}) };
 }
 export function taxFacts(d: Draft): TaxFacts {
@@ -52,11 +62,27 @@ export function taxFacts(d: Draft): TaxFacts {
     evidence_ref: d.evidenceRef || null, special_case: d.specialCase as TaxFacts['special_case'] };
 }
 
-export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'weight' | 'docket'>;
-export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',weight:'',docket:''});
+export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'weight' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity'>;
+export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',weight:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:''});
 export function parcelErrors(parcel: ParcelDraft): Errors {
   const errors = validate({...emptyDraft(), ...parcel}, 'booking');
-  return Object.fromEntries(Object.entries(errors).filter(([key]) => key in parcel));
+  const result=Object.fromEntries(Object.entries(errors).filter(([key]) => key in parcel)) as Errors;
+  if(parcel.contentsDescription){
+    if(!validText(parcel.contentsDescription,200,true))result.contentsDescription='Enter a short contents description.';
+    if(!['solid','documents','liquid','semi_liquid','other'].includes(parcel.contentsType))result.contentsType='Choose a contents type.';
+    if(['liquid','semi_liquid'].includes(parcel.contentsType)&&(!/^[1-9][0-9]*$/.test(parcel.liquidQuantity)||Number(parcel.liquidQuantity)>100000000))result.liquidQuantity='Enter the quantity in litres, with up to three decimal places.';
+  }
+  return result;
+}
+export function additionalParcelErrors(first: Draft, parcels: ParcelDraft[]): Errors[] {
+  const seen = new Set([first.docket.trim().toUpperCase()]);
+  return parcels.map(parcel => {
+    const errors = parcelErrors(parcel);
+    const docket = parcel.docket.trim().toUpperCase();
+    if (docket && seen.has(docket)) errors.docket = 'Another parcel in this booking already has this docket number.';
+    seen.add(docket);
+    return errors;
+  });
 }
 export function totalWeight(first: Draft, additional: ParcelDraft[]): string {
   const weights = [first, ...additional].map(p => p.weight);

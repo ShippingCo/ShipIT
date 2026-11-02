@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useRef } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Msym, cx } from './Icon';
 import { IconButton } from './Button';
 
@@ -13,28 +14,24 @@ export interface DialogProps {
 }
 
 export function Dialog({ open, onClose, title, children, actions, size, hideClose }: DialogProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose?.(); };
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
-  }, [open, onClose]);
-
-  if (!open) return null;
+  const returnFocus = useRef<HTMLElement | null>(null);
   return (
-    <div className="scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className={cx('dialog', size === 'lg' && 'dialog-lg')} role="dialog" aria-modal="true">
-        {title != null && (
+    <DialogPrimitive.Root open={!!open} onOpenChange={next => { if (!next) onClose?.(); }}>
+      <DialogPrimitive.Portal><DialogPrimitive.Overlay className="scrim">
+      <DialogPrimitive.Content className={cx('dialog', size === 'lg' && 'dialog-lg')} aria-describedby={undefined}
+        onOpenAutoFocus={() => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={event => { event.preventDefault(); if (returnFocus.current?.isConnected) returnFocus.current.focus(); }}>
+        {title != null ? (
           <div className={cx('dlg-title', 'left')}>
-            <span>{title}</span>
+            <DialogPrimitive.Title asChild><h2>{title}</h2></DialogPrimitive.Title>
             {!hideClose && <IconButton icon="close" size="sm" label="Close" onClick={onClose} />}
           </div>
-        )}
+        ) : <DialogPrimitive.Title className="workspace-visually-hidden">Dialog</DialogPrimitive.Title>}
         {children}
         {actions && <div className="dlg-actions">{actions}</div>}
-      </div>
-    </div>
+      </DialogPrimitive.Content>
+      </DialogPrimitive.Overlay></DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
@@ -54,6 +51,8 @@ export function ConfirmDialog({ open, onClose, title, body, confirmLabel = 'Conf
     <Dialog
       open={open}
       onClose={onClose}
+      title={title ?? 'Confirm action'}
+      hideClose
       actions={
         <>
           <button className="btn btn-text" onClick={onClose}>Cancel</button>
@@ -65,7 +64,6 @@ export function ConfirmDialog({ open, onClose, title, body, confirmLabel = 'Conf
         {danger && (
           <div className="dlg-icon ic-error"><Msym name="delete_forever" /></div>
         )}
-        <div className="t-title-lg" style={{ marginBottom: 10 }}>{title}</div>
         <div className="t-body-md muted">{body}</div>
       </div>
     </Dialog>

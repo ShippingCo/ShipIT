@@ -15,6 +15,12 @@ export function preReceiptEvent(row:Record<string,unknown>):Record<string,unknow
   return historical;
 }
 
+/** Legacy parcels have no invented booking details after the additive upgrade. */
+export function preBookingParcel(row:Record<string,unknown>):Record<string,unknown> {
+  assert.equal(row.booking_details??null,null,'Historical parcel gained invented booking details');
+  return {...row,booking_details:null};
+}
+
 // This policy is trusted code, never derived from a submitted connection URL.
 const policy: TestDatabasePolicy = {
   allowedHosts: ['localhost', '127.0.0.1', '[::1]', 'postgres'],
@@ -331,6 +337,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.pricing_cards,shipit.pricing_versions,shipit.pricing_rules,shipit.pricing_quotes,shipit.pricing_commands TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.booking_services') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT ON shipit.booking_services TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(revision,state,effective_from,effective_to,quote_validity_seconds,override_tolerance_paise,approval_ref,source_ref,published_at,published_by) ON shipit.pricing_versions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT DELETE ON shipit.pricing_rules TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_pricing_audit(uuid,uuid,uuid,uuid,uuid,text,text,integer,uuid) TO ${identifier(resource.runtimeRole)}`);

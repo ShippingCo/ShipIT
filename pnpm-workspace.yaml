@@ -9,4 +9,21 @@ packages:
 catalog:
   typescript: 5.9.3
   '@types/node': 20.19.43
-  vitest: 3.2.6
+  vitest: 4.1.12
+
+# Narrow security resolutions; retain each consumer's existing major version.
+overrides:
+  'fast-uri@3': 3.1.9
+  'fast-uri@4': 4.2.3
+  'ip-address@10.7.0': 10.7.4
+  'brace-expansion@5.0.9': 5.0.12
+  'source-map-js@1.2.1': 1.2.2
+  'zod@4.5.4': 4.6.6
+  'postcss-selector-parser@6.1.4': 6.1.5
+  # Vitest 4 supports Vite 6; keep the already used build-tool family.
+  'vitest@4.1.12>vite': 6.4.5
+  # Security-only major exceptions: consumers use retained match/partial APIs;
+  # migration glob retains ignore/nodir/withFileTypes and Path.fullpath().
+  'minimatch@10.2.6': 11.0.1
+  'node-pg-migrate@9.0.0>glob': 14.0.2
+  'glob@14.0.2>minimatch': 11.0.1

@@ -3,6 +3,7 @@ import {afterEach,describe,it,expect,vi} from 'vitest';
 import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import type {OperatorRole} from '@shippingco/shared';
 import Custody from '../operations/Custody';
+import {accountNavigationPending} from '../data-access/account-navigation';
 import {createScopeController} from '../operator/scope';
 const id=(n:number)=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const user=id(1),org=id(2),franchise=id(3),manifestId=id(4),parcel=id(5),receipt=id(6),time='2026-10-11T00:00:00.000Z';
@@ -23,17 +24,24 @@ function view(roles:OperatorRole[]){const c=createScopeController();c.runtime.bi
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 describe('custody evidence and named receipt recovery',()=>{
  it('retains exact acknowledgement after a lost response and blocks replacement navigation',async()=>{
-  const writes=fixture(user,true);view(['delivery_agent']);fireEvent.click(await screen.findByRole('button',{name:'View handover'}));
+  const writes=fixture(user,true),c=view(['delivery_agent']);fireEvent.click(await screen.findByRole('button',{name:'View handover'}));expect(screen.getByRole('heading',{name:'Manifest '+manifestId})).toHaveFocus();
   fireEvent.click(await screen.findByRole('button',{name:'Confirm I received every listed parcel'}));
-  const retry=await screen.findByRole('button',{name:'Retry same request'});expect(writes).toHaveLength(1);
+  const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.getByRole('button',{name:'Close detail'})).toBeDisabled();expect(accountNavigationPending(c.runtime.ticket())).toBe(true);expect(writes).toHaveLength(1);
   expect(fireEvent.click(screen.getByRole('link',{name:'Workspace link'}))).toBe(false);
   fireEvent.change(screen.getByRole('combobox',{name:'Franchise'}),{target:{value:id(30)}});expect(screen.getByRole('combobox',{name:'Franchise'})).toHaveValue(franchise);
   fireEvent.click(retry);await screen.findByText('Server update confirmed.');expect(writes).toHaveLength(2);expect(writes[1]).toEqual(writes[0]);expect(JSON.parse(String(writes[0]!.body))).toEqual({expected_version:1});
   await waitFor(()=>expect(screen.queryByRole('button',{name:'Confirm I received every listed parcel'})).not.toBeInTheDocument());expect(screen.queryByText(/DO_NOT_RENDER/)).not.toBeInTheDocument();
  });
  it('does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss',async()=>{
-  fixture(id(20));const c=view(['delivery_agent']);fireEvent.click(await screen.findByRole('button',{name:'View handover'}));await screen.findByText(/Evidence as of/);
+  vi.spyOn(window,'scrollTo').mockImplementation(()=>{});fixture(id(20));const c=view(['delivery_agent']),trigger=await screen.findByRole('button',{name:'View handover'});trigger.focus();fireEvent.click(trigger);await screen.findByText(/Evidence as of/);
   expect(screen.queryByRole('button',{name:'Confirm I received every listed parcel'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Capture private custody report'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Close detail'}));expect(trigger).toHaveFocus();fireEvent.click(trigger);await screen.findByText(/Evidence as of/);
   act(()=>c.clear());expect(screen.queryByText('SYN-PARCEL')).not.toBeInTheDocument();expect(screen.getByRole('heading',{name:'Parcel custody unavailable'})).toBeInTheDocument();
  });
+});
+
+it('requires confirmation before cancelling a prepared handover and preserves its exact server command',async()=>{
+ const writes=fixture();view(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'View handover'}));
+ const cancel=await screen.findByRole('button',{name:'Cancel this prepared handover'});fireEvent.click(cancel);expect(screen.getByRole('dialog',{name:'Cancel this prepared handover?'})).toBeVisible();expect(writes).toHaveLength(0);
+ fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(writes).toHaveLength(0);fireEvent.click(cancel);fireEvent.click(screen.getByRole('button',{name:'Confirm cancel handover'}));await waitFor(()=>expect(writes).toHaveLength(1));expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:1});
 });

@@ -6,8 +6,10 @@ import {digest} from '../pricing/idempotency.ts';
 import {instant} from '../pricing/types.ts';
 import {account} from './repository.ts';
 import type {RateRow} from './types.ts';
+import {calculateServiceQuote} from '../pricing/service-options.ts';
 /** Recomputed inside quote, tax validation and booking transactions. Never trust browser money. */
 export async function calculateAccountQuote(scope:TenantAccess,version:PricingVersionDto,input:PricingQuoteInput,now:Date,id:string,actor:string,privileged:boolean,currentAt=now):Promise<PricingQuoteDto> {
+ const configured=await calculateServiceQuote(scope,version,input,now,id,actor,privileged);if(configured)return configured;
  if(!input.customer_account_id)return calculate(version,input,now,id,actor,privileged);
  if(input.override)throw new HttpError('ACTION_FORBIDDEN');
  const a=await account(scope,input.customer_account_id,true);

@@ -1,0 +1,21 @@
+import {useState} from 'react';
+
+export const courierTaxReference='CBIC-N15-2025-CTR11-2017-ITR8-2017-12-ii-SAC996812';
+export function domesticCourierRows(services:readonly string[],confirmed:boolean):Record<string,string>[] {
+ if(!confirmed||!services.length||services.some(s=>!['standard','express'].includes(s))||new Set(services).size!==services.length)throw new Error('Confirm the domestic courier scope and choose Standard or Express.');
+ return services.flatMap(service=>['unregistered','registered'].flatMap(registration=>['intra','inter'].map(jurisdiction=>({service,registration,jurisdiction,classification:'996812',treatment:'taxable',evidence:courierTaxReference,percent:'18',freight:'yes',packing:'yes'}))));
+}
+export function DomesticCourierTemplate({disabled,apply}:{disabled:boolean;apply:(rows:Record<string,string>[],source:string)=>void}) {
+ const [open,setOpen]=useState(false);
+ const [selected,setSelected]=useState<string[]>([]),[confirmed,setConfirmed]=useState(false),[applied,setApplied]=useState(false);
+ return <><details className="ops-note" open={open} onToggle={event=>{if(event.target===event.currentTarget)setOpen(event.currentTarget.open);}}><summary>Use a domestic courier GST template</summary>
+  <p>For a GST-registered domestic courier business: SAC 996812, total GST 18%. Within-state supply uses 9% CGST + 9% SGST; between-state supply uses 18% IGST.</p>
+  <p>Select the courier services you offer. This template covers both GST-registered and unregistered customers. The booking’s actual place-of-supply facts still determine which rule applies.</p>
+  <fieldset disabled={disabled}><legend>Services covered by this template</legend>{[['standard','Standard'],['express','Express']].map(([value,label])=><label key={value}><input type="checkbox" checked={selected.includes(value!)} onChange={e=>{setSelected(s=>e.target.checked?[...s,value!]:s.filter(x=>x!==value));setApplied(false);}}/>Apply to {label}</label>)}</fieldset>
+  <p>Scope: domestic courier only, including packing incidental to that courier supply. Excludes GTA, international, SEZ and e-commerce-operator local-delivery arrangements. Same-city is excluded unless separately reviewed and configured.</p>
+  <label><input type="checkbox" disabled={disabled} checked={confirmed} onChange={e=>{setConfirmed(e.target.checked);setApplied(false);}}/>I confirm my GST registration and that these services and packing fall within this domestic courier scope.</label>
+  {!!selected.length&&<p aria-label="Courier template preview">Preview: {selected.map(s=>s==='standard'?'Standard':'Express').join(' + ')} · {selected.length*4} rules · both customer registration types · 9% CGST + 9% SGST or 18% IGST · freight and incidental packing.</p>}
+  <button type="button" className="btn btn-outlined" disabled={disabled||!confirmed||!selected.length} onClick={()=>{apply(domesticCourierRows(selected,confirmed),courierTaxReference);setApplied(true);setOpen(false);}}>Replace tax rules with this template</button>
+  <details><summary>Government sources and scope</summary><p>Sources read on 1 November 2026 for this limited courier template. Review applicability before publishing; this is not a certification of every later amendment or state notification.</p><p><a href="https://gst.karnataka.gov.in/Documents/NOTIFICATIONS/CTR1518925.pdf" target="_blank" rel="noopener noreferrer">Notification 15/2025-Central Tax (Rate), amending entry 12(ii) of 11/2017</a> · <a href="https://egazette.gov.in/WriteReadData/2025/266220.pdf" target="_blank" rel="noopener noreferrer">Notification 15/2025-Integrated Tax (Rate), courier entry 12(ii)</a> · <a href="https://gstcouncil.gov.in/sites/default/files/2024-02/scheme_of_classification_of_services_amended.pdf" target="_blank" rel="noopener noreferrer">GST Council service classification: SAC 996812</a> · <a href="https://www.indiacode.nic.in/bitstream/123456789/2251/4/a2017-13.pdf" target="_blank" rel="noopener noreferrer">IGST Act section 12(8): courier place of supply</a> · <a href="https://cbic-gst.gov.in/pdf/e-version-gst-fliers/eflier-valuation-gst27062017.pdf" target="_blank" rel="noopener noreferrer">CBIC valuation guidance: incidental packing</a></p></details>
+ </details>{applied&&<p role="status">{selected.length*4} tax rules added. Open a rule to check its details, then save the draft.</p>}</>;
+}

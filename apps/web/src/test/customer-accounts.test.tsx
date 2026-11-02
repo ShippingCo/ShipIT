@@ -32,23 +32,39 @@ async function start(roles:('franchise_admin'|'read_only'|'accountant')[]=['fran
 it('requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key',async()=>{
  const {router}=await start();await screen.findByText('No customer accounts');fireEvent.click(screen.getByRole('button',{name:'New account'}));
  fill('Account name','Synthetic Monthly');fill('Customer name prefix','Synthetic');fireEvent.click(screen.getByRole('button',{name:'Search customers'}));fireEvent.click(await screen.findByRole('button',{name:/Synthetic Sender/}));
- fill('Billing contact name','Synthetic Contact');fill('Billing contact phone','+12025550100');fill('Contact authority evidence reference','OWNER_ATTESTED');fill('Monthly closing day','31');fill('Calendar days after closing','10');fill('Credit limit','1000.00');fill('Reason for this revision','Owner approved terms');
+ expect(screen.getByRole('group',{name:'Billing contact'})).toBeVisible();expect(screen.getByRole('group',{name:'Billing cycle and credit',hidden:true})).not.toBeVisible();expect(screen.getByLabelText('Billing contact phone')).toHaveAttribute('type','tel');expect(screen.getByLabelText('Monthly closing day (1–31)')).toHaveAttribute('type','number');
+ fill('Billing contact name','Synthetic Contact');fireEvent.change(screen.getByRole('textbox',{name:'Billing contact phone'}),{target:{value:'+12025550100'}});fill('Contact authority evidence reference','OWNER_ATTESTED');fireEvent.click(screen.getByRole('button',{name:'Continue to billing terms'}));expect(screen.getByRole('group',{name:'Billing cycle and credit'})).toBeVisible();fill('Monthly closing day','31');fill('Calendar days after closing','10');fill('Credit limit','1000.00');fill('Reason for this revision','Owner approved terms');fireEvent.click(screen.getByRole('button',{name:'Review account'}));expect(screen.getByRole('region',{name:'Review account'})).toHaveTextContent('Synthetic Monthly');expect(calls.filter(c=>c.options.method==='POST')).toHaveLength(0);
  fireEvent.click(screen.getByRole('button',{name:'Save account revision'}));await screen.findByText(/Choose a debtor, linked shipping customers/);expect(calls.filter(c=>c.options.method==='POST')).toHaveLength(0);
  fireEvent.click(screen.getByRole('checkbox',{name:/I attest as franchise administrator/}));uncertain=true;fireEvent.click(screen.getByRole('button',{name:'Save account revision'}));await screen.findByRole('button',{name:'Retry same request'});
  for(let i=0;i<2;i++){await act(async()=>{await router.navigate(-1);});expect(router.state.location.pathname).toBe('/business/customer-accounts');}
  await screen.findByText('Resolve the retained command before leaving or changing accounts.');
- expect(screen.getByRole('button',{name:'New account'})).toBeDisabled();expect(screen.getByLabelText('Account name')).toBeDisabled();expect(screen.getByLabelText('Billing contact phone')).toHaveValue('+12025550100');
+ expect(screen.queryByRole('button',{name:'New account'})).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Cancel'})).toBeDisabled();expect(screen.getByLabelText('Account name')).toBeDisabled();expect(screen.getByLabelText('Billing contact phone')).toHaveValue('2025550100');
  fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));await screen.findByRole('heading',{name:'Synthetic Monthly'});
  const posts=calls.filter(c=>c.options.method==='POST');expect(posts).toHaveLength(2);expect(posts[0].options.body).toBe(posts[1].options.body);expect((posts[0].options.headers as Record<string,string>)['Idempotency-Key']).toBe((posts[1].options.headers as Record<string,string>)['Idempotency-Key']);
  expect(JSON.parse(posts[1].options.body as string)).toMatchObject({debtor_customer_id:f.customerId,shipping_customer_ids:[f.customerId],credit_limit_paise:100000,billing_contact:account.billing_contact});
  expect(screen.getByText(/Attested by/)).toBeVisible();expect(localStorage.length).toBe(0);
 });
 it('reviews exact shipment evidence before approving and refreshes the pending queue',async()=>{
- pending=true;await start();const radio=await screen.findByRole('radio');radio.focus();expect(radio).toHaveFocus();fireEvent.click(radio);
+ pending=true;await start();const radio=await screen.findByRole('radio');expect(screen.queryByLabelText('Credit exception approval reason')).not.toBeInTheDocument();radio.focus();expect(radio).toHaveFocus();fireEvent.click(radio);
  await screen.findByRole('heading',{name:'Review requested booking'});expect(screen.getByText(/Fictional Recipient · 500 g/)).toBeVisible();expect(screen.getByRole('button',{name:'Approve this booking only'})).toBeDisabled();
  fill('Credit exception approval reason','Reviewed the exact shipment');fireEvent.click(screen.getByRole('button',{name:'Approve this booking only'}));await screen.findByText('Server update confirmed.');
- await waitFor(()=>expect(screen.queryByRole('radio')).toBeNull());const post=calls.find(c=>c.options.method==='POST')!;expect(post.path).toContain('/'+f.id(90)+'/approval');expect(JSON.parse(post.options.body as string)).toEqual({reason:'Reviewed the exact shipment'});
+ await waitFor(()=>expect(screen.queryByRole('radio')).toBeNull());expect(screen.queryByLabelText('Credit exception approval reason')).not.toBeInTheDocument();const post=calls.find(c=>c.options.method==='POST')!;expect(post.path).toContain('/'+f.id(90)+'/approval');expect(JSON.parse(post.options.body as string)).toEqual({reason:'Reviewed the exact shipment'});
 });
 it('read-only cannot mount account directory reads or configuration',async()=>{
  await start(['read_only']);await screen.findByText('Customer account access unavailable');expect(calls.some(c=>c.path.includes('/customer-account'))).toBe(false);
+});
+
+it('creates a missing customer in the account flow and retries the same uncertain customer request',async()=>{
+ const base=vi.mocked(fetch).getMockImplementation()!,posted:RequestInit[]=[];let lost=true;
+ vi.mocked(fetch).mockImplementation(async(input,options={})=>{const path=String(input);if(path.includes('/customers')&&options.method==='POST'){posted.push(options);if(lost){lost=false;throw new TypeError('SYN_ACK_LOST');}return f.json(f.customer);}return base(input,options);});
+ await start();await screen.findByText('No customer accounts');fireEvent.click(screen.getByRole('button',{name:'New account'}));fill('Account name','Monthly customer');fill('Customer name prefix','New customer');fireEvent.click(screen.getByRole('button',{name:'Search customers'}));
+ fireEvent.click(await screen.findByRole('button',{name:'Add “New customer” as a customer'}));fireEvent.change(screen.getByRole('textbox',{name:'New customer phone'}),{target:{value:'+919876543210'}});fireEvent.click(screen.getByRole('button',{name:'Save customer and select'}));
+ const retry=await screen.findByRole('button',{name:'Retry same request'});expect(retry).toBeEnabled();expect(screen.getByRole('button',{name:'Continue to billing terms'})).toBeDisabled();fireEvent.click(retry);
+ await screen.findByText(/Bill-to customer: Synthetic Sender/);expect(posted).toHaveLength(2);expect(posted[0]!.body).toBe(posted[1]!.body);expect((posted[0]!.headers as Record<string,string>)['Idempotency-Key']).toBe((posted[1]!.headers as Record<string,string>)['Idempotency-Key']);expect(screen.getByLabelText('Account name')).toHaveValue('Monthly customer');
+});
+
+it('keeps account setup focused and restores the directory and approval queue on cancel',async()=>{
+ pending=true;await start();await screen.findByText('No customer accounts');expect(await screen.findByRole('radio')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'New account'}));
+ expect(screen.queryByText('No customer accounts')).not.toBeInTheDocument();expect(screen.queryByRole('heading',{name:'Credit-limit exception requests'})).not.toBeInTheDocument();expect(screen.getByRole('heading',{name:'Who will pay the bill?'})).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Cancel'}));
+ await screen.findByText('No customer accounts');expect(await screen.findByRole('radio')).toBeVisible();expect(screen.queryByRole('heading',{name:'Who will pay the bill?'})).not.toBeInTheDocument();
 });

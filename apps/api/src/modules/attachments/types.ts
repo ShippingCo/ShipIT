@@ -24,9 +24,9 @@ export interface AttachmentScanner { scan(bytes: Buffer, signal?: AbortSignal): 
 export interface AttachmentDependencies { store: AttachmentObjectStore; scanner: AttachmentScanner; signingKey: string; clock?: () => Date }
 export function attachmentDto(row: AttachmentRow): AttachmentDto {
   if(!row.booking_id||row.purpose==='expense_evidence')throw new Error('ATTACHMENT_PARENT_INVALID');
-  const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'video/mp4': 'mp4' }[row.declared_type];
+  const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'video/mp4': 'mp4', 'application/pdf': 'pdf' }[row.declared_type];
   return { id: row.id, booking_id: row.booking_id, parcel_id: row.parcel_id, purpose: row.purpose,
-    kind: row.kind, filename: `${row.kind === 'image' ? 'photo' : row.kind === 'audio' ? 'voice-note' : 'video'}.${extension}`,
+    kind: row.kind, filename: `${row.kind === 'image' ? 'photo' : row.kind === 'audio' ? 'voice-note' : row.kind === 'document' ? 'document' : 'video'}.${extension}`,
     size_bytes: row.declared_size, media_type: row.declared_type, state: row.state, scan_state: row.scan_state,
     retention_class: row.retention_class, version: row.version, created_at: row.created_at.toISOString(),
     upload_expires_at: row.upload_expires_at.toISOString(), linked_at: row.linked_at?.toISOString() ?? null };
@@ -34,8 +34,8 @@ export function attachmentDto(row: AttachmentRow): AttachmentDto {
 
 export function expenseAttachmentDto(row:AttachmentRow):ExpenseAttachmentDto {
  if(row.booking_id!==null||!row.expense_request_id||row.purpose!=='expense_evidence'||row.parcel_id!==null)throw new Error('ATTACHMENT_PARENT_INVALID');
- const extension={'image/jpeg':'jpg','image/png':'png','audio/mpeg':'mp3','audio/wav':'wav','video/mp4':'mp4'}[row.declared_type];
+ const extension={'image/jpeg':'jpg','image/png':'png','audio/mpeg':'mp3','audio/wav':'wav','video/mp4':'mp4','application/pdf':'pdf'}[row.declared_type];
  return {id:row.id,expense_request_id:row.expense_request_id,purpose:'expense_evidence',kind:row.kind,
- filename:`${row.kind==='image'?'photo':row.kind==='audio'?'voice-note':'video'}.${extension}`,size_bytes:row.declared_size,media_type:row.declared_type,state:row.state,scan_state:row.scan_state,
+ filename:`${row.kind==='image'?'photo':row.kind==='audio'?'voice-note':row.kind==='document'?'document':'video'}.${extension}`,size_bytes:row.declared_size,media_type:row.declared_type,state:row.state,scan_state:row.scan_state,
  retention_class:'operational_evidence',version:row.version,created_at:row.created_at.toISOString(),upload_expires_at:row.upload_expires_at.toISOString(),linked_at:row.linked_at?.toISOString()??null};
 }

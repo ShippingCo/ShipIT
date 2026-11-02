@@ -1,6 +1,7 @@
 import React from 'react';
 import {afterEach,describe,it,expect,vi} from 'vitest';
 import {cleanup,fireEvent,render,screen} from '@testing-library/react';
+import CustodyActions from '../operations/CustodyActions';
 import CustodyTransfers from '../operations/CustodyTransfers';
 import {custody,custodyTransfers} from '../data-access/custody';
 import {scopedApi} from '../data-access/scoped-api';
@@ -29,4 +30,13 @@ describe('approved outgoing custody discovery',()=>{
   const source={items:[grant],next_cursor:null};expect(custodyTransfers(source)).toEqual(source);
   for(const bad of [{...grant,instruction_id:null},{...grant,destination_kind:'office'},{...grant,office_release_id:id(8)},{...grant,destination_agent_id:grant.agent_id}])expect(()=>custodyTransfers({...source,items:[bad]})).toThrow();
  });
+});
+
+it('confirms named transfer revocation from both the approved list and manual reference form',async()=>{
+ const source=fixture(),submit=vi.fn();const listed=render(<CustodyTransfers source={source} user={grant.agent_id} roles={['franchise_admin']} revision={0} locked={false} submit={submit}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Revoke this transfer approval'}));expect(screen.getByRole('dialog',{name:'Revoke this transfer approval?'})).toBeVisible();expect(submit).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(submit).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'Revoke this transfer approval'}));fireEvent.click(screen.getByRole('button',{name:'Confirm revoke transfer'}));expect(submit).toHaveBeenCalledWith({kind:'revoke_grant',id:grant.id,body:{expected_version:1}});listed.unmount();submit.mockClear();
+ render(<CustodyActions roles={['franchise_admin']} parcels={[]} agents={[]} locked={false} submit={submit}/>);
+ fireEvent.change(screen.getByLabelText('Custody action kind'),{target:{value:'revoke_grant'}});fireEvent.change(screen.getByLabelText('Transfer approval reference'),{target:{value:grant.id}});fireEvent.submit(screen.getByRole('form',{name:'Custody action'}));expect(submit).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(submit).not.toHaveBeenCalled();
+ fireEvent.submit(screen.getByRole('form',{name:'Custody action'}));fireEvent.click(screen.getByRole('button',{name:'Confirm revoke transfer'}));expect(submit).toHaveBeenCalledWith({kind:'revoke_grant',id:grant.id,body:{expected_version:1}});
 });

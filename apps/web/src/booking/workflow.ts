@@ -7,14 +7,14 @@ import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
-import { emptyDraft, emptyParcel, parcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
+import { emptyDraft, emptyParcel, additionalParcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
 export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 'stale';
 interface State {
   draft: Draft; additionalParcels: ParcelDraft[]; parcelErrors: Errors[]; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
-  accountId?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
+  accountId?:string;accountName?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
   settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean;
 }
 export function createBookingWorkflow(controller: ScopeController) {
@@ -32,7 +32,7 @@ export function createBookingWorkflow(controller: ScopeController) {
   const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking;
   function validation(section: Parameters<typeof validate>[1]) {
     const errors = validate(state.draft, section);
-    const extra = section === 'customer' ? [] : state.additionalParcels.map(parcelErrors);
+    const extra = section === 'customer' ? [] : additionalParcelErrors(state.draft,state.additionalParcels);
     if(section !== 'customer' && !totalWeight(state.draft,state.additionalParcels)) errors.weight = 'Enter valid package weights with a safe combined total.';
     const invalid = Object.keys(errors).length > 0 || extra.some(e => Object.keys(e).length > 0);
     set({errors,parcelErrors:extra,message:invalid?'Review the highlighted fields.':''});
@@ -56,7 +56,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     if(!state.customer||!state.tax||!taxInput)return null;
     const d=state.draft;
     return {customer_id:state.customer.id,expected_customer_version:state.customer.version,tax_calculation_id:state.tax.id,tax_intent:taxInput,
-      parcels:[d,...state.additionalParcels].map(p=>({weight_grams:Number(p.weight),...(p.docket?{docket:p.docket}:{}),recipient:{name:p.recipientName,phone:p.recipientPhone,address:p.recipientAddress}}))};
+      parcels:[d,...state.additionalParcels].map(p=>({...((d.recipientPin||p.contentsDescription)?{details:{country:'IN' as const,postal_code:d.recipientPin,city:d.recipientCity,region:d.recipientRegion,contents_type:p.contentsType as import('@shippingco/shared').BookingParcelDetails['contents_type'],contents_description:p.contentsDescription,liquid_quantity_ml:['liquid','semi_liquid'].includes(p.contentsType)?Number(p.liquidQuantity):null}}:{}),weight_grams:Number(p.weight),...(p.docket?{docket:p.docket}:{}),recipient:{name:d.recipientName,phone:d.recipientPhone,address:d.recipientAddress}}))};
   };
   let unsubscribe = () => {};
   const purge = () => {
@@ -66,10 +66,10 @@ export function createBookingWorkflow(controller: ScopeController) {
   };
   return {
     api, customerApi, accountApi,
-    addParcel() {if(locked()||state.additionalParcels.length>=49)return;set({additionalParcels:[...state.additionalParcels,emptyParcel()],parcelErrors:[]});invalidateCommercial();},
+    addParcel() {if(locked()||state.additionalParcels.length>=49)return;set({additionalParcels:[...state.additionalParcels,{...emptyParcel(),recipientName:state.draft.recipientName,recipientPhone:state.draft.recipientPhone,recipientAddress:state.draft.recipientAddress}],parcelErrors:[]});invalidateCommercial();},
     changeParcel(index:number,field:keyof ParcelDraft,value:string) {if(locked()||!state.additionalParcels[index])return;set({additionalParcels:state.additionalParcels.map((p,i)=>i===index?{...p,[field]:value}:p),parcelErrors:[]});invalidateCommercial();},
     removeParcel(index:number) {if(locked())return;set({additionalParcels:state.additionalParcels.filter((_,i)=>i!==index),parcelErrors:[]});invalidateCommercial();},
-    selectAccount(id:string) {if(locked())return;set({accountId:id||undefined});invalidateCommercial();},
+    selectAccount(id:string,name?:string) {if(locked())return;set({accountId:id||undefined,accountName:id?name:undefined,...(id?{draft:{...state.draft,serviceOptionId:''}}:{})});invalidateCommercial();},
     snapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     activate() { live = true; unsubscribe = controller.runtime.onInvalidate(purge); },
@@ -79,17 +79,19 @@ export function createBookingWorkflow(controller: ScopeController) {
       set({draft:{...state.draft,service},settingsVersion:version,message:'Configured service accepted for this new booking draft.'});
       invalidateCommercial();
     },
+    confirmTaxFacts(confirmed:boolean) {if(locked()||!state.customer)return;invalidateCommercial();set({draft:{...state.draft,recipientRef:state.customer.id,evidenceRef:confirmed?'COUNTER_DECLARATION':''}});},
     change(field: Field, value: string) {
       if (locked()) return;
       creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined});
-      set({ ...(field === 'service' ? {settingsVersion:undefined} : {}), draft: { ...state.draft, [field]: value }, errors: { ...state.errors, [field]: undefined } });
+      set({ ...(field === 'service' ? {settingsVersion:undefined} : {}), draft: { ...state.draft, [field]: value, ...(['registration','gstin','recipientState','handoverState','specialCase'].includes(field)?{evidenceRef:''}:{}) }, errors: { ...state.errors, [field]: undefined } });
+      if(['recipientName','recipientPhone','recipientAddress'].includes(field))set({additionalParcels:state.additionalParcels.map(p=>({...p,[field]:value}))});
       if (commercialFields.includes(field)) invalidateCommercial();
       if (['name', 'phone', 'address'].includes(field)) { customerIntent = undefined; set({ customerPhase: 'editing' }); }
     },
     select(customer: CustomerDto) {
       if (locked()) return;
       const d = state.draft;
-      const draft = { ...d, name: d.name || customer.name, phone: d.phone || customer.phone_display, address: d.address || customer.address };
+      const draft = { ...d, recipientRef:customer.id,evidenceRef:'', name: d.name || customer.name, phone: d.phone || customer.phone_display, address: d.address || customer.address };
       customerIntent = undefined;
       invalidateCommercial();set({accountId:undefined,customer, draft, customerPhase: draft.name === customer.name && draft.phone === customer.phone_display && draft.address === customer.address ? 'ready' : 'editing',
         message: 'Customer selected. Entered values were preserved. Confirm any customer changes before booking.' });
@@ -105,7 +107,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     useLatestCustomer() {
       if (!state.customer || locked()) return;
       invalidateCommercial();
-      const c = state.customer; set({ draft: { ...state.draft, name: c.name, phone: c.phone_display, address: c.address }, customerPhase: 'ready', message: 'Latest customer details selected.' });
+      const c = state.customer; set({ draft: { ...state.draft,recipientRef:c.id,evidenceRef:'', name: c.name, phone: c.phone_display, address: c.address }, customerPhase: 'ready', message: 'Latest customer details selected.' });
     },
     async confirmCustomer() {
       if (!current() || state.busy || state.recoveryBlocked || state.booking || bookingIntent || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !validation('customer')) return;
@@ -114,7 +116,7 @@ export function createBookingWorkflow(controller: ScopeController) {
         : customerApi.create({ name: d.name, phone: d.phone, address: d.address });
       set({ busy: true, customerPhase: 'loading', message: 'Saving customer…' });
       try { retainRecovery(customerIntent); const customer = await customerApi.execute(customerIntent);
-        if (!current()) return; clearRecovery(api.scope); customerIntent = undefined; invalidateCommercial();set({ customer, customerPhase: 'ready', message: 'Customer confirmed.' });
+        if (!current()) return; clearRecovery(api.scope); customerIntent = undefined; invalidateCommercial();set({ customer, draft:{...state.draft,recipientRef:customer.id,evidenceRef:''},customerPhase: 'ready', message: 'Customer confirmed.' });
       } catch (error) { if (!current()) return; if (!failed(error, 'customerPhase')) { clearRecovery(api.scope); customerIntent = undefined; } }
       finally { set({ busy: false }); }
     },
@@ -136,7 +138,7 @@ export function createBookingWorkflow(controller: ScopeController) {
         }
         const tax = await commercialApi.executeCalculation(calculateIntent); if (!current()) return;
         if (tax.quote_id !== state.quote!.id) throw new ApiFailure('TEMPORARILY_UNAVAILABLE', { kind: 'protocol', dispatched: true });
-        set({ tax, taxPhase: 'ready', message: 'Server price and tax ready. Review the amounts before saving.' });
+        set({ tax, taxPhase: 'ready', message: 'Price and tax checked. Review the amounts before saving.' });
       } catch (error) { if (!failed(error, phase)) { quoteIntent = prepareIntent = calculateIntent = undefined; taxInput = undefined;
           set({ quote: undefined, tax: undefined }); } }
       finally { set({ busy: false }); }

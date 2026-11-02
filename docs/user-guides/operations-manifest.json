@@ -1,0 +1,168 @@
+[
+  {
+    "file": "pickups.html",
+    "title": "Pickup requests",
+    "summary": "Agree a time to collect a customer\u2019s parcel.",
+    "sources": [
+      "apps/web/src/operations/Pickups.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-pickups.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\pickups-desktop.png",
+      "sha256": "51008ce179193ed240b7821b1e2fd5451b5c4552463e915bab06d254a15907b3"
+    }
+  },
+  {
+    "file": "packages.html",
+    "title": "Packages",
+    "summary": "Find parcels and record what has really happened to them.",
+    "sources": [
+      "apps/web/src/operations/Packages.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-packages.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\packages-desktop.png",
+      "sha256": "5199e33be6985077436f8dd229a5cb3fada2611236e797c813a3f7081f9646eb"
+    }
+  },
+  {
+    "file": "lots.html",
+    "title": "Lots \u2014 parcel groups",
+    "summary": "Keep parcels for the same destination together.",
+    "sources": [
+      "apps/web/src/operations/Lots.tsx",
+      "apps/web/src/operations/LotCandidates.tsx",
+      "apps/api/src/modules/lots/validation.ts"
+    ],
+    "screenshot": {
+      "file": "images/ops-lots.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\lots-desktop.png",
+      "sha256": "90b7bb1d6252772db5594d5dda94f3be4e7a440ece893347166bee7fcc8b339e"
+    }
+  },
+  {
+    "file": "routes.html",
+    "title": "Routes and dispatch lists",
+    "summary": "Plan a journey and keep its parcel list together.",
+    "sources": [
+      "apps/web/src/operations/Routes.tsx",
+      "apps/api/src/modules/routes/validation.ts",
+      "apps/api/src/modules/routes/event-validation.ts"
+    ],
+    "screenshot": {
+      "file": "images/ops-routes.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\operations-details\\route-detail-desktop.png",
+      "sha256": "62ea7622bb2bdfc825643806e424dc0c59d1e131acbd9f3c2a1e98829404593e"
+    }
+  },
+  {
+    "file": "custody.html",
+    "title": "Parcel handovers and custody",
+    "summary": "Record who physically holds each parcel.",
+    "sources": [
+      "apps/web/src/operations/Custody.tsx",
+      "apps/web/src/operations/CustodyActions.tsx",
+      "apps/web/src/operations/CustodyTransfers.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-custody.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\custody-desktop.png",
+      "sha256": "da441aa6963f6f6cc6d9e590e1357f460544dbe7b4e0370d3169de91bce5337a"
+    }
+  },
+  {
+    "file": "deliveries.html",
+    "title": "Delivery work",
+    "summary": "Complete delivery using the recipient\u2019s proof.",
+    "sources": [
+      "apps/web/src/operations/Deliveries.tsx",
+      "apps/web/src/operations/Packages.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-deliveries.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\deliveries-desktop.png",
+      "sha256": "c40dcf202a3485e093159a32a653d2de2ce5bd762f6a32c5b94b1db605ce57f9"
+    }
+  },
+  {
+    "file": "eway-records.html",
+    "title": "External e-way records",
+    "summary": "Keep the details of an existing external document with a booking.",
+    "sources": [
+      "apps/web/src/operations/Eway.tsx",
+      "apps/api/src/modules/eway/validation.ts"
+    ],
+    "screenshot": {
+      "file": "images/ops-eway-records.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\eway-desktop.png",
+      "sha256": "4b285ae1389c28e34227ad6f9c445bdc1f2389e69ff3d234fc0864f82e8fc8b4"
+    }
+  },
+  {
+    "file": "messaging.html",
+    "title": "Automation and messages",
+    "summary": "See whether shipment messages were queued, sent or delivered.",
+    "sources": [
+      "apps/web/src/operations/Messaging.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-messaging.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\automation-desktop.png",
+      "sha256": "ee3e85efc4289c8ed0b351a6c40a1cd50af928081c77a5cc8e401f1ddeefd4fe"
+    }
+  },
+  {
+    "file": "messaging-effectiveness.html",
+    "title": "Messaging and assistant results",
+    "summary": "Review a saved weekly count of messages, assistant outcomes and support work.",
+    "sources": [
+      "apps/web/src/operations/Effectiveness.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-messaging-effectiveness.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\report-view-0.png",
+      "sha256": "78cc474c9c728f29915fff67db7cb57ff054d0b9f96fde14d8b106463e4ef85c"
+    }
+  },
+  {
+    "file": "support.html",
+    "title": "Human support",
+    "summary": "Help customers and keep staff follow-up in one place.",
+    "sources": [
+      "apps/web/src/operations/Support.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-support.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\support-desktop.png",
+      "sha256": "7ed9578b60dd2fd68bce77df03a1f2bae216acb39ebf29500261ae8cd9a90b41"
+    }
+  },
+  {
+    "file": "agent-access.html",
+    "title": "Temporary agent access",
+    "summary": "Allow a verified person to work as a delivery agent in this branch.",
+    "sources": [
+      "apps/web/src/operations/AgentAccess.tsx",
+      "apps/web/src/operations/Custody.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-agent-access.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\operations-details\\agent-revoke-desktop.png",
+      "sha256": "c62882f3aa05b0d1155d4cee3f53d547b5b2cbb1a60cdafb638aeebd1515315e"
+    }
+  },
+  {
+    "file": "owner-summaries.html",
+    "title": "Owner summaries and alerts",
+    "summary": "Get a regular business report and see overdue customer payments.",
+    "sources": [
+      "apps/web/src/operations/OwnerSummaries.tsx",
+      "apps/web/src/operations/Reports.tsx"
+    ],
+    "screenshot": {
+      "file": "images/ops-owner-summaries.png",
+      "source": "D:\\ShippingCo\\dist\\ui-studio-browser\\pages\\owner-reports-settled.png",
+      "sha256": "c75d418242e3bcb64c86535ce3a95d6abf9743386d43973c27e1ba0cb1bbc6f2"
+    }
+  }
+]
