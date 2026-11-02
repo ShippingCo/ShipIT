@@ -6,11 +6,10 @@ import {WorkspaceNavigation} from '../components/workspace/WorkspaceNavigation';
 import {SearchField} from '../components/m3/Input';
 import {ChoiceField} from '../components/workspace/ChoiceField';
 
-it('opens only permitted creation destinations from the keyboard',async()=>{
+it('exposes only permitted creation destinations as direct links',async()=>{
  render(<MemoryRouter><WorkspaceNavigation area="booking" links={[{area:'booking',to:'/business/new-booking',icon:'add',label:'New Booking'}]} onNavigate={()=>{}}/></MemoryRouter>);
- fireEvent.keyDown(screen.getByRole('button',{name:'Create'}),{key:'Enter'});
- expect(await screen.findByRole('menuitem',{name:'New booking'})).toHaveAttribute('href','/business/new-booking');
- expect(screen.queryByRole('menuitem',{name:'Record received money'})).not.toBeInTheDocument();
+ expect(screen.getByRole('link',{name:'New Booking'})).toHaveAttribute('href','/business/new-booking');
+ expect(screen.queryByRole('link',{name:'Record received money'})).not.toBeInTheDocument();
 });
 it('clears a search draft without submitting the surrounding form',()=>{
  const change=vi.fn(),submit=vi.fn();render(<form onSubmit={submit}><SearchField label="Tracking number" value="ABC" onChange={change}/></form>);

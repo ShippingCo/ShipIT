@@ -62,7 +62,7 @@ export default function OperatorApp() {
     else if (state.status === 'signed_out') title = 'Sign in';
     else if (state.status === 'error') title = 'Workspace access unavailable';
     else if (state.context?.state === 'onboarding_required') title = 'Set up your shop';
-    else if (state.context?.state === 'ready') title = document.querySelector('.workspace-breadcrumb [aria-current="page"]')?.textContent || 'Overview';
+    else if (state.context?.state === 'ready') title = document.querySelector('.console-frame .appbar-title')?.textContent || 'Dashboard';
     else title = 'No available workspace';
     document.title = `${title} · ShippingCo`;
     if (!checking && state.context?.state !== 'ready') document.getElementById(state.context?.state === 'onboarding_required' ? 'onboarding-title' : 'access-title')?.focus();
