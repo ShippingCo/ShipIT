@@ -191,7 +191,7 @@
       "apps/web/src/main.tsx": "77772ed3563f5455b02478900a8990899070fe59f6075c6b3354c3d39cea8035",
       "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
-      "apps/web/src/pages/business/Dashboard.tsx": "e70071ffbcc4d119ba8006ac1e8798ca7a58617b9d84959262da72a1f414b0b5",
+      "apps/web/src/pages/business/Dashboard.tsx": "d0a4ebaf488a3964a99051a83186e11d625d45e574aa7a3e24c75c1bc8b97f88",
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "71441335d4ae999e3af7701ea99823a66f43be3102a70e52a87227c8a134450b",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
@@ -202,7 +202,7 @@
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
-      "apps/web/src/test/operator.test.tsx": "494c5e9c904378043bd2b460b9b22a2b37b9711f5780640a689f88bbdceea8bc",
+      "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -381,16 +381,12 @@
           "syntax": "import { Card, EmptyState } from '../../components/m3/Surface';"
         },
         {
-          "target": "apps/web/src/components/m3/Button.tsx",
-          "syntax": "import { Button } from '../../components/m3/Button';"
-        },
-        {
           "target": "apps/web/src/components/m3/Meter.tsx",
           "syntax": "import { Ring } from '../../components/m3/Meter';"
         },
         {
-          "target": "apps/web/src/components/m3/Kpi.tsx",
-          "syntax": "import { KpiCard } from '../../components/m3/Kpi';"
+          "target": "apps/web/src/components/workspace/DashboardView.tsx",
+          "syntax": "import {DashboardView} from '../../components/workspace/DashboardView';"
         },
         {
           "target": "apps/web/src/context/AppContext.tsx",
@@ -2259,6 +2255,46 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "uses complete scoped counts, distinct booking totals and Monday week dates without guessing payment balances",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "shows failed summaries as unavailable and retries without substituting mockup data",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "does not request operational or money data for a delivery agent",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "rejects unsafe counts, incomplete weeks and inconsistent business dates",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "applies dashboard stage links to the scoped package query",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "discards a payment capture completed after the franchise scope changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "name": "counts provider acceptance from durable progress and never calls a queued message sent",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid",
         "cases": null
@@ -2291,16 +2327,6 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/operations.test.tsx",
-        "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/operations.test.tsx",
-        "name": "offers controlled dashboard retry after an API failure without local fallback",
         "cases": null
       },
       {
@@ -3600,6 +3626,10 @@
         "kind": "expect(sessionStorage.length).toBe"
       },
       {
+        "file": "apps/web/src/test/operational-dashboard.test.tsx",
+        "kind": "expect(localStorage.length).toBe"
+      },
+      {
         "file": "apps/web/src/test/operations.test.tsx",
         "kind": "expect(localStorage.length).toBe"
       },
@@ -3614,10 +3644,6 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "kind": "expect(sessionStorage.length).toBe"
-      },
-      {
-        "file": "apps/web/src/test/operations.test.tsx",
-        "kind": "expect(localStorage.length).toBe"
       },
       {
         "file": "apps/web/src/test/operator.test.tsx",
@@ -6295,6 +6321,70 @@
       "reason": "Issue #138: production money receipt UI uses actual source commands, minimum scoped selectors, exact uncertain retries, same-customer bill versions/advances and administrator-only corrections/configuration; finance evidence stays role-scoped."
     },
     {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "uses complete scoped counts, distinct booking totals and Monday week dates without guessing payment balances",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "shows failed summaries as unavailable and retries without substituting mockup data",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "does not request operational or money data for a delivery agent",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "rejects unsafe counts, incomplete weeks and inconsistent business dates",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "applies dashboard stage links to the scoped package query",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "discards a payment capture completed after the franchise scope changes",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
+    },
+    {
+      "file": "apps/web/src/test/operational-dashboard.test.tsx",
+      "name": "counts provider acceptance from durable progress and never calls a queued message sent",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Provider acceptance uses durable progress; queued messages are never represented as sent."
+    },
+    {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid",
       "cases": null,
@@ -6349,22 +6439,6 @@
       "disposition": "preserve",
       "group": "routes",
       "reason": "Issue #34 final review: retain the explicit operational-timezone conversion boundary."
-    },
-    {
-      "file": "apps/web/src/test/operations.test.tsx",
-      "name": "announces dashboard loading then renders bounded accessible cards and an honest empty result",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "seam",
-      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
-    },
-    {
-      "file": "apps/web/src/test/operations.test.tsx",
-      "name": "offers controlled dashboard retry after an API failure without local fallback",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "seam",
-      "reason": "Issue #34: production operational API adapter, authority, recovery, accessibility and projection behavior."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",

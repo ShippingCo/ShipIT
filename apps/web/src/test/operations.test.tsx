@@ -9,7 +9,6 @@ import { lots } from '../data-access/lots';
 import { routes } from '../data-access/routes';
 import { eway } from '../data-access/eway';
 import { deliveries } from '../data-access/deliveries';
-import OperationsDashboard from '../operations/Dashboard';
 import Packages from '../operations/Packages';
 import Lots from '../operations/Lots';
 import Routes from '../operations/Routes';
@@ -95,13 +94,6 @@ describe('production operational screens',()=>{
   expect(kolkataInputToInstant('2026-09-21T02:00:00.000')).toBe('2026-09-20T20:30:00.000Z');
   expect(instantToKolkataInput('2026-09-20T12:00:05.123Z')).toBe('2026-09-20T17:30:05.123');
   expect(kolkataInputToInstant('2026-09-20T17:30:05.123')).toBe('2026-09-20T12:00:05.123Z');
- });
- it('announces dashboard loading then renders bounded accessible cards and an honest empty result',async()=>{
-  let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});vi.stubGlobal('fetch',vi.fn(async()=>{await gate;return json(page([]));}));render(<MemoryRouter><OperationsDashboard controller={controller()} roles={['operator']} workspaceName="Synthetic Counter"/></MemoryRouter>);
-  expect(screen.getByRole('status')).toHaveTextContent('Loading operational workspace');await act(async()=>release());await screen.findByRole('heading',{name:'No records on the current pages'});expect(screen.getByRole('heading',{name:'Your business, at a glance.'})).toBeVisible();expect(screen.getAllByRole('link')).toHaveLength(8);expect(screen.getByRole('link',{name:'Create a booking'})).toHaveAttribute('href','/business/new-booking');expect(screen.getAllByText('0').length).toBeGreaterThan(0);
- });
- it('offers controlled dashboard retry after an API failure without local fallback',async()=>{
-  let failing=true;vi.stubGlobal('fetch',vi.fn(async()=>failing?json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503):json(page([]))));render(<MemoryRouter><OperationsDashboard controller={controller()} roles={['operator']} workspaceName="Synthetic Counter"/></MemoryRouter>);expect(await screen.findByRole('alert')).toHaveTextContent('Operational summaries could not be loaded. Retry to load the current records.');failing=false;fireEvent.click(screen.getByRole('button',{name:/Retry/}));await screen.findByRole('heading',{name:'No records on the current pages'});expect(localStorage.length).toBe(0);
  });
  it('uses guarded package actions and directs new money recording to receipt evidence without OTP or delivery bypasses',async()=>{
   let paymentReads=0;const fetcher=vi.fn(async(path:string,options:RequestInit={})=>{

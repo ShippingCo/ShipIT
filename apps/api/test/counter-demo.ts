@@ -18,11 +18,14 @@ const cleanup:(()=>unknown)[]=[],t={after:(f:()=>unknown)=>cleanup.push(f)} as u
 let finish!:()=>void;const stop=new Promise<void>(resolve=>{finish=resolve;});process.once('SIGINT',finish);process.once('SIGTERM',finish);
 try {
  const s=await attachmentSetup(t);await s.db.prepareRoutes();await s.db.preparePayments();await s.db.prepareReceipts();await s.db.prepareEway();
+ // Dashboard uses the same reporting and customer-activity projections as production.
+ await s.db.prepareMoneyReceipts();await s.db.prepareReports();await s.db.prepareNotificationAutomation();await s.db.prepareSupport();
  const actor=await s.grant('operator',[A,B]);
  const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'franchise_admin',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:invite.acceptance_token});
  const dispatchInvite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'dispatcher',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:dispatchInvite.acceptance_token});
  const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:'silent',ALLOWED_ORIGINS:previewOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
- const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps});cleanup.push(()=>app.close());
+ const whatsapp={configuration:{graph_version:'v24.0',bindings:[]},provider:{validate:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},template:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},send:async()=>({kind:'unavailable' as const,reason:'synthetic_provider_disabled'})}};
+ const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps,whatsapp});cleanup.push(()=>app.close());
  app.addHook('onRequest',async request=>{if(request.url.includes('/customers?')&&request.url.includes('/'+A+'/'))await new Promise(resolve=>setTimeout(resolve,2500));});
  app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${actor.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(previewOrigin+'/#/business/new-booking');});
  await app.listen({host:'127.0.0.1',port:3033});

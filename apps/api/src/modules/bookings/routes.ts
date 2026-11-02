@@ -5,6 +5,10 @@ import { HttpError } from '../../plugins/errors.ts';
 export function registerBookings(app: FastifyInstance, service: ReturnType<typeof createBookingService>, secure: boolean) {
   const session=(request:FastifyRequest)=>request.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
   const searchBudget=app.createRateLimit({max:30,timeWindow:60_000});
+  app.get('/api/v1/parcels/summary',{preHandler:async(request,reply)=>{
+    const result=await searchBudget(request);
+    if(!result.isAllowed&&result.isExceeded){reply.header('Retry-After',result.ttlInSeconds);throw new HttpError('RATE_LIMITED');}
+  }},request=>service.dashboard(session(request),request.query,request.id));
   app.get('/api/v1/parcels',{preHandler:async(request,reply)=>{
     const result=await searchBudget(request);
     if(!result.isAllowed&&result.isExceeded){reply.header('Retry-After',result.ttlInSeconds);throw new HttpError('RATE_LIMITED');}
