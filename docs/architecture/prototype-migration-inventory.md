@@ -1203,8 +1203,174 @@ Only the operator test fingerprint changes to open the relevant folder before ch
 
 | Test | Disposition | Group |
 | --- | --- | --- |
-| apps/web/src/test/workspace-navigation.test.tsx: groups permitted destinations once, expands folders independently and reveals the active route | preserve | presentation |
+The folder-expansion navigation regression was superseded by the Blue Studio shallow-navigation regression documented below.
 
 ### Profile and session actions
 
 The routine footer refresh is removed. Existing settings-departure regressions now exercise declined and accepted profile sign-out: declined departure preserves the exact draft and sends no logout request; accepted departure sends one logout and clears the private editor. History/query and changed-authority checks remain. Two declarations are renamed for the visible action, with no test removed or added. The reviewed operator test fingerprint also covers hidden sign-out, profile Escape/focus restoration and the existing logout/invitation/revocation scenarios.
+
+## Booking experience controls
+
+Reviewed counter test changes: existing API assertions are retained in the All sections view; the new guided flow regression covers validation and Back navigation. Only the counter test fingerprint and four added declarations changed. No production Store callers or safety dispositions changed.
+
+| apps/web/src/test/counter.test.tsx: guides booking steps, validates the current fields and preserves entries on Back | preserve | seam |
+| apps/web/src/test/workspace-controls.test.tsx: opens only permitted creation destinations from the keyboard | preserve | seam |
+| apps/web/src/test/workspace-controls.test.tsx: clears a search draft without submitting the surrounding form | preserve | seam |
+| apps/web/src/test/workspace-controls.test.tsx: labels custom choices and exposes disabled state | preserve | seam |
+
+
+## Blue Studio production implementation review — 2026-11-01
+
+Reviewed 18 new or renamed declarations and retired the one superseded folder-expansion declaration: 365 current declarations. Existing regression dispositions, Store ownership, exports, imports, route inventory, 12 safety scenarios and 17 negative controls are unchanged. The navigation replacement preserves permission filtering, current-route context and navigation callbacks while exercising the approved shallow task areas.
+
+Reviewed tracked source fingerprints: `main.tsx` only adds the shared studio stylesheet; `counter.test.tsx` retains booking/customer/account/idempotency/receipt assertions while exercising the three-step flow and exact kg/rupee entry; `operator.test.tsx` updates visible headings and task navigation, explicitly retains franchise UUID/display assertions, and adds mobile Create-menu focus/Escape coverage. Existing shipment-cost navigation tests now open the closed report chooser; exact request identity, uncertain recovery, late-response authority and history assertions remain. Existing payment tests add review/back-focus and per-bill allocation checks without weakening financial write assertions. Dashboard/cashbook/owner-summary label updates retain bounded evidence and server facts.
+
+The only added inventoried effect is `RateChoices.tsx` subscribing through the existing workflow `useSyncExternalStore` contract. Published destination reads use the scoped resource lifecycle and cancellation; no production Store mutation or browser persistence was introduced. New weekly-report tests cover complete pages, exact paise, saved-snapshot retries, expired evidence and uncertain capture identity. New customer/filter tests preserve explicit scoped queries and valid route identity.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/booking-units.test.tsx: converts kg and rupees exactly at fractional and safe-integer boundaries | preserve | seam |
+| apps/web/src/test/booking-units.test.tsx: retains partial decimal editing and updates after an external draft change | preserve | seam |
+| apps/web/src/test/booking-units.test.tsx: accepts only published rate choices and discards unneeded pricing details | preserve | seam |
+| apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
+| apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
+| apps/web/src/test/counter.test.tsx: shows published destinations with a recoverable failure and no invented fallback choices | preserve | seam |
+| apps/web/src/test/counter.test.tsx: completes all three guided stages with exact kg conversion and a reviewed real quote | preserve | seam |
+| apps/web/src/test/counter.test.tsx: converts rupee overrides exactly and never silently drops an invalid non-empty amount | preserve | seam |
+| apps/web/src/test/counter.test.tsx: reveals a manually collapsed billing section before focusing a rejected field | preserve | seam |
+| apps/web/src/test/logistics-design.test.tsx: keeps customer context on the server query and clears both customer and booked-today route filters | preserve | seam |
+| apps/web/src/test/logistics-design.test.tsx: keeps drafted filters separate from applied filters and rejects a reversed date range before a read | preserve | seam |
+| apps/web/src/test/studio-workspace.test.tsx: builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals | preserve | reports |
+| apps/web/src/test/studio-workspace.test.tsx: searches real scoped customers only after valid input and links the selected record into booking | preserve | customers |
+| apps/web/src/test/weekly-business.test.tsx: waits for every saved page before displaying complete counts and exact paise totals | preserve | reports |
+| apps/web/src/test/weekly-business.test.tsx: recovers a failed next page using the same saved report without another capture | preserve | reports |
+| apps/web/src/test/weekly-business.test.tsx: offers a fresh capture after saved evidence expires and rejects inconsistent page identity | preserve | reports |
+| apps/web/src/test/weekly-business.test.tsx: retains the exact capture request after an uncertain response and offers no fresh action | preserve | reports |
+| apps/web/src/test/workspace-navigation.test.tsx: shows shallow permitted task areas and reveals tools for the current area | preserve | presentation |
+
+
+### Final visual-review follow-up
+
+Reviewed the additional settings-disclosure regression: unavailable saved settings remain visible in category summaries, and collapsing a category cannot hide an active draft or its validation. The current inventory contains 366 declarations. Reviewed the final counter-test fingerprint: friendly customer status/search labels and exact label queries replace implementation-state text and ambiguous substring queries; all existing request, scope and money assertions remain. The initial editing status and pre-selection account prompt are removed from the booking view. No additional Store caller, route or effect changes were found.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/settings.test.tsx: keeps unavailable warnings and active draft validation visible when settings categories are collapsed | preserve | settings |
+
+
+Reviewed the final operator-test readiness helper: one `waitFor` now atomically checks the visible workspace heading, selected franchise UUID and selected franchise display name. This accounts for legitimate navigation reauthorization following onboarding; it retains every scope assertion and the existing default timeout. Only the reviewed operator-test fingerprint changes; all 366 declarations and their dispositions remain unchanged.
+
+
+### Fresh-workspace booking readiness and country-code entry
+
+Reviewed eight new declarations; current total: 374. Phone entry adds a selected country code exactly once, accepts pasted full numbers and preserves invalid data for validation. Booking rate recovery points to actual Settings publication in another tab so the unfinished booking remains intact; retry reads the real published rate card. No seed data, invented destination or pricing bypass is introduced. The counter fingerprint changes for those recovery assertions and national-number display while preserving exact existing API request bodies.
+
+Reviewed the three new setup event registrations: before-unload, navigation click and franchise-selection guards exist only while a setup command is pending or uncertain; each registration has matching cleanup. Setup tests preserve reviewed draft publication, same-intent retry and operator exclusion. The daily-dashboard regression retains explicit capture and exact large/negative financial amounts. Exports, Store ownership, imports, route inventory and safety scenarios are unchanged.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/booking-phone.test.tsx: adds the selected country code exactly once and keeps an empty phone empty | preserve | seam |
+| apps/web/src/test/booking-phone.test.tsx: accepts a full pasted number, preserves unknown international codes and follows external customer changes | preserve | seam |
+| apps/web/src/test/booking-phone.test.tsx: does not discard invalid phone characters and exposes an accessible field error | preserve | seam |
+| apps/web/src/test/booking-policy-setup.test.tsx: converts exact prices and reviewed tax percentages without inventing a rate | preserve | pricing |
+| apps/web/src/test/booking-policy-setup.test.tsx: requires review before publication and retries the same uncertain draft without duplicate intent | preserve | pricing |
+| apps/web/src/test/booking-policy-setup.test.tsx: does not fetch configuration or offer publication to an operator | preserve | pricing |
+| apps/web/src/test/counter.test.tsx: recovers missing and empty rates through real setup without losing the booking draft or inventing services | preserve | seam |
+| apps/web/src/test/daily-dashboard.test.tsx: keeps date shortcuts local until capture and charts exact large or negative amounts without invented percentages | preserve | reports |
+
+
+### Complete-form usability and explicit courier-policy template review
+
+Reviewed 11 new declarations, bringing the inventory to 385. The main-entry fingerprint only adds the shared forms stylesheet. Counter-test changes strengthen invalid lookup validation/focus and retain all scoped customer, exact money and uncertain-command assertions. Finance test-body refinements retain actual selected employee/account/parcel references, request versions and money facts. No export, Store caller, route, import or inventoried effect changed.
+
+Customer phone searches reuse explicit country selection and validate before a scoped read. Sign-in tests preserve exact verification strings, cancellation, field errors and focus. E-way evidence groups cannot silently drop partial values. Shared multiline fields retain accessibility and bounds; supported date controls preserve explicit calendar choices. Booking addresses remain single-line because the existing API contract rejects embedded newlines.
+
+The domestic courier template requires scope confirmation and selected Standard/Express services. It only fills a draft, with actual government notification/SAC references; supplier GSTIN, supplier state, dates and publication review remain explicit. Tests verify both registration types and intra/inter jurisdiction rules with exact integer components; booking place-of-supply resolution is unchanged. PUBLISHER_REVIEW and MANUAL_ENTRY are openly labelled provenance categories, not fabricated external document IDs; external reference mode retains supplied references. The server records the actual publisher/time. Rate-help text follows the actual combined-booking-weight flat-band contract, not a per-kilogram or per-parcel multiplier.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/booking-policy-setup.test.tsx: limits the courier template to confirmed selected courier services and never infers a customer jurisdiction | preserve | pricing |
+| apps/web/src/test/booking-policy-setup.test.tsx: applies a reviewed domestic courier template only to the draft and submits exact user-supplied tax identity | preserve | pricing |
+| apps/web/src/test/booking-policy-setup.test.tsx: records transparent publisher-review and manual-entry provenance without fabricating document references | preserve | pricing |
+| apps/web/src/test/form-inputs.test.tsx: keeps bounded multiline inputs labelled, described and locked during a request | preserve | presentation |
+| apps/web/src/test/form-inputs.test.tsx: adds and removes holiday dates with date inputs without guessing operating days or duplicating dates | preserve | settings |
+| apps/web/src/test/operations.test.tsx: requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid | preserve | eway |
+| apps/web/src/test/sign-in-fields.test.tsx: focuses sign-in steps and retains the email while clearing a rejected code | preserve | seam |
+| apps/web/src/test/sign-in-fields.test.tsx: preserves leading zeroes in a sign-in code and ignores a verification completed after unmount | preserve | seam |
+| apps/web/src/test/studio-workspace.test.tsx: searches customers with an explicit country code and focuses invalid phone input before any request | preserve | customers |
+| apps/web/src/test/weekly-business.test.tsx: loads on entry when requested and uses complete saved evidence for a 30-day preset | preserve | reports |
+| apps/web/src/test/weekly-business.test.tsx: rejects invalid custom date ranges locally without creating a report | preserve | reports |
+
+
+### Account recovery, accessible confirmations and operational empty states
+
+Reviewed eight new declarations, bringing the inventory to 393. The operator-test fingerprint retains exact invitation secrets only in transient request fields, server-selected workspace authority, onboarding request identity and sign-out privacy assertions. It adds uncertain sign-out recovery, view-specific document titles, and visible progressive disclosures. Existing settings and report-navigation tests still assert the exact changed account UUID after opening the support-reference disclosure. No exports, Store callers, import inventory or routes change.
+
+The shared Dialog removes its document key listener because the existing Radix dialog now owns modal focus and Escape handling. Its replacement tests verify the accessible name, Cancel focus, restored opener and one confirmed action. Auth lifecycle title updates add no retained external listener. Onboarding fields remain the same approved request; only grouping, hints, field bounds and focus change.
+
+Operational regressions verify permitted empty-state actions, all-states route recovery, and explicit archive/cancel/revoke confirmation with unchanged identities and expected versions. An uncertain logout keeps private data cleared and prevents hash navigation, focus or visibility events from reauthorizing the workspace until the explicit retry succeeds. No business, tenant, tax or pricing authority moves into the browser.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/custody-transfers.test.tsx: confirms named transfer revocation from both the approved list and manual reference form | preserve | proof |
+| apps/web/src/test/custody.test.tsx: requires confirmation before cancelling a prepared handover and preserves its exact server command | preserve | proof |
+| apps/web/src/test/dialog-accessibility.test.tsx: names the confirmation, focuses Cancel, and restores the opener on Escape without confirming | preserve | presentation |
+| apps/web/src/test/dialog-accessibility.test.tsx: performs the confirmed action once and closes the modal | preserve | presentation |
+| apps/web/src/test/logistics-design.test.tsx: offers first-use lot and route actions only to roles that can create them | preserve | lots |
+| apps/web/src/test/logistics-design.test.tsx: recovers an empty filtered route list using the server all-states query | preserve | routes |
+| apps/web/src/test/operations.test.tsx: requires an explicit archive confirmation for lots and planning routes without changing server versions | preserve | lots |
+| apps/web/src/test/operator.test.tsx: keeps private data hidden after uncertain sign-out until an explicit logout retry succeeds | preserve | seam |
+
+
+Receipt-focus follow-up: the existing booking/receipt composition regression now checks opt-in detail focus on initial and repeated receipt selection, return focus to the exact discovery row, and unchanged optional printing. The booking-success receipt does not opt into focus and does not show the discovery return action. Only the reviewed counter-test fingerprint changes; all 393 declarations, approved request bodies, money assertions, routes and inventoried effects remain unchanged.
+
+
+### Four-step booking modal integration
+
+Reviewed the counter composition changes for From, To, Parcel and Billing, and Review and print. Customer search uses a cancellable debounce; attachment queues subscribe to the active runtime and purge on scope changes; service publication waits for server activation; navigation listeners prevent leaving an unresolved money command. These effects retain existing scoped APIs and exact uncertain retry identities. Real booking metadata, receiver inheritance, actual receipt printing, local-file discard confirmation, and monthly-account composition replace the former three-stage expectations. No Store exports, callers, or routes change.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/booking-attachments.test.tsx: keeps selected files local until booking exists, then uses actual upload/finalize and drops private bytes | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: retries the same lost initiation with stable intent/key, without another booking or duplicate attachment | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: keeps scan-error evidence quarantined and retries finalize with its same key without resending bytes | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: purges private files on scope change and ignores a delayed initiation response | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: refuses empty, oversized and unsupported files before API calls and removes selected files locally | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: never treats rejected files as saved or exposes their bytes | preserve | booking |
+| apps/web/src/test/booking-attachments.test.tsx: uploads a selected batch in sequence so the server pending-upload quota is not exhausted | preserve | booking |
+| apps/web/src/test/booking-service-setup.test.tsx: saves a real named service under StrictMode and retries uncertain creation with the same intent | preserve | booking |
+| apps/web/src/test/booking-service-setup.test.tsx: publishes a reviewed first rate policy then waits for current rates before using the service | preserve | booking |
+| apps/web/src/test/counter.test.tsx: adds a typed customer inline and preserves the four-step draft when closing is cancelled | preserve | booking |
+| apps/web/src/test/counter.test.tsx: prints only after saving and does not recreate a booking when printing is cancelled | preserve | booking |
+| apps/web/src/test/counter.test.tsx: completes all four guided stages with exact kg conversion and a reviewed real quote | preserve | booking |
+| apps/web/src/test/counter.test.tsx: returns to billing when a changed handover fact needs reconfirmation | preserve | booking |
+| apps/web/src/test/counter.test.tsx: customer search selects the exact saved person and offers inline creation | preserve | booking |
+| apps/web/src/test/counter.test.tsx: keyboard continuation focuses the first missing sender field without creating a booking | preserve | booking |
+
+
+### Task-first flow simplification
+
+Reviewed 3 additional regressions; 407 declarations remain inventoried. No regressions were removed. The operator-test fingerprint now verifies the supplied MAIN branch code and its explanation, while retaining required business/location validation and exact onboarding-body checks. Settings, reports, delivery and finance tests follow the new disclosures/steps without changing monetary, permission, scope or idempotency assertions.
+
+| Regression | Decision |
+| --- | --- |
+| apps/web/src/test/customer-accounts.test.tsx: creates a missing customer in the account flow and retries the same uncertain customer request | Preserve: Preserve inline customer creation, exact lost-response retry and authority/navigation locks inside the staged monthly-account flow. |
+| apps/web/src/test/operations.test.tsx: adds a route parcel by tracking lookup while retaining server references and version | Preserve: Preserve tracking lookup selection, exact authorized parcel reference and current route version when attaching a parcel. |
+| apps/web/src/test/shipment-cost.test.tsx: keeps a shipment cost draft while moving between details and booking allocation | Preserve: Preserve entered source amounts and allocation context while moving backward and forward between cost steps. |
+
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/customer-accounts.test.tsx: creates a missing customer in the account flow and retries the same uncertain customer request | preserve | seam |
+| apps/web/src/test/operations.test.tsx: adds a route parcel by tracking lookup while retaining server references and version | preserve | seam |
+| apps/web/src/test/shipment-cost.test.tsx: keeps a shipment cost draft while moving between details and booking allocation | preserve | reports |
+
+
+### Focused form visual-review fixes
+
+Reviewed two additional task-focus/Cancel regressions. No declarations or request assertions were removed. 409 declarations are inventoried.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/customer-accounts.test.tsx: keeps account setup focused and restores the directory and approval queue on cancel | preserve | seam |
+| apps/web/src/test/shipment-cost.test.tsx: focuses cost entry and restores the report without writing when cancelled | preserve | reports |

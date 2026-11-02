@@ -9,6 +9,7 @@ import { createClamdScanner } from '../../src/modules/attachments/scanner.ts';
 import { parseAttachmentConfiguration } from '../../src/modules/attachments/config.ts';
 import { grantToken,verifyGrant } from '../../src/modules/attachments/grants.ts';
 import { photo,intent } from '../attachment-support.ts';
+import {invoicePdf} from '../pdf-attachment-fixture.ts';
 function wav(){const b=Buffer.alloc(46);b.write('RIFF');b.writeUInt32LE(38,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(8000,24);b.writeUInt32LE(16000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(2,40);return b;}
 const mp4=Buffer.from('000000186674797069736f6d0000020069736f6d69736f32000000086d646174','hex');
 test('content detection accepts synthetic photo/audio/video and denies executable, empty, unsupported and MIME mismatch intent',async()=>{
@@ -16,6 +17,11 @@ test('content detection accepts synthetic photo/audio/video and denies executabl
  for(const bytes of [Buffer.alloc(0),Buffer.from('MZ executable'),Buffer.from('<svg>unsafe</svg>')])await expect(detectedType(bytes)).rejects.toMatchObject({code:'ATTACHMENT_TYPE_UNSUPPORTED'});
  expect(()=>validateIntent({...intent(),media_type:'application/pdf'})).toThrow();expect(()=>validateIntent({...intent(),kind:'video'})).toThrow();expect(()=>validateIntent({...intent(),size_bytes:0})).toThrow();
  expect(validateIntent({...intent(),size_bytes:attachmentLimits.fileBytes}).size_bytes).toBe(attachmentLimits.fileBytes);expect(()=>validateIntent({...intent(),size_bytes:attachmentLimits.fileBytes+1})).toThrow();
+});
+test('PDF bytes require a complete unencrypted envelope and a document media intent',async()=>{
+ const pdf=invoicePdf();expect(await detectedType(pdf)).toBe('application/pdf');
+ expect(validateIntent(intent(pdf,'application/pdf','document')).kind).toBe('document');
+ for(const bytes of [pdf.subarray(0,40),Buffer.from('%PDF-1.4\nstartxref\n999999\n%%EOF'),Buffer.from(pdf.toString().replace('/Root','/Encrypt'))])await expect(detectedType(bytes)).rejects.toMatchObject({code:'ATTACHMENT_TYPE_UNSUPPORTED'});
 });
 test('real stream hard bound allows exactly maximum, rejects one byte over and partial bodies',async()=>{
  const bytes=Buffer.alloc(attachmentLimits.fileBytes);expect((await readBounded(Readable.from(bytes),bytes.length)).length).toBe(bytes.length);

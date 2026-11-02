@@ -220,3 +220,15 @@ await test('parcel reads survive pool restart while revoked and unapproved roles
   await assert.rejects(service.read(readOnly.token,parcel.id,{organization_id:org,franchise_id:A},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
   await replacement.close();
 });
+
+await test('counter parcel details survive booking replay and immutable storage',{timeout:30000},async t=>{
+ const s=await bookingSetup(t),key=randomUUID();
+ const details={country:'IN',postal_code:'400001',city:'Mumbai',region:'Maharashtra',contents_type:'solid',contents_description:'Cotton shirts',liquid_quantity_ml:null};
+ const body={...s.body,parcels:s.body.parcels.map(p=>({...p,details}))};
+ const first=await s.book(body,key);assert.equal(first.statusCode,201,first.body);
+ assert.deepEqual(first.json().parcels[0].details,details);
+ assert.deepEqual((await s.book(body,key)).json(),first.json());
+ const stored=await s.db.adminQuery('SELECT booking_details FROM shipit.parcels');assert.deepEqual(stored.rows[0]!.booking_details,details);
+ const changed={...body,parcels:body.parcels.map(p=>({...p,details:{...details,contents_description:'Changed'}}))};
+ assert.equal((await s.book(changed,key)).json().error.code,'IDEMPOTENCY_CONFLICT');
+});

@@ -1,3 +1,4 @@
+import {assertServiceContents} from '../pricing/service-options.ts';
 import {prepareAccountBooking,saveAccountBooking} from '../customer-accounts/credit.ts';
 import { createHash,randomUUID } from 'node:crypto';
 import { DatabaseError, type DatabasePool } from '@shippingco/db';
@@ -66,15 +67,17 @@ export function createBookingService(database: DatabasePool, cursorKey:Buffer, c
         const customer = await snapshot(s.customer,body.customer_id);
         if (!customer) throw new HttpError('RESOURCE_NOT_FOUND');
         if (customer.version !== body.expected_customer_version) throw new HttpError('VERSION_CONFLICT');
+        if(body.tax_intent.facts.evidence_ref==='COUNTER_DECLARATION'&&body.tax_intent.facts.service_recipient_ref!==customer.id)throw new HttpError('TAX_CONFLICT');
         const frozen = customerSnapshot(customerDto(customer));
         const pricing = await validatePricingSnapshot(s.pricing,body.tax_intent.quote_id,body.tax_intent.pricing_input,now);
+        if(body.tax_intent.pricing_input.service_option_id)await assertServiceContents(s.pricing,body.tax_intent.pricing_input.service_option_id,body.parcels.some(p=>p.details&&['liquid','semi_liquid'].includes(p.details.contents_type)));
         const tax = await validateTaxSnapshot(s,body.tax_calculation_id,body.tax_intent,
           {source:'trusted-contemporaneous-records',evidenceRef:command,serviceAt:now,invoiceAt:now,paymentAt:null},now);
         const account=await prepareAccountBooking(s.bookings,body,pricing,tax,now);
         const result: BookingDto = { ...(account?{account}:{}),id,version:1,state:'active',organization_id:organization,franchise_id:franchise,customer:frozen,
           charges:charges(pricing,tax,time),payment_obligation:obligation(randomUUID(),tax.final_payable_paise),event_id:randomUUID(),
           parcels:body.parcels.map(p => ({ id:randomUUID(),version:1,status:'booked',custody:'awaiting_intake',docket:'',
-            weight_grams:p.weight_grams,sender:frozen,recipient:p.recipient,event_id:randomUUID() })) };
+            ...(p.details?{details:p.details}:{}),weight_grams:p.weight_grams,sender:frozen,recipient:p.recipient,event_id:randomUUID() })) };
         await r.insert(s.bookings,command,result,pricing,tax,body.tax_intent,parcelSet);
         for (const [index,p] of result.parcels.entries()) p.docket = await insertParcel(s.parcels,id,index+1,p,body.parcels[index]!.docket);
         await r.saveObligation(s.bookings,id,result.payment_obligation);

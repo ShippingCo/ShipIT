@@ -1,3 +1,4 @@
+import './customer-report-flows.css';
 import {SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import React,{useEffect,useState} from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -31,17 +32,17 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const exported=await source.export(result.snapshot.id),url=URL.createObjectURL(new Blob([exported.csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=`ageing-${exported.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   return <section className="service-report-view" aria-label="To-Pay ageing"><SectionHeader title="To-Pay ageing"/>
-    <p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Unallocated advances are shown separately and do not settle debt. Delivery does not settle payment.</p>
-    <p>Booking age is not days overdue. Due dates use the terms frozen when the booking was confirmed. Missing dates remain unknown. Overdue means unpaid after the due date in Kolkata.</p>
-    <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}>
+    <p className="ops-note">Booking age is not days overdue.</p><details className="form-secondary-options"><summary>How overdue balances are calculated</summary><p>Tax-inclusive debt after approved changes, funds applied to bills, reversals and refunds. Unallocated advances are shown separately and do not settle debt. Delivery does not settle payment.</p>
+    <p>Due dates use the terms frozen when the booking was confirmed. Missing dates remain unknown. Overdue means unpaid after the due date in Kolkata.</p></details>
+    <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}><legend>Balance filters</legend>
       <SelectField aria-label="Age from" label="Age from" value={anchor} onChange={v=>setAnchor(v as AgeingFilter['anchor'])} options={[{value:'booking',label:'Booking date'},{value:'due',label:'Due date (unknown without terms)'}]}/>
       <SelectField aria-label="Parcel status" label="Parcel status" value={status} onChange={setStatus} options={[{value:'',label:'All statuses'},...ageingStatuses.map(value=>({value,label:value.replaceAll('_',' ')}))]}/>
       <label><input type="checkbox" checked={overdueOnly} onChange={e=>setOverdueOnly(e.target.checked)}/>Overdue only</label>
-      <TextField label="Customer ID (optional)" value={customer} onChange={setCustomer}/>
+      <details className="report-more-options"><summary>Customer and balance options{customer?' · one customer':''}</summary><TextField autoCapitalize="none" spellCheck={false} maxLength={36} label="Customer ID (optional)" value={customer} onChange={setCustomer}/>
       <SelectField aria-label="Balances" label="Balances" value={balances} onChange={v=>setBalances(v as AgeingFilter['balances'])} options={[{value:'outstanding',label:'Outstanding only'},{value:'all',label:'All, including settled and credit'}]}/>
-      <p>Customer ID selects the responsible debtor, which may differ from the shipping customer.</p>
+      <p>Customer ID selects the responsible debtor, which may differ from the shipping customer.</p></details>
       <p>All booking dates, up to 5,000 matching bookings. A status match includes the whole booking once. Snapshots expire after 24 hours.</p>
-      <button className="btn btn-filled" disabled={pending||command.canRetry}>Create ageing snapshot</button>
+      <button className="btn btn-filled" disabled={pending||command.canRetry}>Create ageing snapshot</button></fieldset>
     </form>
     {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void create(true)}>Retry same ageing request</button>}
     {pending&&<p role="status">Loading ageing report…</p>}<p role="status" aria-live="polite">{notice}</p>

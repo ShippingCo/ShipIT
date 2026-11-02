@@ -72,6 +72,8 @@ export interface PricingVersionDto extends PricingDraftInput {
   rules:(PricingRuleInput & {id:string})[];
 }
 export interface PricingQuoteInput {
+  /** Immutable named service and rate selected from this branch's catalog. */
+  service_option_id?:string;
   customer_account_id?:string;
   /** Source of an accepted booking service suggestion; omitted for manual/legacy intent. */
   settings_version_id?:string;
@@ -79,6 +81,7 @@ export interface PricingQuoteInput {
   override?:{freight_paise:number;reason_code:PricingOverrideReason};
 }
 export interface PricingQuoteDto {
+  service_option?:{id:string;name:string};
   id:string; proposal:true; card_id:string; rate_version_id:string; rate_version_number:number; rule_id:string|null;
   account?:{id:string;revision_id:string;version:number;rate_source:'account'|'normal';rate_revision_id:string|null;rule_index:number|null};
   policy:{effective_from:string;effective_to:string;quote_validity_seconds:number;override_tolerance_paise:number;approval_ref:string;source_ref:string};
@@ -87,6 +90,12 @@ export interface PricingQuoteDto {
   subtotal_paise:number; created_at:string; expires_at:string; fingerprint:string;
   breakdown:{calculation:'flat_paise_v1';min_weight_grams:number;max_weight_grams:number|null;excluded:['tax','final_payable_rounding']};
 }
+
+export interface BookingServiceInput {
+  name:string; service:PricingService; destination_key:string; accepts_liquids:boolean;
+  pricing:{kind:'flat'|'per_kg';first_kg_paise:number;additional_kg_paise:number;packing_paise:number};
+}
+export interface BookingServiceDto extends BookingServiceInput {id:string;created_at:string}
 
 /** Interactive operator commands, not an import API. Bound applies before deduplication. */
 export const MAX_BULK_PARCELS = 50;
@@ -194,3 +203,5 @@ export * from './owner-summaries.ts';
 export * from './accountant.ts';
 
 export * from './admin-actions.ts';
+
+export type {BookingParcelDetails} from './booking-details.ts';

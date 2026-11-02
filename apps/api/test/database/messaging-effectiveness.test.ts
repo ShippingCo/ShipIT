@@ -77,9 +77,32 @@ await test('logical message evidence deduplicates retries/callbacks and preserve
 
 await test('populated weekly snapshots separate thanks from tool failures and project DST/reopen business hours',{timeout:60000},async t=>{
   const {conversationSetup}=await import('../conversation-support.ts');
-  const {captureEffectiveness}=await import('../../src/modules/reports/effectiveness-repository.ts');
+  const {captureEffectiveness,supportBusinessMinutesSql}=await import('../../src/modules/reports/effectiveness-repository.ts');
   const {createEffectivenessService}=await import('../../src/modules/reports/effectiveness-service.ts');
   const s=await conversationSetup(t);await s.db.prepareSupport();await s.db.prepareReports();
+  // Fixed dates exercise the production SQL even when the suite runs before the
+  // next DST transition. Partial repeated windows are separate elapsed periods.
+  const windows:[string,string,string,number,number,number][]=[
+    ['America/New_York','2026-03-08T06:00:00Z','2026-03-08T09:00:00Z',60,240,120],
+    ['America/New_York','2026-11-01T05:00:00Z','2026-11-01T09:00:00Z',60,240,240],
+    ['America/New_York','2026-11-01T05:00:00Z','2026-11-01T09:00:00Z',90,105,30],
+    ['America/New_York','2026-11-01T04:00:00Z','2026-11-01T07:00:00Z',0,90,120],
+    ['America/New_York','2026-03-08T06:00:00Z','2026-03-08T09:00:00Z',120,180,0],
+    ['America/New_York','2026-03-08T06:00:00Z','2026-03-08T09:00:00Z',150,240,60],
+    ['America/New_York','2026-11-01T05:30:15Z','2026-11-01T06:40:30Z',90,105,25.25],
+    ['America/New_York','2026-03-08T06:45:30Z','2026-03-08T07:15:15Z',90,210,29.75],
+    ['Australia/Lord_Howe','2026-04-04T14:00:00Z','2026-04-04T16:00:00Z',105,120,30],
+    ['Australia/Lord_Howe','2026-10-03T15:00:00Z','2026-10-03T16:30:00Z',120,180,30],
+    ['Asia/Kolkata','2026-05-04T03:30:15Z','2026-05-04T04:15:45Z',540,1080,45.5],
+    ['UTC','2026-11-01T00:00:00Z','2026-11-02T00:00:00Z',0,1440,1440],
+  ];
+  for(const [zone,anchor,cutoff,start,end,expected] of windows){
+    const result=await s.db.adminQuery<{minutes:string}>(`WITH business_clock AS (
+      SELECT $1::timestamptz AS anchor_at,$2::timestamptz AS as_of,$3::text AS zone,
+        $4::int AS start_minute,$5::int AS end_minute,ARRAY[0,1,2,3,4,5,6] AS weekdays,true AS staffed)
+      ${supportBusinessMinutesSql}`,[anchor,cutoff,zone,start,end]);
+    assert.equal(Number(result.rows[0]!.minutes),expected,`${zone} ${anchor}–${cutoff}, local minutes ${start}–${end}`);
+  }
   const monday=new Date();monday.setUTCHours(0,0,0,0);monday.setUTCDate(monday.getUTCDate()-((monday.getUTCDay()+6)%7)-7);
   const cases:string[]=[];
   // Historical fixture rows copy outcomes produced by the real conversation worker.

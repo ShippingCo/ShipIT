@@ -9,17 +9,17 @@ export interface ParcelFilter {
   destination?:string|null;ungrouped?:boolean;customerId:string|null;from:string|null;to:string|null;sort:ParcelSort;limit:number;cursor:string|null;
 }
 export interface ParcelBoundary { value:string;id:string }
-export interface ParcelReadRow {
+export interface ParcelReadRow { booking_details?:import('@shippingco/shared').BookingParcelDetails|null;
   id:string;booking_id:string;organization_id:string;franchise_id:string;version:number;status:ParcelStatus;custody:string;
   docket:string;weight_grams:string|number;sender_snapshot:CustomerSnapshot;recipient_snapshot:ParcelInput['recipient'];confirmed_at:Date;
 }
-export interface ParcelReadDto {
+export interface ParcelReadDto { details?:import('@shippingco/shared').BookingParcelDetails;
   id:string;booking_id:string;version:number;status:ParcelStatus;custody:string;docket:string;weight_grams:number;confirmed_at:string;
   sender:CustomerSnapshot;recipient:ParcelInput['recipient'];
 }
 export interface TimelineRow { event_id:string;event_type:string;aggregate_sequence:string|number;occurred_at:Date }
 export interface TimelineDto { event_id:string;sequence:number;occurred_at:string;code:string;status:ParcelStatus;label:string }
-export interface ParcelDto { id: string; version: 1; status: 'booked'; custody: 'awaiting_intake'; docket: string; weight_grams: number; sender: CustomerSnapshot; recipient: ParcelInput['recipient']; event_id: string }
+export interface ParcelDto { details?:import('@shippingco/shared').BookingParcelDetails; id: string; version: 1; status: 'booked'; custody: 'awaiting_intake'; docket: string; weight_grams: number; sender: CustomerSnapshot; recipient: ParcelInput['recipient']; event_id: string }
 export interface BookingDto {
   account?:import('@shippingco/shared').AccountBookingSnapshot;
   id: string; version: 1; state: 'active'; organization_id: string; franchise_id: string; customer: CustomerSnapshot;
@@ -57,7 +57,7 @@ export function bookingDto(value: BookingDto): BookingDto {
       tax:{...pick(tax,['id','intent_id','quote_id','policy_id','policy_version','rule_id','resolution_id','supplier_state','place_of_supply','jurisdiction','registration','classification','treatment','pre_tax_paise','taxable_basis_paise','cgst_paise','sgst_paise','igst_paise','tax_total_paise','unrounded_payable_paise','rounding_adjustment_paise','final_payable_paise','approval_ref','source_ref','rule_evidence_ref','allocation','time_rule','proposed_tax_point_at','created_at','expires_at']),
         components:tax.components.map(c=>pick(c,['id','kind','numerator','denominator','exact_numerator','exact_denominator','amount_paise']))}},
     payment_obligation:pick(value.payment_obligation,['id','currency','total_paise','collected_paise','outstanding_paise','state']),
-    parcels:value.parcels.map(p=>({...pick(p,['id','version','status','custody','docket','weight_grams','event_id']),sender:party(p.sender),
+    parcels:value.parcels.map(p=>({...((p.details)?{details:pick(p.details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml'])}:{}),...pick(p,['id','version','status','custody','docket','weight_grams','event_id']),sender:party(p.sender),
       recipient:pick(p.recipient,['name','phone_normalized','phone_display','address'])})) };
 }
 
@@ -67,7 +67,7 @@ function safeInteger(value:string|number) {
   return parsed;
 }
 export function parcelReadDto(row:ParcelReadRow):ParcelReadDto {
-  return {id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
+  return {...(row.booking_details?{details:pick(row.booking_details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml'])}:{}),id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
     weight_grams:safeInteger(row.weight_grams),confirmed_at:row.confirmed_at.toISOString(),sender:party(row.sender_snapshot),
     recipient:pick(row.recipient_snapshot,['name','phone_normalized','phone_display','address'])};
 }

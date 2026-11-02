@@ -1,3 +1,4 @@
+import {formatKolkata} from './format';
 import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import React,{useMemo,useRef,useState} from 'react';
@@ -8,7 +9,7 @@ import { scopedApi } from '../data-access/scoped-api';
 import { support,type SupportSource,type SupportDetail } from '../data-access/support';
 import { useCommand,usePagedResource,useResource } from './hooks';
 import { Loading,Failure,Empty,CommandNotice } from './AsyncState';
-import { SelectField } from '../components/m3/Input';
+import { SelectField,TextArea } from '../components/m3/Input';
 
 export default function Support({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const source=useMemo(()=>support(scopedApi(controller)),[controller]);
@@ -17,14 +18,14 @@ export default function Support({controller,roles}:{controller:ScopeController;r
 }
 export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:boolean}) {
  const page=usePagedResource('support',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <section className="service-workspace" aria-labelledby="workspace-title"><PageHeader title="Human support" eyebrow="Customer service" description="Claim a case before replying. Automated answers stay paused until the case is resolved." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
+ return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Human support" eyebrow="Customer service" description="Review customer requests and follow up." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
   {page.phase==='loading'?<Loading/>:page.phase==='error'?<Failure retry={page.reload}/>:page.phase==='empty'?<Empty title="No support cases" body="Customer requests for help will appear here."/>:
-   <RecordTable label="Support cases" caption="Current authorized cases · review a case for private context" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
+   <RecordTable mobile="stack" label="Support cases" caption="Cases in this branch · open a case for customer details" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
     {key:'reference',label:'Case',cell:c=><strong className="service-reference">{c.id.slice(0,8)}</strong>},
     {key:'state',label:'State',cell:c=><StatusBadge tone={c.state==='resolved'?'success':c.state==='open'?'warning':'info'}>{c.state}</StatusBadge>},
     {key:'reason',label:'Reason',cell:c=>c.reason.replaceAll('_',' ')},
     {key:'assigned',label:'Assigned to',cell:c=>c.assigned_staff_id?<span className="service-reference">{c.assigned_staff_id.slice(0,8)}</span>:'Unassigned'},
-    {key:'updated',label:'Updated',cell:c=><time dateTime={c.updated_at}>{new Date(c.updated_at).toLocaleString()}</time>},
+    {key:'updated',label:'Updated',cell:c=><time dateTime={c.updated_at}>{formatKolkata(c.updated_at)}</time>},
     {key:'action',label:'Action',cell:c=><button ref={button=>{if(button&&c.id===selected)trigger.current=button;}} className="btn btn-text" aria-label={`Review case ${c.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(c.id);}}>Review case {c.id.slice(0,8)}</button>},
    ]}/>}
   {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more cases</button>}
@@ -54,16 +55,16 @@ function CaseCommands({value:c,source,canWrite,refresh}:{value:SupportDetail;sou
  return <><p role="status"><b>{c.state}</b> · version {c.version}</p><p>Owner: {c.assigned_staff_id===c.current_actor_id?'You':c.assigned_staff_id??'Unassigned'}</p><p>{c.availability}</p>
   {c.parcel_id&&<p>Verified parcel: {c.parcel_id}</p>}
   <h3>Recent customer context</h3><p className="ops-note">Safe conversation outcomes only. Ask the customer for details if needed. Never ask for their delivery code.</p>
-  <ul>{c.context.map((t,i)=><li key={i}>{t.intent} · {t.outcome} · {new Date(t.recorded_at).toLocaleString()}</li>)}</ul>
+  <ul>{c.context.map((t,i)=><li key={i}>{t.intent} · {t.outcome} · {formatKolkata(t.recorded_at)}</li>)}</ul>
   {canWrite&&<form onSubmit={e=>{void submit(e);}}><fieldset disabled={busy} className="ops-form-grid"><legend>Handle case</legend>
    <SelectField aria-label="Action" label="Action" value={action} onChange={setAction} options={actions.map(v=>({value:v,label:({claim:'Claim case',assign:'Assign case',respond:'Reply to customer',note:'Add internal note',resolve:'Resolve case',reopen:'Reopen case'} as Record<string,string>)[v]!}))}/>
    {action==='assign'&&<SelectField aria-label="Assign to staff" label="Assign to staff" value={assigned} onChange={setAssigned} options={c.staff.map(s=>({value:s.id,label:s.id===c.current_actor_id?'You':s.id}))}/>}
-   {['respond','note'].includes(action)&&<><label htmlFor="support-message">{action==='note'?'Internal note':'Customer message'}</label><textarea id="support-message" value={text} onChange={e=>setText(e.target.value)} required maxLength={2000} aria-describedby="support-message-help"/><p id="support-message-help">Do not include delivery codes, credentials or unnecessary personal details. Customer replies outside the service window are saved as blocked.</p></>}
+   {['respond','note'].includes(action)&&<TextArea id="support-message" label={action==='note'?'Internal note':'Customer message'} value={text} onChange={setText} required maxLength={2000} rows={4} helper={action==='note'?'Visible only to staff. Do not include delivery codes or passwords.':'Outside the messaging window, replies are saved as blocked. Never include delivery codes or passwords.'}/>}
    {['resolve','reopen'].includes(action)&&<SelectField aria-label="Reason" label="Reason" value={reason} onChange={setReason} options={['customer_request','needs_followup','answered','operational_review','incorrect_resolution'].map(v=>({value:v,label:v.replaceAll('_',' ')}))}/>}
    <button className="btn btn-filled" type="submit">Save action</button>
   </fieldset></form>}
   <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(refresh).catch(()=>{});}:undefined}/>
   <button className="btn btn-text" onClick={refresh} disabled={busy}>Reload case</button>
-  <h3>Staff history</h3><ol>{c.history.map(e=><li key={e.id}><b>{e.action==='noted'?'Internal note':e.action}</b> · {e.reason.replaceAll('_',' ')} · {e.actor_id===c.current_actor_id?'You':e.actor_id}<span> · {new Date(e.occurred_at).toLocaleString()}</span>{e.text&&<p>{e.text}</p>}{e.message_state&&<p role="status">Customer message: {e.message_state} · {e.message_reason?.replaceAll('_',' ')} · attempts {e.attempts}. {['failed','uncertain','suppressed'].includes(e.message_state)?'Franchise admin must review messaging recovery. Do not duplicate an uncertain send.':''}</p>}</li>)}</ol>
+  <details className="logistics-secondary" open={c.history.some(event=>event.message_state&&!(['sent','delivered','read'].includes(event.message_state)))}><summary>Staff history</summary><ol>{c.history.map(e=><li key={e.id}><b>{e.action==='noted'?'Internal note':e.action}</b> · {e.reason.replaceAll('_',' ')} · {e.actor_id===c.current_actor_id?'You':e.actor_id}<span> · {formatKolkata(e.occurred_at)}</span>{e.text&&<p>{e.text}</p>}{e.message_state&&<p role="status">Customer message: {e.message_state} · {e.message_reason?.replaceAll('_',' ')} · attempts {e.attempts}. {['failed','uncertain','suppressed'].includes(e.message_state)?'Franchise admin must review messaging recovery. Do not duplicate an uncertain send.':''}</p>}</li>)}</ol></details>
  </>;
 }

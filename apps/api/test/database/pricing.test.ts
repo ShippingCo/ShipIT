@@ -13,6 +13,24 @@ import { issueTenantAccess, scopedQuery } from '../../src/modules/security/scope
 import { createTenancyService } from '../../src/modules/tenancy/service.ts';
 import { approvedAuthority } from '../tenancy-support.ts';
 const missing='00000000-0000-4000-8000-000000009999';
+await test('named services persist, enforce scope and recompute per-kg quotes without changing published rules',{timeout:30000},async t=>{
+ const s=await pricingSetup(t);await s.published();s.setNow(start);
+ const body={name:'Local priority',service:'standard',destination_key:'SYN_DEST',accepts_liquids:false,pricing:{kind:'per_kg',first_kg_paise:10000,additional_kg_paise:2500,packing_paise:100}};
+ const key=randomUUID(),create=()=>s.pricing.createService(s.local.token,org,A,key,body,randomUUID());
+ const [saved,replayed]=await Promise.all([create(),create()]);assert.deepEqual(replayed,saved);assert.deepEqual(await create(),saved);
+ await assert.rejects(s.pricing.createService(s.local.token,org,A,key,{...body,name:'Changed'},randomUUID()),{code:'IDEMPOTENCY_CONFLICT'});
+ await assert.rejects(s.pricing.createService(s.operator.token,org,A,randomUUID(),body,randomUUID()),{code:'ACTION_FORBIDDEN'});
+ assert.equal((await s.pricing.services(s.operator.token,org,A,randomUUID())).items[0]?.id,saved.id);
+ const selected={...input,weight_grams:1500,service_option_id:saved.id};
+ const q=await s.pricing.quote(s.operator.token,org,A,randomUUID(),selected,randomUUID());
+ assert.equal(q.freight_paise,12500);assert.equal(q.packing_paise,100);assert.equal(q.rule_id,null);assert.equal(q.service_option?.name,'Local priority');
+ assert.deepEqual(await s.pricing.validate(s.operator.token,org,A,q.id,selected,randomUUID()),q);
+ const legacy=(await s.quote(input)).json();assert.equal(legacy.freight_paise,12551);
+ await assert.rejects(s.pricing.quote(s.operator.token,org,A,randomUUID(),{...selected,service:'express'},randomUUID()),{code:'NO_RATE'});
+ await assert.rejects(s.db.adminQuery('UPDATE shipit.booking_services SET name=$1 WHERE id=$2',['Changed',saved.id]));
+ const second=await s.pricing.createService(s.local.token,org,A,randomUUID(),{...body,name:'Another rate',pricing:{...body.pricing,first_kg_paise:20000}},randomUUID());
+ assert.notEqual(second.id,saved.id);assert.deepEqual(await s.pricing.validate(s.operator.token,org,A,q.id,selected,randomUUID()),q);
+});
 type Setup=Awaited<ReturnType<typeof pricingSetup>>;
 async function counts(s:Setup) {return (await s.db.adminQuery(`SELECT
   (SELECT count(*)::integer FROM shipit.pricing_versions) AS versions,

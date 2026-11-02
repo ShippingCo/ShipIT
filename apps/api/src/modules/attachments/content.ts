@@ -39,6 +39,13 @@ export async function detectedType(bytes: Buffer) {
   try {
     const result = await fileTypeFromBuffer(bytes);
     if (!result || !Object.hasOwn(attachmentMedia, result.mime)) throw new HttpError('ATTACHMENT_TYPE_UNSUPPORTED');
+    if(result.mime==='application/pdf') {
+      // Envelope checks are not a malware verdict. Every accepted PDF still goes
+      // through the configured ClamAV scanner before it can be downloaded.
+      const text=bytes.toString('latin1'),tail=text.slice(-2048);
+      const xref=/startxref\s+(\d+)\s+%%EOF\s*$/.exec(tail);
+      if(!/^%PDF-(?:1\.[0-7]|2\.0)[\r\n]/.test(text)||!xref||Number(xref[1])>=bytes.length||/\/Encrypt\b/.test(text))throw new HttpError('ATTACHMENT_TYPE_UNSUPPORTED');
+    }
     return result.mime;
   } catch (error) { if (error instanceof HttpError) throw error; throw new HttpError('ATTACHMENT_TYPE_UNSUPPORTED'); }
 }

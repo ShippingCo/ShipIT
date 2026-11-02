@@ -1,0 +1,141 @@
+[
+  {
+    "file": "customer-accounts.html",
+    "title": "Customer accounts",
+    "summary": "Keep monthly billing terms for a regular customer.",
+    "sources": [
+      "apps/web/src/operations/CustomerAccounts.tsx",
+      "apps/web/src/operations/AccountCreditEvidence.tsx"
+    ]
+  },
+  {
+    "file": "account-statements.html",
+    "title": "Customer statements",
+    "summary": "See the bookings and payments included in a customer billing period.",
+    "sources": [
+      "apps/web/src/operations/AccountStatements.tsx"
+    ]
+  },
+  {
+    "file": "money-receipts.html",
+    "title": "Money received",
+    "summary": "Record money that a customer has actually paid.",
+    "sources": [
+      "apps/web/src/operations/MoneyReceipts.tsx"
+    ]
+  },
+  {
+    "file": "cashbook.html",
+    "title": "Expenses and fund requests",
+    "summary": "Record what was paid and where money moved.",
+    "sources": [
+      "apps/web/src/operations/Cashbook.tsx",
+      "apps/web/src/operations/CashbookFilters.tsx",
+      "apps/web/src/operations/CashbookSources.tsx",
+      "apps/web/src/operations/ExpenseProofs.tsx"
+    ]
+  },
+  {
+    "file": "cash-locations.html",
+    "title": "Cash locations",
+    "summary": "Name the places or people that hold cash.",
+    "sources": [
+      "apps/web/src/operations/CashLocations.tsx"
+    ]
+  },
+  {
+    "file": "cash-handovers.html",
+    "title": "Handing over cash",
+    "summary": "Record cash passed from one person or location to another.",
+    "sources": [
+      "apps/web/src/operations/CashHandovers.tsx",
+      "apps/web/src/operations/AgentCashHandovers.tsx"
+    ]
+  },
+  {
+    "file": "cash-closing.html",
+    "title": "Closing a cash drawer",
+    "summary": "Compare counted cash with the cash records.",
+    "sources": [
+      "apps/web/src/operations/CashClosing.tsx"
+    ]
+  },
+  {
+    "file": "agent-money.html",
+    "title": "Agent money and seller COD",
+    "summary": "Keep agent fees, agent advances and seller collections separate.",
+    "sources": [
+      "apps/web/src/operations/AgentMoney.tsx",
+      "apps/web/src/operations/AgentMoneyRequests.tsx"
+    ]
+  },
+  {
+    "file": "agent-settlements.html",
+    "title": "Agent daily statements",
+    "summary": "Check an agent\u2019s daily cash and saved money records.",
+    "sources": [
+      "apps/web/src/operations/AgentSettlements.tsx",
+      "apps/web/src/operations/AgentStatementEvidence.tsx"
+    ]
+  },
+  {
+    "file": "advance-refunds.html",
+    "title": "Returning unused customer advance",
+    "summary": "Record a request to return customer money that was not used for bills.",
+    "sources": [
+      "apps/web/src/operations/AdvanceRefunds.tsx"
+    ]
+  },
+  {
+    "file": "shipment-costs.html",
+    "title": "Shipment costs",
+    "summary": "Record the purchase costs that belong to a shipment.",
+    "sources": [
+      "apps/web/src/operations/ShipmentCosts.tsx",
+      "apps/web/src/operations/ShipmentCostEditor.tsx"
+    ]
+  },
+  {
+    "file": "contribution.html",
+    "title": "Revenue less shipment costs",
+    "summary": "Compare selling revenue with the shipment costs recorded against it.",
+    "sources": [
+      "apps/web/src/operations/Contribution.tsx"
+    ]
+  },
+  {
+    "file": "reconciliation.html",
+    "title": "Checking bank records",
+    "summary": "Compare imported bank entries with money already recorded in the app.",
+    "sources": [
+      "apps/web/src/operations/reconciliation/Imports.tsx",
+      "apps/web/src/operations/reconciliation/Matching.tsx",
+      "apps/web/src/operations/reconciliation/Review.tsx"
+    ]
+  },
+  {
+    "file": "financial-approvals.html",
+    "title": "Approvals and refunds",
+    "summary": "Review changes to booking charges and refund records.",
+    "sources": [
+      "apps/web/src/operations/Financials.tsx",
+      "apps/web/src/operations/FinancialAudit.tsx"
+    ]
+  },
+  {
+    "file": "accountant-register.html",
+    "title": "Accountant register",
+    "summary": "Give your accountant a saved set of financial records.",
+    "sources": [
+      "apps/web/src/operations/AccountantRegister.tsx"
+    ]
+  },
+  {
+    "file": "ageing.html",
+    "title": "Outstanding balances by age",
+    "summary": "See which unpaid balances have been waiting longest.",
+    "sources": [
+      "apps/web/src/operations/Ageing.tsx"
+    ]
+  }
+]

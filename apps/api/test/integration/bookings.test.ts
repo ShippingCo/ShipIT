@@ -11,6 +11,14 @@ import { taxFacts } from '../tax-support.ts';
 import { idempotencyKey } from '../../src/modules/customers/validation.ts';
 const body = {customer_id:randomUUID(),expected_customer_version:1,tax_calculation_id:randomUUID(),
   tax_intent:{quote_id:randomUUID(),pricing_input:input,facts:taxFacts},parcels:[{weight_grams:999,recipient:{name:'Synthetic Recipient',phone:'+1 202-555-0101'}}]};
+it('freezes structured counter details and rejects invalid countries, quantities and private fields',()=>{
+ const details={country:'IN',postal_code:'400001',city:'Mumbai',region:'Maharashtra',contents_type:'liquid',contents_description:'Sealed bottles',liquid_quantity_ml:1000};
+ const withDetails=(d:unknown)=>({...body,parcels:[{...body.parcels[0],details:d}]});
+ expect(create(withDetails(details)).parcels[0]!.details).toEqual(details);
+ expect(fingerprint(create(withDetails(details)))).not.toBe(fingerprint(create(withDetails({...details,liquid_quantity_ml:2000}))));
+ for(const change of [{country:'US'},{postal_code:'000000'},{city:''},{region:'line\nbreak'},{contents_type:'unknown'},{liquid_quantity_ml:0},{liquid_quantity_ml:1.5},{private_note:'not allowed'},{contents_type:'solid',liquid_quantity_ml:10}])expect(()=>create(withDetails({...details,...change}))).toThrow();
+ expect(create(body).parcels[0]!.details).toBeUndefined();
+});
 it('strict booking schema expands only declared defaults and checks whole-booking gram sum',() => {
   const parsed=create(body); expect(parsed.parcels[0]!.docket).toBe(null); expect(parsed.parcels[0]!.recipient.address).toBe('');
   expect(fingerprint(parsed)).toBe(fingerprint(create({...body,parcels:[{...body.parcels[0]!,recipient:{...body.parcels[0]!.recipient,address:''}}]})));

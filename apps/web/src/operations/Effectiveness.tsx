@@ -21,8 +21,8 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
   },[id,source,revision,section,category]);
   async function create(retry=false){if(pending)return;setNotice('');try{const p=await(retry?command.retry():command.run(source.intent({week})));if(p){setSection('');setCategory('');setParams({effectiveness_snapshot:p.snapshot.id});}}catch(e){fail(e);}}
   return <section className="service-report-view" aria-label="Messaging and assistant effectiveness"><SectionHeader title="Messaging and assistant effectiveness"/>
-    <p>Fixed closed Monday-to-Monday weeks in UTC. Logical messages and known customers are counted once; recorded send attempts are separate. Accepted, sent and uncertain do not establish delivery.</p>
-    <p>Tool success, thanks and staff resolution are separate signals. Calls saved and ROI are unmeasured.</p>
+    <details className="form-secondary-options"><summary>How messaging results are counted</summary><p>Fixed closed Monday-to-Monday weeks in UTC. Logical messages and known customers are counted once; recorded send attempts are separate. Accepted, sent and uncertain do not establish delivery.</p>
+    <p>Tool success, thanks and staff resolution are separate signals. Calls saved and ROI are unmeasured.</p></details>
     <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
       <TextField label="Week beginning Monday (UTC)" type="date" value={week} onChange={setWeek}/><p>Up to 53 weeks of history. The week must have closed at least 15 minutes ago. Snapshots expire after 24 hours.</p>
       <button className="btn btn-filled">Create effectiveness snapshot</button></fieldset></form>

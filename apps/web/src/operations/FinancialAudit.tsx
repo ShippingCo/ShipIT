@@ -1,3 +1,4 @@
+import './customer-report-flows.css';
 import {RecordTable,StatusBadge,SectionHeader} from '../components/workspace/Workspace';
 import React,{useEffect,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
@@ -33,7 +34,7 @@ export function FinancialAuditView({source,canExport,openRequest,parentLocked=fa
  <TextField label="From recorded day" type="date" value={from} onChange={setFrom} disabled={locked}/><TextField label="Through recorded day" type="date" value={to} onChange={setTo} disabled={locked}/>
  <SelectField label="Action kind" value={kind} onChange={setKind} disabled={locked} options={[{value:'',label:'All actions'},...financialAuditKinds.map(value=>({value,label:financialLabels[value]}))]}/>
  <SelectField label="Captured status" value={status} onChange={setStatus} disabled={locked} options={[{value:'',label:'All statuses'},...financialAuditStatuses.map(value=>({value,label:value}))]}/>
- <TextField label="Actor reference (optional)" value={actor} onChange={setActor} disabled={locked}/><TextField label="Booking reference (optional)" value={booking} onChange={setBooking} disabled={locked}/></div>
+ </div><details className="report-more-options"><summary>Find a specific person or booking{actor||booking?' · filters applied':''}</summary><div className="ops-grid"><TextField label="Actor reference (optional)" value={actor} onChange={setActor} disabled={locked}/><TextField label="Booking reference (optional)" value={booking} onChange={setBooking} disabled={locked}/></div></details>
  <button className="btn btn-filled" disabled={locked}>Capture financial audit</button></form>
  <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void capture(true);}:undefined}/>{notice&&<p role="status" aria-live="polite">{notice}</p>}
  {id&&<button className="btn btn-text" disabled={locked} onClick={()=>{command.reset();setRevision(value=>value+1);}}>Reload saved audit</button>}

@@ -1,0 +1,54 @@
+[
+  {
+    "file": "start-here.html",
+    "title": "Start here",
+    "summary": "Learn the order of work, from setting up your shop to checking the day\u2019s money.",
+    "sources": [
+      "apps/web/src/components/workspace/WorkspaceNavigation.tsx"
+    ]
+  },
+  {
+    "file": "sign-in-and-profile.html",
+    "title": "Sign in, join a shop and sign out",
+    "summary": "Open your shop securely and leave it safely.",
+    "sources": [
+      "apps/web/src/operator/SignIn.tsx",
+      "apps/web/src/operator/Onboarding.tsx",
+      "apps/web/src/operator/OperatorApp.tsx"
+    ]
+  },
+  {
+    "file": "dashboard.html",
+    "title": "Overview and daily figures",
+    "summary": "See bookings, billed amounts, payments and work waiting for your team.",
+    "sources": [
+      "apps/web/src/operations/Dashboard.tsx",
+      "apps/web/src/operations/WeeklyBusiness.tsx",
+      "apps/web/src/operations/DailyDashboard.tsx"
+    ]
+  },
+  {
+    "file": "find-customers.html",
+    "title": "Find a customer",
+    "summary": "Reuse the right customer details and avoid selecting the wrong person.",
+    "sources": [
+      "apps/web/src/operations/Customers.tsx"
+    ]
+  },
+  {
+    "file": "reports.html",
+    "title": "Choose and read a report",
+    "summary": "Answer a business question using saved figures and the records behind them.",
+    "sources": [
+      "apps/web/src/operations/Reports.tsx"
+    ]
+  },
+  {
+    "file": "delivery-performance.html",
+    "title": "Delivery performance report",
+    "summary": "See which parcels were delivered and compare delivery against the expected time.",
+    "sources": [
+      "apps/web/src/operations/Performance.tsx"
+    ]
+  }
+]

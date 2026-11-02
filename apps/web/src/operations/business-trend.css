@@ -1,0 +1,22 @@
+.business-trend{margin-top:12px;padding:24px 0;min-width:0}
+.business-trend .workspace-section-header{margin-bottom:18px}
+.trend-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.trend-periods{display:flex;gap:4px;padding:4px;background:#f4f6f8;border:1px solid #e5e9ef;border-radius:10px;flex-wrap:wrap}
+.trend-periods button{border:0;background:transparent;border-radius:7px;padding:9px 13px;font:inherit;font-size:13px;min-height:38px;color:#536278;cursor:pointer}
+.trend-periods button[aria-pressed=true]{background:white;color:#235ba7;box-shadow:0 1px 4px #1b33551a;font-weight:600}
+.trend-periods button:disabled{cursor:default;opacity:.65}
+.trend-custom-dates{display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin-bottom:20px}
+.trend-custom-dates .tf{flex:1 1 180px}.trend-custom-dates>p{flex-basis:100%}
+.trend-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #e0e6ee;border-radius:14px;overflow:hidden}
+.trend-metrics>button,.trend-metrics>div{text-align:left;border:0;border-right:1px solid #e0e6ee;background:white;padding:20px;min-width:0;color:var(--workspace-text);font:inherit}
+.trend-metrics>button{cursor:pointer;border-bottom:1px solid transparent}.trend-metrics>div:last-child{border-right:0}
+.trend-metrics>button[aria-pressed=true]{background:#f5f9ff;border-bottom-color:var(--md-primary)}
+.trend-metrics span,.trend-metrics small{display:block;color:#5b6b80;font-size:13px}.trend-metrics small{font-size:12px;margin-top:5px}
+.trend-metrics strong{display:block;font-size:clamp(20px,2.1vw,30px);letter-spacing:-.035em;line-height:1.4;margin-top:8px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.trend-chart-wrap{padding-top:22px}.trend-chart-caption{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#5b6b80;margin:0 0 12px;flex-wrap:wrap}.trend-chart-caption strong{font-weight:500}.trend-chart-caption i{display:inline-block;background:var(--md-primary);width:8px;height:8px;border-radius:3px;margin-right:7px}
+.business-trend .studio-chart{height:auto;aspect-ratio:600/260;max-height:300px;min-height:210px}
+.trend-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-top:1px solid #e5e9ef;margin-top:16px}.trend-footer details{flex:1;min-width:0}.trend-footer>span{padding-top:14px;white-space:nowrap}
+.trend-empty{padding:14px 18px;background:#f7f9fc;border-radius:8px;font-size:13px;color:#52647b}
+.trend-loading{height:280px;display:flex;flex-direction:column;justify-content:center;gap:25px;color:#637083;font-size:13px}.trend-loading-line{height:1px;background:#e5e9ef;display:block}
+.trend-periods button:focus-visible,.trend-metrics button:focus-visible{outline:3px solid #2868c7;outline-offset:-3px}
+@media(max-width:700px){.trend-metrics{grid-template-columns:1fr}.trend-metrics>button,.trend-metrics>div{padding:14px 16px;border-right:0;border-bottom:1px solid #e0e6ee}.trend-metrics>button[aria-pressed=true]{border-left:1px solid var(--md-primary);border-bottom:1px solid #e0e6ee;padding-left:13px}.trend-metrics strong{font-size:26px}.trend-metrics small{margin-top:2px}.trend-periods{width:100%}.trend-periods button{flex:1;padding-inline:7px}.trend-footer{flex-direction:column;gap:0}.trend-footer>span{padding-top:0}.trend-toolbar>.ops-note{font-size:12px}}

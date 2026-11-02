@@ -188,7 +188,7 @@
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
       "apps/web/src/data/store.ts": "4254155ea29a147800f9775b6e8875afd270294adcc800ede48aa333fbab6960",
       "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
-      "apps/web/src/main.tsx": "7828070e8e776ab4eb43f0f6e5a4d17e158ab139385043344ac6fd7fffbef222",
+      "apps/web/src/main.tsx": "77772ed3563f5455b02478900a8990899070fe59f6075c6b3354c3d39cea8035",
       "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
       "apps/web/src/pages/business/Dashboard.tsx": "e70071ffbcc4d119ba8006ac1e8798ca7a58617b9d84959262da72a1f414b0b5",
@@ -201,8 +201,8 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
       "apps/web/src/test/app.test.tsx": "a934d6cde3dee36a385f41d40dbb2f32b11bbaa55de51ed8f2fd7ce0cfd663c2",
-      "apps/web/src/test/counter.test.tsx": "1f56af9b4573ac658543daace74144fc12b1af5073f58ec0e9e9a095e5ecff2b",
-      "apps/web/src/test/operator.test.tsx": "37712be67661116f8b3bc6a13e92b0641b48f160b65517a46c20f72c6075c188",
+      "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
+      "apps/web/src/test/operator.test.tsx": "81fe40812336b16810c16535f6e32855bc418fe661904d7130dfdd0aac2a2507",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -1263,6 +1263,111 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "keeps selected files local until booking exists, then uses actual upload/finalize and drops private bytes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "retries the same lost initiation with stable intent/key, without another booking or duplicate attachment",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "keeps scan-error evidence quarantined and retries finalize with its same key without resending bytes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "purges private files on scope change and ignores a delayed initiation response",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "refuses empty, oversized and unsupported files before API calls and removes selected files locally",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "never treats rejected files as saved or exposes their bytes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-attachments.test.tsx",
+        "name": "uploads a selected batch in sequence so the server pending-upload quota is not exhausted",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-phone.test.tsx",
+        "name": "adds the selected country code exactly once and keeps an empty phone empty",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-phone.test.tsx",
+        "name": "accepts a full pasted number, preserves unknown international codes and follows external customer changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-phone.test.tsx",
+        "name": "does not discard invalid phone characters and exposes an accessible field error",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "limits the courier template to confirmed selected courier services and never infers a customer jurisdiction",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "applies a reviewed domestic courier template only to the draft and submits exact user-supplied tax identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "converts exact prices and reviewed tax percentages without inventing a rate",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "requires review before publication and retries the same uncertain draft without duplicate intent",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "does not fetch configuration or offer publication to an operator",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+        "name": "records transparent publisher-review and manual-entry provenance without fabricating document references",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-service-setup.test.tsx",
+        "name": "saves a real named service under StrictMode and retries uncertain creation with the same intent",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-service-setup.test.tsx",
+        "name": "publishes a reviewed first rate policy then waits for current rates before using the service",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-units.test.tsx",
+        "name": "converts kg and rupees exactly at fractional and safe-integer boundaries",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-units.test.tsx",
+        "name": "retains partial decimal editing and updates after an external draft change",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/booking-units.test.tsx",
+        "name": "accepts only published rate choices and discards unneeded pricing details",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/business-dates.test.tsx",
         "name": "uses IST midnight and Monday weeks across Sunday, month and year boundaries",
         "cases": null
@@ -1464,6 +1569,56 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
+        "name": "adds a typed customer inline and preserves the four-step draft when closing is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "recovers missing and empty rates through real setup without losing the booking draft or inventing services",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "loads an explicitly selected customer through the current scope and never creates a replacement",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "does not request an invalid customer link or substitute a customer when it fails",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "shows published destinations with a recoverable failure and no invented fallback choices",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "completes all four guided stages with exact kg conversion and a reviewed real quote",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "converts rupee overrides exactly and never silently drops an invalid non-empty amount",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "returns to billing when a changed handover fact needs reconfirmation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "guides booking steps, validates the current fields and preserves entries on Back",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
         "name": "does not claim an empty receipt result until the edited docket is searched",
         "cases": null
       },
@@ -1509,7 +1664,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "repeat selection fills empty values while preserving deliberate edits",
+        "name": "customer search selects the exact saved person and offers inline creation",
         "cases": null
       },
       {
@@ -1524,7 +1679,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "keyboard form submission focuses first invalid field and describes the error",
+        "name": "keyboard continuation focuses the first missing sender field without creating a booking",
         "cases": null
       },
       {
@@ -1653,6 +1808,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/custody-transfers.test.tsx",
+        "name": "confirms named transfer revocation from both the approved list and manual reference form",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/custody.test.tsx",
         "name": "retains exact acknowledgement after a lost response and blocks replacement navigation",
         "cases": null
@@ -1660,6 +1820,11 @@
       {
         "file": "apps/web/src/test/custody.test.tsx",
         "name": "does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/custody.test.tsx",
+        "name": "requires confirmation before cancelling a prepared handover and preserves its exact server command",
         "cases": null
       },
       {
@@ -1675,6 +1840,21 @@
       {
         "file": "apps/web/src/test/customer-accounts.test.tsx",
         "name": "read-only cannot mount account directory reads or configuration",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "name": "creates a missing customer in the account flow and retries the same uncertain customer request",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/customer-accounts.test.tsx",
+        "name": "keeps account setup focused and restores the directory and approval queue on cancel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/daily-dashboard.test.tsx",
+        "name": "keeps date shortcuts local until capture and charts exact large or negative amounts without invented percentages",
         "cases": null
       },
       {
@@ -1770,6 +1950,16 @@
       {
         "file": "apps/web/src/test/data-access.test.ts",
         "name": "broadcasts only payload-free invalidation and closes its channel; missing channel needs no storage fallback",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/dialog-accessibility.test.tsx",
+        "name": "names the confirmation, focuses Cancel, and restores the opener on Escape without confirming",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/dialog-accessibility.test.tsx",
+        "name": "performs the confirmed action once and closes the modal",
         "cases": null
       },
       {
@@ -1883,8 +2073,38 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/form-inputs.test.tsx",
+        "name": "keeps bounded multiline inputs labelled, described and locked during a request",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/form-inputs.test.tsx",
+        "name": "adds and removes holiday dates with date inputs without guessing operating days or duplicating dates",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/lint-regressions.test.tsx",
         "name": "can change between empty and populated series without changing hook order",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-design.test.tsx",
+        "name": "keeps customer context on the server query and clears both customer and booked-today route filters",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-design.test.tsx",
+        "name": "keeps drafted filters separate from applied filters and rejects a reversed date range before a read",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-design.test.tsx",
+        "name": "offers first-use lot and route actions only to roles that can create them",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-design.test.tsx",
+        "name": "recovers an empty filtered route list using the server all-states query",
         "cases": null
       },
       {
@@ -1994,6 +2214,11 @@
       },
       {
         "file": "apps/web/src/test/operations.test.tsx",
+        "name": "requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
         "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
         "cases": null
       },
@@ -2080,6 +2305,16 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "requires an explicit archive confirmation for lots and planning routes without changing server versions",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "adds a route parcel by tracking lookup while retaining server references and version",
         "cases": null
       },
       {
@@ -2180,6 +2415,11 @@
       {
         "file": "apps/web/src/test/operator.test.tsx",
         "name": "logout hides private data immediately and late context cannot repaint",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operator.test.tsx",
+        "name": "keeps private data hidden after uncertain sign-out until an explicit logout retry succeeds",
         "cases": null
       },
       {
@@ -2394,6 +2634,11 @@
       },
       {
         "file": "apps/web/src/test/settings.test.tsx",
+        "name": "keeps unavailable warnings and active draft validation visible when settings categories are collapsed",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings.test.tsx",
         "name": "decodes absent, inherited, configured-empty and revoked scope without manufacturing values or leaking unknown properties",
         "cases": null
       },
@@ -2603,6 +2848,41 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "keeps a shipment cost draft while moving between details and booking allocation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/shipment-cost.test.tsx",
+        "name": "focuses cost entry and restores the report without writing when cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/sign-in-fields.test.tsx",
+        "name": "focuses sign-in steps and retains the email while clearing a rejected code",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/sign-in-fields.test.tsx",
+        "name": "preserves leading zeroes in a sign-in code and ignores a verification completed after unmount",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "name": "searches customers with an explicit country code and focuses invalid phone input before any request",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "name": "builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "name": "searches real scoped customers only after valid input and links the selected record into booking",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
         "cases": null
@@ -2638,6 +2918,36 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "waits for every saved page before displaying complete counts and exact paise totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "recovers a failed next page using the same saved report without another capture",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "offers a fresh capture after saved evidence expires and rejects inconsistent page identity",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "retains the exact capture request after an uncertain response and offers no fresh action",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "loads on entry when requested and uses complete saved evidence for a 30-day preset",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/weekly-business.test.tsx",
+        "name": "rejects invalid custom date ranges locally without creating a report",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/workspace-components.test.tsx",
         "name": "keeps native field names separate from options and connects helpers and validation messages",
         "cases": null
@@ -2653,8 +2963,23 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/workspace-controls.test.tsx",
+        "name": "opens only permitted creation destinations from the keyboard",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-controls.test.tsx",
+        "name": "clears a search draft without submitting the surrounding form",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-controls.test.tsx",
+        "name": "labels custom choices and exposes disabled state",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/workspace-navigation.test.tsx",
-        "name": "groups permitted destinations once, expands folders independently and reveals the active route",
+        "name": "shows shallow permitted task areas and reveals tools for the current area",
         "cases": null
       }
     ],
@@ -2664,12 +2989,32 @@
         "kind": "useSyncExternalStore"
       },
       {
+        "file": "apps/web/src/booking/BookingAttachments.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/booking/BookingServiceSetup.tsx",
+        "kind": "window.setTimeout"
+      },
+      {
+        "file": "apps/web/src/booking/CustomerLookup.tsx",
+        "kind": "window.setTimeout"
+      },
+      {
         "file": "apps/web/src/booking/NewBooking.tsx",
         "kind": "useSyncExternalStore"
       },
       {
         "file": "apps/web/src/booking/NewBooking.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/booking/NewBooking.tsx",
         "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/booking/RateChoices.tsx",
+        "kind": "useSyncExternalStore"
       },
       {
         "file": "apps/web/src/booking/recovery.ts",
@@ -2697,10 +3042,6 @@
       },
       {
         "file": "apps/web/src/components/m3/Controls.tsx",
-        "kind": "document.addEventListener"
-      },
-      {
-        "file": "apps/web/src/components/m3/Dialog.tsx",
         "kind": "document.addEventListener"
       },
       {
@@ -2810,6 +3151,18 @@
       {
         "file": "apps/web/src/operations/AgentSettlements.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operations/BookingPolicySetup.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/BookingPolicySetup.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/BookingPolicySetup.tsx",
+        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/operations/CashClosing.tsx",
@@ -4327,6 +4680,174 @@
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "keeps selected files local until booking exists, then uses actual upload/finalize and drops private bytes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "retries the same lost initiation with stable intent/key, without another booking or duplicate attachment",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "keeps scan-error evidence quarantined and retries finalize with its same key without resending bytes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "purges private files on scope change and ignores a delayed initiation response",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "refuses empty, oversized and unsupported files before API calls and removes selected files locally",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "never treats rejected files as saved or exposes their bytes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-attachments.test.tsx",
+      "name": "uploads a selected batch in sequence so the server pending-upload quota is not exhausted",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-phone.test.tsx",
+      "name": "adds the selected country code exactly once and keeps an empty phone empty",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve explicit country selection, one country prefix and an empty unset phone draft."
+    },
+    {
+      "file": "apps/web/src/test/booking-phone.test.tsx",
+      "name": "accepts a full pasted number, preserves unknown international codes and follows external customer changes",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve pasted full international numbers, unsupported-country escape and external saved-customer selection."
+    },
+    {
+      "file": "apps/web/src/test/booking-phone.test.tsx",
+      "name": "does not discard invalid phone characters and exposes an accessible field error",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve international-number validation, explicit invalid characters and accessible disabled/error controls."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "limits the courier template to confirmed selected courier services and never infers a customer jurisdiction",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve explicit domestic-courier scope confirmation, selected supported services and separate registration/jurisdiction rules without deciding booking place of supply."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "applies a reviewed domestic courier template only to the draft and submits exact user-supplied tax identity",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve draft-only template application, actual supplier/approval facts, sourced notification evidence, exact 18 percent components and explicit publication review."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "converts exact prices and reviewed tax percentages without inventing a rate",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve exact rupee/percentage conversion and explicit approved rate and tax input without fabricated values."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "requires review before publication and retries the same uncertain draft without duplicate intent",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve saved draft review and same-intent recovery before explicit scoped pricing publication."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "does not fetch configuration or offer publication to an operator",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve administrator-only policy setup affordances with server authorization remaining authoritative."
+    },
+    {
+      "file": "apps/web/src/test/booking-policy-setup.test.tsx",
+      "name": "records transparent publisher-review and manual-entry provenance without fabricating document references",
+      "cases": null,
+      "group": "pricing",
+      "disposition": "preserve",
+      "reason": "Preserve explicit semantic provenance markers, unset freight, convenience defaults and a separate actual publication-review step; external document mode retains actual supplied references."
+    },
+    {
+      "file": "apps/web/src/test/booking-service-setup.test.tsx",
+      "name": "saves a real named service under StrictMode and retries uncertain creation with the same intent",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-service-setup.test.tsx",
+      "name": "publishes a reviewed first rate policy then waits for current rates before using the service",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/booking-units.test.tsx",
+      "name": "converts kg and rupees exactly at fractional and safe-integer boundaries",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve exact decimal conversion, precision rejection and safe-integer boundaries before API submission."
+    },
+    {
+      "file": "apps/web/src/test/booking-units.test.tsx",
+      "name": "retains partial decimal editing and updates after an external draft change",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve unfinished display input and synchronization with external authoritative draft changes."
+    },
+    {
+      "file": "apps/web/src/test/booking-units.test.tsx",
+      "name": "accepts only published rate choices and discards unneeded pricing details",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve the minimal published-card decoder and rejection of unsupported destination/service evidence."
+    },
+    {
       "file": "apps/web/src/test/business-dates.test.tsx",
       "name": "uses IST midnight and Monday weeks across Sunday, month and year boundaries",
       "cases": null,
@@ -4648,6 +5169,86 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
+      "name": "adds a typed customer inline and preserves the four-step draft when closing is cancelled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "recovers missing and empty rates through real setup without losing the booking draft or inventing services",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve real Settings setup navigation in a separate tab, retained booking input and explicit published-rate retry without fallback destinations."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "loads an explicitly selected customer through the current scope and never creates a replacement",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve scoped customer identity from directory navigation and forbid automatic replacement creation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "does not request an invalid customer link or substitute a customer when it fails",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve invalid-link rejection and safe customer-read failure without substituting identity."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "shows published destinations with a recoverable failure and no invented fallback choices",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve real published rate choices, explicit retry and absence of invented destinations."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "completes all four guided stages with exact kg conversion and a reviewed real quote",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "converts rupee overrides exactly and never silently drops an invalid non-empty amount",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve exact paise conversion and rejection of invalid nonempty optional overrides."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "returns to billing when a changed handover fact needs reconfirmation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "guides booking steps, validates the current fields and preserves entries on Back",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
       "name": "does not claim an empty receipt result until the edited docket is searched",
       "cases": null,
       "group": "seam",
@@ -4720,11 +5321,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "repeat selection fills empty values while preserving deliberate edits",
+      "name": "customer search selects the exact saved person and offers inline creation",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -4744,11 +5345,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "keyboard form submission focuses first invalid field and describes the error",
+      "name": "keyboard continuation focuses the first missing sender field without creating a booking",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+      "group": "booking",
+      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -4951,6 +5552,14 @@
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
+      "file": "apps/web/src/test/custody-transfers.test.tsx",
+      "name": "confirms named transfer revocation from both the approved list and manual reference form",
+      "cases": null,
+      "group": "proof",
+      "disposition": "preserve",
+      "reason": "Preserve explicit revocation review, cancel without mutation and exact approval identity/version for both entry points."
+    },
+    {
       "file": "apps/web/src/test/custody.test.tsx",
       "name": "retains exact acknowledgement after a lost response and blocks replacement navigation",
       "cases": null,
@@ -4965,6 +5574,14 @@
       "group": "recovery",
       "disposition": "preserve",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
+    },
+    {
+      "file": "apps/web/src/test/custody.test.tsx",
+      "name": "requires confirmation before cancelling a prepared handover and preserves its exact server command",
+      "cases": null,
+      "group": "proof",
+      "disposition": "preserve",
+      "reason": "Preserve no mutation before confirmation and the exact current expected version when a prepared handover is cancelled."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
@@ -4989,6 +5606,30 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
+      "file": "apps/web/src/test/customer-accounts.test.tsx",
+      "name": "creates a missing customer in the account flow and retries the same uncertain customer request",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve inline customer creation, exact lost-response retry and authority/navigation locks inside the staged monthly-account flow."
+    },
+    {
+      "file": "apps/web/src/test/customer-accounts.test.tsx",
+      "name": "keeps account setup focused and restores the directory and approval queue on cancel",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve focused account setup, restore the directory and approval queue after Cancel, and retain uncertain-request locks."
+    },
+    {
+      "file": "apps/web/src/test/daily-dashboard.test.tsx",
+      "name": "keeps date shortcuts local until capture and charts exact large or negative amounts without invented percentages",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve local date drafting, explicit report capture and exact large/signed server amounts in comparison visuals."
     },
     {
       "file": "apps/web/src/test/daily-dashboard.test.tsx",
@@ -5141,6 +5782,22 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/dialog-accessibility.test.tsx",
+      "name": "names the confirmation, focuses Cancel, and restores the opener on Escape without confirming",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve accessible dialog title, safe initial focus, Escape dismissal and opener focus restoration without a destructive write."
+    },
+    {
+      "file": "apps/web/src/test/dialog-accessibility.test.tsx",
+      "name": "performs the confirmed action once and closes the modal",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve one explicit confirmed action and modal closure."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
@@ -5319,12 +5976,60 @@
       "reason": "Issue #139: preserve scoped production financial workflow and frozen audit coverage for exact uncertain intent, source versions, approval separation, private refund evidence, policy configuration and safe snapshot/export identity."
     },
     {
+      "file": "apps/web/src/test/form-inputs.test.tsx",
+      "name": "keeps bounded multiline inputs labelled, described and locked during a request",
+      "cases": null,
+      "group": "presentation",
+      "disposition": "preserve",
+      "reason": "Preserve accessible input identity, bounded text, helper association and disabled/required state."
+    },
+    {
+      "file": "apps/web/src/test/form-inputs.test.tsx",
+      "name": "adds and removes holiday dates with date inputs without guessing operating days or duplicating dates",
+      "cases": null,
+      "group": "settings",
+      "disposition": "preserve",
+      "reason": "Preserve explicit holiday editing, unique dates and the existing operating-day selection and review reason."
+    },
+    {
       "file": "apps/web/src/test/lint-regressions.test.tsx",
       "name": "can change between empty and populated series without changing hook order",
       "cases": null,
       "group": "presentation",
       "disposition": "preserve",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
+    },
+    {
+      "file": "apps/web/src/test/logistics-design.test.tsx",
+      "name": "keeps customer context on the server query and clears both customer and booked-today route filters",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve scoped customer filters in server reads and explicit clearing of route-provided filters."
+    },
+    {
+      "file": "apps/web/src/test/logistics-design.test.tsx",
+      "name": "keeps drafted filters separate from applied filters and rejects a reversed date range before a read",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve draft/apply separation, date validation, accessible error focus and role-limited actions."
+    },
+    {
+      "file": "apps/web/src/test/logistics-design.test.tsx",
+      "name": "offers first-use lot and route actions only to roles that can create them",
+      "cases": null,
+      "group": "lots",
+      "disposition": "preserve",
+      "reason": "Preserve permission-filtered first-use actions and focus the actual create form when available."
+    },
+    {
+      "file": "apps/web/src/test/logistics-design.test.tsx",
+      "name": "recovers an empty filtered route list using the server all-states query",
+      "cases": null,
+      "group": "routes",
+      "disposition": "preserve",
+      "reason": "Preserve explicit empty-filter recovery and the scoped server query without a fabricated local result."
     },
     {
       "file": "apps/web/src/test/lot-candidates.test.tsx",
@@ -5496,6 +6201,14 @@
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
+      "name": "requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid",
+      "cases": null,
+      "group": "eway",
+      "disposition": "preserve",
+      "reason": "Preserve complete optional evidence groups and block partial reference/value submission instead of silently omitting entered facts."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
       "name": "projects only safe delivery state and builds immutable proof commands without browser persistence",
       "cases": null,
       "disposition": "preserve",
@@ -5637,6 +6350,22 @@
       "group": "booking",
       "disposition": "preserve",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "requires an explicit archive confirmation for lots and planning routes without changing server versions",
+      "cases": null,
+      "group": "lots",
+      "disposition": "preserve",
+      "reason": "Preserve cancellation without writes, opener focus return, exact lot/route identifiers and expected server versions on confirmation."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "adds a route parcel by tracking lookup while retaining server references and version",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve tracking lookup selection, exact authorized parcel reference and current route version when attaching a parcel."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
@@ -5797,6 +6526,14 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
+    },
+    {
+      "file": "apps/web/src/test/operator.test.tsx",
+      "name": "keeps private data hidden after uncertain sign-out until an explicit logout retry succeeds",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve immediate private-data removal and block route/focus reauthorization until explicit sign-out retry is confirmed."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
@@ -6136,6 +6873,14 @@
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",
+      "name": "keeps unavailable warnings and active draft validation visible when settings categories are collapsed",
+      "cases": null,
+      "group": "settings",
+      "disposition": "preserve",
+      "reason": "Preserve visible unavailable-setting warnings and active draft validation when category disclosures are collapsed; retain entered values and explicit reviewed save."
+    },
+    {
+      "file": "apps/web/src/test/settings.test.tsx",
       "name": "decodes absent, inherited, configured-empty and revoked scope without manufacturing values or leaking unknown properties",
       "cases": null,
       "disposition": "preserve",
@@ -6471,6 +7216,62 @@
       "reason": "Issue #147: scoped purchase evidence, explicit allocations, honest actual/estimated/missing coverage, immutable preview/report recovery and private export. Controlled transport tests complement genuine PostgreSQL source and actual browser qualification; no browser ledger or payment authority."
     },
     {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "keeps a shipment cost draft while moving between details and booking allocation",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve entered source amounts and allocation context while moving backward and forward between cost steps."
+    },
+    {
+      "file": "apps/web/src/test/shipment-cost.test.tsx",
+      "name": "focuses cost entry and restores the report without writing when cancelled",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve cost-entry focus and restore report context on Cancel without sending a cost write."
+    },
+    {
+      "file": "apps/web/src/test/sign-in-fields.test.tsx",
+      "name": "focuses sign-in steps and retains the email while clearing a rejected code",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve sign-in focus, explicit error association, retained login email and cleared rejected verification secret."
+    },
+    {
+      "file": "apps/web/src/test/sign-in-fields.test.tsx",
+      "name": "preserves leading zeroes in a sign-in code and ignores a verification completed after unmount",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Preserve exact eight-digit strings, pending-state locking and cancellation before a late sign-in completion can advance the UI."
+    },
+    {
+      "file": "apps/web/src/test/studio-workspace.test.tsx",
+      "name": "searches customers with an explicit country code and focuses invalid phone input before any request",
+      "cases": null,
+      "group": "customers",
+      "disposition": "preserve",
+      "reason": "Preserve selected international country code, scoped explicit customer search and local error focus without invalid reads."
+    },
+    {
+      "file": "apps/web/src/test/studio-workspace.test.tsx",
+      "name": "builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve exact BigInt paise aggregation, Kolkata day boundaries and complete reconciled evidence."
+    },
+    {
+      "file": "apps/web/src/test/studio-workspace.test.tsx",
+      "name": "searches real scoped customers only after valid input and links the selected record into booking",
+      "cases": null,
+      "group": "customers",
+      "disposition": "preserve",
+      "reason": "Preserve bounded explicit customer search, scoped identity navigation and cleared private selection."
+    },
+    {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
       "cases": null,
@@ -6527,6 +7328,54 @@
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "waits for every saved page before displaying complete counts and exact paise totals",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve complete saved-report pagination before presenting counts or money."
+    },
+    {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "recovers a failed next page using the same saved report without another capture",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve snapshot identity and offset when retrying a failed report page."
+    },
+    {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "offers a fresh capture after saved evidence expires and rejects inconsistent page identity",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve explicit expired-evidence recovery and rejection of mismatched snapshots."
+    },
+    {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "retains the exact capture request after an uncertain response and offers no fresh action",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve the original capture intent after uncertainty and prohibit a replacement request."
+    },
+    {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "loads on entry when requested and uses complete saved evidence for a 30-day preset",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve requested entry capture, complete saved pages and exact selected-period report intent for chart presets."
+    },
+    {
+      "file": "apps/web/src/test/weekly-business.test.tsx",
+      "name": "rejects invalid custom date ranges locally without creating a report",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Preserve custom date validation before creating any report capture intent."
+    },
+    {
       "file": "apps/web/src/test/workspace-components.test.tsx",
       "name": "keeps native field names separate from options and connects helpers and validation messages",
       "cases": null,
@@ -6551,12 +7400,36 @@
       "reason": "Preserve explicitly local prototype filtering, chronological ISO date sorting, zero totals and exact export view."
     },
     {
+      "file": "apps/web/src/test/workspace-controls.test.tsx",
+      "name": "opens only permitted creation destinations from the keyboard",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+    },
+    {
+      "file": "apps/web/src/test/workspace-controls.test.tsx",
+      "name": "clears a search draft without submitting the surrounding form",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+    },
+    {
+      "file": "apps/web/src/test/workspace-controls.test.tsx",
+      "name": "labels custom choices and exposes disabled state",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+    },
+    {
       "file": "apps/web/src/test/workspace-navigation.test.tsx",
-      "name": "groups permitted destinations once, expands folders independently and reveals the active route",
+      "name": "shows shallow permitted task areas and reveals tools for the current area",
       "cases": null,
       "group": "presentation",
       "disposition": "preserve",
-      "reason": "Preserve permission-filtered disclosure navigation, independent folder controls, active route visibility and unchanged link callbacks."
+      "reason": "Preserve permission-filtered task areas, active-route context and navigation callbacks; replaces independent folder expansion with the approved shallow navigation."
     }
   ],
   "safety": {

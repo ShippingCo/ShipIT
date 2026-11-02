@@ -1,7 +1,9 @@
+import WeeklyBusiness from './WeeklyBusiness';
 import {PageHeader} from '../components/workspace/Workspace';
 import React,{useMemo} from 'react';
 import { Link } from 'react-router-dom';
 import type { OperatorRole } from '@shippingco/shared';
+import {canAdminister} from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { parcels } from '../data-access/parcels';
@@ -34,21 +36,21 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
    routes:rs?{items:rs.items.length,more:rs.page.has_more,planning:rs.items.filter(item=>item.state==='planning').length}:null,
    eway:es?{items:es.items.length,more:es.page.has_more,attention:es.items.filter(item=>item.state.reminder_reasons.length>0).length}:null};
  },value=>Object.values(value).every(item=>item===null));
- const header=<><PageHeader title={workspaceName} eyebrow="Operational workspace" description="Review your current workspace and open an available work area."/><p className="ops-note service-page-note">Counts cover the records loaded here. Open a work area to see more records and details.</p></>;
+ const header=<><PageHeader title="Your business, at a glance." eyebrow={workspaceName} description="Track your bookings, check your money and plan the next delivery."/></>;
  if(resource.phase==='loading')return <div className="ops-page service-dashboard">{header}<Loading label="Loading operational workspace…"/></div>;
  if(resource.phase==='error')return <div className="ops-page service-dashboard">{header}<Failure retry={resource.reload} label="Operational summaries could not be loaded."/></div>;
- if(resource.phase==='empty')return <div className="ops-page service-dashboard">{header}<Empty icon="lock" title="No operational views for this role" body="Your current memberships do not include these operational read projections."/></div>;
+ if(resource.phase==='empty')return <div className="ops-page service-dashboard">{header}<Empty icon="lock" title="No operational views for this role" body="Your role does not include these delivery views. Open an available task from the sidebar."/></div>;
  const s=resource.value!;
  const metrics=[
-  s.parcels&&{to:'/business/packages',icon:'inventory_2',number:s.parcels.items,label:'Parcels loaded',note:`${s.parcels.attention} need recovery review${s.parcels.more?' · more pages available':''}`},
-  s.lots&&{to:'/business/lots',icon:'layers',number:s.lots.items,label:'Active lots loaded',note:`${s.lots.members} server-counted active memberships${s.lots.more?' · more lots available':''}`},
-  s.routes&&{to:'/business/routes',icon:'alt_route',number:s.routes.items,label:'Routes loaded',note:`${s.routes.planning} still in planning${s.routes.more?' · more routes available':''}`},
+  s.parcels&&{to:'/business/packages',icon:'inventory_2',number:s.parcels.items,label:'Parcels',note:`${s.parcels.attention} need attention${s.parcels.more?' · more pages available':''}`},
+  s.lots&&{to:'/business/lots',icon:'layers',number:s.lots.items,label:'Active lots',note:`${s.lots.members} parcels grouped for dispatch${s.lots.more?' · more lots available':''}`},
+  s.routes&&{to:'/business/routes',icon:'alt_route',number:s.routes.items,label:'Routes',note:`${s.routes.planning} still in planning${s.routes.more?' · more routes available':''}`},
   s.eway&&{to:'/business/eway',icon:'fact_check',number:s.eway.attention,label:'E-way checks need review',note:`From ${s.eway.items} loaded reminders${s.eway.more?' · more reminders available':''}`},
  ].filter(Boolean) as {to:string;icon:string;number:number;label:string;note:string}[];
  return <div className="ops-page service-dashboard">
   {header}
-  {allowed(roles,parcelRead)&&<Link className="btn btn-outlined" to="/business/packages?booked=today">Booked today</Link>}
-  <section aria-label="Current operational summaries" className="service-summary-grid">{metrics.map(metric=><Link className="card ops-kpi service-summary" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
-  {metrics.every(metric=>metric.number===0)&&<Empty icon="inventory_2" title="No records on the current pages" body="Create a booking or operational record, then retry this dashboard."/>}
+  <div className="studio-quick-actions">{(canAdminister(roles,'bookings.create')||roles.includes('operator'))&&<Link className="btn btn-filled" to="/business/new-booking"><Msym name="add"/>New booking</Link>}{allowed(roles,parcelRead)&&<Link className="btn btn-outlined" to="/business/packages?booked=today">Booked today</Link>}{roles.some(role=>['org_admin','franchise_admin','operator','accountant'].includes(role))&&<Link className="btn btn-outlined" to="/business/money-receipts">Record payment</Link>}</div>{roles.some(role=>['org_admin','franchise_admin','accountant'].includes(role))&&<WeeklyBusiness controller={controller} autoLoad/>}<h2 className="t-title-lg">Delivery at a glance</h2><p className="ops-note">Current work across all dates. Counts show the first 100 records; open a work area for the full list.</p>
+  <section aria-label="Current operational summaries" className="studio-next-up">{metrics.map(metric=><Link className="card ops-kpi service-summary" to={metric.to} key={metric.to}><span className="ops-kpi-icon"><Msym name={metric.icon}/></span><span><strong className="ops-kpi-number">{metric.number}{metric.note.includes('more')?'+':''}</strong><span className="ops-kpi-label">{metric.label}</span><span className="ops-kpi-note">{metric.note}</span></span></Link>)}</section>
+  {metrics.every(metric=>metric.number===0)&&<Empty icon="inventory_2" title="No records on the current pages" body="Start with a booking, or refresh to check for records created by your team." action={<><button type="button" className="btn btn-outlined" onClick={resource.reload}>Refresh workspace</button>{(canAdminister(roles,'bookings.create')||roles.includes('operator'))&&<Link className="btn btn-filled" to="/business/new-booking">Create a booking</Link>}</>}/>}
  </div>;
 }

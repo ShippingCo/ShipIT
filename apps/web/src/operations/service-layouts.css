@@ -62,7 +62,7 @@
 .service-settings-editor>legend,.service-settings-editor>p,.service-settings-editor>fieldset,.service-settings-editor>label,.service-settings-editor>.settings-schedule-row{grid-column:1/-1}
 .settings-schedule-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px;border:1px solid var(--md-sys-color-outline-variant,#e2e8f0);border-radius:8px}
 .settings-schedule-row>label:first-child{min-width:120px}
-.service-preference-note{border-left:3px solid var(--md-primary);padding:8px 14px;margin:12px 0;background:var(--md-sys-color-surface-container-low,#f8fafc)}
+.service-preference-note{border-left:1px solid var(--md-primary);padding:8px 14px;margin:12px 0;background:var(--md-sys-color-surface-container-low,#f8fafc)}
 .service-display-preference{font-size:12px;margin:0 0 12px;line-height:1.6}
 .service-cost-editor>form>fieldset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .service-cost-editor>form>fieldset>p,.service-cost-editor>form>fieldset>legend,.service-cost-editor>form>fieldset>.service-allocation-row{grid-column:1/-1}
@@ -73,6 +73,37 @@
 .service-metric-grid>.ops-kpi>div{min-width:0;width:100%}
 .service-metric-grid .daily-metric-button{max-width:100%;white-space:normal;text-align:left;padding:0}
 .service-metric-grid .ops-kpi-number{overflow-wrap:anywhere}
+
+/* Task-led reports and quiet settings sections share the workspace vocabulary. */
+.service-report-navigation{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;overflow:visible;padding:0;border:0;background:transparent;margin:22px 0 26px}
+.service-report-navigation .btn{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;white-space:normal;text-align:left;height:auto;min-height:82px;padding:14px;border:1px solid var(--workspace-border);border-radius:10px;color:var(--workspace-text);font-size:13px;line-height:1.5;background:#fff}
+.service-report-navigation .btn small{font-size:11px;font-weight:400;color:var(--workspace-muted)}
+.service-report-navigation .btn[aria-pressed=true]{background:var(--md-primary-container);border-color:var(--md-primary);box-shadow:none;color:var(--md-primary)}
+.service-report-picker{margin:20px 0 24px;border-block:1px solid var(--workspace-border);padding:14px 0}
+.service-report-picker>summary{font-size:14px;font-weight:600;color:var(--workspace-text);cursor:pointer}
+.service-report-picker>summary>span{font-weight:400;color:var(--workspace-muted);margin-inline-start:12px}
+.service-report-picker .service-report-navigation{margin-bottom:6px}
+.service-report-controls{border-inline:0;border-radius:0;padding:20px 0;background:transparent}
+.service-report-view>.ops-facts{border-inline:0;border-radius:0;background:#fff}
+.settings-group{border:0;border-radius:0}
+.settings-group > summary { padding: 18px 0; border-bottom: 1px solid var(--workspace-border); }
+.settings-group-title { font-size: 16px; font-weight: 650; }
+.settings-group-description { display: block; margin-top: 6px; color: var(--workspace-muted); font-size: 13px; line-height: 1.5; }
+.settings-group-state,.settings-group-warning { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.settings-group-warning { color: var(--workspace-warning, #845400); }
+.service-report-scope-details summary { font-size: 13px; }
+.service-report-scope-details p { overflow-wrap: anywhere; }
+.settings-group>.workspace-section-header{padding:0 0 15px;background:transparent;border-bottom:1px solid var(--workspace-border)}
+.settings-setting{padding:20px 0}
+.settings-source-details{margin:10px 0;font-size:12px;color:var(--workspace-muted)}
+.settings-source-details summary{padding:4px 0;cursor:pointer}
+.settings-source-details[open] summary{color:var(--md-primary)}
+.settings-setting .settings-consumer{font-size:12px;max-width:72ch}
+.service-settings-draft.card{padding:24px 0;border:0;border-top:2px solid var(--md-primary);border-radius:0}
+.service-settings-editor{border:0!important;padding-inline:0!important}
+.settings-schedule-row{border:0;border-bottom:1px solid var(--workspace-border);border-radius:0;padding:14px 0}
+@media(max-width:1100px){.service-report-navigation{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.service-report-navigation{grid-template-columns:minmax(0,1fr);gap:7px}.service-report-navigation .btn{min-height:64px;padding:12px}.service-report-controls{padding-inline:0}.settings-setting,.settings-group>.workspace-section-header{padding-inline:0}}
 
 @media(max-width:640px){
  .service-view-switch .btn,.settings-setting-actions .btn,.service-metric-grid .btn-text,.service-metric-grid .daily-metric-button{min-height:44px;min-block-size:44px}

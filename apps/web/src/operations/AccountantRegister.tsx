@@ -1,3 +1,4 @@
+import './customer-report-flows.css';
 import {RecordTable} from '../components/workspace/Workspace';
 import {DatePresets} from './DatePresets';
 import React,{useEffect,useRef,useState} from 'react';
@@ -40,9 +41,9 @@ export function AccountantRegister({source,canExport,franchises}:{source:Account
  return <section className="card ops-card service-report-view" aria-labelledby="accountant-title"><h2 id="accountant-title">Accountant register and exports</h2>
  <p>Sales, actual money receipts, customer advances, seller COD and cash custody retain separate meanings. Statements group existing debt. Receipts and adjustments are not qualified tax invoices or credit notes.</p>
  <form className="service-report-controls" aria-busy={busy} onSubmit={e=>{e.preventDefault();void create();}}><div className="ops-grid"><DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);setDateError('');}}/><TextField label="Register from day" type="date" value={from} onChange={setFrom} error={dateError} disabled={busy||command.canRetry}/><TextField label="Register through day" type="date" value={to} onChange={setTo} disabled={busy||command.canRetry}/></div>
- <fieldset disabled={busy||command.canRetry}><legend>Permitted franchises</legend>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={ids.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>setIds(e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id))}/>{f.name}</label>)}</fieldset>
+ <details className="report-more-options"><summary>Export options and branches · {ids.length} selected</summary><fieldset disabled={busy||command.canRetry}><legend>Permitted franchises</legend>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={ids.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>setIds(e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id))}/>{f.name}</label>)}</fieldset>
  <label><input type="checkbox" checked={references} disabled={busy||command.canRetry} onChange={e=>setReferences(e.target.checked)}/> Include private payment and approval references</label>
- <SelectField label="Accounting format" value="generic_csv_v1" onChange={()=>{}} options={[{value:'generic_csv_v1',label:'Generic CSV v1 — no external software compatibility claimed'}]} disabled/>
+ <SelectField label="Accounting format" value="generic_csv_v1" onChange={()=>{}} options={[{value:'generic_csv_v1',label:'Generic CSV v1 — no external software compatibility claimed'}]} disabled/></details>
  <p>Asia/Kolkata dates; up to 31 days, 5,000 combined source rows and 8 MiB. Earlier source history is included to explain opening positions. Captures expire after 24 hours. Target software formats await accountant qualification.</p>
  <button className="btn btn-filled" disabled={busy||command.canRetry}>Capture register</button>{command.canRetry&&<button className="btn btn-outlined" type="button" disabled={busy} onClick={()=>void create(true)}>Retry same register request</button>}</form>
  {busy&&<p role="status">Loading accountant evidence…</p>}<p role="status" aria-live="polite">{notice}</p>{snapshotId&&!result&&!busy&&<button className="btn btn-outlined" onClick={()=>setRevision(n=>n+1)}>Retry saved register</button>}

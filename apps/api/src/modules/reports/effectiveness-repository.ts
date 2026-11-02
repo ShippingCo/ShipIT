@@ -2,6 +2,36 @@ import {scopedQuery,type TenantAccess} from '../security/scope.ts';
 import {assistantMetricsSql,type MetricRow} from '../conversations/metrics.ts';
 import type {SupportHours} from '../support/rules.ts';
 import type {AggregateCell} from './effectiveness-rules.ts';
+// The caller supplies business_clock (anchor_at, as_of, zone, start_minute,
+// end_minute, weekdays, staffed). Local-to-UTC conversion alone loses repeated
+// hours and invents skipped hours. Use elapsed UTC minutes near offset changes;
+// ordinary days retain the inexpensive single-window intersection.
+export const supportBusinessMinutesSql=`
+  SELECT COALESCE(sum(CASE WHEN offsets.before_offset=offsets.after_offset THEN
+    GREATEST(0,extract(epoch FROM
+      LEAST(b.as_of,(d.day+make_interval(mins=>b.end_minute)) AT TIME ZONE b.zone)
+      -GREATEST(b.anchor_at,(d.day+make_interval(mins=>b.start_minute)) AT TIME ZONE b.zone)))
+    ELSE transition.seconds END),0)/60 AS minutes
+  FROM business_clock b
+  CROSS JOIN LATERAL generate_series(
+    CASE WHEN b.staffed AND b.anchor_at<=b.as_of THEN date_trunc('day',b.anchor_at AT TIME ZONE b.zone) END,
+    date_trunc('day',b.as_of AT TIME ZONE b.zone),interval '1 day') d(day)
+  CROSS JOIN LATERAL (SELECT (d.day AT TIME ZONE 'UTC')-interval '24 hours' AS first,
+    (d.day AT TIME ZONE 'UTC')+interval '48 hours' AS last) envelope
+  CROSS JOIN LATERAL (SELECT
+    (envelope.first AT TIME ZONE b.zone)-(envelope.first AT TIME ZONE 'UTC') AS before_offset,
+    (envelope.last AT TIME ZONE b.zone)-(envelope.last AT TIME ZONE 'UTC') AS after_offset) offsets
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(sum(GREATEST(0,extract(epoch FROM LEAST(b.as_of,m.at+interval '1 minute')-GREATEST(b.anchor_at,m.at)))),0) AS seconds
+    FROM generate_series(
+      CASE WHEN offsets.before_offset<>offsets.after_offset THEN GREATEST(envelope.first,date_trunc('minute',b.anchor_at)) END,
+      LEAST(envelope.last-interval '1 minute',b.as_of),interval '1 minute') m(at)
+    CROSS JOIN LATERAL (SELECT m.at AT TIME ZONE b.zone AS local_at) local
+    WHERE date_trunc('day',local.local_at)=d.day
+      AND extract(hour FROM local.local_at)*60+extract(minute FROM local.local_at)>=b.start_minute
+      AND extract(hour FROM local.local_at)*60+extract(minute FROM local.local_at)<b.end_minute
+  ) transition ON true
+  WHERE extract(dow FROM d.day)::int=ANY(b.weekdays)`;
 export async function captureEffectiveness(scope:TenantAccess,from:Date,to:Date,hours:SupportHours|undefined) {
   const configured=!!hours?.staffed;
   return (await scopedQuery<{as_of:Date;messaging:AggregateCell[];assistant:MetricRow[];queue:AggregateCell[]}>(scope,['reports.capture'],`
@@ -49,12 +79,10 @@ export async function captureEffectiveness(scope:TenantAccess,from:Date,to:Date,
           LEFT JOIN LATERAL (SELECT max(e.occurred_at) at FROM shipit.support_events e
             WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.organization_id=c.organization_id AND e.franchise_id=c.franchise_id
               AND e.case_id=c.id AND e.event_type IN ('opened','reopened')) anchor ON true
-          LEFT JOIN LATERAL (SELECT COALESCE(sum(GREATEST(0,extract(epoch FROM
-              LEAST(date_trunc('milliseconds',statement_timestamp()),(d.day+make_interval(mins=>$5::int)) AT TIME ZONE $3::text)
-              -GREATEST(anchor.at,(d.day+make_interval(mins=>$4::int)) AT TIME ZONE $3::text)))),0)/60 minutes
-            FROM generate_series(date_trunc('day',anchor.at AT TIME ZONE $3::text),
-              date_trunc('day',date_trunc('milliseconds',statement_timestamp()) AT TIME ZONE $3::text),interval '1 day') d(day)
-            WHERE extract(dow FROM d.day)::int=ANY($6::int[]) AND $7::boolean AND anchor.at<=date_trunc('milliseconds',statement_timestamp())) elapsed ON true
+          LEFT JOIN LATERAL (
+            WITH business_clock AS (SELECT anchor.at AS anchor_at,date_trunc('milliseconds',statement_timestamp()) AS as_of,
+              $3::text AS zone,$4::int AS start_minute,$5::int AS end_minute,$6::int[] AS weekdays,$7::boolean AS staffed)
+            ${supportBusinessMinutesSql}) elapsed ON true
           WHERE {{franchise:c.organization_id:c.franchise_id}} AND c.state IN ('open','claimed')
         ) SELECT v.category,count(*)::int n,count(DISTINCT a.conversation_id)::int subjects,
           avg(a.business_minutes)::double precision business_minutes,

@@ -1,0 +1,62 @@
+[
+  {
+    "file": "new-booking.html",
+    "title": "Create a booking",
+    "summary": "Save the customer, parcels, price and billing details in one booking.",
+    "sources": [
+      "apps/web/src/booking/NewBooking.tsx",
+      "apps/web/src/booking/form.ts",
+      "apps/web/src/booking/AccountSelection.tsx",
+      "apps/web/src/booking/CustomerLookup.tsx",
+      "apps/web/src/booking/RateChoices.tsx"
+    ]
+  },
+  {
+    "file": "rate-cards.html",
+    "title": "Set up a rate card",
+    "summary": "Tell the app which destinations and services you sell, and what each weight band costs.",
+    "sources": [
+      "apps/web/src/operations/BookingPolicySetup.tsx"
+    ]
+  },
+  {
+    "file": "tax-policies.html",
+    "title": "Set up a tax policy",
+    "summary": "Give the app the reviewed tax rules it should use when pricing a booking.",
+    "sources": [
+      "apps/web/src/operations/BookingPolicySetup.tsx",
+      "apps/web/src/operations/DomesticCourierTemplate.tsx",
+      "apps/web/src/booking/form.ts"
+    ]
+  },
+  {
+    "file": "business-settings.html",
+    "title": "Change business settings",
+    "summary": "Save business preferences in clear sections. Some preferences are suggestions only.",
+    "sources": [
+      "apps/web/src/operations/Settings.tsx",
+      "apps/web/src/operations/SettingEditor.tsx",
+      "apps/web/src/operations/SettingsPreferences.tsx"
+    ]
+  },
+  {
+    "file": "booking-receipts-files.html",
+    "title": "Booking receipts and files",
+    "summary": "View or print the saved booking receipt and attach supporting files.",
+    "sources": [
+      "apps/web/src/booking/ReceiptPanel.tsx",
+      "apps/web/src/components/m3/AttachmentUploader.tsx"
+    ]
+  },
+  {
+    "file": "sales-and-gst.html",
+    "title": "Sales and GST",
+    "summary": "See how much you billed, the saved tax amounts and later financial changes.",
+    "sources": [
+      "apps/web/src/operations/Sales.tsx",
+      "apps/web/src/operations/Reports.tsx",
+      "apps/web/src/operations/DatePresets.tsx",
+      "apps/web/src/data-access/sales.ts"
+    ]
+  }
+]

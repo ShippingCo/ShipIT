@@ -52,7 +52,14 @@ export function TextField({ label, value, onChange, type = 'text', error, helper
   );
 }
 
-export interface TextAreaProps extends FieldBase {
+/** Search remains controlled; clearing never silently submits a server query. */
+export function SearchField(props:TextFieldProps){
+  return <div className="workspace-search-field"><TextField {...props} type="search" trailing="search"/>
+    {String(props.value??'')&&<button type="button" className="workspace-search-clear" disabled={props.disabled} aria-label={`Clear ${typeof props.label==='string'?props.label:'search'}`} onClick={event=>{props.onChange('');event.currentTarget.parentElement?.querySelector('input')?.focus();}}><Msym name="close"/></button>}
+  </div>;
+}
+
+export interface TextAreaProps extends FieldBase,Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>,keyof FieldBase|'onChange'|'value'> {
   value?: string | null;
   onChange: (value: string) => void;
   rows?: number;
@@ -60,8 +67,8 @@ export interface TextAreaProps extends FieldBase {
   onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
 }
 
-export function TextArea({ label, value, onChange, rows = 3, placeholder, error, helper, className, style, onBlur }: TextAreaProps) {
-  const id=React.useId(),helpId=`${id}-help`;
+export function TextArea({ label, value, onChange, rows = 3, placeholder, error, helper, className, style, onBlur,id:providedId,'aria-describedby':describedBy,...rest }: TextAreaProps) {
+  const generatedId=React.useId(),id=providedId??generatedId,helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
   return (
     <div className={cx('tf', error && 'err', (focused || value) && 'float', className)} style={style}>
@@ -69,10 +76,11 @@ export function TextArea({ label, value, onChange, rows = 3, placeholder, error,
       <span className="tf-box">
         <textarea
           id={id} rows={rows} value={value ?? ''} placeholder={placeholder}
-          aria-describedby={error||helper?helpId:undefined}
+          aria-describedby={[describedBy,error||helper?helpId:undefined].filter(Boolean).join(' ')||undefined}
           aria-invalid={error ? true : undefined}
           onFocus={() => setFocused(true)} onBlur={(e) => { setFocused(false); onBlur?.(e); }}
           onChange={(e) => onChange(e.target.value)}
+          {...rest}
         />
       </span>
       {(error || helper) && (

@@ -7,7 +7,7 @@ export function Empty({icon='inbox',title,body,action}:{icon?:string;title:strin
 export function CommandNotice({phase,code,retry}:{phase:string;code?:string;retry?:()=>void}){
  if(phase==='pending')return <p className="workspace-command-state workspace-command-pending" role="status" aria-live="polite"><Msym name="progress_activity"/>Saving with the server…</p>;
  if(phase==='confirmed')return <p className="workspace-command-state workspace-command-confirmed" role="status" aria-live="polite"><Msym name="check_circle"/>Server update confirmed.</p>;
- if(phase==='uncertain')return <div className="ops-alert ops-uncertain"><p role="alert">The outcome is uncertain. Keep this exact request and reconcile it before making a replacement.</p>{retry&&<button className="btn btn-outlined" onClick={retry}>Retry same request</button>}</div>;
+ if(phase==='uncertain')return <div className="ops-alert ops-uncertain"><p role="alert">The outcome is uncertain. We could not confirm whether this was saved. Retry the same request to check before starting a new one.</p>{retry&&<button className="btn btn-outlined" onClick={retry}>Retry same request</button>}</div>;
  if(phase==='error'&&code==='MONEY_RECEIPTS_DISABLED')return <p role="alert" className="ops-alert">New receipt writes are disabled. Ask the administrator to complete rollout. Saved evidence and exact completed-request replay remain available.</p>;
  if(phase==='error')return <p role="alert" className="ops-alert">The server rejected the change{code?` (${code})`:''}. Refresh current state before changing a stale command.</p>;
  return null;
