@@ -45,6 +45,7 @@ const PAGE_TITLE = {
   '/business/feed': 'Automation Feed',
   '/business/receipts': 'Receipts',
   '/business/reports': 'Reports',
+  '/business/reports/gst': 'Reports',
   '/business/eway': 'E-way Bills',
   '/business/settings': 'Settings',
 };

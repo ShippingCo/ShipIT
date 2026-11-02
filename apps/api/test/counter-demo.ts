@@ -9,6 +9,9 @@ import { org,A,B } from './audit-support.ts';
 import { buildServer } from '../src/server.ts';
 import { parseEnvironment } from '../src/env.ts';
 if(process.env.NODE_ENV!=='test'||process.env.TEST_DATABASE_IDENTITY!=='db_test')throw new Error('SYNTHETIC_FIXTURE_ONLY');
+// Keep a reference demo running while reviewing the real API UI on another port.
+const previewOrigin=process.env.SHIPIT_COUNTER_PREVIEW_ORIGIN??'http://localhost:5173';
+if(!/^http:\/\/(?:localhost|127\.0\.0\.1):[1-9][0-9]{0,4}$/.test(previewOrigin)||Number(new URL(previewOrigin).port)>65535)throw new Error('SYNTHETIC_LOOPBACK_ORIGIN_REQUIRED');
 const temp=await mkdtemp(join(tmpdir(),'shipit-counter-')),registry=join(temp,'registry.jsonl');
 await writeFile(registry,'',{mode:0o600});process.env.DB_TEST_RESOURCE_REGISTRY=registry;
 const cleanup:(()=>unknown)[]=[],t={after:(f:()=>unknown)=>cleanup.push(f)} as unknown as TestContext;
@@ -18,10 +21,10 @@ try {
  const actor=await s.grant('operator',[A,B]);
  const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'franchise_admin',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:invite.acceptance_token});
  const dispatchInvite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'dispatcher',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:dispatchInvite.acceptance_token});
- const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:'silent',ALLOWED_ORIGINS:'http://localhost:5173',TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
+ const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:'silent',ALLOWED_ORIGINS:previewOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
  const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps});cleanup.push(()=>app.close());
  app.addHook('onRequest',async request=>{if(request.url.includes('/customers?')&&request.url.includes('/'+A+'/'))await new Promise(resolve=>setTimeout(resolve,2500));});
- app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${actor.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect('http://localhost:5173/#/business/new-booking');});
+ app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${actor.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(previewOrigin+'/#/business/new-booking');});
  await app.listen({host:'127.0.0.1',port:3033});
  console.log('Synthetic #33/#34 fixture: http://localhost:3033/_fixture/session (Vite proxy port 3033). Actor has operator in A/B plus franchise_admin and dispatcher in A. Rate SYN_DEST / standard / 999g; unregistered handover 27; references SYN_BUYER / SYN_HANDOVER. Create multiple parcels, then use Packages/Lots/Routes/E-way for the documented #34 walkthrough. A customer searches wait 2.5 seconds for scope-race verification.');
  await stop;

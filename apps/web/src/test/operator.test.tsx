@@ -52,33 +52,25 @@ describe('production operator flow',()=>{
     const toggle=screen.getByRole('button',{name:'Open workspace navigation'});
     expect(toggle).toHaveAttribute('aria-expanded','false');fireEvent.click(toggle);
     const menu=screen.getByRole('navigation',{name:'Workspace navigation'});
-    expect(within(menu).getByRole('link',{name:'Overview'})).toHaveFocus();
-    const create=within(menu).getByRole('button',{name:'Create'});
-    act(()=>create.focus());fireEvent.keyDown(create,{key:'Enter'});
-    const booking=await screen.findByRole('menuitem',{name:'New booking'});
-    act(()=>booking.focus());
-    expect(booking).toHaveFocus();expect(toggle).toHaveAttribute('aria-expanded','true');
-    fireEvent.keyDown(booking,{key:'Escape'});
-    await waitFor(()=>expect(create).toHaveFocus());
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();expect(toggle).toHaveAttribute('aria-expanded','true');
+    expect(within(menu).getByRole('link',{name:'Dashboard'})).toHaveFocus();
+    expect(within(menu).getByRole('link',{name:'New Booking'})).toHaveAttribute('href','#/business/new-booking');
     fireEvent.keyDown(document,{key:'Escape'});
     expect(screen.getByRole('button',{name:'Open workspace navigation'})).toHaveFocus();
     expect(toggle).toHaveAttribute('aria-expanded','false');
     fireEvent.click(toggle);
     act(()=>toggle.focus());expect(toggle).toHaveAttribute('aria-expanded','true');
     act(()=>screen.getByRole('combobox',{name:'Franchise'}).focus());
+    expect(toggle).toHaveAttribute('aria-expanded','true');
+    act(()=>screen.getByRole('button',{name:'Search everything'}).focus());
     expect(toggle).toHaveAttribute('aria-expanded','false');
   });
   it.each(['org_admin','franchise_admin'] as const)('shows booking and delivery administration with only %s',async role=>{
     context={...ready,franchises:ready.franchises.map(f=>({...f,roles:[role]}))};
     render(<App/>);await workspaceReady();
     const nav=screen.getByRole('navigation',{name:'Workspace navigation'});
-    fireEvent.keyDown(within(nav).getByRole('button',{name:'Create'}),{key:'Enter'});
-    const booking=await screen.findByRole('menuitem',{name:'New booking'});
-    expect(booking).toHaveAttribute('href','#/business/new-booking');
-    fireEvent.keyDown(booking,{key:'Escape'});
-    await waitFor(()=>expect(screen.queryByRole('menu')).not.toBeInTheDocument());
-    expect(within(nav).getByRole('link',{name:'Settings & help'})).toHaveAttribute('href','#/business/settings');
+    expect(within(nav).getByRole('link',{name:'New Booking'})).toHaveAttribute('href','#/business/new-booking');
+    expect(within(nav).getByRole('link',{name:'Settings'})).toHaveAttribute('href','#/business/settings');
+    fireEvent.click(within(nav).getByText('More tools'));
     fireEvent.click(within(nav).getByRole('link',{name:'Delivery'}));
     await screen.findByRole('heading',{name:'Delivery work'});
     expect(within(screen.getByRole('main')).getByRole('link',{name:/^Deliveries/})).toHaveAttribute('href','#/business/deliveries');
@@ -138,7 +130,7 @@ describe('production operator flow',()=>{
   it('protected navigation after revocation removes cached data and offers controlled recovery',async()=>{
     context=ready;render(<App/>);await workspaceReady();
     responseOverride=path=>path.startsWith('/api/v1/operator-context')?Promise.resolve(json({error:{code:'RESOURCE_NOT_FOUND'}},404)):undefined;
-    fireEvent.click(screen.getByRole('link',{name:'Settings & help'}));
+    fireEvent.click(screen.getByRole('link',{name:'Settings'}));
     await screen.findByRole('heading',{name:'Workspace access unavailable'});
     expect(screen.queryByRole('heading',{name:'Your business, at a glance.'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Franchise')).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Private workspace data has been cleared');
@@ -219,7 +211,7 @@ describe('production operator flow',()=>{
     fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Send sign-in code'}));
     await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'12345678'}});
     fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));await workspaceReady();
-    expect(document.title).toBe('Overview · ShippingCo');
+    expect(document.title).toBe('Dashboard · ShippingCo');
     expect(screen.queryByRole('button',{name:'Refresh workspace access'})).not.toBeInTheDocument();
     expect(screen.queryByRole('button',{name:'Sign out'})).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Account and invitations'));

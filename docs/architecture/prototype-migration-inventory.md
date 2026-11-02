@@ -1214,7 +1214,6 @@ The routine footer refresh is removed. Existing settings-departure regressions n
 Reviewed counter test changes: existing API assertions are retained in the All sections view; the new guided flow regression covers validation and Back navigation. Only the counter test fingerprint and four added declarations changed. No production Store callers or safety dispositions changed.
 
 | apps/web/src/test/counter.test.tsx: guides booking steps, validates the current fields and preserves entries on Back | preserve | seam |
-| apps/web/src/test/workspace-controls.test.tsx: opens only permitted creation destinations from the keyboard | preserve | seam |
 | apps/web/src/test/workspace-controls.test.tsx: clears a search draft without submitting the surrounding form | preserve | seam |
 | apps/web/src/test/workspace-controls.test.tsx: labels custom choices and exposes disabled state | preserve | seam |
 
@@ -1246,7 +1245,6 @@ The only added inventoried effect is `RateChoices.tsx` subscribing through the e
 | apps/web/src/test/weekly-business.test.tsx: recovers a failed next page using the same saved report without another capture | preserve | reports |
 | apps/web/src/test/weekly-business.test.tsx: offers a fresh capture after saved evidence expires and rejects inconsistent page identity | preserve | reports |
 | apps/web/src/test/weekly-business.test.tsx: retains the exact capture request after an uncertain response and offers no fresh action | preserve | reports |
-| apps/web/src/test/workspace-navigation.test.tsx: shows shallow permitted task areas and reveals tools for the current area | preserve | presentation |
 
 
 ### Final visual-review follow-up
@@ -1374,3 +1372,19 @@ Reviewed two additional task-focus/Cancel regressions. No declarations or reques
 | --- | --- | --- |
 | apps/web/src/test/customer-accounts.test.tsx: keeps account setup focused and restores the directory and approval queue on cancel | preserve | seam |
 | apps/web/src/test/shipment-cost.test.tsx: focuses cost entry and restores the report without writing when cancelled | preserve | reports |
+
+### Shared console repair (#193)
+
+Reviewed the extraction of presentation and keyboard listeners from the fictional shell. No new store consumers or production local writes were introduced. Two navigation tests were replaced with direct-link and additional-tool coverage; scoped search adds six regressions. Report detail titles now retain the Reports label.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/console-search.test.tsx: searches only permitted tasks without fetching or confirming a booking | preserve | seam |
+| apps/web/src/test/console-search.test.tsx: looks up a full tracking number in the active franchise and opens the real parcel | preserve | seam |
+| apps/web/src/test/console-search.test.tsx: discards late private results after the active franchise changes | preserve | seam |
+| apps/web/src/test/console-search.test.tsx: cancels the old search immediately when the query changes | preserve | seam |
+| apps/web/src/test/console-search.test.tsx: validates customer input and searches scoped contacts using the existing API | preserve | seam |
+| apps/web/src/test/console-search.test.tsx: reports a failed API lookup without displaying sample records or success | preserve | seam |
+| apps/web/src/test/workspace-controls.test.tsx: exposes only permitted creation destinations as direct links | preserve | seam |
+| apps/web/src/test/workspace-navigation.test.tsx: keeps reference tasks directly accessible in the same order in both compositions | preserve | presentation |
+| apps/web/src/test/workspace-navigation.test.tsx: does not add unauthorized links and keeps additional operations reachable | preserve | presentation |

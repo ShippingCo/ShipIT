@@ -44,22 +44,7 @@ const NAV_ACTIONS = [
    mounting an unbounded list on every keystroke. */
 const SEARCH_POOL = 400;
 
-/* Owns the shortcut so any shell can mount the palette with two lines. */
-/** Owns the palette's open state and the Ctrl/Cmd-K shortcut that toggles it. */
-export function useCommandPalette(): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key && e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-  return [open, setOpen];
-}
+export {useCommandPalette} from './workspace/use-command-palette';
 
 export default function CommandPalette({ open, onOpenChange }) {
   const data = useDB();

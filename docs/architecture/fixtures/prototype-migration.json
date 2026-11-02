@@ -180,7 +180,7 @@
     "fingerprints": {
       "apps/web/src/App.tsx": "467b6dbc36c98ba5fc6f00989a9d28737ca3b0a04e9051efab4398573a1d2dba",
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
-      "apps/web/src/components/CommandPalette.tsx": "e8a77ba64077abe51a56a92ba4791eea3271d10f6b26e24614292cbeb67e2f4d",
+      "apps/web/src/components/CommandPalette.tsx": "df73ea3660f56a81c67aaf278794b52848082a64f4f7a04625642ba7d20df32b",
       "apps/web/src/components/m3/Controls.tsx": "ac106b600ec77dce5739a898fdc9d73693abbfe796dbc5d69322ff633d55c784",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
@@ -192,7 +192,7 @@
       "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
       "apps/web/src/pages/business/Dashboard.tsx": "e70071ffbcc4d119ba8006ac1e8798ca7a58617b9d84959262da72a1f414b0b5",
-      "apps/web/src/pages/business/DemoBusinessShell.tsx": "bad00ba2705e726ccadd77d4f9e2809a137dbb9381899c1cf9408b8485f0ecb4",
+      "apps/web/src/pages/business/DemoBusinessShell.tsx": "71441335d4ae999e3af7701ea99823a66f43be3102a70e52a87227c8a134450b",
       "apps/web/src/pages/business/EwayPage.tsx": "1bcac914780ecd96e59e8c7cf90d485e9d39c4d128bff520853eeab618bcecd0",
       "apps/web/src/pages/business/LotsPage.tsx": "dfc2af4bbdb7133cdce452a71c718da99136cd8c1e118293703d1250ebbc9002",
       "apps/web/src/pages/business/MiscPages.tsx": "d7da7d40536c529b73d768d679b5e09cd07a2385114ee2ee67842eb2d59e9a77",
@@ -200,9 +200,9 @@
       "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
       "apps/web/src/pages/business/ReportsPage.tsx": "ad10651bacad22962f84329c5199197aa9425932a60c56d7da541d72f4d3c8b1",
       "apps/web/src/pages/business/RoutesPage.tsx": "e30dc52661ae73ac3d518c647719d867054339044c91955516ea01c0e2079e4c",
-      "apps/web/src/test/app.test.tsx": "a934d6cde3dee36a385f41d40dbb2f32b11bbaa55de51ed8f2fd7ce0cfd663c2",
+      "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
-      "apps/web/src/test/operator.test.tsx": "81fe40812336b16810c16535f6e32855bc418fe661904d7130dfdd0aac2a2507",
+      "apps/web/src/test/operator.test.tsx": "494c5e9c904378043bd2b460b9b22a2b37b9711f5780640a689f88bbdceea8bc",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -259,6 +259,10 @@
         {
           "target": "apps/web/src/data/store.ts",
           "syntax": "import { prettyPhone } from '../data/store';"
+        },
+        {
+          "target": "apps/web/src/components/workspace/use-command-palette.ts",
+          "syntax": "export {useCommandPalette} from './workspace/use-command-palette';"
         }
       ],
       "apps/web/src/components/m3/Journey.tsx": [
@@ -403,8 +407,12 @@
           "syntax": "import { Msym } from '../../components/m3/Icon';"
         },
         {
-          "target": "apps/web/src/components/m3/Button.tsx",
-          "syntax": "import { Fab } from '../../components/m3/Button';"
+          "target": "apps/web/src/components/workspace/ConsoleFrame.tsx",
+          "syntax": "import {ConsoleFrame} from '../../components/workspace/ConsoleFrame';"
+        },
+        {
+          "target": "apps/web/src/components/workspace/console-navigation.ts",
+          "syntax": "import {consoleTasks} from '../../components/workspace/console-navigation';"
         },
         {
           "target": "apps/web/src/pages/business/Dashboard.tsx",
@@ -889,51 +897,59 @@
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route index element={<Dashboard />} />"
+        "declaration": "<Route index element={<Dashboard/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"booking\" element={<NewBookingPage />} />"
+        "declaration": "<Route path=\"booking\" element={<NewBookingPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"packages\" element={<PackagesPage />} />"
+        "declaration": "<Route path=\"new-booking\" element={<NewBookingPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"lots\" element={<LotsPage />} />"
+        "declaration": "<Route path=\"packages\" element={<PackagesPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"routes\" element={<RoutesPage />} />"
+        "declaration": "<Route path=\"lots\" element={<LotsPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"feed\" element={<AutomationFeedPage />} />"
+        "declaration": "<Route path=\"routes\" element={<RoutesPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"receipts\" element={<ReceiptsPage />} />"
+        "declaration": "<Route path=\"feed\" element={<AutomationFeedPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"reports\" element={<ReportsPage />} />"
+        "declaration": "<Route path=\"automation\" element={<AutomationFeedPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"reports/:id\" element={<ReportsPage />} />"
+        "declaration": "<Route path=\"receipts\" element={<ReceiptsPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"eway\" element={<EwayPage />} />"
+        "declaration": "<Route path=\"reports\" element={<ReportsPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"settings\" element={<SettingsPage />} />"
+        "declaration": "<Route path=\"reports/:id\" element={<ReportsPage/>}/>"
       },
       {
         "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "declaration": "<Route path=\"*\" element={<Navigate to=\"/business\" replace />} />"
+        "declaration": "<Route path=\"eway\" element={<EwayPage/>}/>"
+      },
+      {
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
+        "declaration": "<Route path=\"settings\" element={<SettingsPage/>}/>"
+      },
+      {
+        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
+        "declaration": "<Route path=\"*\" element={<Navigate to=\"/business\" replace/>}/>"
       }
     ],
     "tests": [
@@ -1565,6 +1581,36 @@
       {
         "file": "apps/web/src/test/cashbook.test.tsx",
         "name": "shows captured receipt components and complete attribution totals after partial acknowledgement, with malformed ownership rejected",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "searches only permitted tasks without fetching or confirming a booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "looks up a full tracking number in the active franchise and opens the real parcel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "discards late private results after the active franchise changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "cancels the old search immediately when the query changes",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "validates customer input and searches scoped contacts using the existing API",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/console-search.test.tsx",
+        "name": "reports a failed API lookup without displaying sample records or success",
         "cases": null
       },
       {
@@ -2964,7 +3010,7 @@
       },
       {
         "file": "apps/web/src/test/workspace-controls.test.tsx",
-        "name": "opens only permitted creation destinations from the keyboard",
+        "name": "exposes only permitted creation destinations as direct links",
         "cases": null
       },
       {
@@ -2979,7 +3025,12 @@
       },
       {
         "file": "apps/web/src/test/workspace-navigation.test.tsx",
-        "name": "shows shallow permitted task areas and reveals tools for the current area",
+        "name": "keeps reference tasks directly accessible in the same order in both compositions",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/workspace-navigation.test.tsx",
+        "name": "does not add unauthorized links and keeps additional operations reachable",
         "cases": null
       }
     ],
@@ -3029,10 +3080,6 @@
         "kind": "sessionStorage.removeItem"
       },
       {
-        "file": "apps/web/src/components/CommandPalette.tsx",
-        "kind": "document.addEventListener"
-      },
-      {
         "file": "apps/web/src/components/m3/Controls.tsx",
         "kind": "document.addEventListener"
       },
@@ -3055,6 +3102,18 @@
       {
         "file": "apps/web/src/components/m3/Snackbar.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/components/workspace/ConsoleFrame.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/workspace/ConsoleFrame.tsx",
+        "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/components/workspace/use-command-palette.ts",
+        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/context/AppContext.tsx",
@@ -3379,18 +3438,6 @@
       {
         "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
         "kind": "setTimeout"
-      },
-      {
-        "file": "apps/web/src/pages/business/BusinessShell.tsx",
-        "kind": "document.addEventListener"
-      },
-      {
-        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "kind": "window.addEventListener"
-      },
-      {
-        "file": "apps/web/src/pages/business/DemoBusinessShell.tsx",
-        "kind": "document.addEventListener"
       },
       {
         "file": "apps/web/src/pages/business/MiscPages.tsx",
@@ -5166,6 +5213,54 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #144: preserve immutable handover receipt/component provenance and complete totals, with malformed ownership/control amounts rejected; historical missing evidence remains explicitly unattributed. Controlled web transport is separate from native money evidence."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "searches only permitted tasks without fetching or confirming a booking",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "looks up a full tracking number in the active franchise and opens the real parcel",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "discards late private results after the active franchise changes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "cancels the old search immediately when the query changes",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "validates customer input and searches scoped contacts using the existing API",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
+    },
+    {
+      "file": "apps/web/src/test/console-search.test.tsx",
+      "name": "reports a failed API lookup without displaying sample records or success",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit scoped API lookups, permission-filtered tasks, invalid-input focus, cancellation and rejection of late or failed private responses; never load fictional records in production."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -7401,11 +7496,11 @@
     },
     {
       "file": "apps/web/src/test/workspace-controls.test.tsx",
-      "name": "opens only permitted creation destinations from the keyboard",
+      "name": "exposes only permitted creation destinations as direct links",
       "cases": null,
       "disposition": "preserve",
       "group": "seam",
-      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+      "reason": "Preserve permission filtering with the reference direct booking link; navigation never confirms a booking."
     },
     {
       "file": "apps/web/src/test/workspace-controls.test.tsx",
@@ -7425,11 +7520,19 @@
     },
     {
       "file": "apps/web/src/test/workspace-navigation.test.tsx",
-      "name": "shows shallow permitted task areas and reveals tools for the current area",
+      "name": "keeps reference tasks directly accessible in the same order in both compositions",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
-      "reason": "Preserve permission-filtered task areas, active-route context and navigation callbacks; replaces independent folder expansion with the approved shallow navigation."
+      "group": "presentation",
+      "reason": "Use the same direct task order in demo and production while preserving authorized extra tools and active-route context."
+    },
+    {
+      "file": "apps/web/src/test/workspace-navigation.test.tsx",
+      "name": "does not add unauthorized links and keeps additional operations reachable",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "presentation",
+      "reason": "Use the same direct task order in demo and production while preserving authorized extra tools and active-route context."
     }
   ],
   "safety": {

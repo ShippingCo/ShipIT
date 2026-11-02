@@ -1,0 +1,37 @@
+/* The selected mockup's chrome is shared by both data compositions. */
+.shell.console-frame {
+  --drawer-w: 264px;
+  --md-primary: #2563eb;
+  --md-primary-hover: #1d4ed8;
+  --md-primary-container: #d3e3fd;
+  --md-on-primary-container: #041e49;
+  background: var(--md-surface);
+  align-items: stretch;
+}
+.shell.console-frame .drawer-pane { display:flex; background:var(--md-surface); height:100dvh; }
+.shell.console-frame .main-area { width:auto; border-radius:0; }
+.console-brand-text { min-width:0; }
+.console-navigation { overflow-y:auto; flex:1; min-height:0; }
+.console-frame .drawer-item { min-height:56px; height:auto; padding:16px; border-radius:var(--shape-full); font-size:14px; }
+.console-frame .drawer-item.active { background:var(--md-primary-container); color:var(--md-on-primary-container); }
+.console-frame .appbar { min-height:var(--topbar-h); background:var(--md-surface); }
+.console-frame .appbar .btn { border-radius:var(--shape-full); height:40px; padding:0 24px; background:var(--md-primary); }
+.console-scope { padding:12px 20px 0; }
+.console-scope .tf { margin:0; }
+.console-more { margin-top:12px; border-top:1px solid var(--md-outline-variant); padding-top:12px; }
+.console-more summary { padding:12px 16px; cursor:pointer; font-size:14px; font-weight:600; }
+.console-booking-fab { position:fixed; right:24px; bottom:24px; z-index:20; text-decoration:none; }
+.console-scrim { display:none; }
+.console-search-form { display:grid; gap:16px; margin-bottom:16px; }
+.console-search-results { max-height:45vh; overflow-y:auto; margin-block:16px; }
+.console-search-results .drawer-item { height:auto; min-height:48px; }
+.console-search-detail { display:block; }
+@media(max-width:1020px) {
+  .shell.console-frame .drawer-pane { display:flex; visibility:hidden; }
+  .console-frame .drawer-pane.open { visibility:visible; }
+  .shell.console-frame .main-area { margin-left:0; }
+  .console-scrim { display:block; position:fixed; inset:0; background:var(--md-scrim); z-index:25; }
+  .console-frame .workspace-skip-link { left:12px; }
+}
+@media(prefers-reduced-motion:reduce) { .shell.console-frame .drawer-pane { transition:none; } }
+@media print { .console-frame .drawer-pane,.console-frame .appbar,.console-booking-fab,.console-scrim { display:none; } }
