@@ -41,19 +41,19 @@ async function start() {
  render(<App/>);
  await screen.findByRole('heading',{name:'New booking',level:1});
  await screen.findByRole('option',{name:'SYN DEST'});
- fireEvent.click(screen.getByRole('button',{name:'New customer'}));
+
 }
 
 async function entered(paid=false, serviceOptionId?:string) {
  await start();
  fill('Customer name',f.customer.name);
- fill('Customer phone',f.customer.phone_display);
+ fill('WhatsApp number',f.customer.phone_display);
  fill('Customer address',f.customer.address);
  fireEvent.click(screen.getByRole('button',{name:'Create customer'}));
  await screen.findByText('Customer details confirmed.');
  fill('Recipient name','Synthetic Recipient');
  fill('Recipient phone','+1 202-555-0101');
- fill('Recipient address','21 Fictional Street');
+ fill('Delivery address','21 Fictional Street');
  fill('Destination','SYN_DEST');
  if(serviceOptionId) fill('Service','option:'+serviceOptionId);
  fill('Docket number','00123-A');
@@ -65,7 +65,7 @@ async function entered(paid=false, serviceOptionId?:string) {
  fill('Parcel handed over in','27');
  fireEvent.click(screen.getByLabelText('I checked these billing and handover details with the customer.'));
  if(paid){
-  fill('Payment choice','paid_counter');
+  fireEvent.click(screen.getByRole('button',{name:'Paid now'}));
   fill('Payment method','upi');
  }
  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));
@@ -75,10 +75,10 @@ const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
 describe('production counter API composition',{timeout:20000},()=>{
  it('adds a typed customer inline and preserves the booking draft when cancellation is dismissed',async()=>{
-  render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});fill('Customer name or phone','New sample sender');
+  render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});fireEvent.click(screen.getByText('Find an existing customer'));fill('Customer name or phone','New sample sender');
   fireEvent.click(screen.getByRole('option',{name:/Add “New sample sender” to customers/}));
-  expect(screen.getByLabelText('Customer name')).toHaveValue('New sample sender');fill('Customer phone','9876543210');
-  fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));await screen.findByRole('heading',{name:'Discard this booking draft?'});
+  expect(screen.getByLabelText('Customer name')).toHaveValue('New sample sender');fill('WhatsApp number','9876543210');
+  fireEvent.click(screen.getByRole('button',{name:'Discard draft'}));await screen.findByRole('heading',{name:'Discard this booking draft?'});
   fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));expect(screen.getByLabelText('Customer name')).toHaveValue('New sample sender');
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
@@ -171,11 +171,11 @@ describe('production counter API composition',{timeout:20000},()=>{
   save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
  it('converts rupee overrides exactly and never silently drops an invalid non-empty amount',async()=>{
-  await entered();fireEvent.click(screen.getByText('Change the freight charge'));fill('Freight override (₹)','12.345');
+  await entered();fill('Freight ₹','12.345');
   fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));
   expect(posts('/api/v1/pricing/quote')).toHaveLength(1);
-  expect(screen.getByLabelText('Freight override (₹)')).toHaveAttribute('aria-invalid','true');
-  fill('Freight override (₹)','12.34');fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
+  expect(screen.getByLabelText('Freight ₹')).toHaveAttribute('aria-invalid','true');
+  fill('Freight ₹','12.34');fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
   expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({override:{freight_paise:1234,reason_code:'customer_agreement'}});
  });
  it('invalidates the reviewed quote when a handover fact needs reconfirmation',async()=>{
@@ -228,7 +228,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   expect(calls.some(c=>c.path.startsWith('/api/v1/parcels?'))).toBe(true);expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);expect(document.body.textContent).not.toMatch(/WhatsApp sent|customer notified/);
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
-  await entered();fill('Payment choice','paid_counter');fill('Payment method','cash');
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fill('Payment method','cash');
   fireEvent.submit(screen.getByRole('form',{name:'New booking'}));
   fireEvent.keyDown(screen.getByLabelText('Payment method',{exact:false}),{key:'Enter',code:'Enter'});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
@@ -251,7 +251,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   fill('Parcel 2 state','Maharashtra');
   fill('Declared goods value (₹)','0');
   fill('Parcel 2 declared goods value (₹)','1000.01');
-  fill('Recipient address','22 Fictional Street');
+  fill('Delivery address','22 Fictional Street');
 
   fill('Parcel 2 docket number','00123-a');
   fireEvent.click(screen.getByRole('button',{name:'Hide parcel fields 2'}));
@@ -284,7 +284,7 @@ describe('production counter API composition',{timeout:20000},()=>{
     membership:{id:f.id(parcel_id===secondParcelId?93:92),lot_id:lot.id,parcel_id,started_at:f.now,ended_at:null,end_reason:null}
    }));
   };
-  fireEvent.click(screen.getByRole('button',{name:'Add to lot (optional)'}));
+  fireEvent.click(screen.getByRole('button',{name:'Retry loading lots'}));
   await screen.findByRole('option',{name:'SYN-LOT · Mumbai run'});
   fill('Add to lot',lot.id);
   expect(posts(lotPath)).toHaveLength(0);
@@ -308,6 +308,41 @@ describe('production counter API composition',{timeout:20000},()=>{
   expect(sent.parcels[1]).toMatchObject({docket:'00123-B',weight_grams:501,recipient:{name:'Second Receiver',phone:expect.stringMatching(/^\+91[ -]?9876543210$/),address:'8 Market Road'},details:{postal_code:'400001',city:'Mumbai',contents_description:'Second parcel',declared_value_paise:100001}});
   expect(sent.tax_intent.pricing_input.weight_grams).toBe(1500);
   expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);
+ });
+ it('saves three dockets in one booking and cancels all three from the saved screen',async()=>{
+  await entered();
+  for(const number of [2,3]) {
+   fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+   fill('Parcel '+number+' docket number','SYN-PACK-'+number);
+   fill('Package '+number+' · Weight (kg)','0.5');
+   fill('Parcel '+number+' contents description','Test parcel '+number);
+   fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);
+  }
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
+  const parcels=[f.booking.parcels[0],...[2,3].map(number=>({...f.booking.parcels[0],id:f.id(80+number),docket:'SYN-PACK-'+number,weight_grams:500}))];
+  const cancelPath='/api/v1/bookings/'+f.bookingId+'/cancellation';
+  override=c=>{
+   if(c.path.startsWith('/api/v1/bookings?'))return Promise.resolve(f.json({...f.booking,parcels},201));
+   if(c.path.startsWith(cancelPath))return Promise.resolve(f.json(c.options.method==='POST'?{id:f.id(95),booking_id:f.bookingId,parcel_count:3,outstanding_paise:'13400',cancelled_at:f.now}:{booking_id:f.bookingId,parcel_count:3,outstanding_paise:'13400',financial_version:1,payment_version:0,blocked_reason:null}));
+  };
+  save();await screen.findByRole('heading',{name:'Booking saved',level:1});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  expect(body(posts('/api/v1/bookings?')[0]).parcels.map(p=>p.docket)).toEqual(['00123-A','SYN-PACK-2','SYN-PACK-3']);
+  expect(body(posts('/api/v1/pricing/quote').at(-1)!).weight_grams).toBe(1999);
+  fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));
+  const dialog=within(await screen.findByRole('dialog',{name:'Cancel booking'}));
+  await dialog.findByLabelText('Reason for cancellation');
+  fireEvent.click(dialog.getByRole('button',{name:'Keep booking'}));expect(posts(cancelPath)).toHaveLength(0);
+  fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');
+  fill('Reason for cancellation','Sender withdrew all three packages');
+  fireEvent.click(screen.getByRole('button',{name:'Confirm cancellation'}));
+  await screen.findByText('Cancelled 3 parcels in this booking.');
+  fireEvent.click(screen.getByRole('button',{name:'Done'}));
+  expect(screen.getByRole('heading',{name:'Booking cancelled',level:1})).toBeVisible();
+  expect(screen.queryByRole('button',{name:'Record received money'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Cancel saved booking'})).not.toBeInTheDocument();
+  expect(posts(cancelPath)).toHaveLength(1);
+  expect(body(posts(cancelPath)[0])).toEqual({reason:'Sender withdrew all three packages',expected_financial_version:1,expected_payment_version:0});
  });
  it('copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents',async()=>{
   await entered();
@@ -333,11 +368,11 @@ describe('production counter API composition',{timeout:20000},()=>{
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address',async()=>{
-  await entered();fill('Recipient name','');fill('Recipient phone','+91 12');fill('Recipient address','');save();
+  await entered();fill('Recipient name','');fill('Recipient phone','+91 12');fill('Delivery address','');save();
   expect(screen.getByLabelText('Recipient phone',{exact:true})).toHaveAttribute('aria-invalid','true');
-  expect(screen.getByLabelText('Recipient address',{exact:true})).toHaveAttribute('aria-invalid','true');
+  expect(screen.getByLabelText('Delivery address',{exact:true})).toHaveAttribute('aria-invalid','true');
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
-  fill('Recipient phone','');fill('Recipient address','22 Example Lane');save();
+  fill('Recipient phone','');fill('Delivery address','22 Example Lane');save();
   await screen.findByRole('heading',{name:'Booking saved'});
   expect(body(posts('/api/v1/bookings?')[0]).parcels[0].recipient).toEqual({address:'22 Example Lane'});
  });
@@ -380,7 +415,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   fill('Customer name or phone','Syn');fireEvent.keyDown(screen.getByLabelText('Customer name or phone'),{key:'Enter'});await waitFor(()=>expect(calls.some(c=>c.path.includes('/customers?'))).toBe(true));
   const old=calls.find(c=>c.path.includes('/customers?'))!;fill('Franchise',f.B);await screen.findByRole('heading',{name:'New booking'});await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));
   await act(async()=>slow.resolve(f.json({items:[f.customer],page:{next_cursor:null,has_more:false}})));
-  expect(old.options.signal?.aborted).toBe(true);expect(document.body.textContent).not.toContain(f.customer.address);expect(screen.getByLabelText('Customer name or phone')).toHaveValue('');expect(screen.queryByLabelText('Customer phone')).not.toBeInTheDocument();
+  expect(old.options.signal?.aborted).toBe(true);expect(document.body.textContent).not.toContain(f.customer.address);expect(screen.getByLabelText('Customer name or phone')).toHaveValue('');expect(screen.getByLabelText('WhatsApp number')).toHaveValue('');
  });
  it('customer search selects the exact saved person and offers inline creation',async()=>{
   render(<App/>);await screen.findByRole('heading',{name:'New booking'});fill('Customer name or phone','Syn');

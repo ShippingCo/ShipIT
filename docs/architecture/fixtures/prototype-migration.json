@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "6682b2972f267a4c656b519afd7c202d4a405a1c4fd793f0cd7d0be498df7d90",
+      "apps/web/src/test/counter.test.tsx": "1573e7a3417f809e1df0ec4051d8a54cfc3fd49f117a0b2e3e924e8774b1c4e8",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1694,6 +1694,11 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "saves distinct parcel details once and retries only the unconfirmed lot assignment",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves three dockets in one booking and cancels all three from the saved screen",
         "cases": null
       },
       {
@@ -5515,6 +5520,14 @@
       "disposition": "preserve",
       "group": "booking",
       "reason": "Preserve each receiver, docket, declared paise, combined weight and confirmed parcel ID. Retry the unconfirmed lot addition with its original command identity."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves three dockets in one booking and cancels all three from the saved screen",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Preserve one atomic booking with three dockets and explicit whole-booking cancellation from the saved counter; dismissing cancellation must not write."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",

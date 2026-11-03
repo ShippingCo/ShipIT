@@ -1445,6 +1445,7 @@ The counter fingerprint changes for visible section navigation, exact per-parcel
 | apps/web/src/test/counter.test.tsx: keeps Customer, Parcel, Charges and Booking summary on one editable page | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves distinct parcel details once and retries only the unconfirmed lot assignment | preserve | booking |
 | apps/web/src/test/counter.test.tsx: explicit save focuses the first missing sender field without creating a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves three dockets in one booking and cancels all three from the saved screen | preserve | booking | Preserve one atomic booking with three dockets and explicit whole-booking cancellation from the saved counter; dismissing cancellation must not write. |
 | apps/web/src/test/counter.test.tsx: copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address | preserve | booking |
 | apps/web/src/test/logistics-parity.test.tsx: cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement | preserve | booking |

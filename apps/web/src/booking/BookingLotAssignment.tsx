@@ -18,15 +18,14 @@ type Assignment = {
 
 export function useBookingLotAssignment(api:ScopedApi,booking:BookingConfirmation|undefined,destination:string,disabled:boolean) {
   const source=useMemo(()=>lots(api),[api]);
-  const [open,setOpen]=useState(false);
   const [selected,setSelected]=useState<LotDto|null>(null);
   const selection=selected?.destination_key===destination?selected:null;
   const [phase,setPhase]=useState<'idle'|'saving'|'uncertain'|'stopped'|'done'>('idle');
   const [progress,setProgress]=useState(0);
   const active=useRef(false);
   const assignment=useRef<Assignment|null>(null);
-  const page=usePagedResource(JSON.stringify([open,destination,!!booking]),(cursor,signal)=>
-    open && destination && !booking ? source.list({state:'active',destination_key:destination,limit:50,cursor},signal)
+  const page=usePagedResource(JSON.stringify([destination,!!booking]),(cursor,signal)=>
+    destination && !booking ? source.list({state:'active',destination_key:destination,limit:50,cursor},signal)
       : Promise.resolve({items:[],page:{has_more:false,next_cursor:null}}));
 
   const assign=useCallback(async(job:Assignment)=>{
@@ -62,17 +61,15 @@ export function useBookingLotAssignment(api:ScopedApi,booking:BookingConfirmatio
     void assign(job);
   },[assign,booking,selection]);
 
-  const reset=()=>{assignment.current=null;setSelected(null);setOpen(false);setProgress(0);setPhase('idle');};
-  const picker=destination && !booking ? <div>
-    {!open?<button type="button" className="btn btn-text" disabled={disabled} onClick={()=>setOpen(true)}>Add to lot (optional)</button>:<>
-      <SelectField label="Add to lot" disabled={disabled} value={selection?.id??''} options={[
-        {value:'',label:'No lot'},...page.items.map(lot=>({value:lot.id,label:lot.code+' · '+lot.name}))
+  const reset=()=>{assignment.current=null;setSelected(null);setProgress(0);setPhase('idle');};
+  const picker=!booking ? <div>
+      <SelectField label="Add to lot" disabled={disabled||!destination} value={selection?.id??''} options={[
+        {value:'',label:destination?'None':'Choose destination first'},...page.items.map(lot=>({value:lot.id,label:lot.code+' · '+lot.name}))
       ]} onChange={id=>setSelected(page.items.find(lot=>lot.id===id)??null)}/>
       {page.phase==='loading'&&<small role="status">Loading lots…</small>}
-      {page.phase==='empty'&&<small>No active lots for this destination.</small>}
+      {page.phase==='empty'&&destination&&<small>No active lots for this destination.</small>}
       {page.phase==='error'&&<button type="button" className="btn btn-text" onClick={page.reload}>Retry loading lots</button>}
       {page.page.has_more&&<button type="button" className="btn btn-text" disabled={page.phase==='more'} onClick={page.loadMore}>More lots</button>}
-    </>}
   </div>:null;
   const job=assignment.current;
   const result=booking&&job?<section aria-label="Lot assignment">

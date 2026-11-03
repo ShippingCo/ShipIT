@@ -10,9 +10,10 @@ export function splitPhone(value:string,fallback='91') {
  return country?{country:country.value,number:trimmed.slice(country.value.length+1).replace(/^[ -]+/,'')}:{country:'other',number:value};
 }
 /** The draft remains a full international phone. National entry never changes server validation. */
-export function PhoneField({label,value,onChange,helper,...props}:Omit<Parameters<typeof TextField>[0],'label'|'value'|'onChange'|'inputMode'|'type'>&{label:string;value:string;onChange:(value:string)=>void}) {
+export function PhoneField({label,value,onChange,helper,compact=false,...props}:Omit<Parameters<typeof TextField>[0],'label'|'value'|'onChange'|'inputMode'|'type'>&{label:string;value:string;onChange:(value:string)=>void;compact?:boolean}) {
  const [preferred,setPreferred]=useState('91'),[selection,setSelection]=useState<{country:string;value:string}>();
  const derived=splitPhone(value,preferred),parts=selection?.value===value?{country:selection.country,number:selection.country==='other'?value:derived.number}:derived;
+ if(compact)return <TextField {...props} label={label} type="tel" inputMode="tel" autoComplete="tel" value={derived.country==='91'?derived.number:value} helper={helper??'India +91. For other countries, include the country code.'} onChange={number=>onChange(number.trimStart().startsWith('+')?number:number?'+91 '+number:'')}/>;
  return <div className="counter-phone-field"><div className="counter-phone-controls">
   <SelectField label="Country code" aria-label={label+' country code'} value={parts.country} disabled={props.disabled} options={countries} onChange={country=>{
    const number=splitPhone(value,preferred).number,next=number?(country==='other'?value:'+'+country+' '+number):'';
