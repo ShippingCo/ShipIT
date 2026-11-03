@@ -39,6 +39,6 @@ export async function pending(scope:TenantAccess,cursor:string|null,limit:number
 
 /** Stored intent is normalized domain data; rebuild the wire shape before validating it again. */
 export function requestBooking(row:RequestRow):BookingInput {
- const stored=row.booking_intent,body=bookingInput({...stored,parcels:stored.parcels.map(p=>({weight_grams:p.weight_grams,...(p.docket===null?{}:{docket:p.docket}),recipient:{name:p.recipient.name,phone:p.recipient.phone_display,address:p.recipient.address}}))});
+ const stored=row.booking_intent,body=bookingInput({...stored,parcels:stored.parcels.map(p=>({...(p.details?{details:p.details}:{}),weight_grams:p.weight_grams,...(p.docket===null?{}:{docket:p.docket}),recipient:{name:p.recipient.name,phone:p.recipient.phone_display,address:p.recipient.address}}))});
  if(creditIntent(body)!==row.fingerprint)throw new HttpError('RESOURCE_NOT_FOUND');return body;
 }

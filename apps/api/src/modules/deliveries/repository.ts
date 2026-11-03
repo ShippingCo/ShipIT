@@ -8,7 +8,7 @@ export interface StartParcel {
  active_attempt_id:string|null;assigned_agent_id:string|null;organization_lifecycle:string;franchise_lifecycle:string;
  recipient_snapshot:{phone_normalized?:unknown};booking_state:string;
 }
-export interface DeliveryRecipient {id:string;contact_version:string;phone_normalized:string}
+export interface DeliveryRecipient {id:string;contact_version:string;phone_normalized:string|null}
 export async function now(scope:TenantAccess,override?:Date) {
  return override??(await scopedQuery<{instant:Date}>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT date_trunc('milliseconds',clock_timestamp()) AS instant
   FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}}`)).rows[0]!.instant;
@@ -35,10 +35,10 @@ export async function startParcel(scope:TenantAccess,id:string) {
 }
 export async function ensureRecipient(scope:TenantAccess,parcel:StartParcel,id:string,contactVersion:string,time:Date) {
  const c=assertTenantAccess(scope,['deliveries.start','deliveries.retry']),phone=parcel.recipient_snapshot.phone_normalized;
- if(typeof phone!=='string'||!/^\+[1-9][0-9]{7,14}$/.test(phone))throw new HttpError('PARCEL_STATE_CONFLICT');
+ if(phone!=null&&(typeof phone!=='string'||!/^\+[1-9][0-9]{7,14}$/.test(phone)))throw new HttpError('PARCEL_STATE_CONFLICT');
  await scopedQuery(scope,['deliveries.start','deliveries.retry'],`INSERT INTO shipit.delivery_recipients(id,organization_id,franchise_id,parcel_id,contact_version,phone_normalized,created_at)
   SELECT $1,{{organization}},$2,$3,$4,$5,$6 WHERE {{franchise:$7:$2}} ON CONFLICT(organization_id,franchise_id,parcel_id) DO NOTHING`,
- [id,c.permittedFranchiseIds[0],parcel.id,contactVersion,phone,time,c.organizationId]);
+ [id,c.permittedFranchiseIds[0],parcel.id,contactVersion,phone??null,time,c.organizationId]);
  const recipient=(await scopedQuery<DeliveryRecipient>(scope,['deliveries.start','deliveries.retry'],`SELECT r.id,r.contact_version,r.phone_normalized FROM shipit.delivery_recipients r
   WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.parcel_id=$1`,[parcel.id])).rows[0];
  if(!recipient)throw new HttpError('PARCEL_STATE_CONFLICT');return recipient;
@@ -123,7 +123,7 @@ export async function lockAttempt(scope:TenantAccess,parcel:string,agentOnly:boo
    WHEN a.locked_at IS NOT NULL THEN 'locked' WHEN ch.expires_at<=clock_timestamp() THEN 'expired'
    WHEN s.id IS NULL OR s.send_state='queued' AND o.state IN ('queued','retry_wait','dispatching') THEN 'pending' ELSE 'active' END AS challenge_status,
   ch.issued_at,ch.expires_at,ch.superseded_at,ch.consumed_at,ch.encrypted_secret,ch.key_version,p.version AS parcel_version,p.status AS parcel_status,
-  p.custody AS parcel_custody,p.assigned_agent_id,p.active_attempt_id,p.docket
+  (p.recipient_snapshot->>'phone_normalized') IS NOT NULL AS proof_channel_available,p.custody AS parcel_custody,p.assigned_agent_id,p.active_attempt_id,p.docket
   FROM shipit.delivery_attempts a JOIN shipit.parcels p ON p.organization_id=a.organization_id AND p.franchise_id=a.franchise_id AND p.id=a.parcel_id
   JOIN shipit.delivery_challenges ch ON ch.organization_id=a.organization_id AND ch.franchise_id=a.franchise_id AND ch.attempt_id=a.id AND ch.superseded_at IS NULL
   LEFT JOIN LATERAL (SELECT x.* FROM shipit.delivery_challenge_sends x WHERE x.organization_id=a.organization_id AND x.franchise_id=a.franchise_id AND x.attempt_id=a.id ORDER BY x.reserved_at DESC,x.id DESC LIMIT 1) s ON true
@@ -140,10 +140,10 @@ export async function currentState(scope:TenantAccess,parcel:string,agentOnly:bo
  const exception=(await scopedQuery<{id:string;state:'pending'|'approved'|'denied'|'invalidated';reason_code:ExceptionalReason;approval_id:string|null}>(scope,['deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace','deliveries.complete','deliveries.exception.request','deliveries.exception.approve','deliveries.read'],`SELECT r.id,r.state,r.reason_code,a.id AS approval_id FROM shipit.delivery_exception_requests r LEFT JOIN shipit.delivery_exception_approvals a
   ON a.organization_id=r.organization_id AND a.franchise_id=r.franchise_id AND a.request_id=r.id WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.attempt_id=$1 ORDER BY (r.state='invalidated') ASC,r.requested_at DESC,r.id DESC LIMIT 1`,[a.id])).rows[0];
  const status:ChallengeStatus=a.challenge_status;
- return {parcel_id:a.parcel_id,docket:a.docket,parcel_version:a.parcel_version,attempt_id:a.id,assignment_id:a.assignment_id,attempt_number:a.attempt_number,
+ return {proof_channel_available:a.proof_channel_available,parcel_id:a.parcel_id,docket:a.docket,parcel_version:a.parcel_version,attempt_id:a.id,assignment_id:a.assignment_id,attempt_number:a.attempt_number,
   challenge_ref:a.challenge_id,challenge_version:a.challenge_version,status,expires_at:a.expires_at.toISOString(),
-  resend_available_at:new Date((send?.reserved_at??a.issued_at).getTime()+60000).toISOString(),resends_remaining:Math.max(0,3-a.resend_count),
-  verification_attempts_remaining:Math.max(0,5-a.failed_verifications),send_state:send?.outbound_state??send?.send_state??'failed',
+  resend_available_at:new Date((send?.reserved_at??a.issued_at).getTime()+60000).toISOString(),resends_remaining:a.proof_channel_available?Math.max(0,3-a.resend_count):0,
+  verification_attempts_remaining:a.proof_channel_available?Math.max(0,5-a.failed_verifications):0,send_state:send?.outbound_state??send?.send_state??'failed',
   send_reason:send?.outbound_reason??send?.reason_code??'send_unavailable',proof_method:proof?.proof_method??null,
   exception:exception?{request_id:exception.id,state:exception.state,reason_code:exception.reason_code,approval_ref:exception.approval_id}:null};
 }
@@ -235,7 +235,7 @@ export async function closeForFailure(scope:TenantAccess,parcel:string,attempt:s
 }
 export async function queue(scope:TenantAccess,agentOnly:boolean) {
  const c=assertTenantAccess(scope,['deliveries.list']);
- return (await scopedQuery<{parcel_id:string;docket:string;attempt_id:string;attempt_number:number;expires_at:Date;failed_verifications:number;resend_count:number}>(scope,['deliveries.list'],`SELECT a.parcel_id,p.docket,a.id AS attempt_id,a.attempt_number,ch.expires_at,a.failed_verifications,a.resend_count
+ return (await scopedQuery<{proof_channel_available:boolean;parcel_id:string;docket:string;attempt_id:string;attempt_number:number;expires_at:Date;failed_verifications:number;resend_count:number}>(scope,['deliveries.list'],`SELECT (p.recipient_snapshot->>'phone_normalized') IS NOT NULL AS proof_channel_available,a.parcel_id,p.docket,a.id AS attempt_id,a.attempt_number,ch.expires_at,a.failed_verifications,a.resend_count
   FROM shipit.delivery_attempts a JOIN shipit.parcels p ON p.organization_id=a.organization_id AND p.franchise_id=a.franchise_id AND p.id=a.parcel_id
   JOIN shipit.delivery_challenges ch ON ch.organization_id=a.organization_id AND ch.franchise_id=a.franchise_id AND ch.attempt_id=a.id AND ch.superseded_at IS NULL
   WHERE {{franchise:a.organization_id:a.franchise_id}} AND {{franchise:p.organization_id:p.franchise_id}} AND a.state='active'

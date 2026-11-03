@@ -4,7 +4,7 @@ ShippingCo supports courier counter work for Indian small and medium businesses.
 
 ## Booking task
 
-The approved production booking flow is From → To → Parcel and Billing → Review and print. Staff search for a real customer or create one, enter one receiver and delivery address, add one or more parcels, choose a published service, confirm billing facts, review the server price and save. Packed weight in kg remains separate from additional liquid volume in litres. Booking references are generated automatically.
+The booking counter uses the first ShipIT prototype’s single page. Staff choose or create the customer, select a destination and service, then add each parcel with its own paper docket number, receiver and delivery address. Packed weight is recorded in kg and liquid volume in litres. Staff confirm billing details, review the calculated price and save or print. The system assigns the booking reference.
 
 Bookings are domestic India only and limited to supported tax jurisdictions. The current server tax admission boundary is a states-only pilot; it excludes Union Territories. This is not a claim that unsupported cases are exempt or that all Indian destinations are admitted.
 

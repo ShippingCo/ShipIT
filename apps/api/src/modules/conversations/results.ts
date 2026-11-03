@@ -6,7 +6,7 @@ export type ToolResult=
  |{tool:'charges';docket:string;booked_paise:string;collected_paise:string;remaining_paise:string;ledger_version:number;correction?:{adjusted_paise:string;refunded_paise:string;refundable_credit_paise:string}}
  |{tool:'receipt';docket:string;number:string;issued_at:string;booked_paise:string}
  |{tool:'resend';docket:string;state:'queued'|'failed';reason_code:string};
-const statuses=['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'];
+const statuses=['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto','cancelled'];
 const instant=(v:unknown)=>typeof v==='string'&&Number.isFinite(Date.parse(v));
 const money=(v:unknown)=>typeof v==='string'&&/^-?\d{1,18}$/.test(v);
 /** A dependency cannot accidentally broaden the customer response with a new field. */
@@ -34,7 +34,7 @@ export function validateResult(tool:Tool,value:unknown):ToolResult {
     (d.state==='available'?(!Number.isSafeInteger(d.total_minutes)||Number(d.total_minutes)<0||Number(d.total_minutes)>43200):d.state!=='unavailable'||d.total_minutes!==null))return fail();
   }
   if(!Array.isArray(b.timeline)||b.timeline.length>20||b.timeline.some(v=>!v||typeof v!=='object'||Object.keys(v).length!==2||
-   !['parcel.booked','parcel.checked_in','parcel.dispatched','parcel.in_transit','delivery.attempt_started','delivery.retry_started','delivery.attempt_failed','parcel.held_at_office','delivery.completed','delivery.collected','delivery.reversed','parcel.rto_approved'].includes(v.event)||!instant(v.at)))return fail();
+   !['parcel.booked','parcel.checked_in','parcel.dispatched','parcel.in_transit','delivery.attempt_started','delivery.retry_started','delivery.attempt_failed','parcel.held_at_office','delivery.completed','delivery.collected','delivery.reversed','parcel.rto_approved','booking.cancelled'].includes(v.event)||!instant(v.at)))return fail();
  }
  return value as ToolResult;
 }
@@ -44,7 +44,7 @@ export function renderResult(r:ToolResult,locale:'en'|'hi'='en'):string {
   if(r.tool==='charges')return `${r.docket}: बुकिंग की कुल राशि ${rupees(r.booked_paise)}। जमा ${rupees(r.collected_paise)}। बाकी ${rupees(r.remaining_paise)}।${r.correction?` सुधार के बाद राशि ${rupees(r.correction.adjusted_paise)}। वापस किए गए ${rupees(r.correction.refunded_paise)}। वापस करने योग्य ${rupees(r.correction.refundable_credit_paise)}।`:''} ये सहेजे गए बुकिंग और भुगतान रिकॉर्ड हैं।`;
   if(r.tool==='receipt')return `${r.docket}: जारी बुकिंग रसीद ${r.number}, ${r.issued_at}। कुल बुकिंग राशि ${rupees(r.booked_paise)}। यह रसीद का सार है; पूरे दस्तावेज़ के लिए फ्रैंचाइज़ी से संपर्क करें।`;
   if(r.tool==='resend')return r.state==='queued'?`${r.docket}: सत्यापित प्राप्तकर्ता को डिलीवरी कोड दोबारा भेजने का अनुरोध कतार में है। भेजने की पुष्टि अभी नहीं हुई है।`:`${r.docket}: डिलीवरी कोड भेजना उपलब्ध नहीं है। फ्रैंचाइज़ी से संपर्क करें।`;
-  const states:Record<string,string>={booked:'बुक किया गया',checked_in:'केंद्र में प्राप्त',dispatched:'रवाना',in_transit:'रास्ते में',out_for_delivery:'डिलीवरी के लिए निकला',failed_attempt:'डिलीवरी का प्रयास असफल',held_at_office:'कार्यालय में रखा',delivered:'डिलीवर हुआ',rto:'वापसी'};
+  const states:Record<string,string>={booked:'बुक किया गया',checked_in:'केंद्र में प्राप्त',dispatched:'रवाना',in_transit:'रास्ते में',out_for_delivery:'डिलीवरी के लिए निकला',failed_attempt:'डिलीवरी का प्रयास असफल',held_at_office:'कार्यालय में रखा',delivered:'डिलीवर हुआ',rto:'वापसी',cancelled:'बुकिंग रद्द'};
   const eta=r.eta.state==='available'?`दर्ज मार्ग-आगमन अनुमान: ${r.eta.at}। यह डिलीवरी का वादा नहीं है।`:'अभी पहुँचने का अनुमान उपलब्ध नहीं है।';
   return `${r.docket}: दर्ज स्थिति ${states[r.status]} (संस्करण ${r.version})। ${eta}${r.tool==='delay'?(r.delay?.state==='available'?` दर्ज मार्ग देरी: ${r.delay.total_minutes} मिनट। कारण का अनुमान नहीं लगाया गया है।`:' दर्ज मार्ग देरी उपलब्ध नहीं है।'):''}`;
  }

@@ -120,7 +120,7 @@ export function createDeliveryService(database:DatabasePool,configuration:Delive
     return finish(scopes,a,command,key,fingerprint,time,'exceptional',approval);
    }
    const otp=body as ReturnType<typeof validate.proof>;
-   if(a.challenge_id!==otp.challenge_ref||a.challenge_version!==otp.challenge_version)throw new HttpError('DELIVERY_PROOF_INVALID');
+   if(!a.proof_channel_available||a.challenge_id!==otp.challenge_ref||a.challenge_version!==otp.challenge_version)throw new HttpError('DELIVERY_PROOF_INVALID');
    if(a.locked_at||a.failed_verifications>=5)throw new HttpError('DELIVERY_CHALLENGE_LOCKED');
    if(a.consumed_at||a.superseded_at||a.challenge_status==='closed')throw new HttpError('DELIVERY_PROOF_INVALID');
    if(time>=a.expires_at)throw new HttpError('DELIVERY_CHALLENGE_EXPIRED');

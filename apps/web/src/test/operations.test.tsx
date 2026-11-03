@@ -83,9 +83,9 @@ describe('production operational screens',()=>{
  it('shows assigned-only delivery work, submits recipient proof, clears it, and reloads canonical state',async()=>{
   const queue={items:[{parcel_id:parcelId,docket:'SYN-34',attempt_id:id(70),attempt_number:1,expires_at:now,failed_verifications:0,resend_count:0}],scope_revision:'revision'};
   const active={parcel_id:parcelId,docket:'SYN-34',parcel_version:5,attempt_id:id(70),assignment_id:id(71),attempt_number:1,challenge_ref:id(72),challenge_version:1,status:'active',expires_at:now,resend_available_at:'2020-01-01T00:00:00.000Z',resends_remaining:3,verification_attempts_remaining:5,send_state:'accepted',send_reason:'provider_accepted',proof_method:null,exception:null};
-  const consumed={...active,parcel_version:6,status:'consumed',proof_method:'otp_verified',resends_remaining:3};let delivered=false,writes=0,reads=0;
-  vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes(`/deliveries/${parcelId}/complete`)&&options.method==='POST'){writes++;expect(JSON.parse(String(options.body))).toMatchObject({proof:'123456',challenge_ref:id(72)});delivered=true;return json(consumed);}if(path.includes(`/deliveries/${parcelId}?`)){reads++;return json(delivered?consumed:active);}if(path.includes('/deliveries?'))return json(delivered?{items:[],scope_revision:'revision-2'}:queue);throw new Error(`Unexpected ${path}`);}));
-  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));const input=await screen.findByLabelText('6-digit recipient code');expect(screen.getByRole('heading',{name:'SYN-34'})).toHaveFocus();expect(screen.queryByText(/private|verifier|ciphertext/i)).not.toBeInTheDocument();fireEvent.change(input,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verify and complete delivery'}));await waitFor(()=>expect(writes).toBe(1));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));expect(input).toHaveValue('');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
+  const consumed={...active,parcel_version:6,status:'consumed',proof_method:'otp_verified',resends_remaining:3};let delivered=false,writes=0,reads=0;let firstBody:unknown,firstHeaders:unknown;
+  vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes(`/deliveries/${parcelId}/complete`)&&options.method==='POST'){writes++;expect(JSON.parse(String(options.body))).toMatchObject({proof:'123456',challenge_ref:id(72)});if(writes===1){firstBody=options.body;firstHeaders=options.headers;throw new TypeError('Synthetic disconnect');}expect(options.body).toBe(firstBody);expect(options.headers).toEqual(firstHeaders);delivered=true;return json(consumed);}if(path.includes(`/deliveries/${parcelId}?`)){reads++;return json(delivered?consumed:active);}if(path.includes('/deliveries?'))return json(delivered?{items:[],scope_revision:'revision-2'}:queue);throw new Error(`Unexpected ${path}`);}));
+  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));const input=await screen.findByLabelText('6-digit recipient code');expect(screen.getByRole('heading',{name:'SYN-34'})).toHaveFocus();expect(screen.queryByText(/private|verifier|ciphertext/i)).not.toBeInTheDocument();expect(input).toHaveAttribute('type','password');fireEvent.click(screen.getByText('Delivery needs an exception'));fireEvent.change(screen.getByLabelText('Protected evidence ID (UUID)'),{target:{value:id(91)}});expect(screen.getByRole('button',{name:'Request independent approval'})).toBeDisabled();fireEvent.click(screen.getByLabelText('The recipient is here with me'));expect(screen.getByRole('button',{name:'Request independent approval'})).toBeEnabled();fireEvent.change(input,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verify and complete delivery'}));const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.getByRole('button',{name:'Close detail'})).toBeDisabled();expect(screen.getByRole('button',{name:'Request independent approval'})).toBeDisabled();fireEvent.click(retry);await waitFor(()=>expect(writes).toBe(2));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));expect(input).toHaveValue('');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
  });
  it('round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary',()=>{
   expect(instantToKolkataInput('2026-09-20T12:00:00.000Z')).toBe('2026-09-20T17:30');
@@ -199,4 +199,21 @@ it('adds a route parcel by tracking lookup while retaining server references and
  expect(screen.getByLabelText('Parcel ID (UUID)')).not.toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'Add to dispatch list'}));
  await waitFor(()=>expect(attached).toEqual({expected_version:4,parcel_id:parcelId}));
+});
+it('shows the proof exception route when a parcel has no receiver phone',async()=>{
+ const queued={proof_channel_available:false,parcel_id:parcelId,docket:'SYN-NO-PHONE',attempt_id:id(70),attempt_number:1,expires_at:now,failed_verifications:0,resend_count:0};
+ const detail={...queued,parcel_version:5,assignment_id:id(71),challenge_ref:id(72),challenge_version:1,status:'pending',
+   resend_available_at:now,resends_remaining:0,verification_attempts_remaining:0,send_state:'suppressed',send_reason:'contact_unavailable',
+   proof_channel_available:false,proof_method:null,exception:null};
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
+   if(options.method==='POST')throw new Error('Opening the record must not send a code');
+   return json(path.includes('/deliveries?')?{items:[queued],scope_revision:'revision'}:detail);
+ }));
+ render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);
+ fireEvent.click(await screen.findByRole('button',{name:'Open'}));
+ expect(await screen.findByText(/No receiver phone was provided/)).toBeVisible();expect(screen.getByText('No code')).toBeVisible();
+ expect(screen.queryByLabelText('6-digit recipient code')).not.toBeInTheDocument();
+ expect(screen.queryByText('Code expires')).not.toBeInTheDocument();
+ expect(screen.getByLabelText('Protected evidence ID (UUID)')).toBeVisible();
+ expect(screen.getByRole('checkbox',{name:'The recipient is here with me'})).not.toBeChecked();
 });

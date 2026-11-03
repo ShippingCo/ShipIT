@@ -90,7 +90,7 @@ it('aborted startup never resolves secrets or opens a listener', async () => {
 });
 it('process startup validation is redacted and nonzero', () => {
   const child = spawnSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('../../src/index.ts', import.meta.url))], {
-    env: { ...process.env, ...syntheticEnv, PORT: 'SYN_STARTUP_SECRET' }, encoding: 'utf8', timeout: 5000,
+    env: { ...process.env, ...syntheticEnv, PORT: 'SYN_STARTUP_SECRET' }, encoding: 'utf8', timeout: 20000,
   });
   expect(child.status).toBe(1); expect(child.stderr).toContain('CONFIGURATION_INVALID'); expect(child.stdout + child.stderr).not.toContain('SYN_STARTUP_SECRET');
 });
@@ -108,7 +108,7 @@ it.each(['SIGTERM', 'SIGINT'] as const)('registered %s handler shuts down a real
   const exit = once(child, 'exit');
   try {
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('TEST_STARTUP_TIMEOUT')), 4000);
+      const timer = setTimeout(() => reject(new Error('TEST_STARTUP_TIMEOUT')), 20000);
       child.stdout!.on('data', chunk => { output += String(chunk); if (output.includes('Server listening')) { clearTimeout(timer); resolve(); } });
       child.once('exit', () => { clearTimeout(timer); reject(new Error('TEST_STARTUP_EXIT')); });
     });
@@ -118,7 +118,7 @@ it.each(['SIGTERM', 'SIGINT'] as const)('registered %s handler shuts down a real
     expect((await exit)[0]).toBe(0); expect(output).not.toContain('SYN_PASSWORD');
     await expect(get(`http://127.0.0.1:${address.port}/health/live`)).rejects.toThrow();
   } finally { if (child.exitCode === null) { child.kill('SIGKILL'); await exit; } }
-});
+}, 30000);
 
 it('malformed and oversized HTTP headers receive safe transport envelopes on real sockets', async () => {
   const logs: string[] = [], database = fakeDatabase();

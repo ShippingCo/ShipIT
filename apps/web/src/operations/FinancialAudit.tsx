@@ -4,7 +4,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {financialAuditKinds,financialAuditStatuses,type FinancialAuditPage,type FinancialAuditRow,type FinancialAuditFilter} from '@shippingco/shared';
 import type {FinancialAuditSource} from '../data-access/financial-audit';
-import {TextField,SelectField} from '../components/m3/Input';
+import {TextField, DateField,SelectField} from '../components/m3/Input';
 import {useCommand} from './hooks';
 import {CommandNotice,Loading} from './AsyncState';
 import {formatKolkata} from './format';
@@ -31,7 +31,7 @@ export function FinancialAuditView({source,canExport,openRequest,parentLocked=fa
  async function download(){if(!page||!canExport||locked)return;setBusy(true);const generation=lifetime.current.generation;try{const value=await source.export(page.snapshot.id);if(generation!==lifetime.current.generation)return;const url=URL.createObjectURL(new Blob([value.csv],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download=`financial-audit-${value.snapshot.id}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('Matching audit CSV ready. Check your downloads.');}catch{if(generation===lifetime.current.generation)failure();}finally{if(generation===lifetime.current.generation)setBusy(false);}}
  return <div className="ops-page"><section className="card ops-card"><SectionHeader title="Financial review audit" description="Capture recorded actions in this franchise. Each amount uses its labelled basis; audit counts are not a sum of money transferred."/>
  <form className="ops-form finance-grouped-form" aria-label="Financial audit filters" onSubmit={event=>{event.preventDefault();void capture();}}><div className="ops-form-grid">
- <TextField label="From recorded day" type="date" value={from} onChange={setFrom} disabled={locked}/><TextField label="Through recorded day" type="date" value={to} onChange={setTo} disabled={locked}/>
+ <DateField label="From recorded day" value={from} onChange={setFrom} disabled={locked}/><DateField label="Through recorded day" value={to} onChange={setTo} disabled={locked}/>
  <SelectField label="Action kind" value={kind} onChange={setKind} disabled={locked} options={[{value:'',label:'All actions'},...financialAuditKinds.map(value=>({value,label:financialLabels[value]}))]}/>
  <SelectField label="Captured status" value={status} onChange={setStatus} disabled={locked} options={[{value:'',label:'All statuses'},...financialAuditStatuses.map(value=>({value,label:value}))]}/>
  </div><details className="report-more-options"><summary>Find a specific person or booking{actor||booking?' · filters applied':''}</summary><div className="ops-grid"><TextField label="Actor reference (optional)" value={actor} onChange={setActor} disabled={locked}/><TextField label="Booking reference (optional)" value={booking} onChange={setBooking} disabled={locked}/></div></details>

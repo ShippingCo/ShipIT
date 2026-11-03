@@ -16,7 +16,8 @@ it('freezes structured counter details and rejects invalid countries, quantities
  const withDetails=(d:unknown)=>({...body,parcels:[{...body.parcels[0],details:d}]});
  expect(create(withDetails(details)).parcels[0]!.details).toEqual(details);
  expect(fingerprint(create(withDetails(details)))).not.toBe(fingerprint(create(withDetails({...details,liquid_quantity_ml:2000}))));
- for(const change of [{country:'US'},{postal_code:'000000'},{city:''},{region:'line\nbreak'},{contents_type:'unknown'},{liquid_quantity_ml:0},{liquid_quantity_ml:1.5},{private_note:'not allowed'},{contents_type:'solid',liquid_quantity_ml:10}])expect(()=>create(withDetails({...details,...change}))).toThrow();
+ expect(create(withDetails({...details,declared_value_paise:0})).parcels[0]?.details?.declared_value_paise).toBe(0);
+ for(const change of [{declared_value_paise:-1},{declared_value_paise:1.25},{country:'US'},{postal_code:'000000'},{city:''},{region:'line\nbreak'},{contents_type:'unknown'},{liquid_quantity_ml:0},{liquid_quantity_ml:1.5},{private_note:'not allowed'},{contents_type:'solid',liquid_quantity_ml:10}])expect(()=>create(withDetails({...details,...change}))).toThrow();
  expect(create(body).parcels[0]!.details).toBeUndefined();
 });
 it('strict booking schema expands only declared defaults and checks whole-booking gram sum',() => {
@@ -34,7 +35,17 @@ it.each(['lot_id','organization_id','franchise_id','status','state','version','t
 });
 it('rejects nested mass assignment and invalid shipment-party data',() => {
   for(const extra of [{status:'delivered'},{organization_id:randomUUID()},{lot_id:randomUUID()}]) expect(() => create({...body,parcels:[{...body.parcels[0],...extra}]})).toThrow();
-  for(const name of ['','X'.repeat(121),'\ud800','line\nbreak']) expect(() => create({...body,parcels:[{...body.parcels[0],recipient:{...body.parcels[0]!.recipient,name}}]})).toThrow();
+  for(const name of ['X'.repeat(121),'\ud800','line\nbreak']) expect(() => create({...body,parcels:[{...body.parcels[0],recipient:{...body.parcels[0]!.recipient,name}}]})).toThrow();
+});
+it('normalizes absent recipient contact without weakening supplied phone and name validation',()=>{
+ const party=(recipient:Record<string,unknown>)=>create({...body,parcels:[{...body.parcels[0],recipient}]}).parcels[0]!.recipient;
+ expect(party({address:'Depot'})).toEqual({name:null,phone_normalized:null,phone_display:null,address:'Depot'});
+ expect(party({name:'  ',phone:'',address:'Depot'})).toEqual(party({address:'Depot'}));
+ expect(party({name:'  Ada  ',address:'Depot'})).toMatchObject({name:'Ada',phone_normalized:null});
+ expect(party({phone:'+91 98765 43210',address:'Depot'})).toMatchObject({name:null,phone_normalized:'+919876543210'});
+ expect(party({name:'Ada',phone:'+91 98765 43210'}).address).toBe('');
+ expect(()=>party({})).toThrow();
+ for(const invalid of [{phone:'invalid'},{phone:123},{name:42},{phone_normalized:'+919876543210'}])expect(()=>party(invalid)).toThrow();
 });
 it('normalizes ASCII docket edges/case and preserves internal punctuation',() => {
   expect(docket(' \tab-c9\t ')).toBe('AB-C9'); expect(docket('A'.repeat(32))).toHaveLength(32);

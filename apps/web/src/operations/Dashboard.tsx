@@ -45,11 +45,11 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
  const {summary,recent,dispatch}=resource.value;
  const counts=summary.stages,moving=stages.reduce((sum,stage)=>sum+counts[stage.key],0);
  const queue:DashboardQueueItem[]=[];
- if(counts.failed_attempt)queue.push({key:'failed',icon:'assignment_return',tone:'error',title:`${counts.failed_attempt} parcels need delivery follow-up`,cta:'Review',go:'/business/packages?status=failed_attempt'});
- if(counts.held_at_office)queue.push({key:'held',icon:'storefront',tone:'warning',title:`${counts.held_at_office} parcels are held at the office`,cta:'Review',go:'/business/packages?status=held_at_office'});
- if(counts.out_for_delivery)queue.push({key:'delivery',icon:'moped',title:`${counts.out_for_delivery} parcels are out for delivery`,cta:'View parcels',go:'/business/packages?status=out_for_delivery'});
+ if(counts.failed_attempt)queue.push({key:'failed',icon:'assignment_return',tone:'error',title:`${counts.failed_attempt} ${counts.failed_attempt===1?'parcel needs':'parcels need'} delivery follow-up`,cta:'Review',go:'/business/packages?status=failed_attempt'});
+ if(counts.held_at_office)queue.push({key:'held',icon:'storefront',tone:'warning',title:`${counts.held_at_office} ${counts.held_at_office===1?'parcel is':'parcels are'} held at the office`,cta:'Review',go:'/business/packages?status=held_at_office'});
+ if(counts.out_for_delivery)queue.push({key:'delivery',icon:'moped',title:`${counts.out_for_delivery} ${counts.out_for_delivery===1?'parcel is':'parcels are'} out for delivery`,cta:'View parcels',go:'/business/packages?status=out_for_delivery'});
  const openCases=assistance.value?.cases?.items.filter(item=>item.state!=='resolved').length??0;
- if(openCases)queue.push({key:'support',icon:'support_agent',tone:'error',title:`${assistance.value?.cases?.page.has_more?'At least ':''}${openCases} customer cases need a person`,cta:'Reply',go:'/business/support'});
+ if(openCases)queue.push({key:'support',icon:'support_agent',tone:'error',title:`${assistance.value?.cases?.page.has_more?'At least ':''}${openCases} ${openCases===1?'customer case needs':'customer cases need'} a person`,cta:'Reply',go:'/business/support'});
  const snapshot=money.snapshot,amount=snapshot?.totals.outstanding;
  if(amount&&BigInt(amount)>0n)queue.push({key:'money',icon:'currency_rupee',tone:'warning',title:`${formatMoney(amount)} outstanding on bookings with delivered parcels`,cta:'Review payments',go:'/business/reports?ageing_snapshot='+snapshot!.id});
  const moneyLink=snapshot?'/business/reports?ageing_snapshot='+snapshot.id:canFinance?'/business/reports':'/business/packages';
@@ -63,24 +63,24 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
  const assistant=<Card pad className="agent">
    {assistance.phase==='loading'?<p role="status">Loading customer activity…</p>:assistance.phase==='error'?<><p role="alert">Customer activity could not be loaded.</p><button className="btn btn-outlined" type="button" onClick={assistance.reload}>Retry customer activity</button></>:<>
     <div className="bot-grid">{[{icon:'send',label:'Updates accepted',value:accepted===undefined?'—':String(accepted)+(assistance.value?.history?.page.has_more?'+':'')},{icon:'support_agent',label:'Need a person',value:assistance.value?.cases?String(openCases)+(assistance.value.cases.page.has_more?'+':''):'—'}].map(cell=><div className="bot-cell" key={cell.label}><div className="bot-top"><span className="bot-ic"><Msym name={cell.icon}/></span><span className="bot-l">{cell.label}</span></div><div className="bot-n">{cell.value}</div></div>)}</div>
-    <p className="dashboard-note">Accepted means the provider accepted the message. Counts cover the latest message and support pages; a plus means more records are available. Customer reach and thank-you counts are not inferred.</p>
+    <p className="dashboard-note">Accepted means the provider accepted the update. A plus means more records are available.</p>
    </>}
    {canMessages&&<Link className="card-foot-link agent-cta" to="/business/automation">Open conversations</Link>}
  </Card>;
  const todayRoutes=dispatch.items.filter(route=>route.state!=='archived'&&businessDay(new Date(route.scheduled_departure_at))===summary.day);
  const bookingAllowed=canAdminister(roles,'bookings.create')||roles.includes('operator');
  return <>
-  <DashboardView date={formatKolkata(summary.as_of,{weekday:'long',day:'numeric',month:'long'})} contextAction={<button className="btn btn-text" type="button" onClick={resource.reload}><Msym name="refresh"/>Refresh</button>} queue={queue} queueNote="Parcel counts cover the selected franchise. Customer cases and payment balances are checked separately." emptyQueueTitle="No flagged parcels in this snapshot" emptyQueueNote="Review customer messages and payment balances for other work." assistant={assistant}
+  <DashboardView date={formatKolkata(summary.as_of,{weekday:'long',day:'numeric',month:'long'})} contextAction={<button className="btn btn-text" type="button" onClick={resource.reload}><Msym name="refresh"/>Refresh</button>} queue={queue} queueNote="Parcel counts are for the selected branch." emptyQueueTitle="No flagged parcels in this snapshot" emptyQueueNote="Review customer messages and payment balances for other work." assistant={assistant}
    metrics={[
-    {key:'moving',icon:'local_shipping',label:'Parcels moving',tone:'info',value:moving,foot:'active parcel stages',go:'/business/packages'},
-    {key:'money',icon:'currency_rupee',label:'Money to collect',tone:'warning',value:amount===undefined?'—':formatMoney(amount),foot:snapshot?`${snapshot.count} bookings with delivered parcels`:canFinance?'Loading or awaiting a verified report':'Open permitted payment records',go:moneyLink},
     {key:'booked',icon:'note_add',label:'Booked today',tone:'info',value:summary.booked_today,delta:summary.booked_today-summary.booked_yesterday,foot:'bookings, including multi-parcel bookings',go:'/business/packages?booked=today'},
-    {key:'delivered',icon:'task_alt',label:'Delivered today',tone:'ok',value:summary.delivered_today,foot:'parcels with recorded delivery proof',go:'/business/packages?status=delivered'},
+    {key:'moving',icon:'local_shipping',label:'Parcels moving',tone:'info',value:moving,foot:'in the delivery network',go:'/business/packages'},
+    {key:'delivered',icon:'task_alt',label:'Delivered today',tone:'ok',value:summary.delivered_today,foot:'confirmed deliveries',go:'/business/packages?status=delivered'},
+    {key:'money',icon:'currency_rupee',label:'Money to collect',tone:'warning',value:amount===undefined?'—':formatMoney(amount),foot:snapshot?`${snapshot.count} ${snapshot.count===1?'booking':'bookings'} with deliveries`:canFinance?'Loading or awaiting a verified report':'Open permitted payment records',go:moneyLink},
    ]}
    stages={stages.map(stage=>({...stage,n:counts[stage.key],go:'/business/packages?status='+stage.key}))}
    week={summary.week.map(day=>({day:day.day,n:day.bookings,today:day.day===summary.day,label:formatKolkata(day.day+'T12:00:00Z',{weekday:'narrow'}),full:formatKolkata(day.day+'T12:00:00Z',{weekday:'long',day:'numeric',month:'short'})}))} moneyAge={moneyAge}
    routes={todayRoutes.map(route=>({id:route.id,icon:icons[route.mode],title:route.origin+' → '+route.destination,detail:formatKolkata(route.scheduled_departure_at),status:route.state,go:'/business/routes'}))} routesNote={dispatch.page.has_more?'Scheduled today among the latest 100 routes. Open all routes for the complete list.':undefined}
-   recent={recent.items.map(parcel=>({id:parcel.id,icon:stages.find(stage=>stage.key===parcel.status)?.icon??'inventory_2',title:<><span className="mono bk-dk">{parcel.docket}</span>{parcel.details&&<span className="bk-to">to {parcel.details.city}</span>}</>,detail:parcel.sender.name+' · '+parcel.sender.phone_display+' · '+formatKolkata(parcel.confirmed_at),status:parcel.status.replaceAll('_',' '),go:'/business/packages?parcel='+parcel.id}))} recentNote="Latest booked parcels across days. A multi-parcel booking appears once per tracking number; Booked today counts bookings." newBooking={bookingAllowed?'/business/new-booking':undefined}/>
+   recent={recent.items.map(parcel=>({id:parcel.id,icon:stages.find(stage=>stage.key===parcel.status)?.icon??'inventory_2',title:<><span className="mono bk-dk">{parcel.docket}</span>{parcel.details&&<span className="bk-to">to {parcel.details.city}</span>}</>,detail:parcel.sender.name+' · '+parcel.sender.phone_display+' · '+formatKolkata(parcel.confirmed_at),status:parcel.status.replaceAll('_',' '),go:'/business/packages?parcel='+parcel.id}))} recentNote="Each row is one parcel. One booking can have several tracking numbers." newBooking={bookingAllowed?'/business/new-booking':undefined}/>
   {canFinance&&<details className="dashboard-supplement"><summary>Custom booking trends</summary><WeeklyBusiness controller={controller}/></details>}
  </>;
 }

@@ -1,12 +1,12 @@
 import {bookingDetails} from './details.ts';
 import type { TaxIntentInput } from '@shippingco/shared';
 import { FieldValidationError,HttpError } from '../../plugins/errors.ts';
-import { createInput } from '../customers/validation.ts';
+import { bookingRecipient } from '../customers/validation.ts';
 import { intent, integer, object, uuid } from '../tax/validation.ts';
 import type { ParcelFilter,ParcelSort,ParcelStatus } from './types.ts';
 export { idempotencyKey, selection } from '../tax/validation.ts';
 export const MAX_PARCELS = 50;
-export interface ParcelInput { details?:import('@shippingco/shared').BookingParcelDetails; weight_grams: number; docket: string|null; recipient: ReturnType<typeof createInput> }
+export interface ParcelInput { details?:import('@shippingco/shared').BookingParcelDetails; weight_grams: number; docket: string|null; recipient: ReturnType<typeof bookingRecipient> }
 export interface BookingInput { credit_approval_id?:string; customer_id: string; expected_customer_version: number; tax_calculation_id: string; tax_intent: TaxIntentInput; parcels: ParcelInput[] }
 export function docket(value: unknown): string {
   if (typeof value !== 'string') throw new FieldValidationError('docket','INVALID_TYPE');
@@ -19,7 +19,7 @@ export function create(value: unknown): BookingInput {
   if (!Array.isArray(b.parcels) || b.parcels.length < 1 || b.parcels.length > MAX_PARCELS) throw new FieldValidationError('parcels','OUT_OF_RANGE');
   const parcels = b.parcels.map(value => {
     const p = object(value,['weight_grams','docket','recipient','details']);
-    return { ...(p.details===undefined?{}:{details:bookingDetails(p.details)}), weight_grams: integer(p.weight_grams,'weight_grams',1),docket: p.docket === undefined ? null : docket(p.docket),recipient: createInput(p.recipient) };
+    return { ...(p.details===undefined?{}:{details:bookingDetails(p.details)}), weight_grams: integer(p.weight_grams,'weight_grams',1),docket: p.docket === undefined ? null : docket(p.docket),recipient: bookingRecipient(p.recipient) };
   });
   const tax = intent(b.tax_intent);
   if (parcels.reduce((sum,p) => sum+BigInt(p.weight_grams),0n) !== BigInt(tax.pricing_input.weight_grams)) throw new FieldValidationError('weight_grams','OUT_OF_RANGE');
@@ -27,7 +27,7 @@ export function create(value: unknown): BookingInput {
     tax_calculation_id: uuid(b.tax_calculation_id,'tax_calculation_id'),tax_intent: tax,parcels };
 }
 
-const statuses:readonly ParcelStatus[]=['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'];
+const statuses:readonly ParcelStatus[]=['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto','cancelled'];
 const sorts:readonly ParcelSort[]=['created_at_desc','created_at_asc','docket_asc','docket_desc'];
 const fail=(field:'$'|'organization_id'|'franchise_id'|'status'|'from'|'to'|'sort'|'limit'|'cursor'|'customer_id'|'parcel_id',code:'REQUIRED'|'INVALID_TYPE'|'INVALID_FORMAT'|'OUT_OF_RANGE'|'UNKNOWN_FIELD'='INVALID_FORMAT'):never=>{throw new FieldValidationError(field,code);};
 function queryUuid(value:unknown,field:'organization_id'|'franchise_id'|'customer_id') {

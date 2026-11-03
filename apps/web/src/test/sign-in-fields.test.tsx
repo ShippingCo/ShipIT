@@ -17,3 +17,22 @@ it('preserves leading zeroes in a sign-in code and ignores a verification comple
  await screen.findByLabelText('Sign-in code');fireEvent.change(screen.getByLabelText('Sign-in code'),{target:{value:'00123456'}});fireEvent.submit(screen.getByRole('form',{name:'Verify sign-in code'}));
  expect(verify).toHaveBeenCalledWith('synthetic-challenge','00123456',expect.any(AbortSignal));expect(screen.getByRole('button',{name:'Checking code…'})).toBeDisabled();view.unmount();expect(verify.mock.calls[0]![2]!.aborted).toBe(true);await act(async()=>pending.resolve({}));expect(complete).not.toHaveBeenCalled();
 });
+
+it('reuses the email challenge for resend and clears the cooldown when returning to email',async()=>{
+ const source={...createOperatorDataSource(),startSignIn:vi.fn(async()=>({challenge_id:'test-challenge',resend_after:1})),
+   resendSignIn:vi.fn(async()=>({resend_after:60}))};
+ render(<SignIn source={source} complete={vi.fn(async()=>{})}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Set up your shop'}));
+ fireEvent.change(screen.getByLabelText('Email'),{target:{value:'shop@example.test'}});
+ fireEvent.submit(screen.getByRole('form',{name:'Start shop setup'}));
+ expect(await screen.findByRole('button',{name:'Resend in 1s'})).toBeDisabled();
+ const retry=await screen.findByRole('button',{name:'Resend code'},{timeout:4000});
+ fireEvent.click(retry);
+ expect(await screen.findByText('Another code was requested. Check your email.')).toBeVisible();
+ expect(source.resendSignIn).toHaveBeenCalledWith('test-challenge',expect.any(AbortSignal));
+ expect(source.startSignIn).toHaveBeenCalledTimes(1);
+ expect(screen.getByRole('button',{name:/Resend in/})).toBeDisabled();
+ fireEvent.click(screen.getByRole('button',{name:'Use email again'}));
+ expect(screen.getByLabelText('Email')).toHaveValue('shop@example.test');
+ expect(screen.queryByText(/Another code was requested/)).not.toBeInTheDocument();
+});

@@ -4,6 +4,7 @@ import { sendReservationPending } from './messaging.ts';
 
 /** Shared staff/customer resend rules. Replacement alone may renew an expired challenge. */
 export function assertResendPolicy(a:DeliveryAttemptRow,time:Date,latest:{reserved_at:Date;send_state:string;outbound_state:string|null}|undefined,replace=false) {
+ if(!a.proof_channel_available)throw new HttpError('DELIVERY_PROOF_INVALID');
  if(a.id!==a.active_attempt_id||a.state!=='active'||a.parcel_status!=='out_for_delivery'||a.assigned_agent_id!==a.agent_id||a.superseded_at||a.consumed_at)
   throw new HttpError('PARCEL_STATE_CONFLICT');
  if(a.locked_at||a.failed_verifications>=5)throw new HttpError('DELIVERY_CHALLENGE_LOCKED');

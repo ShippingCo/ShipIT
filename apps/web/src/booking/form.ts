@@ -1,7 +1,7 @@
 import type { PricingQuoteInput, TaxFacts } from '@shippingco/shared';
 export const emptyDraft = () => ({
   name: '', phone: '', address: '', recipientName: '', recipientPhone: '', recipientAddress: '',
-  serviceOptionId:'', recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',
+  serviceOptionId:'', recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:'',
   destination: '', weight: '', service: 'standard', docket: '', override: '', reason: 'customer_agreement',
   registration: 'unregistered', recipientState: '', gstin: '', handoverState: '', recipientRef: '', evidenceRef: '',
   specialCase: 'none', paymentMode: 'to_pay', method: '',
@@ -24,16 +24,18 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if (!validText(d.address, 500, false)) e.address = 'Use a single-line address up to 500 characters.';
   }
   if (section === 'booking') {
-    if (!validText(d.recipientName, 120, true)) e.recipientName = 'Enter the recipient name.';
-    if (!validPhone(d.recipientPhone)) e.recipientPhone = 'Choose the country code and enter the receiver’s phone number.';
+    if (!validText(d.recipientName, 120, false)) e.recipientName = 'Use a single-line name up to 120 characters.';
+    if (d.recipientPhone.trim() && !validPhone(d.recipientPhone)) e.recipientPhone = 'Choose the country code and enter the receiver’s phone number.';
     if (!validText(d.recipientAddress, 500, false)) e.recipientAddress = 'Use a single-line address up to 500 characters.';
-    if(d.recipientPin||d.contentsDescription){
-      if(d.recipientCountry!=='IN')e.recipientCountry='Only India is supported for this booking.';
-      if(!/^[1-9][0-9]{5}$/.test(d.recipientPin))e.recipientPin='Enter a six-digit PIN code.';
-      if(!validText(d.recipientCity,80,true))e.recipientCity='Enter the receiver city.';
-      if(!validText(d.recipientRegion,80,true))e.recipientRegion='Enter the receiver state.';
-      if(!validText(d.recipientAddress,500,true))e.recipientAddress='Enter the delivery address.';
-    }
+    if(d.recipientCountry!=='IN')e.recipientCountry='Only India is supported for this booking.';
+    if(!/^[1-9][0-9]{5}$/.test(d.recipientPin))e.recipientPin='Enter a six-digit PIN code.';
+    if(!validText(d.recipientCity,80,true))e.recipientCity='Enter the receiver city.';
+    if(!validText(d.recipientRegion,80,true))e.recipientRegion='Enter the receiver state.';
+    if(!validText(d.recipientAddress,500,true))e.recipientAddress='Enter the delivery address.';
+    if(!validText(d.contentsDescription,200,true))e.contentsDescription='Enter a short contents description.';
+    if(!['solid','documents','liquid','semi_liquid','other'].includes(d.contentsType))e.contentsType='Choose a contents type.';
+    if(['liquid','semi_liquid'].includes(d.contentsType)&&(!/^[1-9][0-9]*$/.test(d.liquidQuantity)||Number(d.liquidQuantity)>100000000))e.liquidQuantity='Enter a positive quantity up to 100,000 litres, with up to three decimal places.';
+    if(d.declaredValue&&(!/^(0|[1-9][0-9]*)$/.test(d.declaredValue)||!Number.isSafeInteger(Number(d.declaredValue))))e.declaredValue='Enter zero or a positive amount with up to two decimal places.';
     const docket = d.docket.replace(/^[ \t]+|[ \t]+$/g, '').toUpperCase();
     if (!docket) e.docket = 'Enter the docket number on this parcel.';
     else if (docket.length > 32 || !/^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(docket)) e.docket = 'Use up to 32 letters, numbers or hyphens. Start and end with a letter or number.';
@@ -62,17 +64,13 @@ export function taxFacts(d: Draft): TaxFacts {
     evidence_ref: d.evidenceRef || null, special_case: d.specialCase as TaxFacts['special_case'] };
 }
 
-export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'weight' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity'>;
-export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',weight:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:''});
+export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'recipientCountry' | 'recipientPin' | 'recipientCity' | 'recipientRegion' | 'weight' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity' | 'declaredValue'>;
+export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',weight:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:''});
+export const receiverFields = ['recipientName','recipientPhone','recipientAddress','recipientCountry','recipientPin','recipientCity','recipientRegion'] as const;
 export function parcelErrors(parcel: ParcelDraft): Errors {
   const errors = validate({...emptyDraft(), ...parcel}, 'booking');
-  const result=Object.fromEntries(Object.entries(errors).filter(([key]) => key in parcel)) as Errors;
-  if(parcel.contentsDescription){
-    if(!validText(parcel.contentsDescription,200,true))result.contentsDescription='Enter a short contents description.';
-    if(!['solid','documents','liquid','semi_liquid','other'].includes(parcel.contentsType))result.contentsType='Choose a contents type.';
-    if(['liquid','semi_liquid'].includes(parcel.contentsType)&&(!/^[1-9][0-9]*$/.test(parcel.liquidQuantity)||Number(parcel.liquidQuantity)>100000000))result.liquidQuantity='Enter the quantity in litres, with up to three decimal places.';
-  }
-  return result;
+  const fields=emptyParcel();
+  return Object.fromEntries(Object.entries(errors).filter(([key]) => key in fields)) as Errors;
 }
 export function additionalParcelErrors(first: Draft, parcels: ParcelDraft[]): Errors[] {
   const seen = new Set([first.docket.trim().toUpperCase()]);

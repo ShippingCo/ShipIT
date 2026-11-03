@@ -23,32 +23,32 @@ function fixture(autoLoad=false){
 it('waits for every saved page before displaying complete counts and exact paise totals',async()=>{
  const {source,last}=fixture(),pending=f.deferred<ReportPage>();vi.mocked(source.page).mockReturnValueOnce(pending.promise);
  fireEvent.click(screen.getByRole('button',{name:'Load report'}));await waitFor(()=>expect(source.page).toHaveBeenCalledWith(last.snapshot.id,100,expect.any(AbortSignal)));
- expect(screen.queryByText('101 bookings in the selected period')).not.toBeInTheDocument();expect(screen.queryByText('Daily figures')).not.toBeInTheDocument();pending.resolve(last);
- expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Billed amount'}));expect(screen.getByText('₹9,00,71,99,25,47,40,993.00')).toBeVisible();
+ expect(screen.queryByRole('button',{name:'Bookings'})).not.toBeInTheDocument();expect(screen.queryByText('Daily figures')).not.toBeInTheDocument();pending.resolve(last);
+ expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');fireEvent.click(screen.getByRole('button',{name:'Billed amount'}));expect(screen.getByText('₹9,00,71,99,25,47,40,993.00')).toBeVisible();
 });
 it('recovers a failed next page using the same saved report without another capture',async()=>{
  const {source,first}=fixture();vi.mocked(source.page).mockRejectedValueOnce(new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network'}));
  fireEvent.click(screen.getByRole('button',{name:'Load report'}));await screen.findByRole('alert');expect(screen.queryByRole('button',{name:'Start a fresh weekly report'})).not.toBeInTheDocument();
- fireEvent.click(screen.getByRole('button',{name:'Retry report'}));expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();expect(source.execute).toHaveBeenCalledTimes(1);expect(vi.mocked(source.page).mock.calls.map(call=>call.slice(0,2))).toEqual([[first.snapshot.id,100],[first.snapshot.id,100]]);
+ fireEvent.click(screen.getByRole('button',{name:'Retry report'}));expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');expect(source.execute).toHaveBeenCalledTimes(1);expect(vi.mocked(source.page).mock.calls.map(call=>call.slice(0,2))).toEqual([[first.snapshot.id,100],[first.snapshot.id,100]]);
 });
 it('offers a fresh capture after saved evidence expires and rejects inconsistent page identity',async()=>{
  const {source,first,last}=fixture();vi.mocked(source.page).mockRejectedValueOnce(new ApiFailure('REPORT_EXPIRED'));
  fireEvent.click(screen.getByRole('button',{name:'Load report'}));fireEvent.click(await screen.findByRole('button',{name:'Start a fresh weekly report'}));
- expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();expect(source.intent).toHaveBeenCalledTimes(2);expect(vi.mocked(source.execute).mock.calls[0]![0]).not.toBe(vi.mocked(source.execute).mock.calls[1]![0]);
+ expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');expect(source.intent).toHaveBeenCalledTimes(2);expect(vi.mocked(source.execute).mock.calls[0]![0]).not.toBe(vi.mocked(source.execute).mock.calls[1]![0]);
  vi.mocked(source.page).mockResolvedValueOnce({...last,snapshot:{...first.snapshot,id:f.id(99)}});fireEvent.click(screen.getByRole('button',{name:'Refresh report'}));
- expect(await screen.findByRole('alert')).toHaveTextContent('inconsistent');expect(screen.queryByText('101 bookings in the selected period')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Start a fresh weekly report'})).toBeEnabled();
+ expect(await screen.findByRole('alert')).toHaveTextContent('inconsistent');expect(screen.queryByRole('button',{name:'Bookings'})).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Start a fresh weekly report'})).toBeEnabled();
 });
 it('retains the exact capture request after an uncertain response and offers no fresh action',async()=>{
  const {source}=fixture();vi.mocked(source.execute).mockRejectedValueOnce(new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network',dispatched:true}));
  fireEvent.click(screen.getByRole('button',{name:'Load report'}));await screen.findByRole('alert');expect(screen.queryByRole('button',{name:'Start a fresh weekly report'})).not.toBeInTheDocument();
- fireEvent.click(screen.getByRole('button',{name:'Retry report'}));expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();expect(source.intent).toHaveBeenCalledTimes(1);expect(vi.mocked(source.execute).mock.calls[0]![0]).toBe(vi.mocked(source.execute).mock.calls[1]![0]);
+ fireEvent.click(screen.getByRole('button',{name:'Retry report'}));expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');expect(source.intent).toHaveBeenCalledTimes(1);expect(vi.mocked(source.execute).mock.calls[0]![0]).toBe(vi.mocked(source.execute).mock.calls[1]![0]);
 });
 
 it('loads on entry when requested and uses complete saved evidence for a 30-day preset',async()=>{
- const {source,first,last}=fixture(true);expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();
+ const {source,first,last}=fixture(true);expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');
  const end=first.snapshot.filter.to_day,date=new Date(end+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-29);const from=date.toISOString().slice(0,10),snapshot={...first.snapshot,filter:{...first.snapshot.filter,from_day:from}};
  vi.mocked(source.execute).mockResolvedValueOnce({...first,snapshot});vi.mocked(source.page).mockResolvedValueOnce({...last,snapshot});fireEvent.click(screen.getByRole('button',{name:'Last 30 days'}));
- expect(await screen.findByText('101 bookings in the selected period')).toBeVisible();expect(source.intent).toHaveBeenLastCalledWith({from_day:from,to_day:end,sort:'confirmed_asc'});expect(screen.getByRole('button',{name:'Last 30 days'})).toHaveAttribute('aria-pressed','true');
+ expect(await screen.findByRole('button',{name:'Bookings'})).toHaveTextContent('101');expect(source.intent).toHaveBeenLastCalledWith({from_day:from,to_day:end,sort:'confirmed_asc'});expect(screen.getByRole('button',{name:'Last 30 days'})).toHaveAttribute('aria-pressed','true');
 });
 it('rejects invalid custom date ranges locally without creating a report',()=>{
  const {source}=fixture();fireEvent.click(screen.getByRole('button',{name:'Custom dates'}));fireEvent.change(screen.getByLabelText('Chart start date'),{target:{value:'2026-11-02'}});fireEvent.change(screen.getByLabelText('Chart end date'),{target:{value:'2026-11-01'}});fireEvent.click(screen.getByRole('button',{name:'Apply dates'}));

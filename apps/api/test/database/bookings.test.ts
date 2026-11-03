@@ -25,6 +25,19 @@ await test('operator creates canonical booking and one child with frozen authori
   const receipt=(await s.db.adminQuery('SELECT committed_at,retain_until,http_status FROM shipit.booking_commands')).rows[0]!;
   assert.ok(Number(new Date(receipt.retain_until as string))-Number(new Date(receipt.committed_at as string))>=86400000);assert.equal(receipt.http_status,201);
 });
+await test('recipient name and phone may each be omitted, persist independently and replay without copying the sender',{timeout:30000},async t=>{
+ const s=await bookingSetup(t),key=randomUUID(),address='Synthetic destination';
+ const parcels=[{name:'Ada',address},{phone:'+91 98765 43210',address},{address}].map(recipient=>({weight_grams:333,recipient}));
+ const body={...s.body,parcels};
+ const invalid=await s.book({...body,parcels:[{...parcels[0],recipient:{phone:'invalid',address}},...parcels.slice(1)]});assert.equal(invalid.statusCode,422,invalid.body);
+ const response=await s.book(body,key);assert.equal(response.statusCode,201,response.body);
+ const expected=[{name:'Ada',phone_normalized:null,phone_display:null,address},{name:null,phone_normalized:'+919876543210',phone_display:'+91 98765 43210',address},{name:null,phone_normalized:null,phone_display:null,address}];
+ assert.deepEqual(response.json().parcels.map((p:{recipient:unknown})=>p.recipient),expected);
+ const replay=await s.book(body,key);assert.equal(replay.statusCode,201,replay.body);assert.deepEqual(replay.json(),response.json());
+ const stored=await s.db.adminQuery('SELECT recipient_snapshot FROM shipit.parcels WHERE booking_id=$1 ORDER BY position',[response.json().id]);assert.deepEqual(stored.rows.map(row=>row.recipient_snapshot),expected);
+ const parcel=await s.app.inject({url:'/api/v1/parcels/'+response.json().parcels[2].id+'?'+new URLSearchParams({organization_id:org,franchise_id:A}),cookies:s.cookies(s.operator.token)});assert.equal(parcel.statusCode,200,parcel.body);assert.deepEqual(parcel.json().recipient,expected[2]);
+});
+
 await test('multiple children preserve order and normalized manual dockets, sharing only frozen commercial ownership',{timeout:30000},async t=>{
   const s=await bookingSetup(t);const p=s.body.parcels[0]!;
   const response=await s.book({...s.body,parcels:[{...p,weight_grams:400,docket:' syn-a '},{...p,weight_grams:599,docket:'syn-b'}]});
@@ -223,7 +236,7 @@ await test('parcel reads survive pool restart while revoked and unapproved roles
 
 await test('counter parcel details survive booking replay and immutable storage',{timeout:30000},async t=>{
  const s=await bookingSetup(t),key=randomUUID();
- const details={country:'IN',postal_code:'400001',city:'Mumbai',region:'Maharashtra',contents_type:'solid',contents_description:'Cotton shirts',liquid_quantity_ml:null};
+ const details={country:'IN',postal_code:'400001',city:'Mumbai',region:'Maharashtra',contents_type:'solid',contents_description:'Cotton shirts',liquid_quantity_ml:null,declared_value_paise:12345};
  const body={...s.body,parcels:s.body.parcels.map(p=>({...p,details}))};
  const first=await s.book(body,key);assert.equal(first.statusCode,201,first.body);
  assert.deepEqual(first.json().parcels[0].details,details);

@@ -3,7 +3,7 @@ import { TextField } from '../components/m3/Input';
 import { ApiFailure, recoveryFor } from '../data-access/errors';
 import type { OnboardingRequest } from '@shippingco/shared';
 import type { ScopeController } from './scope';
-import {Msym} from '../components/m3/Icon';
+import {AccessStep} from './AccessStep';
 
 type Intent = { key: string; body: OnboardingRequest };
 // Only a pending request intent, never workspace authority. GET context always runs first.
@@ -51,15 +51,13 @@ export default function Onboarding({ userId, complete, controller }: { userId: s
     } finally { setBusy(false); }
   }
   return <section className="card operator-card operator-auth-card" aria-labelledby="onboarding-title">
-    <span className="workspace-auth-mark"><Msym name="storefront"/></span>
+    <AccessStep stage="shop"/>
     <h1 id="onboarding-title" tabIndex={-1} className="t-headline-sm">Set up your shop</h1>
     <p className="muted">Add your business and the first place you book parcels from.</p>
     <form aria-label="Set up your shop" onSubmit={event => { void submit(event); }} noValidate>
-      <TextField id="onboarding-name" name="organization" autoComplete="organization" maxLength={120} label="Business name" placeholder="Shree Balaji Courier" helper="The name your customers know." value={name} onChange={setName} required disabled={busy || !!intent} aria-describedby={errors.name ? 'error-name' : undefined} aria-invalid={!!errors.name} />
-      {errors.name && <p id="error-name" className="operator-error">{errors.name}</p>}
+      <TextField id="onboarding-name" name="organization" autoComplete="organization" maxLength={120} label="Business name" placeholder="Shree Balaji Courier" value={name} onChange={setName} required disabled={busy || !!intent} error={errors.name} />
       <fieldset className="operator-onboarding-location"><legend>Your first location</legend>
-      <TextField id="onboarding-location" name="location" autoComplete="off" maxLength={120} label="Location name" placeholder="Pune main shop" helper="A name that helps your team recognise this shop or branch." value={location} onChange={setLocation} required disabled={busy || !!intent} aria-describedby={errors.location ? 'error-location' : undefined} aria-invalid={!!errors.location} />
-      {errors.location && <p id="error-location" className="operator-error">{errors.location}</p>}
+      <TextField id="onboarding-location" name="location" autoComplete="off" maxLength={120} label="Location name" placeholder="Pune main shop" value={location} onChange={setLocation} required disabled={busy || !!intent} error={errors.location} />
       <details open={!!errors.code} className="operator-branch-code"><summary>Branch code · optional</summary><TextField id="onboarding-code" name="location-code" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={32} label="Location code" placeholder="PUNE_1" value={code} onChange={setCode} required disabled={busy || !!intent} aria-describedby="code-help" aria-invalid={!!errors.code} />
       <p id="code-help" className={errors.code ? 'operator-error' : 'muted'}>{errors.code ?? 'MAIN is filled in for your first branch. Change it only if your business uses another code.'}</p></details>
       </fieldset>

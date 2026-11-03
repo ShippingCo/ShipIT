@@ -1,3 +1,4 @@
+import {Dropdown} from './Input';
 import React, { useMemo, useState } from 'react';
 import { Msym } from './Icon';
 
@@ -158,10 +159,9 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
                 {columns.map((c) => (
                   <th key={c.key}>
                     {c.type === 'enum' ? (
-                      <select aria-label={`Filter ${typeof c.label==='string'?c.label:c.key}`} value={asText(filters[c.key])} onChange={(e) => setFilters((f) => ({ ...f, [c.key]: e.target.value }))}>
-                        <option value="">All</option>
-                        {(enums[c.key] ?? []).map((v) => <option key={v} value={v}>{v}</option>)}
-                      </select>
+                      <Dropdown aria-label={`Filter ${typeof c.label==='string'?c.label:c.key}`} value={asText(filters[c.key])}
+                        options={[{value:'', label:'All'}, ...(enums[c.key] ?? []).map(value=>({value,label:value}))]}
+                        onValueChange={value => setFilters(previous => ({...previous, [c.key]: value}))}/>
                     ) : c.type === 'num' || c.type === 'money' ? (
                       <span className="dt-range">
                         <input aria-label={`${typeof c.label==='string'?c.label:c.key} minimum`} type="number" placeholder="min" value={asRange(filters[c.key]).min ?? ''}

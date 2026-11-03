@@ -113,3 +113,19 @@
  .studio-financial-metrics .ops-kpi-label{font-size:13px}
  .studio-financial-metrics .ops-kpi p{margin-block:4px}
 }
+.workspace-task-group > h2, .customers-workspace #customer-find-heading { font-size: 1.125rem; line-height: 1.4; margin: 0 0 .75rem; }
+.workspace-task-group + .workspace-task-group { margin-top: 1.5rem; }
+.customer-contact-details { display: grid; grid-template-columns: max-content 1fr; gap: .75rem 1.25rem; }
+.customer-contact-details dt { color: var(--workspace-muted); }
+.customer-contact-details dd { margin: 0; overflow-wrap: anywhere; }
+.settings-section-shortcuts { display: flex; flex-wrap: wrap; gap: .25rem .5rem; }
+.settings-workspace :is(#booking-policy-setup, #settings-preferences-title, #settings-history-title) { scroll-margin-block-start: calc(var(--topbar-h) + 1rem); }
+.settings-consumer summary { cursor: pointer; font-size: .875rem; }
+/* Keep the active docket or bill in sight when tabbing through row actions. */
+.record-table tbody tr:focus-within { background-color: var(--workspace-subtle); }
+.record-table tbody tr[data-selected] { background-color: var(--md-primary-container); }
+.record-table tbody tr[data-selected] > td:first-child { box-shadow: inset 3px 0 var(--md-primary); }
+.record-table .record-numeric { font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) {
+  .record-table tbody tr[data-selected] { outline: 2px solid Highlight; outline-offset: -2px; }
+}

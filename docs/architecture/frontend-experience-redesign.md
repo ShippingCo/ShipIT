@@ -664,7 +664,7 @@ Scope: the existing authenticated application, its 23 work-area routes, account 
 
 Verification details and coverage limits accompany the final evidence below. Native date-picker appearance is platform-specific. Existing backend-unavailable settings remain explicitly described as unavailable/configuration-only rather than being made to look operational. The scoped GST template is optional and is not legal certification.
 
-## Production four-step booking design evidence — 1 November 2026
+## Historical four-step booking design evidence — 1 November 2026
 
 The approved booking-modal preview is now the composition reference for the production
 booking implementation, an ordinary extension of the incumbent interface. Its isolated
@@ -722,3 +722,34 @@ Source evidence: `CustomerAccounts.tsx`, `ShipmentCostEditor.tsx`, `ShipmentCost
 The installed Impeccable documenter specification was applied against the implementation and incumbent CSS. No visual-world replacement was requested. `styles/tokens.css`, `base.css` and `studio.css` retain white surfaces, #2868c7 primary blue, neutral text, Inter with existing fallbacks, compact title/body/label hierarchy and shared focus treatments. This pass does not promote existing eyebrow rules or other unrelated drift into reusable design guidance. The missing DESIGN.md and design sidecar remain a pre-existing documentation gap rather than an excuse to invent a system during an ordinary extension.
 
 This section records source-level decisions only. Final browser, test and detector results for this extension must be reported separately after completion; it makes no deployment, participant-usability or accessibility-certification claim.
+
+## Single-page booking counter, 3 November 2026
+
+The current counter follows the first ShipIT booking page. Customer, Parcel
+and Charges stay visible together. Section links move focus directly to each
+heading. The booking summary shows the selected service and each parcel's
+docket, then shows the freight, packing, GST and total returned by the quote
+and tax APIs. The summary sits below the form on narrow screens.
+
+Each parcel has its own required docket, receiver, domestic delivery address
+and contents. A new parcel initially copies the first receiver for convenient
+entry. Later edits apply only to that parcel. The selected destination and
+service apply to the full booking, and pricing uses the combined packed
+weight. Optional declared goods value is recorded in integer paise for each
+parcel. An omitted value stays unknown and a supplied zero stays zero.
+
+Save booking and Save and print use the same booking command. Printing
+retrieves the issued receipt after confirmation. Optional lot assignment
+uses the saved parcel IDs and the lot's current version, with a separate
+retry for an unconfirmed addition. File uploads and money receipts also use
+their own post-save requests. The [client booking guide](../user-guides/new-booking.html)
+describes the counter workflow.
+
+The 3 November production-browser check exercised the form at 1440, 390
+and 320 CSS pixels. It created a customer and named service, saved one
+booking with two different receivers, confirmed both parcel memberships
+in a lot, uploaded a test PDF, retrieved and printed the issued receipt,
+and recorded the collection. The server returned ₹125.00 freight, ₹6.25
+GST and a −₹0.25 rounding adjustment for a ₹131.00 total. The guide
+screenshots come from this run. It used disposable PostgreSQL, a memory
+object store and a deterministic scanner fixture.

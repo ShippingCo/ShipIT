@@ -1,3 +1,4 @@
+import { DateField } from './Input';
 import {businessDay,dayStart,shiftDay,weekMonday} from '../../operations/business-dates';
 import React, { useEffect, useRef, useState } from 'react';
 import { Msym, cx } from './Icon';
@@ -171,16 +172,10 @@ export function DateFilter({ preset, onPreset, custom, onCustom }: DateFilterPro
           ))}
           <div className="datefilter-sep" />
           <div className="datefilter-custom">
-            <label>
-              <span>From</span>
-              <input type="date" value={custom?.from || ''} max={custom?.to || undefined}
-                onChange={(e) => { onCustom({ ...custom, from: e.target.value }); onPreset('custom'); }} />
-            </label>
-            <label>
-              <span>To</span>
-              <input type="date" value={custom?.to || ''} min={custom?.from || undefined}
-                onChange={(e) => { onCustom({ ...custom, to: e.target.value }); onPreset('custom'); }} />
-            </label>
+            <DateField label="From" value={custom?.from} max={custom?.to || undefined}
+              onChange={from => { onCustom({ ...custom, from }); onPreset('custom'); }} />
+            <DateField label="To" value={custom?.to} min={custom?.from || undefined}
+              onChange={to => { onCustom({ ...custom, to }); onPreset('custom'); }} />
           </div>
           {active && (
             <button type="button" className="datefilter-clear"

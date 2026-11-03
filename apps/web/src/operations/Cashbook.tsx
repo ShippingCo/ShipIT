@@ -1,3 +1,4 @@
+import {FinancePosition} from './FinancePosition';
 import {PageHeader,RecordTable,StatusBadge,WorkflowTabs} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import CashClosing from './CashClosing';
@@ -37,8 +38,8 @@ function Workspace({controller,roles}:{controller:ScopeController;roles:readonly
  const retry=async()=>{try{const r=await command.retry();if(r&&controller.runtime.isCurrent(api.scope))saved(r.id,r.area);}catch{/* Retain exact intent. */}};
  return <><section className="finance-workspace-intro"><PageHeader title="Expenses and cashbook" actions={canRequest?<button type="button" className="btn btn-filled" disabled={locked||!inbox.value} onClick={()=>{setView('requests');requestAnimationFrame(()=>{if(!controller.runtime.isCurrent(api.scope))return;const editor=document.getElementById('cashbook-request-editor');editor?.scrollIntoView?.({block:'start',behavior:'auto'});editor?.focus({preventScroll:true});});}}>Add expense or cash movement</button>:undefined} description="Record what you paid for and where the money moved. Each request is checked by a different administrator before it is applied." eyebrow="Money"/><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void retry();}:undefined}/>{blocked&&locked&&<p role="alert">Reconcile this exact request before leaving or changing franchise.</p>}{!locked&&<button className="btn btn-text" onClick={()=>{command.reset();setRevision(r=>r+1);locations.reload();employees.reload();}}>Refresh current evidence</button>}</section>
  <nav aria-label="Cashbook workflow"><WorkflowTabs label="Cashbook views" value={view} onChange={value=>setView(value as typeof view)} items={[
- {value:'closing',label:'Daily cash closing',disabled:locked},...(admin?[{value:'agent_money',label:'Agent and seller money requests',disabled:locked}]:[]),
- {value:'requests',label:'Expense and fund requests',disabled:locked},{value:'custody',label:'Cash custody',disabled:locked},
+ {value:'requests',label:'Expense and fund requests',disabled:locked},{value:'closing',label:'Daily cash closing',disabled:locked},
+ {value:'custody',label:'Cash custody',disabled:locked},...(admin?[{value:'agent_money',label:'Agent and seller money requests',disabled:locked}]:[]),
  ...(has(roles,'org_admin','franchise_admin','accountant')?[{value:'sources',label:'Cashbook sources',disabled:locked}]:[]),
  ...(admin?[{value:'locations',label:'Configure cash locations',disabled:locked}]:[]),
  ]}/></nav>
@@ -58,7 +59,30 @@ function Workspace({controller,roles}:{controller:ScopeController;roles:readonly
  {key:'correction',label:'Evidence',cell:r=>r.corrected_by?'Later correction recorded':'Original request'},
  ]}/>}{inbox.value.next_cursor&&<button className="btn btn-text" disabled={locked} onClick={()=>setCursor(inbox.value!.next_cursor!)}>Next request page</button>}{cursor&&<button className="btn btn-text" disabled={locked} onClick={()=>setCursor(undefined)}>First request page</button>}</>}
  </section>{selected&&current.phase==='loading'&&<Loading label="Loading request evidence…"/>}{selected&&current.phase==='error'&&<Failure retry={current.reload} label="This request is unavailable in the selected franchise."/>}
- {detail&&<section className="card ops-card"><h2 className="t-title-lg">Saved request</h2><dl className="ops-details"><dt>Reference</dt><dd>{detail.request.id}</dd><dt>Amount</dt><dd>{formatMoney(detail.request.amount_paise)}</dd>{detail.request.cod_allocation_id&&<><dt>Seller COD source</dt><dd>{detail.request.cod_allocation_id}</dd>{detail.request.payment_reference&&<><dt>Private seller payment reference</dt><dd>{detail.request.payment_reference}</dd></>}</>}{detail.request.fee_earning_id&&<><dt>Gross fee source</dt><dd>{detail.request.fee_earning_id}</dd><dt>Recorded direct fee payment</dt><dd>{formatMoney(detail.request.fee_cash_paise!)}</dd><dt>Advance applied</dt><dd>{formatMoney(detail.request.fee_advance_paise!)}</dd></>}<dt>Payment method</dt><dd>{detail.request.payment_method??'Fund movement'}</dd><dt>Occurred</dt><dd>{formatKolkata(detail.request.occurred_at)}</dd><dt>Recorded</dt><dd>{formatKolkata(detail.request.recorded_at)}</dd><dt>Category</dt><dd>{detail.request.category??'Fund movement'}</dd><dt>Responsible employee</dt><dd>{detail.request.responsible_employee_id}</dd><dt>Source location</dt><dd>{detail.request.source_location_id}</dd><dt>Target location</dt><dd>{detail.request.target_location_id??'—'}</dd><dt>Private payee</dt><dd>{detail.request.payee??'—'}</dd><dt>Reason</dt><dd>{detail.request.reason}</dd><dt>State</dt><dd>{detail.effect?'Applied':detail.decision?.decision??'Requested'}</dd></dl>{detail.request.correction_of&&<p>Recording correction of {detail.request.correction_of}. Original evidence remains unchanged.</p>}
+ {detail&&<section className="card ops-card"><h2 className="t-title-lg">Saved request</h2><FinancePosition label="Saved cashbook request" primary={{label:'Requested amount',value:formatMoney(detail.request.amount_paise)}} items={detail.request.fee_earning_id?[
+  {label:'Recorded direct fee payment',value:formatMoney(detail.request.fee_cash_paise!)},
+  {label:'Advance applied',value:formatMoney(detail.request.fee_advance_paise!)}
+ ]:[]}/>
+ <dl className="finance-review-list">
+  <div><dt>Status</dt><dd>{detail.effect?'Applied':detail.decision?.decision??'Requested'}</dd></div>
+  <div><dt>Reason</dt><dd>{detail.request.reason}</dd></div>
+  {detail.request.payee&&<div><dt>Private payee</dt><dd>{detail.request.payee}</dd></div>}
+  <div><dt>Payment method</dt><dd>{detail.request.payment_method??'Fund movement'}</dd></div>
+  {detail.request.category&&<div><dt>Category</dt><dd>{detail.request.category}</dd></div>}
+  <div><dt>Occurred</dt><dd>{formatKolkata(detail.request.occurred_at)}</dd></div>
+  <div><dt>Source location</dt><dd>{locations.items.find(location=>location.id===detail.request.source_location_id)?.name??detail.request.source_location_id}</dd></div>
+  {detail.request.target_location_id&&<div><dt>Target location</dt><dd>{locations.items.find(location=>location.id===detail.request.target_location_id)?.name??detail.request.target_location_id}</dd></div>}
+ </dl>
+ <details className="finance-secondary-action"><summary>Request references and recording details</summary><dl className="finance-review-list">
+  <div><dt>Reference</dt><dd>{detail.request.id}</dd></div>
+  <div><dt>Recorded</dt><dd>{formatKolkata(detail.request.recorded_at)}</dd></div>
+  <div><dt>Responsible employee ID</dt><dd>{detail.request.responsible_employee_id}</dd></div>
+  <div><dt>Source location ID</dt><dd>{detail.request.source_location_id}</dd></div>
+  {detail.request.target_location_id&&<div><dt>Target location ID</dt><dd>{detail.request.target_location_id}</dd></div>}
+  {detail.request.cod_allocation_id&&<div><dt>Seller COD source</dt><dd>{detail.request.cod_allocation_id}</dd></div>}
+  {detail.request.payment_reference&&<div><dt>Private seller payment reference</dt><dd>{detail.request.payment_reference}</dd></div>}
+  {detail.request.fee_earning_id&&<div><dt>Gross fee source</dt><dd>{detail.request.fee_earning_id}</dd></div>}
+ </dl></details>{detail.request.correction_of&&<p>Recording correction of {detail.request.correction_of}. Original evidence remains unchanged.</p>}
  {detail.request.kind==='expense'&&<ExpenseProofs key={'proof-'+detail.request.id} controller={controller} detail={detail} canRequest={canRequest} locked={commandLocked} onActivity={setAttachmentBusy}/>}
  {detail.decision&&<p>Reviewed by {detail.decision.actor_id}. {detail.decision.reason} · {detail.decision.attachments?.length??0} reviewed attachments.</p>}
  {admin&&!detail.decision&&detail.request.actor_id!==api.scope.authority?.userId&&<Review key={'review-'+selected!} id={selected!} locked={locked} run={(outcome,reason)=>{void run(source.decide(selected!,{decision:outcome,reason,expected_version:1}),selected!);}}/>}

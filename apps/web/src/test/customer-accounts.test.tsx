@@ -42,7 +42,7 @@ it('requires an explicit contact attestation, keeps an uncertain command and ret
  fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));await screen.findByRole('heading',{name:'Synthetic Monthly'});
  const posts=calls.filter(c=>c.options.method==='POST');expect(posts).toHaveLength(2);expect(posts[0].options.body).toBe(posts[1].options.body);expect((posts[0].options.headers as Record<string,string>)['Idempotency-Key']).toBe((posts[1].options.headers as Record<string,string>)['Idempotency-Key']);
  expect(JSON.parse(posts[1].options.body as string)).toMatchObject({debtor_customer_id:f.customerId,shipping_customer_ids:[f.customerId],credit_limit_paise:100000,billing_contact:account.billing_contact});
- expect(screen.getByText(/Attested by/)).toBeVisible();expect(localStorage.length).toBe(0);
+ fireEvent.click(screen.getByText('Terms and contact authority history'));const revisions=await screen.findByRole('table',{name:'Billing terms revisions'});fireEvent.click(revisions.querySelector('summary')!);expect(screen.getByText(/Attested by/)).toBeVisible();expect(localStorage.length).toBe(0);
 });
 it('reviews exact shipment evidence before approving and refreshes the pending queue',async()=>{
  pending=true;await start();const radio=await screen.findByRole('radio');expect(screen.queryByLabelText('Credit exception approval reason')).not.toBeInTheDocument();radio.focus();expect(radio).toHaveFocus();fireEvent.click(radio);

@@ -1,3 +1,4 @@
+import {ReportMeasures} from './ReportMeasures';
 import {RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
@@ -20,6 +21,7 @@ export default function OwnerSummaries({controller,franchises,canExport}:{contro
 export function OwnerSummaryView({source,franchises,canExport}:{source:OwnerSummarySource;franchises:{id:string;name:string}[];canExport:boolean}){
  const workspace=useResource('owner-reports',signal=>source.workspace(signal)),command=useCommand(source.execute);
  const [draft,setDraft]=useState(()=>initial(source.franchise,source.user)),[editing,setEditing]=useState<string|null>(null),[notice,setNotice]=useState(''),[invalid,setInvalid]=useState(''),[minimumRupees,setMinimumRupees]=useState('1.00');
+ const [editorOpen,setEditorOpen]=useState<boolean|null>(null);
  const [snapshot,setSnapshot]=useState<OwnerSummarySnapshot|null>(null),[busy,setBusy]=useState(false),[kind,setKind]=useState('sales'),[offset,setOffset]=useState(0);
  const [params,setParams]=useSearchParams(),savedId=params.get('owner_report'),alive=useRef(true),request=useRef(0),heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
@@ -28,7 +30,7 @@ export function OwnerSummaryView({source,franchises,canExport}:{source:OwnerSumm
  function acceptSchedule(value:unknown){if(value&&typeof value==='object'&&'name' in value&&'id' in value&&typeof value.id==='string'&&'version' in value&&typeof value.version==='number'){setEditing(value.id);setDraft(d=>({...d,expected_version:value.version as number}));}}
  async function send(intent:Parameters<typeof command.run>[0]){try{const result=await command.run(intent);if(alive.current){setNotice('Saved.');workspace.reload();setInvalid('');acceptSchedule(result);if(intent.operation==='owner.preview'&&result&&typeof result==='object'&&'id' in result&&typeof result.id==='string'){setParams(p=>{const n=new URLSearchParams(p);n.set('owner_report',result.id as string);return n;});}}return result;}catch(e){if(alive.current)setNotice(failure(e));}}
  async function retry(){try{const result=await command.retry();if(alive.current){setNotice('The original request is confirmed.');workspace.reload();acceptSchedule(result);}}catch(e){if(alive.current)setNotice(failure(e));}}
- function edit(s:OwnerSummarySchedule){setEditing(s.id);setMinimumRupees(thresholdRupees(s.alerts.minimum_paise));setDraft({expected_version:s.version,name:s.name,timing:{...s.timing},franchise_ids:[...s.franchise_ids],recipient_ids:[...s.recipient_ids],enabled:s.enabled,whatsapp:s.whatsapp,corrections:s.corrections,alerts:{...s.alerts}});setInvalid('');heading.current?.focus();}
+ function edit(s:OwnerSummarySchedule){setEditorOpen(true);setEditing(s.id);setMinimumRupees(thresholdRupees(s.alerts.minimum_paise));setDraft({expected_version:s.version,name:s.name,timing:{...s.timing},franchise_ids:[...s.franchise_ids],recipient_ids:[...s.recipient_ids],enabled:s.enabled,whatsapp:s.whatsapp,corrections:s.corrections,alerts:{...s.alerts}});setInvalid('');heading.current?.focus();}
  async function save(event:React.FormEvent){event.preventDefault();const minimum_paise=draft.alerts.enabled?thresholdPaise(minimumRupees):draft.alerts.minimum_paise;if(!draft.name.trim()||!draft.franchise_ids.length||!draft.recipient_ids.length||minimum_paise===null){setInvalid('Enter a name, choose a branch and recipient, and enter a positive overdue amount in rupees with up to two decimal places.');return;}await send(source.saveIntent({...draft,alerts:{...draft.alerts,minimum_paise}},editing??undefined));}
  async function download(){if(!savedId)return;setBusy(true);try{const result=await source.export(savedId);if(alive.current){const url=URL.createObjectURL(new Blob([result.csv],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='owner-summary-'+savedId+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),0);setNotice('Saved report evidence downloaded.');}}catch(e){if(alive.current)setNotice(failure(e));}finally{if(alive.current)setBusy(false);}}
  const toggle=(values:string[],id:string)=>values.includes(id)?values.filter(v=>v!==id):[...values,id];
@@ -40,10 +42,14 @@ export function OwnerSummaryView({source,franchises,canExport}:{source:OwnerSumm
  {workspace.phase==='loading'&&<p role="status">Loading owner reports…</p>}{workspace.phase==='error'&&<p role="alert">Owner reports could not be loaded. <button onClick={workspace.reload}>Retry owner reports</button></p>}
  {notice&&<p role="status" aria-live="polite">{notice}</p>}
  {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void retry()}>Retry the same owner request</button>}
- {data&&<><button className="btn btn-outlined" disabled={locked} onClick={workspace.reload}>Refresh owner reports</button>{!data.enabled&&<p role="status">Owner reporting is disabled by the server. Saved reports remain subject to access and expiry.</p>}
- <h3>Your WhatsApp permission</h3><p>{data.consent.has_verified_number?'Notifications use your verified WhatsApp login number.':'Add and verify a WhatsApp login number in your account before enabling notifications.'}</p>
- {checks('Allow owner report notifications on WhatsApp',data.consent.enabled,v=>void send(source.consentIntent(v,data.consent.version)),locked||!data.enabled||!data.consent.has_verified_number)}
- {data.can_configure&&<form className="service-report-controls" aria-describedby={invalid?'owner-schedule-error':undefined} onSubmit={e=>void save(e)}><h3>{editing?'Edit schedule':'Create schedule'}</h3><fieldset disabled={locked||!data.enabled}><legend>Schedule and delivery</legend>
+ {data&&<><ReportMeasures label="Owner reporting activity" items={[
+  {label:'Active schedules',value:data.schedules.filter(schedule=>schedule.enabled).length},
+  {label:'Open overdue alerts',value:data.alerts.filter(alert=>alert.state==='open').length},
+  {label:'Recent reports',value:data.runs.length}
+ ]}/><button className="btn btn-outlined" disabled={locked} onClick={workspace.reload}>Refresh owner reports</button>{!data.enabled&&<p role="status">Owner reporting is disabled by the server. Saved reports remain subject to access and expiry.</p>}
+ <details className="report-calculation"><summary>WhatsApp notification permission</summary><h3>Your WhatsApp permission</h3><p>{data.consent.has_verified_number?'Notifications use your verified WhatsApp login number.':'Add and verify a WhatsApp login number in your account before enabling notifications.'}</p>
+ {checks('Allow owner report notifications on WhatsApp',data.consent.enabled,v=>void send(source.consentIntent(v,data.consent.version)),locked||!data.enabled||!data.consent.has_verified_number)}</details>
+ {data.can_configure&&<details className="owner-schedule-editor" open={editorOpen??data.schedules.length===0} onToggle={event=>setEditorOpen(event.currentTarget.open)}><summary>{editing?'Edit schedule':'Set up a schedule'}</summary><form className="service-report-controls" aria-describedby={invalid?'owner-schedule-error':undefined} onSubmit={e=>void save(e)}><h3>{editing?'Edit schedule':'Create schedule'}</h3><fieldset disabled={locked||!data.enabled}><legend>Schedule and delivery</legend>
  <TextField label="Schedule name" value={draft.name} onChange={name=>setDraft(d=>({...d,name}))} maxLength={80} required/>
  <SelectField label="Summary frequency" aria-label="Summary frequency" value={draft.timing.frequency} onChange={frequency=>setDraft(d=>({...d,timing:{...d.timing,frequency:frequency as OwnerSummaryScheduleInput['timing']['frequency']}}))} options={['daily','weekly','monthly'].map(v=>({value:v,label:v[0]!.toUpperCase()+v.slice(1)}))}/>
  <TextField label="Schedule timezone" list="owner-summary-timezones" spellCheck={false} autoComplete="off" value={draft.timing.timezone} onChange={timezone=>setDraft(d=>({...d,timing:{...d.timing,timezone}}))} required/>
@@ -57,7 +63,7 @@ export function OwnerSummaryView({source,franchises,canExport}:{source:OwnerSumm
  <TextField label="Minimum overdue amount (₹)" inputMode="decimal" value={minimumRupees} onChange={setMinimumRupees} error={minimumRupees&&thresholdPaise(minimumRupees)===null?'Enter a positive rupee amount with up to two decimal places.':undefined} helper="Show an alert when the overdue balance reaches this amount." required/>
  <TextField label="Minimum days overdue" type="number" inputMode="numeric" min="1" max="3650" step="1" value={draft.alerts.minimum_overdue_days} onChange={v=>setDraft(d=>({...d,alerts:{...d.alerts,minimum_overdue_days:Number(v)}}))} required/>
  <SelectField label="Repeat unchanged overdue notifications" aria-label="Repeat unchanged overdue notifications" value={String(draft.alerts.repeat_hours??'never')} onChange={v=>setDraft(d=>({...d,alerts:{...d.alerts,repeat_hours:v==='never'?null:Number(v)}}))} options={[{value:'never',label:'Once until resolved'},{value:'24',label:'Every 24 hours'},{value:'168',label:'Every week'}]}/></div>
- </fieldset>{invalid&&<p id="owner-schedule-error" role="alert">{invalid}</p>}<button className="btn btn-filled" disabled={locked||!data.enabled}>Save owner schedule</button>{editing&&<button className="btn btn-text" type="button" disabled={locked} onClick={()=>{setEditing(null);setMinimumRupees('1.00');setDraft(initial(source.franchise,source.user));}}>New schedule</button>}</form>}
+ </fieldset>{invalid&&<p id="owner-schedule-error" role="alert">{invalid}</p>}<button className="btn btn-filled" disabled={locked||!data.enabled}>Save owner schedule</button>{editing&&<button className="btn btn-text" type="button" disabled={locked} onClick={()=>{setEditing(null);setMinimumRupees('1.00');setDraft(initial(source.franchise,source.user));}}>New schedule</button>}</form></details>}
  <h3>Schedules</h3><RecordTable empty="No owner schedules yet." label="Owner report schedules" rows={data.schedules} rowKey={s=>s.id} columns={[
  {key:'name',label:'Schedule',cell:s=><strong>{s.name}</strong>},
  {key:'timing',label:'Frequency / timezone',cell:s=><span className="service-cell-stack">{s.timing.frequency}<span className="ops-note">{s.timing.timezone}</span></span>},
@@ -81,7 +87,15 @@ export function OwnerSummaryView({source,franchises,canExport}:{source:OwnerSumm
  ]}/>
  </>}
  {snapshot&&<><h3>Saved period report</h3><p>{snapshot.period.label} · {snapshot.period.timezone} · captured {new Date(snapshot.as_of).toLocaleString()} · {snapshot.franchise_ids.length} franchise(s).</p>
- <div className="ops-grid">{[['Billed gross',snapshot.metrics.billed_gross],['Tax-exclusive sales',snapshot.metrics.tax_exclusive_revenue],['Collections received',snapshot.metrics.collections],['Actual refunds',snapshot.metrics.refunds],['Outstanding debt',snapshot.metrics.outstanding],['Overdue debt',snapshot.overdue_paise],['Applied expenses',snapshot.expenses_paise],['Agent-held known money',snapshot.agent_held_known_paise],['Recorded cash difference magnitude',snapshot.cash_differences_paise]].map(([label,value])=><div className="ops-kpi" key={label}><Msym name="payments"/><div><span>{label}</span><strong className="ops-kpi-number">{money(value!)}</strong></div></div>)}</div>
+ <ReportMeasures label="Saved owner report totals" items={[
+  {label:'Billed gross',value:money(snapshot.metrics.billed_gross)},
+  {label:'Collections received',value:money(snapshot.metrics.collections)},
+  {label:'Outstanding debt',value:money(snapshot.metrics.outstanding)},
+  {label:'Overdue debt',value:money(snapshot.overdue_paise)}
+ ]}/>
+ <details className="report-calculation"><summary>Other amounts in this report</summary><dl className="report-breakdown">
+  {[['Tax-exclusive sales',snapshot.metrics.tax_exclusive_revenue],['Actual refunds',snapshot.metrics.refunds],['Applied expenses',snapshot.expenses_paise],['Agent-held known money',snapshot.agent_held_known_paise],['Recorded cash difference magnitude',snapshot.cash_differences_paise]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{money(value!)}</dd></div>)}
+ </dl></details>
  <p>{snapshot.metrics.bookings} bookings · {snapshot.metrics.customers} customers ({snapshot.metrics.new_customers} new, {snapshot.metrics.returning_customers} returning) · average bill {money(snapshot.metrics.average_bill)}.</p>
  <p>{snapshot.unknown_due_count} unpaid bookings have unknown due dates. {snapshot.unknown_custody_count} sources have unknown custody. Agent-held figures include recorded known sources only. Cash differences are recorded counts, not transfers or approval. Reconciliation: {snapshot.reconciliation_state}; {snapshot.reconciliation_exceptions} exceptions.</p>
  <SelectField label="Saved source evidence" aria-label="Saved source evidence" value={kind} onChange={v=>{setKind(v);setOffset(0);}} options={['sales','overdue','expense','agent_custody','cash_difference','unknown_custody','unknown_due','reconciliation'].map(v=>({value:v,label:v.replaceAll('_',' ')}))}/>{canExport&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void download()}>Download saved owner evidence</button>}

@@ -52,6 +52,10 @@ export function TextField({ label, value, onChange, type = 'text', error, helper
   );
 }
 
+export function DateField(props: Omit<TextFieldProps, 'type' | 'value'> & {value?: string | null}) {
+  return <TextField {...props} type="date" />;
+}
+
 /** Search remains controlled; clearing never silently submits a server query. */
 export function SearchField(props:TextFieldProps){
   return <div className="workspace-search-field"><TextField {...props} type="search" trailing="search"/>
@@ -96,6 +100,7 @@ export function TextArea({ label, value, onChange, rows = 3, placeholder, error,
 export interface SelectOption {
   value: string;
   label: React.ReactNode;
+  disabled?: boolean;
 }
 
 export interface SelectFieldProps
@@ -112,6 +117,17 @@ export interface SelectFieldProps
   trailing?: React.ReactNode;
 }
 
+type DropdownProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'children'> & {
+  options: readonly SelectOption[];
+  onValueChange: (value: string) => void;
+};
+
+export function Dropdown({options, onValueChange, ...props}: DropdownProps) {
+  return <select {...props} onChange={event => onValueChange(event.currentTarget.value)}>
+    {options.map(option => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
+  </select>;
+}
+
 export function SelectField({ label, value, onChange, options, error, helper, className, style, onBlur, trailing: _trailing, id:providedId, 'aria-describedby':describedBy, ...rest }: SelectFieldProps) {
   const generatedId=React.useId(),id=providedId??generatedId,helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
@@ -120,18 +136,14 @@ export function SelectField({ label, value, onChange, options, error, helper, cl
     <div className={cx('tf', error && 'err', float && 'float', 'has-trail', className)} style={style}>
       {label&&<label className="tf-label" htmlFor={id}>{label}</label>}
       <span className="tf-box">
-        <select
+        <Dropdown options={options}
           id={id} value={value ?? ''}
           aria-describedby={[describedBy,error||helper?helpId:undefined].filter(Boolean).join(' ')||undefined}
           aria-invalid={error ? true : undefined}
           onFocus={() => setFocused(true)} onBlur={(e) => { setFocused(false); onBlur?.(e); }}
-          onChange={(e) => onChange(e.target.value)}
+          onValueChange={onChange}
           {...rest}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        />
         <span className="tf-trail"><Msym name="expand_more" /></span>
       </span>
       {(error || helper) && (

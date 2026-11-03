@@ -1,3 +1,4 @@
+import {PhoneField} from '../booking/PhoneField';
 import React,{useEffect,useId,useMemo,useRef,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {Dialog} from '../components/m3/Dialog';
@@ -38,13 +39,16 @@ export function OperatorSearch({controller,links,close}:{controller:ScopeControl
       if(!abort.signal.aborted)setState({phase:'ready',items,more});
     } catch {if(!abort.signal.aborted&&controller.runtime.isCurrent(api.scope))setState({phase:'error',items:[],more:false});}
   };
-  return <Dialog open onClose={close} title="Search anything">
+  const matchingTasks=links.filter(link=>link.label.toLowerCase().includes(query.trim().toLowerCase()));
+  return <Dialog open onClose={close} title="Search anything" initialFocusId={fieldId}>
     <form onSubmit={event=>{void search(event);}} className="console-search-form" aria-label="Search workspace">
-      <SelectField label="Search for" value={kind} options={options} onChange={value=>{clear();setKind(value);}}/>
-      <SearchField id={fieldId} label={kind==='tasks'?'Find a task':kind==='tracking'?'Full tracking number':kind==='name'?'Customer name':'Customer phone'} value={query} onChange={value=>{clear();setQuery(value);}} maxLength={kind==='tracking'?32:kind==='phone'?40:120} autoComplete="off" error={error} helper={kind==='name'?'Use the same capital letters as the saved name.':kind==='phone'?'Include + and country code, for example +919876543210.':undefined}/>
+      <SelectField label="Search for" value={kind} options={options} onChange={value=>{clear();setQuery('');setKind(value);}}/>
+      {kind==='phone'
+        ? <PhoneField id={fieldId} label="Customer phone" value={query} maxLength={40} error={error} onChange={value=>{clear();setQuery(value);}}/>
+        : <SearchField id={fieldId} label={kind==='tasks'?'Find a task':kind==='tracking'?'Full tracking number':'Customer name'} value={query} onChange={value=>{clear();setQuery(value);}} maxLength={kind==='tracking'?32:120} autoComplete="off" error={error} helper={kind==='name'?'Use the same capital letters as the saved name.':undefined}/>}
       {kind!=='tasks'&&<button type="submit" className="btn btn-filled" disabled={state.phase==='loading'}>Search</button>}
     </form>
-    {kind==='tasks'?<nav className="console-search-results" aria-label="Matching tasks">{links.filter(link=>link.label.toLowerCase().includes(query.trim().toLowerCase())).map(link=><Link key={link.area} to={link.to} onClick={close} className="drawer-item"><Msym name={link.icon}/>{link.label}</Link>)}</nav>:<div className="console-search-results" aria-live="polite">
+    {kind==='tasks'?<nav className="console-search-results" aria-label="Matching tasks">{matchingTasks.length===0&&<p role="status">No matching tasks. Try a different name.</p>}{matchingTasks.map(link=><Link key={link.area} to={link.to} onClick={close} className="drawer-item"><span className="console-result-icon"><Msym name={link.icon}/></span><span>{link.label}</span><Msym className="console-result-next" name="chevron_right"/></Link>)}</nav>:<div className="console-search-results" aria-live="polite">
       {state.phase==='loading'&&<p role="status">Searching this franchise…</p>}
       {state.phase==='error'&&<p role="alert">Search could not be completed. Try again.</p>}
       {state.phase==='ready'&&state.items.length===0&&<p>No matches in this franchise. Check the search and try again.</p>}

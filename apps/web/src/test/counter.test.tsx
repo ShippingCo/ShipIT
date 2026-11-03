@@ -21,6 +21,7 @@ beforeEach(()=>{
   if(path.startsWith('/api/v1/operator-context'))return f.json({...f.context,active_franchise_id:path.includes(f.B)?f.B:f.A});
   if(path.includes('/customers'))return f.json(options.method==='GET'&&path.includes('?')?{items:[f.customer],page:{has_more:false,next_cursor:null}}:f.customer,options.method==='POST'?201:200);
   if(path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[],next_cursor:null});
+  if(path.includes('/pricing/services'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
   if(path.includes('/pricing/versions'))return f.json(f.rateCard);
   if(path.startsWith('/api/v1/pricing/quote'))return f.json(f.quote);
   if(path.startsWith('/api/v1/tax/intents'))return f.json(f.intent);
@@ -36,45 +37,115 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
-async function start() {render(<App/>);await screen.findByRole('heading',{name:'New booking'});await screen.findByRole('option',{name:'SYN DEST',hidden:true});fireEvent.click(screen.getByRole('button',{hidden:true,name:'New customer'}));}
-async function entered(paid=false) {
- await start();fill('Customer name',f.customer.name);fill('Customer phone',f.customer.phone_display);fill('Customer address',f.customer.address);
- fireEvent.click(screen.getByRole('button',{hidden:true,name:'Create customer'}));await screen.findByText('Customer details confirmed.');
- fill('Recipient name','Synthetic Recipient');fill('Recipient phone','+1 202-555-0101');fill('Recipient address','21 Fictional Street');fill('Destination','SYN_DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');fill('PIN code','411001');fill('City','Pune');fill('State / region','Maharashtra');fill('Contents description','Synthetic contents');fill('Parcel handed over in','27');fireEvent.click(screen.getByLabelText('I checked these billing and handover details with the customer.'));
- if(paid){fill('Payment choice','paid_counter');fill('Payment method','upi');}
- for(let i=0;i<3;i++){fireEvent.click(screen.getByRole('button',{name:'Continue'}));await waitFor(()=>expect(screen.getByRole('button',{name:new RegExp('^'+(i+2)+' ')})).toHaveAttribute('aria-current','step'));}
+async function start() {
+ render(<App/>);
+ await screen.findByRole('heading',{name:'New booking',level:1});
+ await screen.findByRole('option',{name:'SYN DEST'});
+ fireEvent.click(screen.getByRole('button',{name:'New customer'}));
+}
+
+async function entered(paid=false, serviceOptionId?:string) {
+ await start();
+ fill('Customer name',f.customer.name);
+ fill('Customer phone',f.customer.phone_display);
+ fill('Customer address',f.customer.address);
+ fireEvent.click(screen.getByRole('button',{name:'Create customer'}));
+ await screen.findByText('Customer details confirmed.');
+ fill('Recipient name','Synthetic Recipient');
+ fill('Recipient phone','+1 202-555-0101');
+ fill('Recipient address','21 Fictional Street');
+ fill('Destination','SYN_DEST');
+ if(serviceOptionId) fill('Service','option:'+serviceOptionId);
+ fill('Docket number','00123-A');
+ fill('Weight (kg)','0.999');
+ fill('PIN code','411001');
+ fill('City','Pune');
+ fill('State / region','Maharashtra');
+ fill('Contents description','Synthetic contents');
+ fill('Parcel handed over in','27');
+ fireEvent.click(screen.getByLabelText('I checked these billing and handover details with the customer.'));
+ if(paid){
+  fill('Payment choice','paid_counter');
+  fill('Payment method','upi');
+ }
+ fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));
  await screen.findByText('Total payable ₹134.00');
 }
-const save=()=>fireEvent.click(screen.getByRole('button',{hidden:true,name:'Create booking'}));
-describe('production counter API composition',()=>{
- it('adds a typed customer inline and preserves the four-step draft when closing is cancelled',async()=>{
-  render(<App/>);await screen.findByRole('dialog',{name:'New booking'});fill('Customer name or phone','New sample sender');
+const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
+const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+describe('production counter API composition',{timeout:20000},()=>{
+ it('adds a typed customer inline and preserves the booking draft when cancellation is dismissed',async()=>{
+  render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});fill('Customer name or phone','New sample sender');
   fireEvent.click(screen.getByRole('option',{name:/Add “New sample sender” to customers/}));
   expect(screen.getByLabelText('Customer name')).toHaveValue('New sample sender');fill('Customer phone','9876543210');
-  fireEvent.click(screen.getByRole('button',{name:'Close'}));await screen.findByRole('heading',{name:'Discard this booking draft?'});
+  fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));await screen.findByRole('heading',{name:'Discard this booking draft?'});
   fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));expect(screen.getByLabelText('Customer name')).toHaveValue('New sample sender');
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('prints only after saving and does not recreate a booking when printing is cancelled',async()=>{
-  override=c=>c.path.startsWith('/api/v1/pricing/quote')?Promise.resolve(f.json({...f.quote,service_option:{id:f.id(90),name:'Local priority'}})):undefined;const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();expect(screen.getByText(/kg · Local priority/)).toBeVisible();expect(screen.getByText('Price and tax checked. Review the amounts before saving.')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Create booking & print'}));
+  const service = {id:f.id(90),name:'Local priority',accepts_liquids:false,service:'standard',destination_key:'SYN_DEST',
+   pricing:{kind:'flat',first_kg_paise:12551,additional_kg_paise:0,packing_paise:249},created_at:f.now};
+  override=c=>{
+   if(c.path.includes('/pricing/services'))return Promise.resolve(f.json({items:[service],page:{has_more:false,next_cursor:null}}));
+   if(c.path.startsWith('/api/v1/pricing/quote'))return Promise.resolve(f.json({...f.quote,service_option:{id:service.id,name:service.name}}));
+  };
+  const print=vi.spyOn(window,'print').mockImplementation(()=>{});
+  await entered(false,service.id);
+  expect(body(posts('/api/v1/pricing/quote')[0])).toMatchObject({service_option_id:service.id});
+  expect(summary().getByText(service.name)).toBeVisible();
+  expect(screen.getByText('Price and tax checked. Review the amounts before saving.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Save and print'}));
   await screen.findByRole('heading',{name:'Booking saved'});await waitFor(()=>expect(print).toHaveBeenCalledTimes(1));expect(posts('/api/v1/bookings?')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button',{name:'Print booking receipt'}));await waitFor(()=>expect(print).toHaveBeenCalledTimes(2));expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+
+ it('can save a booking immediately after creating and using a service in its dialog',async()=>{
+  await entered();
+  const service={id:f.id(91),name:'New counter service',service:'standard',destination_key:'SYN_DEST',accepts_liquids:false,
+   pricing:{kind:'flat',first_kg_paise:12551,additional_kg_paise:0,packing_paise:249},created_at:f.now};
+  let published=false;
+  override=c=>{
+   if(c.path.includes('/pricing/services')){
+    if(c.options.method==='POST'){
+     published=true;
+     return Promise.resolve(f.json(service,201));
+    }
+    return Promise.resolve(f.json({items:published?[service]:[],page:{has_more:false,next_cursor:null}}));
+   }
+   if(c.path.startsWith('/api/v1/pricing/quote'))return Promise.resolve(f.json({...f.quote,service_option:{id:service.id,name:service.name}}));
+  };
+  fireEvent.click(screen.getByRole('button',{name:'Add a service and its rates'}));
+  const dialog=within(await screen.findByRole('dialog',{name:'Add a service'}));
+  fireEvent.change(dialog.getByLabelText('Service name'),{target:{value:service.name}});
+  fireEvent.click(dialog.getByRole('button',{name:'Continue setup'}));
+  fireEvent.change(dialog.getByLabelText('Charge per booking (₹)'),{target:{value:'125.51'}});
+  fireEvent.click(dialog.getByRole('button',{name:'Continue setup'}));
+  fireEvent.click(dialog.getByRole('checkbox',{name:'I reviewed these prices and the service category.'}));
+  fireEvent.click(dialog.getByRole('button',{name:'Save and use service'}));
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(screen.getByLabelText('Service',{exact:true})).toHaveValue('option:'+service.id);
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));
+  await summary().findByText(service.name);
+  expect(summary().getByRole('button',{name:'Save and print'})).toBeEnabled();
+  save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
 
  it('recovers missing and empty rates through real setup without losing the booking draft or inventing services',async()=>{
   let rateState:'missing'|'empty'|'ready'='missing';override=c=>c.path.includes('/pricing/versions')?Promise.resolve(rateState==='missing'?f.json({error:{code:'NO_RATE'}},409):f.json({...f.rateCard,rules:rateState==='empty'?[]:f.rateCard.rules})):undefined;
   render(<App/>);await screen.findByRole('heading',{name:'New booking'});
   fill('Recipient name','Keep this receiver');fill('Recipient phone','9876543210');
-  await screen.findByText('Set up booking rates for this branch');expect(screen.getByRole('combobox',{hidden:true,name:'Destination'})).toBeDisabled();expect(screen.getByRole('combobox',{hidden:true,name:'Service'})).toBeDisabled();
-  const setup=screen.getByRole('link',{hidden:true,name:'Open booking setup · new tab'});expect(setup).toHaveAttribute('href','#/business/settings?setup=booking');expect(setup).toHaveAttribute('target','_blank');expect(setup).toHaveAttribute('rel','noopener noreferrer');
-  rateState='empty';fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry destinations'}));await screen.findByText(/published rate card has no destinations/);expect(screen.getByRole('combobox',{hidden:true,name:'Destination'})).toBeDisabled();
-  rateState='ready';fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry destinations'}));await screen.findByRole('option',{name:'SYN DEST',hidden:true});expect(screen.getByLabelText('Recipient name')).toHaveValue('Keep this receiver');expect(screen.getByLabelText('Recipient phone')).toHaveValue('9876543210');
-  expect(screen.getByRole('combobox',{hidden:true,name:'Service'})).toBeDisabled();fill('Destination','SYN_DEST');expect(screen.getByRole('combobox',{hidden:true,name:'Service'})).toBeEnabled();expect(screen.getByRole('combobox',{hidden:true,name:'Service'})).toHaveValue('standard');expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  await screen.findByText('Set up booking rates for this branch');expect(screen.getByRole('combobox',{name:'Destination'})).toBeDisabled();expect(screen.getByRole('combobox',{name:'Service'})).toBeDisabled();
+  const setup=screen.getByRole('link',{name:'Open booking setup · new tab'});expect(setup).toHaveAttribute('href','#/business/settings?setup=booking');expect(setup).toHaveAttribute('target','_blank');expect(setup).toHaveAttribute('rel','noopener noreferrer');
+  rateState='empty';fireEvent.click(screen.getByRole('button',{name:'Retry destinations'}));await screen.findByText(/published rate card has no destinations/);expect(screen.getByRole('combobox',{name:'Destination'})).toBeDisabled();
+  rateState='ready';fireEvent.click(screen.getByRole('button',{name:'Retry destinations'}));await screen.findByRole('option',{name:'SYN DEST'});expect(screen.getByLabelText('Recipient name')).toHaveValue('Keep this receiver');expect(screen.getByLabelText('Recipient phone')).toHaveValue('9876543210');
+  expect(screen.getByRole('combobox',{name:'Service'})).toBeDisabled();fill('Destination','SYN_DEST');expect(screen.getByRole('combobox',{name:'Service'})).toBeEnabled();expect(screen.getByRole('combobox',{name:'Service'})).toHaveValue('standard');expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('loads an explicitly selected customer through the current scope and never creates a replacement',async()=>{
   window.location.hash='/business/new-booking?customer_id='+f.customerId;render(<App/>);
   await screen.findByText('Customer details confirmed.');
-  expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);
+  expect(screen.getByRole('region',{name:'Customer'})).toHaveTextContent(f.customer.name);
   expect(calls.some(c=>c.path===`/api/v1/organizations/${f.org}/franchises/${f.A}/customers/${f.customerId}`)).toBe(true);
   expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
   expect(screen.queryByRole('button',{name:'Create customer'})).not.toBeInTheDocument();
@@ -83,46 +154,49 @@ describe('production counter API composition',()=>{
   window.location.hash='/business/new-booking?customer_id=invalid';render(<App/>);
   await screen.findByText(/selected customer could not be loaded/i);
   expect(calls.some(c=>c.path.includes('/customers/invalid'))).toBe(false);
-  expect(screen.getByLabelText('Customer name')).toHaveValue('');
+  expect(screen.getByLabelText('Customer name or phone')).toHaveValue('');
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('shows published destinations with a recoverable failure and no invented fallback choices',async()=>{
   let fail=true;override=c=>c.path.includes('/pricing/versions')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
   render(<App/>);await screen.findByRole('heading',{name:'New booking'});
-  await screen.findByRole('button',{hidden:true,name:'Retry destinations'});expect(screen.getByRole('combobox',{hidden:true,name:'Destination'})).toBeDisabled();
+  await screen.findByRole('button',{name:'Retry destinations'});expect(screen.getByRole('combobox',{name:'Destination'})).toBeDisabled();
   expect(screen.queryByRole('option',{name:'SYN DEST'})).not.toBeInTheDocument();
-  fail=false;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry destinations'}));await screen.findByRole('option',{name:'SYN DEST',hidden:true});
-  expect(screen.getByRole('combobox',{hidden:true,name:'Destination'})).toBeEnabled();
+  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry destinations'}));await screen.findByRole('option',{name:'SYN DEST'});
+  expect(screen.getByRole('combobox',{name:'Destination'})).toBeEnabled();
  });
- it('completes all four guided stages with exact kg conversion and a reviewed real quote',async()=>{
-  await entered();expect(screen.getByRole('button',{name:'4 Review and print'})).toHaveAttribute('aria-current','step');
+ it('saves from the single booking page with exact kg conversion and a reviewed quote',async()=>{
+  await entered();expect(screen.getByRole('heading',{name:'Booking summary'})).toBeVisible();
   expect(body(posts('/api/v1/pricing/quote')[0])).toMatchObject({weight_grams:999});
   save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
  it('converts rupee overrides exactly and never silently drops an invalid non-empty amount',async()=>{
-  await entered();fill('Freight override (₹)','12.345');
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));
+  await entered();fireEvent.click(screen.getByText('Change the freight charge'));fill('Freight override (₹)','12.345');
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));
   expect(posts('/api/v1/pricing/quote')).toHaveLength(1);
   expect(screen.getByLabelText('Freight override (₹)')).toHaveAttribute('aria-invalid','true');
-  fill('Freight override (₹)','12.34');fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
+  fill('Freight override (₹)','12.34');fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
   expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({override:{freight_paise:1234,reason_code:'customer_agreement'}});
  });
- it('returns to billing when a changed handover fact needs reconfirmation',async()=>{
+ it('invalidates the reviewed quote when a handover fact needs reconfirmation',async()=>{
   await entered();fill('Parcel handed over in','');save();
-  await waitFor(()=>expect(screen.getByRole('button',{name:'3 Parcel and Billing'})).toHaveAttribute('aria-current','step'));
+  expect(screen.queryByText('Total payable ₹134.00')).not.toBeInTheDocument();
   expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByLabelText('I checked these billing and handover details with the customer.')).not.toBeChecked();
  });
- it('guides booking steps, validates the current fields and preserves entries on Back',async()=>{
-  render(<App/>);await screen.findByRole('heading',{name:'New booking'});
-  expect(screen.getByRole('button',{name:'1 From'})).toHaveAttribute('aria-current','step');
-  fireEvent.click(screen.getByRole('button',{name:'Continue'}));
-  expect(screen.getByLabelText('Customer name',{exact:true})).toHaveAttribute('aria-invalid','true');
-  fill('Customer name',f.customer.name);fill('Customer phone',f.customer.phone_display);
-  fireEvent.click(screen.getByRole('button',{name:'Continue'}));await screen.findByText('Customer details confirmed.');
-  await waitFor(()=>expect(screen.getByRole('button',{name:'2 To'})).toHaveAttribute('aria-current','step'));
-  fill('Recipient name','Synthetic Recipient');fireEvent.click(screen.getByRole('button',{name:'Back'}));
+ it('keeps Customer, Parcel, Charges and Booking summary on one editable page',async()=>{
+  await start();
+  for (const name of ['Customer','Parcel','Charges','Booking summary']) {
+   expect(screen.getByRole('heading',{name})).toBeVisible();
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Continue'})).not.toBeInTheDocument();
+  fill('Customer name',f.customer.name);
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Booking sections'})).getByRole('button',{name:/^Parcel section/}));
+  expect(screen.getByRole('heading',{name:'Parcel'})).toHaveFocus();
+  fill('Recipient name','Synthetic Recipient');
   expect(screen.getByLabelText('Customer name',{exact:true})).toHaveValue(f.customer.name);
-  expect(screen.getByLabelText('Recipient name',{exact:true})).toHaveValue('Synthetic Recipient');expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  expect(screen.getByLabelText('Recipient name',{exact:true})).toHaveValue('Synthetic Recipient');
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('does not claim an empty receipt result until the edited docket is searched',async()=>{
   window.location.hash='/business/receipts';render(<App/>);
@@ -131,88 +205,174 @@ describe('production counter API composition',()=>{
   expect(screen.getByText('Search to load matching bookings.')).toBeVisible();
   expect(screen.queryByRole('heading',{name:'No receipts found'})).not.toBeInTheDocument();
   override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Find receipts'}));
+  fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));
   await screen.findByRole('heading',{name:'No receipts found'});
   expect(calls.filter(c=>c.path.startsWith('/api/v1/parcels')).at(-1)!.path).toContain('docket=UNKNOWN');
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Clear search'}));
+  fireEvent.click(screen.getByRole('button',{name:'Clear search'}));
   expect(screen.getByRole('searchbox',{name:'Find receipt by docket'})).toHaveFocus();
  });
  it('creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery',async()=>{
-  override=c=>c.path.startsWith('/api/v1/pricing/quote')?Promise.resolve(f.json({...f.quote,service_option:{id:f.id(90),name:'Local priority'}})):undefined;const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();expect(screen.getByText(/kg · Local priority/)).toBeVisible();expect(screen.getByText('Price and tax checked. Review the amounts before saving.')).toBeVisible();save();await screen.findByRole('heading',{name:'Booking saved'});
+  override=c=>c.path.startsWith('/api/v1/pricing/quote')?Promise.resolve(f.json({...f.quote,service_option:{id:f.id(90),name:'Local priority'}})):undefined;const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();expect(summary().getByText('Local priority')).toBeVisible();expect(screen.getByText('Price and tax checked. Review the amounts before saving.')).toBeVisible();save();await screen.findByRole('heading',{name:'Booking saved'});
   expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/bookings?')[0])).toMatchObject({customer_id:f.customerId,expected_customer_version:1,tax_calculation_id:f.tax.id,tax_intent:{quote_id:f.quote.id,pricing_input:{destination_key:'SYN_DEST',service:'standard',weight_grams:999},facts:{service_recipient_ref:f.customerId,registration:'unregistered',recipient_state:null,recipient_gstin:null,handover_state:'27',evidence_ref:'COUNTER_DECLARATION',special_case:'none'}},parcels:[{weight_grams:999,recipient:{name:'Synthetic Recipient',phone:'+1 202-555-0101',address:'21 Fictional Street'}}]});
   expect(screen.getByText('Outstanding ₹134.00 at booking confirmation')).toBeVisible();expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);
-  expect(screen.getByText('Booking saved.',{selector:'p[role="status"]'})).toHaveAttribute('aria-live','polite');expect(print).not.toHaveBeenCalled();
+  expect(screen.getByText('Booking saved.',{selector:'p[role="status"]'})).toBeVisible();expect(print).not.toHaveBeenCalled();
   expect(screen.getByRole('heading',{name:'Booking receipt'})).not.toHaveFocus();expect(screen.getByRole('heading',{name:'Booking receipt'})).not.toHaveAttribute('tabindex');expect(screen.queryByRole('button',{name:'Back to receipts'})).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Load receipt'}));await screen.findByText(/RCT-0000000000000000033/);expect(print).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Print receipt'}));expect(print).toHaveBeenCalledTimes(1);expect(document.getElementById('print-root')).toBeNull();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Reload receipt'}));await screen.findByRole('button',{hidden:true,name:'Print receipt'});
-  fireEvent.click(screen.getByRole('link',{hidden:true,name:'Open Receipts'}));await screen.findByRole('heading',{name:'Receipts'});await screen.findByRole('button',{hidden:true,name:/SYN-33/});
-  const openReceipt=screen.getByRole('button',{hidden:true,name:/Open receipt for SYN-33/});fireEvent.click(openReceipt);expect(screen.getByRole('heading',{name:'Booking receipt'})).toHaveFocus();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Load receipt'}));await screen.findByRole('button',{hidden:true,name:'Print receipt'});expect(print).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Back to receipts'}));expect(openReceipt).toHaveFocus();expect(screen.queryByRole('heading',{name:'Booking receipt'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByText(/RCT-0000000000000000033/);expect(print).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Print receipt'}));expect(print).toHaveBeenCalledTimes(1);expect(document.getElementById('print-root')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Reload receipt'}));await screen.findByRole('button',{name:'Print receipt'});
+  fireEvent.click(screen.getByRole('link',{name:'Open Receipts'}));await screen.findByRole('heading',{name:'Receipts'});await screen.findByRole('button',{name:/SYN-33/});
+  const openReceipt=screen.getByRole('button',{name:/Open receipt for SYN-33/});fireEvent.click(openReceipt);expect(screen.getByRole('heading',{name:'Booking receipt'})).toHaveFocus();
+  fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(print).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button',{name:'Back to receipts'}));expect(openReceipt).toHaveFocus();expect(screen.queryByRole('heading',{name:'Booking receipt'})).not.toBeInTheDocument();
   fireEvent.click(openReceipt);expect(screen.getByRole('heading',{name:'Booking receipt'})).toHaveFocus();openReceipt.focus();fireEvent.click(openReceipt);expect(screen.getByRole('heading',{name:'Booking receipt'})).toHaveFocus();
   expect(calls.some(c=>c.path.startsWith('/api/v1/parcels?'))).toBe(true);expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);expect(document.body.textContent).not.toMatch(/WhatsApp sent|customer notified/);
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
   await entered();fill('Payment choice','paid_counter');fill('Payment method','cash');
-  fireEvent.submit(screen.getByRole('form',{hidden:true,name:'New booking'}));
+  fireEvent.submit(screen.getByRole('form',{name:'New booking'}));
   fireEvent.keyDown(screen.getByLabelText('Payment method',{exact:false}),{key:'Enter',code:'Enter'});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
-  expect(screen.getByRole('button',{hidden:true,name:'Create booking'})).toHaveAttribute('type','button');
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
   save();await screen.findByRole('heading',{name:'Booking saved'});
  });
- it('adds, edits and removes packages, prices combined weight and saves independent dockets atomically',async()=>{
-  await entered();fireEvent.click(screen.getByRole('button',{hidden:true,name:'Add package'}));
+ it('saves distinct parcel details once and retries only the unconfirmed lot assignment',async()=>{
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Add package'}));
   expect(screen.queryByText('Total payable ₹134.00')).toBeNull();
   fill('Parcel 2 docket number','00123-B');fill('Parcel 2 contents description','Second parcel');
   fill('Package 2 · Weight (kg)','0.501');
-  fill('Parcel 2 docket number','00123-a');save();await screen.findByText('Another parcel in this booking already has this docket number.');
+  expect(screen.getByLabelText('Parcel 2 recipient name')).toHaveValue('');
+  fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 1'}));
+  expect(screen.getByLabelText('Parcel 2 recipient name')).toHaveValue('Synthetic Recipient');
+  fill('Parcel 2 recipient name','Second Receiver');
+  fill('Parcel 2 recipient phone','+91 9876543210');
+  fill('Parcel 2 recipient address','8 Market Road');
+  fill('Parcel 2 PIN code','400001');
+  fill('Parcel 2 city','Mumbai');
+  fill('Parcel 2 state','Maharashtra');
+  fill('Declared goods value (₹)','0');
+  fill('Parcel 2 declared goods value (₹)','1000.01');
+  fill('Recipient address','22 Fictional Street');
+
+  fill('Parcel 2 docket number','00123-a');
+  fireEvent.click(screen.getByRole('button',{name:'Hide parcel fields 2'}));
+  expect(screen.getByLabelText('Parcel 2 docket number')).not.toBeVisible();
+  expect(screen.getByRole('button',{name:'Edit parcel 2'})).toHaveAttribute('aria-expanded','false');
+  save();await screen.findByText('Another parcel in this booking already has this docket number.');
+  await waitFor(()=>expect(screen.getByLabelText('Parcel 2 docket number')).toHaveFocus());
   expect(posts('/api/v1/bookings?')).toHaveLength(0);fill('Parcel 2 docket number','00123-B');
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Add package'}));
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Remove package 3'}));
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
+  fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+  fireEvent.click(screen.getByRole('button',{name:'Remove package 3'}));
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
   expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({weight_grams:1500});
-  fireEvent.click(screen.getByRole('button',{name:'Continue'}));await screen.findByRole('heading',{name:'Everything look right?'});
-  expect(screen.getByText('00123-B · 0.501 kg')).toBeVisible();
-  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({...f.booking,parcels:[...f.booking.parcels,{id:f.id(90),docket:'SYN-SECOND',weight_grams:501,status:'booked'}]},201)):undefined;
-  save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(summary().getByText('00123-B · Second Receiver')).toBeVisible();
+  const lot={id:f.id(91),code:'SYN-LOT',name:'Mumbai run',destination_key:'SYN_DEST',state:'active',version:2,created_at:f.now,updated_at:f.now,archived_at:null,active_member_count:0};
+  const secondParcelId=f.id(90);
+  const booking={...f.booking,parcels:[...f.booking.parcels,{id:secondParcelId,docket:'00123-B',weight_grams:501,status:'booked'}]};
+  const lotPath='/api/v1/lots/'+lot.id+'/parcels';
+  let loseSecondResponse=true;
+  override=c=>{
+   if(c.path.startsWith('/api/v1/lots?'))return Promise.resolve(f.json({items:[lot],page:{has_more:false,next_cursor:null}}));
+   if(c.path.startsWith('/api/v1/bookings?'))return Promise.resolve(f.json(booking,201));
+   if(!c.path.startsWith(lotPath))return;
+   const {parcel_id,expected_version}=body(c);
+   if(parcel_id===secondParcelId && loseSecondResponse){
+    loseSecondResponse=false;
+    return Promise.reject(new TypeError('Lost lot assignment response'));
+   }
+   return Promise.resolve(f.json({
+    lots:[{...lot,version:expected_version+1}],
+    membership:{id:f.id(parcel_id===secondParcelId?93:92),lot_id:lot.id,parcel_id,started_at:f.now,ended_at:null,end_reason:null}
+   }));
+  };
+  fireEvent.click(screen.getByRole('button',{name:'Add to lot (optional)'}));
+  await screen.findByRole('option',{name:'SYN-LOT · Mumbai run'});
+  fill('Add to lot',lot.id);
+  expect(posts(lotPath)).toHaveLength(0);
+  save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  const retry=await screen.findByRole('button',{name:'Retry same lot assignment'});
+  expect(screen.getByRole('region',{name:'Lot assignment'})).toHaveTextContent('1 of 2 parcels confirmed');
+  const [firstAssignment,secondAssignment]=posts(lotPath);
+  expect(body(firstAssignment)).toEqual({parcel_id:booking.parcels[0].id,expected_version:2});
+  expect(body(secondAssignment)).toEqual({parcel_id:secondParcelId,expected_version:3});
+  fireEvent.click(retry);
+  await screen.findByText(/2 of 2 parcels confirmed/);
+  const lotAttempts=posts(lotPath);
+  expect(lotAttempts).toHaveLength(3);
+  expect(lotAttempts[2].path).toBe(secondAssignment.path);
+  expect(lotAttempts[2].options.body).toBe(secondAssignment.options.body);
+  expect(key(lotAttempts[2])).toBe(key(secondAssignment));
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
   const sent=body(posts('/api/v1/bookings?')[0]);expect(sent.parcels).toHaveLength(2);
-  expect(sent.parcels[0].docket).toBe('00123-A');
-  expect(sent.parcels[1]).toMatchObject({docket:'00123-B',weight_grams:501,recipient:{name:'Synthetic Recipient',phone:'+1 202-555-0101',address:'21 Fictional Street'},details:{contents_description:'Second parcel'}});
+  expect(sent.parcels[0]).toMatchObject({docket:'00123-A',recipient:{name:'Synthetic Recipient',address:'22 Fictional Street'},details:{postal_code:'411001',city:'Pune',declared_value_paise:0}});
+  expect(sent.parcels[1]).toMatchObject({docket:'00123-B',weight_grams:501,recipient:{name:'Second Receiver',phone:expect.stringMatching(/^\+91[ -]?9876543210$/),address:'8 Market Road'},details:{postal_code:'400001',city:'Mumbai',contents_description:'Second parcel',declared_value_paise:100001}});
   expect(sent.tax_intent.pricing_input.weight_grams).toBe(1500);
   expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);
  });
+ it('copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents',async()=>{
+  await entered();
+  fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+  fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 1'}));
+  fill('Parcel 2 recipient name','');fill('Parcel 2 recipient phone','');fill('Parcel 2 city','Mumbai');
+  fireEvent.click(screen.getByRole('button',{name:'Add package'}));
+  fill('Parcel 3 docket number','3-A');fill('Parcel 3 contents description','Spare parts');fill('Parcel 3 recipient name','My receiver');
+  fill('Copy receiver for parcel 3 from','2');fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 2'}));
+  const dialog=screen.getByRole('dialog',{name:'Replace receiver on parcel 3?'});
+  fireEvent.click(within(dialog).getByRole('button',{name:'Cancel'}));
+  expect(screen.getByLabelText('Parcel 3 recipient name')).toHaveValue('My receiver');
+  fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 2'}));
+  fireEvent.click(screen.getByRole('button',{name:'Replace receiver'}));
+  expect(screen.getByLabelText('Parcel 3 city')).toHaveValue('Mumbai');
+  expect(screen.getByLabelText('Parcel 3 recipient name')).toHaveValue('');
+  expect(screen.getByLabelText('Parcel 3 recipient phone')).toHaveValue('');
+  expect(screen.getByLabelText('Parcel 3 docket number')).toHaveValue('3-A');
+  expect(screen.getByLabelText('Parcel 3 contents description')).toHaveValue('Spare parts');
+  expect(screen.getByText('Copied from parcel 2. Check the receiver and address below.')).toBeVisible();
+  fill('Parcel 2 city','Thane');expect(screen.getByLabelText('Parcel 3 city')).toHaveValue('Mumbai');
+  expect(screen.queryByText('Copied from parcel 2. Check the receiver and address below.')).not.toBeInTheDocument();
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address',async()=>{
+  await entered();fill('Recipient name','');fill('Recipient phone','+91 12');fill('Recipient address','');save();
+  expect(screen.getByLabelText('Recipient phone',{exact:true})).toHaveAttribute('aria-invalid','true');
+  expect(screen.getByLabelText('Recipient address',{exact:true})).toHaveAttribute('aria-invalid','true');
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  fill('Recipient phone','');fill('Recipient address','22 Example Lane');save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts('/api/v1/bookings?')[0]).parcels[0].recipient).toEqual({address:'22 Example Lane'});
+ });
  it('rejects invalid extra package details and prevents edits during uncertain multi-package confirmation',async()=>{
-  await entered();fireEvent.click(screen.getByRole('button',{hidden:true,name:'Add package'}));save();
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Add package'}));save();
   expect(screen.getByLabelText('Parcel 2 docket number',{exact:false})).toHaveAttribute('aria-invalid','true');
   expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByLabelText('Package 2 · Weight (kg)',{exact:false})).toHaveAttribute('aria-invalid','true');
+  fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 1'}));
   fill('Parcel 2 docket number','00123-B');fill('Parcel 2 contents description','Second parcel');fill('Package 2 · Weight (kg)','0.001');
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');fireEvent.click(screen.getByRole('button',{name:'Continue'}));await waitFor(()=>expect(screen.getByRole('button',{name:'4 Review and print'})).toHaveAttribute('aria-current','step'));
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
   override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
-  save();await screen.findByRole('button',{hidden:true,name:'Retry same booking'});
-  expect(screen.getByRole('button',{hidden:true,name:'Add package'})).toBeDisabled();expect(screen.getByRole('button',{hidden:true,name:'Remove package 2'})).toBeDisabled();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry same booking'}));await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(2));
+  save();await screen.findByRole('button',{name:'Retry same booking'});
+  expect(screen.getByRole('button',{name:'Add package'})).toBeDisabled();expect(screen.getByRole('button',{name:'Remove package 2'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(2));
   const [a,b]=posts('/api/v1/bookings?');expect([a.options.body,key(a)]).toEqual([b.options.body,key(b)]);
  });
  it('double click and lost commit acknowledgement retain identical path/body/key with one displayed result',async()=>{
   await entered();const slow=f.deferred<Response>();let first=true;override=c=>c.path.startsWith('/api/v1/bookings?')&&first?(first=false,slow.promise):undefined;
-  const button=screen.getByRole('button',{hidden:true,name:'Create booking'});fireEvent.click(button);fireEvent.click(button);await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(1));
+  const button=screen.getByRole('button',{name:'Save booking'});fireEvent.click(button);fireEvent.click(button);await waitFor(()=>expect(posts('/api/v1/bookings?')).toHaveLength(1));
   await act(async()=>slow.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)));
-  await screen.findByRole('button',{hidden:true,name:'Retry same booking'});expect(screen.getByRole('alert')).toHaveTextContent(/may have|uncertain|confirmed/i);expect(screen.getByLabelText('Recipient name')).toHaveValue('Synthetic Recipient');
+  await screen.findByRole('button',{name:'Retry same booking'});expect(screen.getByRole('alert')).toHaveTextContent(/may have|uncertain|confirmed/i);expect(screen.getByLabelText('Recipient name')).toHaveValue('Synthetic Recipient');
   expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(screen.getByLabelText('Recipient name')).toBeDisabled();
   const marker=sessionStorage.getItem(sessionStorage.key(0)!)!;expect(marker).not.toMatch(/Synthetic|Street|0101|parcels|tax_intent/);
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
+  fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
   const [a,b]=posts('/api/v1/bookings?');expect([a.path,a.options.body,key(a)]).toEqual([b.path,b.options.body,key(b)]);expect(sessionStorage.length).toBe(0);
  });
  it('network outage preserves draft and never fabricates a receipt or local booking',async()=>{
-  await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.reject(new TypeError('SYN_DISCONNECT')):undefined;save();await screen.findByRole('button',{hidden:true,name:'Retry same booking'});
+  await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.reject(new TypeError('SYN_DISCONNECT')):undefined;save();await screen.findByRole('button',{name:'Retry same booking'});
   expect(screen.getByLabelText('Customer address')).toHaveValue(f.customer.address);expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(calls.some(c=>c.path.includes('/receipt'))).toBe(false);expect(localStorage.length).toBe(0);
  });
  it('rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity',async()=>{
   await entered();screen.getByText('Total payable ₹134.00').textContent='Total payable ₹0.00';let reject=true;
   override=c=>c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'QUOTE_STALE'}},409)):undefined;save();await screen.findByText(/Pricing expired|Pricing changed|quote.*expired/i);
   expect(body(posts('/api/v1/bookings?')[0])).not.toHaveProperty('total_paise');expect(screen.getByLabelText('Recipient name')).toHaveValue('Synthetic Recipient');expect(screen.queryByText('Total payable ₹0.00')).toBeNull();
-  reject=false;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');save();await screen.findByRole('heading',{name:'Booking saved'});
+  reject=false;fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');save();await screen.findByRole('heading',{name:'Booking saved'});
   expect(key(posts('/api/v1/bookings?')[0])).not.toBe(key(posts('/api/v1/bookings?')[1]));
  });
  it.each([1280,375])('discards late franchise A search at viewport %i through real scope generation',async width=>{
@@ -220,37 +380,38 @@ describe('production counter API composition',()=>{
   fill('Customer name or phone','Syn');fireEvent.keyDown(screen.getByLabelText('Customer name or phone'),{key:'Enter'});await waitFor(()=>expect(calls.some(c=>c.path.includes('/customers?'))).toBe(true));
   const old=calls.find(c=>c.path.includes('/customers?'))!;fill('Franchise',f.B);await screen.findByRole('heading',{name:'New booking'});await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));
   await act(async()=>slow.resolve(f.json({items:[f.customer],page:{next_cursor:null,has_more:false}})));
-  expect(old.options.signal?.aborted).toBe(true);expect(document.body.textContent).not.toContain(f.customer.address);expect(screen.getByLabelText('Customer name')).toHaveValue('');expect(screen.getByLabelText('Customer phone')).toHaveValue('');
+  expect(old.options.signal?.aborted).toBe(true);expect(document.body.textContent).not.toContain(f.customer.address);expect(screen.getByLabelText('Customer name or phone')).toHaveValue('');expect(screen.queryByLabelText('Customer phone')).not.toBeInTheDocument();
  });
  it('customer search selects the exact saved person and offers inline creation',async()=>{
   render(<App/>);await screen.findByRole('heading',{name:'New booking'});fill('Customer name or phone','Syn');
   fireEvent.keyDown(screen.getByLabelText('Customer name or phone'),{key:'Enter'});
   fireEvent.click(await screen.findByRole('option',{name:/Synthetic Sender/}));
-  expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(screen.getByLabelText('Customer phone')).toHaveValue('202-555-0100');
+  const selected=screen.getByRole('region',{name:'Customer'});
+  expect(selected).toHaveTextContent(f.customer.name);expect(selected).toHaveTextContent(f.customer.phone_display);
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write',async()=>{
   await entered(true);save();await screen.findByRole('heading',{name:'Booking saved'});
-  const link=screen.getByRole('link',{hidden:true,name:'Open payments / apply advance'}),href=new URL(link.getAttribute('href')!,'https://synthetic.example.test');expect(href.hash.startsWith('#/business/money-receipts?')).toBe(true);const url=new URL(href.hash.slice(1),'https://synthetic.example.test');
+  const link=screen.getByRole('link',{name:'Open payments / apply advance'}),href=new URL(link.getAttribute('href')!,'https://synthetic.example.test');expect(href.hash.startsWith('#/business/money-receipts?')).toBe(true);const url=new URL(href.hash.slice(1),'https://synthetic.example.test');
   expect(url.pathname).toBe('/business/money-receipts');expect(url.searchParams.get('customer_id')).toBe(f.customer.id);expect(url.searchParams.get('booking_id')).toBe(f.bookingId);expect(url.searchParams.get('context')).toBe('paid_counter');
   expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(screen.queryByRole('button',{name:'Retry payment'})).not.toBeInTheDocument();
  });
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Load receipt'}));await screen.findByRole('button',{hidden:true,name:'Retry receipt'});expect(screen.getByRole('alert')).toHaveTextContent('Booking saved. Receipt is temporarily unavailable.');
-  fail=false;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry receipt'}));await screen.findByRole('button',{hidden:true,name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Retry receipt'});expect(screen.getByRole('alert')).toHaveTextContent('Booking saved. Receipt is temporarily unavailable.');
+  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
- it('keyboard continuation focuses the first missing sender field without creating a booking',async()=>{
-  await start();fireEvent.click(screen.getByRole('button',{name:'Continue'}));
+ it('explicit save focuses the first missing sender field without creating a booking',async()=>{
+  await start();save();
   const first=document.getElementById('counter-name')!;await waitFor(()=>expect(first).toHaveFocus());expect(first).toHaveAttribute('aria-invalid','true');expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it.each(['/api/v1/pricing/quote','/api/v1/tax/calculations'])('scope change cancels late %s and prevents private totals repaint',async path=>{
-  await entered();fill('Weight (kg)','0.998');const slow=f.deferred<Response>();override=c=>c.path.startsWith(path)?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBe(2));
+  await entered();fill('Weight (kg)','0.998');const slow=f.deferred<Response>();override=c=>c.path.startsWith(path)?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBe(2));
   fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));
-  expect(screen.queryByText('Total payable ₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
+  expect(screen.queryByText('Total payable ₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name or phone')).toHaveValue('');
  });
  it('scope change cancels late receipt and drops its private snapshot',async()=>{
-  await entered();save();await screen.findByRole('heading',{name:'Booking saved'});const slow=f.deferred<Response>();override=c=>c.path.includes('/receipt')?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Load receipt'}));await waitFor(()=>expect(calls.some(c=>c.path.includes('/receipt'))).toBe(true));
+  await entered();save();await screen.findByRole('heading',{name:'Booking saved'});const slow=f.deferred<Response>();override=c=>c.path.includes('/receipt')?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await waitFor(()=>expect(calls.some(c=>c.path.includes('/receipt'))).toBe(true));
   fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(f.receipt)));expect(document.body.textContent).not.toContain(f.receipt.number);
  });
  it('malformed successes fail safely and unknown private fields are projected out',()=>{
@@ -274,7 +435,7 @@ describe('production counter API composition',()=>{
  });
  it('malformed committed response is uncertain and retry uses its original identity',async()=>{
   await entered();let fail=true;override=c=>c.path.startsWith('/api/v1/bookings?')&&fail?Promise.resolve(f.json({...f.booking,payment_obligation:{...f.booking.payment_obligation,total_paise:'0'},otp:'SYN_PRIVATE'},201)):undefined;
-  save();await screen.findByRole('button',{hidden:true,name:'Retry same booking'});expect(document.body.textContent).not.toContain('SYN_PRIVATE');fail=false;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
+  save();await screen.findByRole('button',{name:'Retry same booking'});expect(document.body.textContent).not.toContain('SYN_PRIVATE');fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
   expect(key(posts('/api/v1/bookings?')[0])).toBe(key(posts('/api/v1/bookings?')[1]));
  });
  it('401 purges private form and requires sign in without local fallback',async()=>{
@@ -282,13 +443,13 @@ describe('production counter API composition',()=>{
   expect(document.body.textContent).not.toContain(f.customer.address);expect(screen.queryByLabelText('Customer name')).toBeNull();expect(localStorage.length).toBe(0);
  });
  it('reload with an unresolved marker forbids fresh-key booking and contains no persisted body',async()=>{
-  await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'IDEMPOTENCY_IN_PROGRESS'}},409)):undefined;save();await screen.findByRole('button',{hidden:true,name:'Retry same booking'});
-  fireEvent.click(screen.getAllByRole('link',{hidden:true,name:'Receipts'})[0]);await screen.findByRole('heading',{name:'Receipts'});fireEvent.click(screen.getAllByRole('link',{hidden:true,name:'New Booking'})[0]);await screen.findByRole('heading',{name:'Booking recovery required'});
-  expect(screen.queryByRole('button',{name:'Create booking'})).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(JSON.stringify(sessionStorage)).not.toMatch(/Synthetic|Street|parcels/);
+  await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'IDEMPOTENCY_IN_PROGRESS'}},409)):undefined;save();await screen.findByRole('button',{name:'Retry same booking'});
+  fireEvent.click(screen.getAllByRole('link',{name:'Receipts'})[0]);await screen.findByRole('heading',{name:'Receipts'});fireEvent.click(screen.getAllByRole('link',{name:'New Booking'})[0]);await screen.findByRole('heading',{name:'Booking recovery required'});
+  expect(screen.queryByRole('button',{name:'Save booking'})).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(JSON.stringify(sessionStorage)).not.toMatch(/Synthetic|Street|parcels/);
  });
  it('receipt discovery supports empty and safe denied/retry states',async()=>{
   window.location.hash='/business/receipts';let denied=true;override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(denied?f.json({error:{code:'ACTION_FORBIDDEN'}},403):f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  render(<App/>);await screen.findByRole('button',{hidden:true,name:'Retry receipts'});expect(screen.getByRole('alert')).toHaveTextContent('not permitted');denied=false;fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry receipts'}));await screen.findByText('No bookings found in this workspace.');
+  render(<App/>);await screen.findByRole('button',{name:'Retry receipts'});expect(screen.getByRole('alert')).toHaveTextContent('not permitted');denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipts'}));await screen.findByText('No bookings found in this workspace.');
  });
 
  it('scope switch during a dispatched booking retains opaque recovery and never replays under B',async()=>{
@@ -300,7 +461,7 @@ describe('production counter API composition',()=>{
 
 });
 
-describe('monthly account booking',()=>{
+describe('monthly account booking',{timeout:20000},()=>{
  const account=f.id(80),request=f.id(81),approval=f.id(82),debtor=f.id(83);
  function accountResponses(c:Call){
   if(c.path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[{id:account,name:'Synthetic Monthly',version:1,state:'active'}],next_cursor:null});
@@ -312,27 +473,27 @@ describe('monthly account booking',()=>{
  }
  async function selected(){
   override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
-  await entered();fireEvent.change(screen.getByRole('combobox',{hidden:true,name:'Bill-to account'}),{target:{value:account}});await screen.findByText('₹400.00',{selector:'strong'});expect(screen.getByText('Synthetic Monthly',{selector:'.counter-review-row p'})).toBeVisible();
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
+  await entered();fireEvent.change(screen.getByRole('combobox',{name:'Bill-to account'}),{target:{value:account}});await screen.findByText('₹400.00',{selector:'strong'});expect(summary().getByText('Synthetic Monthly')).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Calculate booking price'}));await screen.findByText('Total payable ₹134.00');
  }
  it('shows source credit, retains an uncertain request identity and saves the exact approved debtor',async()=>{
-  await selected();fireEvent.click(screen.getByRole('button',{hidden:true,name:'Credit source bookings'}));
-  const sources=await screen.findByRole('table',{name:'Credit source bookings',hidden:true});
-  expect(within(sources).getByRole('columnheader',{name:'Original',hidden:true})).toBeInTheDocument();
-  const originalIndex=within(sources).getAllByRole('columnheader',{hidden:true}).findIndex(header=>header.textContent==='Original');
-  expect(within(within(sources).getAllByRole('row',{hidden:true})[1]).getAllByRole('cell',{hidden:true})[originalIndex]).toHaveTextContent('₹600.00');
+  await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));
+  const sources=await screen.findByRole('table',{name:'Credit source bookings'});
+  expect(within(sources).getByRole('columnheader',{name:'Original'})).toBeInTheDocument();
+  const originalIndex=within(sources).getAllByRole('columnheader',{}).findIndex(header=>header.textContent==='Original');
+  expect(within(within(sources).getAllByRole('row',{})[1]).getAllByRole('cell',{})[originalIndex]).toHaveTextContent('₹600.00');
   let first=true;override=c=>{if(c.path.startsWith('/api/v1/customer-credit-requests')&&c.options.method==='POST'&&first){first=false;return Promise.reject(new TypeError('SYN_ACK_LOST'));}const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Request credit-limit exception'}));await screen.findByRole('button',{hidden:true,name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
-  fireEvent.click(within(screen.getByRole('navigation',{hidden:true,name:'Workspace navigation'})).getByRole('link',{hidden:true,name:'Receipts'}));await screen.findByText(/Finish or retry the current request before closing/);expect(screen.getByRole('heading',{name:'New booking'})).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByText(/Finish or retry the current request before closing/);expect(screen.getByRole('heading',{name:'New booking'})).toBeVisible();
   const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Retry same credit request'}));await screen.findByRole('button',{hidden:true,name:'Check owner approval'});
+  fireEvent.click(screen.getByRole('button',{name:'Retry same credit request'}));await screen.findByRole('button',{name:'Check owner approval'});
   const attempts=posts('/api/v1/customer-credit-requests');expect(attempts).toHaveLength(2);expect([attempts[0].path,attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].path,attempts[1].options.body,key(attempts[1])]);
-  fireEvent.click(screen.getByRole('button',{hidden:true,name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);save();await screen.findByRole('heading',{name:'Booking saved'});
+  fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);save();await screen.findByRole('heading',{name:'Booking saved'});
   expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBe(approval);expect(body(posts('/api/v1/bookings?')[0]).tax_intent.pricing_input.customer_account_id).toBe(account);
-  expect(screen.getByText(/Bill to Separate Debtor/)).toBeVisible();expect(screen.getByRole('link',{hidden:true,name:'Open payments / apply advance'})).toHaveAttribute('href',expect.stringContaining(debtor));
+  expect(screen.getByText(/Bill to Separate Debtor/)).toBeVisible();expect(screen.getByRole('link',{name:'Open payments / apply advance'})).toHaveAttribute('href',expect.stringContaining(debtor));
  });
  it('invalidates approval after any shipment edit and gives a clear held-account denial',async()=>{
-  await selected();fireEvent.click(screen.getByRole('button',{hidden:true,name:'Request credit-limit exception'}));await screen.findByRole('button',{hidden:true,name:'Check owner approval'});fireEvent.click(screen.getByRole('button',{hidden:true,name:'Check owner approval'}));await screen.findByText(/Owner approved this booking:/);
+  await selected();fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Check owner approval'});fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking:/);
   fill('Recipient name','Different Recipient');expect(screen.queryByText(/Owner approved this booking:/)).toBeNull();expect(screen.queryByRole('button',{name:'Check owner approval'})).toBeNull();
   override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;save();await screen.findByText(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();
  });

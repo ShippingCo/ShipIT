@@ -1,3 +1,4 @@
+import {Dropdown} from '../components/m3/Input';
 import { DEMO_PERSONA_KEY } from '../demo/storage';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -114,11 +115,8 @@ export default function CustomerWhatsApp() {
       <div className="wa-persona-bar">
         <span className="t-label-md muted">SIMULATING WHATSAPP FOR</span>
         <label className="persona-select">
-          <select value={me} onChange={(e) => setMe(e.target.value)} aria-label="Simulated customer">
-            {customers.map((c) => (
-              <option key={c.phone} value={c.phone}>{c.name} · {prettyPhone(c.phone)}</option>
-            ))}
-          </select>
+          <Dropdown value={me} onValueChange={setMe} aria-label="Simulated customer"
+            options={customers.map(customer=>({value:customer.phone,label:customer.name+' · '+prettyPhone(customer.phone)}))}/>
           <Msym name="expand_more" />
         </label>
         <a href="#/" className="btn btn-text btn-sm">← Launcher</a>

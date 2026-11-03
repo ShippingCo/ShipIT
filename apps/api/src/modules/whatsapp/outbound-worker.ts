@@ -63,7 +63,7 @@ export function createOutboundWorker(database:DatabasePool,dependencies:Whatsapp
      recipient=channel;
     } else if(input.purpose==='delivery_otp') {
      const deliveryRecipient=await repository.lockDeliveryRecipient(scope,m.delivery_recipient_ref);
-     if(!deliveryRecipient||deliveryRecipient.contact_version!==m.contact_version||input.delivery_recipient_ref!==deliveryRecipient.id) {
+     if(!deliveryRecipient?.phone_normalized||deliveryRecipient.contact_version!==m.contact_version||input.delivery_recipient_ref!==deliveryRecipient.id) {
       await repository.update(scope,m,'suppressed','contact_changed',now,{purge:true});return {result:'suppressed'} as const;
      }
      if(!await repository.sourceValid(scope,input)) {await repository.update(scope,m,'suppressed','challenge_unavailable',now,{purge:true});return {result:'suppressed'} as const;}

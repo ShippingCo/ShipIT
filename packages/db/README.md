@@ -353,6 +353,15 @@ GRANT EXECUTE ON FUNCTION shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,u
   TO runtime_role;
 ```
 
+For operational booking cancellations, grant the API role access to the cancellation record and scoped preview after applying the cancellation migration.
+
+```sql
+GRANT SELECT, INSERT ON shipit.booking_cancellations TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(uuid,uuid,uuid) TO runtime_role;
+```
+
+The immutable record stores the actor, reason, request identity, source financial versions and outstanding amount. Its trigger moves the booking and its complete parcel set to the terminal cancelled state in one transaction. Financial adjustments use their existing approval workflow. The runtime role requires no UPDATE grant on bookings for cancellation.
+
 Retain existing Customer/pricing/tax/auth/membership/tenancy and audit_history grants.
 `prepareBookings` provisions the exact test runtime privileges. The allocator and integrity
 functions run only as triggers (execution checked at trigger creation); PUBLIC execution is

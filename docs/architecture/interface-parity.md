@@ -4,8 +4,10 @@ Tracking: [#193](https://github.com/ShippingCo/ShipIT/issues/193).
 
 On 2026-11-02 the user selected the fictional console at commit `2c6611e`
 (`/#/business`, originally served on port 5173) as the presentation reference.
-They explicitly retained the newer **From → To → Parcel and Billing → Review
-and print** booking flow from PR #192, inside that reference layout.
+The 2 November pass retained the four-stage booking flow from PR #192. On
+3 November the user selected the first ShipIT booking page as the counter
+reference as well. Production now presents Customer, Parcel and Charges on
+one page, with a booking summary beside the form on wide screens.
 
 ## Verified cause
 
@@ -50,7 +52,7 @@ The production console now uses the reference composition across the core staff 
 | Surface | Current production implementation | Work still required |
 | --- | --- | --- |
 | Navigation/layout | Shared with demo; extra authorized tools retained | Compare future changes in both compositions. |
-| Booking | Current step-by-step production flow retained | Use `pnpm preview:workflow` for the current operator app and API-backed four-step flow. The standalone demo is explicitly the historical prototype, not a current workflow preview. |
+| Booking | Single-page Customer, Parcel and Charges form with a booking summary, real service setup and an independent docket and receiver per parcel | Use `pnpm preview:workflow` to exercise the scoped operator APIs. See the [booking guide](../user-guides/new-booking.html) for entry, printing and recovery. |
 | Dashboard | Shared reference layout; complete scoped parcel/booking totals, Monday chart, recent parcels, dispatch and verified payment report | Provider/assistant summaries identify their bounded pages; no invented reach/satisfaction numbers. |
 | Global search | Real scoped task/tracking/customer lookup | Reference's combined lot/route search needs compatible API search contracts. |
 | Packages | Reference chips, customer/destination columns, server ordering and detail dialog; existing transitions/bulk commands retained | Free-text/global and financial filters remain limited to authorized API contracts; no first-page totals or per-parcel payment guesses. |
@@ -145,7 +147,7 @@ permission and evidence flows inside the reference surface treatment.
 
 `pnpm preview:workflow` starts the same production UI with the guarded disposable
 API fixture on ports 5174/3033. This is the canonical local workflow preview and
-includes the retained booking wizard. It ignores root environment files, fixes the
+includes the production counter form. It ignores root environment files, fixes the
 UI to production composition and a loopback API proxy, and forwards no live
 credentials. The fixture prepares the existing settings, custody, customer-account and financial read paths as well as booking. These are disposable runtime-role grants, not production permission changes. The fixture has no live messaging provider. Ctrl+C stops both services;
 the database wrapper also limits a preview to 30 minutes and cleans up its container.
@@ -174,7 +176,7 @@ only a loopback preview origin. It does not use the developer's `.env.database.l
 The wrapper terminates after 30 minutes and removes its own disposable container.
 Never use that fixture session route in a deployed application.
 
-Browser verification on this delivery used the real API fixture: the retained
+Browser verification on the 2 November delivery used the real API fixture: the retained
 booking dialog and shared navigation at 1440×900, the drawer at 390×844, and an
 exact tracking lookup that returned the fixture's persisted parcel. The package, lot and route delivery was also checked at desktop and mobile sizes,
 including persisted synthetic lot/route creation and parcel-detail focus return.

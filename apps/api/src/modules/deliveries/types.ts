@@ -25,6 +25,7 @@ export interface DeliveryProofConfiguration {
   readonly meta_send_qualified:boolean;
 }
 export interface DeliveryAttemptRow {
+  proof_channel_available:boolean;
   id:string;organization_id:string;franchise_id:string;booking_id:string;parcel_id:string;assignment_id:string;
   agent_id:string;recipient_ref:string;recipient_contact_version:string;attempt_number:number;state:'active'|'failed'|'completed';
   failed_verifications:number;resend_count:number;locked_at:Date|null;started_at:Date;closed_at:Date|null;version:number;
@@ -34,6 +35,7 @@ export interface DeliveryAttemptRow {
   docket:string;
 }
 export interface DeliveryStateDto {
+  proof_channel_available:boolean;
   parcel_id:string;docket:string;parcel_version:number;attempt_id:string;assignment_id:string;attempt_number:number;
   challenge_ref:string;challenge_version:number;status:ChallengeStatus;expires_at:string;resend_available_at:string;
   resends_remaining:number;verification_attempts_remaining:number;send_state:string;send_reason:string;proof_method:ProofMethod|null;

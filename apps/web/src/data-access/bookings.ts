@@ -5,7 +5,7 @@ import type { ScopedApi } from './scoped-api';
 export interface BookingInput {
   credit_approval_id?:string;
   customer_id: string; expected_customer_version: number; tax_calculation_id: string; tax_intent: TaxIntentInput;
-  parcels: { details?:import('@shippingco/shared').BookingParcelDetails; weight_grams: number; docket?: string; recipient: { name: string; phone: string; address: string } }[];
+  parcels: { details?:import('@shippingco/shared').BookingParcelDetails; weight_grams: number; docket?: string; recipient: { name?: string; phone?: string; address: string } }[];
 }
 const confirmation = object({account:optional(object({account_id:uuid,debtor:object({source_customer_id:uuid,name:text}),due_date:text,rate_source:choice('account','normal'),approval_id:nullable(uuid)})), id: uuid, version: choice(1), state: choice('active'), organization_id: uuid, franchise_id: uuid,
   customer: object({ source_customer_id: uuid, source_customer_version: integer(1), name: text }),

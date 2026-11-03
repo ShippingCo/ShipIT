@@ -14,19 +14,21 @@ export async function reserveChallengeSend(scope:TenantAccess,whatsapp:WhatsappD
  const c=assertTenantAccess(scope,actions),send=randomUUID(),outbound=randomUUID();
  let reason='provider_unavailable',installation:Installation|undefined,template:RegisteredTemplate|null,phone:string|undefined;
  const webhook=whatsapp?.configuration.webhook;
- if(whatsapp&&webhook) {
+ const contact=(await scopedQuery<{phone_normalized:string|null;contact_version:string}>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace'],`SELECT x.phone_normalized,x.contact_version FROM shipit.delivery_recipients x
+   WHERE {{franchise:x.organization_id:x.franchise_id}} AND x.id=$1 AND x.parcel_id=$2`,[source.recipient,source.parcel])).rows[0];
+ if(!contact?.phone_normalized)reason='contact_unavailable';
+ else if(whatsapp&&webhook) {
   installation=(await scopedQuery<Installation>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace'],`SELECT i.* FROM shipit.whatsapp_installations i
    WHERE {{franchise:i.organization_id:i.franchise_id}} FOR SHARE`)).rows[0];
-  const recipient=(await scopedQuery<{phone_normalized:string;contact_version:string}>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace'],`SELECT x.phone_normalized,x.contact_version FROM shipit.delivery_recipients x
-   WHERE {{franchise:x.organization_id:x.franchise_id}} AND x.id=$1 AND x.parcel_id=$2`,[source.recipient,source.parcel])).rows[0];
-  if(installation&&recipient&&recipient.contact_version===source.contactVersion) {
-   phone=recipient.phone_normalized;
+
+  if(installation&&contact.contact_version===source.contactVersion) {
+   phone=contact.phone_normalized;
    template=(await scopedQuery<RegisteredTemplate>(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace'],`SELECT t.* FROM shipit.whatsapp_templates t WHERE {{franchise:t.organization_id:t.franchise_id}}
     AND t.installation_id=$1 AND t.name=$2 AND t.language=$3 ORDER BY t.version DESC LIMIT 1`,[installation.id,proof.template_name,proof.template_language])).rows[0]??null;
    reason=!proof.meta_send_qualified?'authentication_template_unqualified':installation.state!=='validated'?'installation_unavailable':templateReason(template,'delivery_otp')??
     (template!.credential_revision!==installation.credential_revision||source.time.getTime()-template!.checked_at.getTime()<0||source.time.getTime()-template!.checked_at.getTime()>=900000?'template_validation_stale':
      !validVariables(template!,[source.code])?'template_variables_invalid':'eligible');
-  } else reason=recipient?'contact_changed':'contact_unavailable';
+  } else reason='contact_changed';
  }
  const queued=reason==='eligible'&&!!webhook&&!!installation&&!!phone;
  await scopedQuery(scope,['whatsapp.inbox.work','deliveries.start','deliveries.retry','deliveries.resend','deliveries.replace'],`INSERT INTO shipit.delivery_challenge_sends(id,organization_id,franchise_id,parcel_id,attempt_id,challenge_id,recipient_ref,kind,resend_ordinal,reserved_at,outbound_intent_id,send_state,reason_code,command_id)

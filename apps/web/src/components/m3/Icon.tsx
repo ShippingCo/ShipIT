@@ -1,4 +1,7 @@
 import React from 'react';
+import symbolNames from '../../assets/material-symbols/names.json';
+
+const bundledSymbols = new Set(symbolNames);
 
 export interface MsymProps {
   /** A Material Symbols ligature name, e.g. 'local_shipping'. */
@@ -18,7 +21,7 @@ export function Msym({ name, fill, size, className = '', style }: MsymProps) {
       style={{ fontSize: size, ...style }}
       aria-hidden="true"
     >
-      {name}
+      {typeof name === 'string' && !bundledSymbols.has(name) ? 'help_outline' : name}
     </span>
   );
 }

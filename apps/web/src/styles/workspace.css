@@ -342,3 +342,10 @@
 .workspace-choice-option { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:11px 12px; border-radius:6px; font-size:14px; color:#26323b; cursor:default; }
 .workspace-choice-option[data-highlighted] { background:#eaf4fb; outline:2px solid #426c83; outline-offset:-2px; }
 .workspace-choice-option[data-state=checked] { font-weight:600; }
+
+/* Long workflow menus collapse to the same selected value on smaller screens. */
+.tf.workspace-compact-view { display: none; }
+@media (max-width: 600px) {
+  .workspace-view-switch.workspace-view-switch--long { display: none; }
+  .tf.workspace-compact-view { display: block; max-width: 100%; margin-block: 12px; }
+}

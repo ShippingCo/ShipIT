@@ -1,4 +1,5 @@
 import './customer-report-flows.css';
+import {ReportMeasures} from './ReportMeasures';
 import {SectionHeader,RecordTable} from '../components/workspace/Workspace';
 import {DatePresets} from './DatePresets';
 import {ReportPreferenceControl,type ReportPreference} from './SettingsPreferences';
@@ -14,7 +15,7 @@ import { ApiFailure } from '../data-access/errors';
 
 import { useCommand } from './hooks';
 
-import { TextField,SelectField } from '../components/m3/Input';
+import { TextField, DateField,SelectField } from '../components/m3/Input';
 
 export const salesAmount=(s:string)=>{const n=BigInt(s),a=n<0n?-n:n;return `${n<0n?'−':''}₹${(a/100n).toLocaleString('en-IN')}.${String(a%100n).padStart(2,'0')}`;};
 
@@ -57,15 +58,22 @@ export function SalesView({source,canExport,canManage,franchises,preference}:{so
 
  const [financeTask,setFinanceTask]=useState<'changes'|'statements'>('changes');
 
- return <section className="service-report-view" aria-label="Sales and GST"><SectionHeader title="Sales and GST"/><p>Application summary for accountant review. This is not an official tax return or a filing service.</p>
+ return <section className="service-report-view" aria-label="Sales and GST"><SectionHeader title="Sales and GST"/><p>Review billed amounts, GST and collections for the selected dates. This summary is not an official tax return.</p>
 
- <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField disabled={pending||command.canRetry} label="From day" type="date" value={from} onChange={setFrom}/><TextField disabled={pending||command.canRetry} label="Through day" type="date" value={to} onChange={setTo}/><details className="form-secondary-options"><summary>Filter by saved GST rate</summary><TextField disabled={pending||command.canRetry} label="Saved GST rate fraction (blank for all, e.g. 5/100)" value={rate} onChange={setRate} placeholder="e.g. 5/100" spellCheck={false}/></details>
+ <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><DateField disabled={pending||command.canRetry} label="From day" value={from} onChange={setFrom}/><DateField disabled={pending||command.canRetry} label="Through day" value={to} onChange={setTo}/><details className="form-secondary-options"><summary>Filter by saved GST rate</summary><TextField disabled={pending||command.canRetry} label="Saved GST rate fraction (blank for all, e.g. 5/100)" value={rate} onChange={setRate} placeholder="e.g. 5/100" spellCheck={false}/></details>
 
- <details className="report-more-options"><summary>Branches included · {selected.length} selected</summary><ReportPreferenceControl preference={preference} disabled={pending||command.canRetry||!!id} accept={(ids,version)=>{setSelected([...ids]);setSettingsVersion(version);}}/>{settingsVersion&&<p>Accepted settings source {settingsVersion}</p>}<fieldset disabled={pending||command.canRetry}><legend>Included franchises</legend><p>Selected scope: {selected.map(id=>franchises.find(f=>f.id===id)?.name??id).join(', ')}. Load more authorized options to inspect additional selections.</p>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>{setSettingsVersion(undefined);setSelected(ids=>e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id));}}/>{f.name}</label>)}</fieldset></details><p>Asia/Kolkata dates. Up to 31 days and 5,000 bookings; saved reports expire after 24 hours.</p><button className="btn btn-filled" disabled={pending||command.canRetry||finance.canRetry}>Create sales snapshot</button></form>
+ <details className="report-more-options"><summary>Branches included · {selected.length} selected</summary><ReportPreferenceControl preference={preference} disabled={pending||command.canRetry||!!id} accept={(ids,version)=>{setSelected([...ids]);setSettingsVersion(version);}}/>{settingsVersion&&<p>Accepted settings source {settingsVersion}</p>}<fieldset disabled={pending||command.canRetry}><legend>Included franchises</legend><p>Selected scope: {selected.map(id=>franchises.find(f=>f.id===id)?.name??id).join(', ')}. Load more authorized options to inspect additional selections.</p>{franchises.map(f=><label key={f.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(f.id)} disabled={f.id===source.franchise} onChange={e=>{setSettingsVersion(undefined);setSelected(ids=>e.target.checked?[...ids,f.id]:ids.filter(id=>id!==f.id));}}/>{f.name}</label>)}</fieldset></details><p>Choose up to 31 days in India time. A saved report includes up to 5,000 bookings and is available for 24 hours.</p><button className="btn btn-filled" disabled={pending||command.canRetry||finance.canRetry}>Create sales snapshot</button></form>
 
  {command.canRetry&&<button disabled={pending} onClick={()=>void create(true)}>Retry same report request</button>}<p role="status" aria-live="polite">{pending?'Loading…':notice}</p>{!pending&&id&&!result&&<button onClick={()=>setRevision(n=>n+1)}>Reload saved report</button>}
 
- {result&&<><p>Saved period {result.snapshot.filter.from_day} to {result.snapshot.filter.to_day} · {result.snapshot.count} shipments · Rate {result.snapshot.filter.rate??'all'} · {result.snapshot.filter.franchise_ids.length} franchises</p><p>As of {new Date(result.snapshot.as_of).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST</p><div className="ops-facts">{salesMeasures.map(k=><div key={k}><span>{label(k)}</span><p className="t-headline-sm">{salesAmount(result.snapshot.totals[k])}</p></div>)}</div><p>Pre-tax charges + GST + rounding = gross. Collections are net funds applied to these shipments by capture time, including legacy entries and linked receipt allocations. Customer advances stay in Money receipts; actual refunds are shown separately.</p><button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching sales CSV</button>{!canExport&&<p>Your role can read this report but cannot export it.</p>}
+ {result&&<><p>Saved period {result.snapshot.filter.from_day} to {result.snapshot.filter.to_day} · {result.snapshot.count} shipments · Rate {result.snapshot.filter.rate??'all'} · {result.snapshot.filter.franchise_ids.length} franchises</p><p>As of {new Date(result.snapshot.as_of).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST</p><ReportMeasures label="Sales totals" items={[
+   {label:'Billed amount',value:salesAmount(result.snapshot.totals.gross)},
+   {label:'GST',value:salesAmount(result.snapshot.totals.gst)},
+   {label:'Collections',value:salesAmount(result.snapshot.totals.collections)},
+   {label:'Outstanding',value:salesAmount(result.snapshot.totals.outstanding)}
+ ]}/><details className="report-calculation"><summary>Tax, refunds and credit breakdown</summary>
+   <dl className="report-breakdown">{salesMeasures.filter(key=>!['gross','gst','collections','outstanding'].includes(key)).map(key=><div key={key}><dt>{label(key)}</dt><dd>{salesAmount(result.snapshot.totals[key])}</dd></div>)}</dl>
+ </details><p>Pre-tax charges + GST + rounding = gross. Collections are net funds applied to these shipments by capture time, including legacy entries and linked receipt allocations. Customer advances stay in Money receipts; actual refunds are shown separately.</p><button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching sales CSV</button>{!canExport&&<p>Your role can read this report but cannot export it.</p>}
 
  <h2 className="t-title-lg">GST groups</h2><RecordTable label="GST groups" rows={result.snapshot.groups} rowKey={g=>[g.rate,g.treatment,g.jurisdiction].join(':')} columns={[
  {key:'rate',label:'Rate',cell:g=>g.rate}, {key:'treatment',label:'Treatment',cell:g=>label(g.treatment)},

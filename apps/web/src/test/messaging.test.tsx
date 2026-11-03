@@ -27,7 +27,7 @@ describe('production messaging history',()=>{
  it.each(['suppressed','failed','uncertain'])('labels %s separately',async state=>{serve({...message,message:{...message.message,state}});mount();expect(await screen.findByText(state[0].toUpperCase()+state.slice(1),{selector:'span'})).toBeVisible();});
  it('shows empty/error/explicit retry without demo fallback',async()=>{
   let failing=true;vi.stubGlobal('fetch',vi.fn(async()=>failing?json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503):json(page([]))));mount();expect(await screen.findByRole('alert')).toHaveTextContent('Messaging history could not be loaded');
-  failing=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No matching history');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
+  failing=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No messages yet');fireEvent.change(screen.getByLabelText('Message status'),{target:{value:'failed'}});await screen.findByText('No matching history');fireEvent.click(screen.getByRole('button',{name:'Clear history filters'}));await screen.findByText('No messages yet');expect(screen.getByLabelText('Message status')).toHaveValue('');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
  });
  it('offers keyboard native filters and resets old cursors on filter changes',async()=>{
   serve();mount();await screen.findByText('Accepted by provider',{selector:'span'});const select=screen.getByLabelText('Message status');select.focus();expect(select).toHaveFocus();fireEvent.change(select,{target:{value:'uncertain'}});

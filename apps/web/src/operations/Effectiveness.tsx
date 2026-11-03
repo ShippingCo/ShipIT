@@ -1,10 +1,11 @@
+import {ReportMeasures} from './ReportMeasures';
 import {SectionHeader,RecordTable} from '../components/workspace/Workspace';
 import React,{useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import type {EffectivenessPage,EffectivenessSection} from '@shippingco/shared';
 import type {EffectivenessSource} from '../data-access/effectiveness';
 import {useCommand} from './hooks';
-import {TextField,SelectField} from '../components/m3/Input';
+import {DateField,SelectField} from '../components/m3/Input';
 import {ApiFailure} from '../data-access/errors';
 const human=(v:string)=>v.replaceAll('_',' ');
 const label=(v:string)=>v==='accepted'?'Accepted · delivery unknown':v==='sent'?'Sent · delivery unknown':human(v);
@@ -21,18 +22,20 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
   },[id,source,revision,section,category]);
   async function create(retry=false){if(pending)return;setNotice('');try{const p=await(retry?command.retry():command.run(source.intent({week})));if(p){setSection('');setCategory('');setParams({effectiveness_snapshot:p.snapshot.id});}}catch(e){fail(e);}}
   return <section className="service-report-view" aria-label="Messaging and assistant effectiveness"><SectionHeader title="Messaging and assistant effectiveness"/>
-    <details className="form-secondary-options"><summary>How messaging results are counted</summary><p>Fixed closed Monday-to-Monday weeks in UTC. Logical messages and known customers are counted once; recorded send attempts are separate. Accepted, sent and uncertain do not establish delivery.</p>
-    <p>Tool success, thanks and staff resolution are separate signals. Calls saved and ROI are unmeasured.</p></details>
+
     <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
-      <TextField label="Week beginning Monday (UTC)" type="date" value={week} onChange={setWeek}/><p>Up to 53 weeks of history. The week must have closed at least 15 minutes ago. Snapshots expire after 24 hours.</p>
+      <DateField label="Week beginning Monday (UTC)" value={week} onChange={setWeek}/><p>Up to 53 weeks of history. The week must have closed at least 15 minutes ago. Snapshots expire after 24 hours.</p>
       <button className="btn btn-filled">Create effectiveness snapshot</button></fieldset></form>
+    <details className="form-secondary-options"><summary>How messaging results are counted</summary><p>Weeks run from Monday to Monday in UTC. Each message and known customer counts once. Delivery requires confirmation from the provider.</p>
+    <p>Assistant actions, customer thanks and cases resolved by staff are counted separately. Calls saved and ROI are unmeasured.</p></details>
     {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void create(true)}>Retry same effectiveness request</button>}
     {pending&&<p role="status">Loading effectiveness…</p>}<p role="status" aria-live="polite">{notice}</p>
     {!pending&&notice&&id&&!result&&<button className="btn btn-outlined" onClick={()=>setRevision(v=>v+1)}>Retry saved effectiveness</button>}
     {result&&<><p>Saved week {result.snapshot.filter.week} · captured {new Date(result.snapshot.as_of).toLocaleString('en-GB',{timeZone:'UTC'})} UTC</p>
-      <p>Small nonzero groups have counts hidden below five subjects. Related totals and exclusions may also be hidden to protect small groups. Zero is separate from unknown.</p>
-      <p>Staff queue is current at capture, including older cases. Age uses the captured current weekly schedule in {result.snapshot.staffing.timezone??'an unconfigured timezone'}; historical staffing changes and holidays are unmeasured. {result.snapshot.staffing.state==='unavailable'?'Staffing is unavailable; business age is unknown.':'This schedule projection is not a response deadline.'}</p>
-      {result.snapshot.staffing.state==='configured'&&<p>Captured schedule: {result.snapshot.staffing.weekdays.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')} · {String(Math.floor((result.snapshot.staffing.start_minute??0)/60)).padStart(2,'0')}:{String((result.snapshot.staffing.start_minute??0)%60).padStart(2,'0')}–{String(Math.floor((result.snapshot.staffing.end_minute??0)/60)).padStart(2,'0')}:{String((result.snapshot.staffing.end_minute??0)%60).padStart(2,'0')}.</p>}
+      {!section&&<ReachSummary items={result.items}/>}
+      <p>{result.snapshot.staffing.timezone?'Queue age uses the current weekly schedule in '+result.snapshot.staffing.timezone+'.':'Queue age is unknown because no staffing timezone is set.'}</p><details className="report-more-options"><summary>Privacy and staffing details</summary><p>Small nonzero groups have counts hidden below five subjects. Related totals and exclusions may also be hidden to protect small groups. Zero is separate from unknown.</p>
+      <p>The queue includes older open cases. Earlier staffing changes and holidays are excluded from the age calculation. {result.snapshot.staffing.state==='unavailable'?'Staffing is unavailable; business age is unknown.':'This schedule projection is not a response deadline.'}</p>
+      {result.snapshot.staffing.state==='configured'&&<p>Captured schedule: {result.snapshot.staffing.weekdays.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')} · {String(Math.floor((result.snapshot.staffing.start_minute??0)/60)).padStart(2,'0')}:{String((result.snapshot.staffing.start_minute??0)%60).padStart(2,'0')}–{String(Math.floor((result.snapshot.staffing.end_minute??0)/60)).padStart(2,'0')}:{String((result.snapshot.staffing.end_minute??0)%60).padStart(2,'0')}.</p>}</details>
       <SelectField label="Report section" value={section} disabled={pending} onChange={v=>{setSection(v);setCategory('');}} options={[{value:'',label:'All sections'},...(['messaging','assistant','queue'] as const).map(value=>({value,label:human(value)}))]}/>
       {category&&<><p>Selected category: {human(category)}</p><button className="btn btn-outlined" disabled={pending} onClick={()=>setCategory('')}>Back to all categories</button></>}
       {result.items.every(r=>r.count===0)&&<p role="status">No measured events in this selection.</p>}
@@ -45,4 +48,14 @@ export function EffectivenessView({source}:{source:EffectivenessSource}) {
  ]}/><p>Drill-through contains aggregate evidence only. No transcript, phone, docket or customer list is included.</p>
     </>}
   </section>;
+}
+
+function ReachSummary({items}:{items:EffectivenessPage['items']}) {
+  const keys=[['messaging','logical_intents','Messages'],['messaging','delivery_unknown','Delivery unknown'],['messaging','confirmed_customers','Customers reached'],['queue','all_active','Open or claimed cases']] as const;
+  const facts=keys.map(([section,key,label])=>{
+    const cell=items.find(row=>row.section===section&&row.category===key);
+    const value=!cell||cell.count===null?'Unknown':cell.count.toLocaleString('en-IN');
+    return {label,value:cell?.suppressed?'Suppressed':value};
+  });
+  return <ReportMeasures label="Message reach and support workload" items={facts}/>;
 }

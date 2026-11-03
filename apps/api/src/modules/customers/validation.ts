@@ -36,6 +36,16 @@ function contact(body: Record<string, unknown>, create: boolean): ContactInput {
   return { name: text(body.name, 'name', 120), phone_normalized: p.normalized, phone_display: p.display,
     address: text(create && body.address === undefined ? '' : body.address, 'address', 500, true) };
 }
+export function bookingRecipient(value: unknown): import('@shippingco/shared').BookingRecipientSnapshot {
+  const body = object(value, ['name', 'phone', 'address']);
+  const name = body.name == null ? null : text(body.name, 'name', 120, true) || null;
+  const absentPhone = body.phone == null || (typeof body.phone === 'string' && /^ {0,40}$/.test(body.phone));
+  const number = absentPhone ? null : phone(body.phone);
+  // Full-contact bookings historically allowed an empty address, including retained replays.
+  const address = text(body.address === undefined ? '' : body.address, 'address', 500, Boolean(name && number));
+  return {name, phone_normalized: number?.normalized ?? null, phone_display: number?.display ?? null,
+    address};
+}
 export function createInput(value: unknown) { return contact(object(value, ['name', 'phone', 'address']), true); }
 export function updateInput(value: unknown) {
   const body = object(value, ['name', 'phone', 'address', 'expected_version']);

@@ -1,4 +1,5 @@
 import React from 'react';
+import {SelectField} from '../m3/Input';
 
 export function PageHeader({title,description,actions,id='workspace-title'}:{
   title:React.ReactNode;description?:React.ReactNode;eyebrow?:string;actions?:React.ReactNode;id?:string;
@@ -68,7 +69,14 @@ export function ActiveViewStrip({children,label,value,className,role='navigation
 export function WorkflowTabs({items,value,onChange,label='Views'}:{
   items:readonly {value:string;label:React.ReactNode;disabled?:boolean}[];value:string;onChange:(value:string)=>void;label?:string;
 }){
-  return <ActiveViewStrip className="workspace-view-switch" role="group" label={label} value={value}>
-    {items.map(item=><button key={item.value} type="button" aria-pressed={value===item.value} disabled={item.disabled} onClick={()=>onChange(item.value)}>{item.label}</button>)}
-  </ActiveViewStrip>;
+  const compact = items.length >= 5 && items.every(item => typeof item.label === 'string');
+  return <>
+    <ActiveViewStrip className={compact ? 'workspace-view-switch workspace-view-switch--long' : 'workspace-view-switch'} role="group" label={label} value={value}>
+      {items.map(item=><button key={item.value} type="button" aria-pressed={value===item.value} disabled={item.disabled} onClick={()=>onChange(item.value)}>{item.label}</button>)}
+    </ActiveViewStrip>
+    {compact && <SelectField className="workspace-compact-view" label={label} value={value}
+      options={items.map(item=>({value:item.value,label:item.label,disabled:item.disabled}))}
+      disabled={items.every(item=>item.disabled)}
+      onChange={next=>{if(items.some(item=>item.value===next&&!item.disabled))onChange(next);}}/>}
+  </>;
 }
