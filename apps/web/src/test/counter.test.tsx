@@ -39,19 +39,18 @@ afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
 function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
-async function checkout(){fireEvent.click(screen.getByRole('button',{name:'Save booking'}));await screen.findByRole('dialog',{name:'Confirm booking'});}
-async function review(){fill('Parcel handed over in','27');fireEvent.click(screen.getByLabelText('I checked these billing and handover details with the customer.'));fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await screen.findByText('Total payable ₹134.00');}
-async function entered(paid=false){await start();core(paid);await checkout();await review();fireEvent.click(screen.getByRole('button',{name:'Back to booking'}));}
+async function calculate(){fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(summary().getByText('₹134.00')).toBeVisible());}
+async function entered(paid=false){await start();core(paid);fill('Parcel handed over in','27');await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
-function options(){fireEvent.click(screen.getByRole('button',{name:'Booking options'}));fireEvent.click(screen.getByText('More booking options'));}
-async function recalculate(){fireEvent.click(screen.getByRole('button',{name:'Booking options'}));fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await screen.findByText('Total payable ₹134.00');fireEvent.click(screen.getByRole('button',{name:'Back to booking'}));}
+function options(){fireEvent.click(screen.getByText('More booking options'));}
+async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
-  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
+  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹','GST registration','Parcel handed over in']);
   for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
   for(const name of ['Photo','Video','Voice note','Add package','Save booking','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
@@ -64,8 +63,8 @@ describe('production counter API composition',{timeout:20000},()=>{
  });
  it('creates a new customer as part of save and does not duplicate it after returning to the form',async()=>{
   override=c=>c.path.includes('/customers?')?Promise.resolve(f.json({items:[],page:{has_more:false,next_cursor:null}})):undefined;
-  await start();core();await checkout();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button',{name:'Back to booking'}));await checkout();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
+  await start();core();fill('Parcel handed over in','27');await calculate();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
+  await calculate();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
  });
  it('does not replace an existing customer with a different name or treat lookup failure as a new customer',async()=>{
   await start();core();fill('Customer name','Another sender');save();await screen.findByText(/Choose the matching customer below/);expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
@@ -95,8 +94,8 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();fill('Freight ₹','12.345');save();await waitFor(()=>expect(screen.getByLabelText('Freight ₹')).toHaveAttribute('aria-invalid','true'));expect(posts('/api/v1/bookings?')).toHaveLength(0);
   fill('Freight ₹','125.51');fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({override:{freight_paise:12551,packing_paise:301,reason_code:'customer_agreement'}});
  });
- it('invalidates the reviewed quote when a handover fact needs reconfirmation',async()=>{
-  await entered();options();fill('Parcel handed over in','');expect(screen.queryByText('Total payable ₹134.00')).toBeNull();expect(screen.getByLabelText('I checked these billing and handover details with the customer.')).not.toBeChecked();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('invalidates the total and shows a missing handover fact inline',async()=>{
+  await entered();options();fill('Parcel handed over in','');expect(summary().queryByText('₹134.00')).toBeNull();save();await waitFor(()=>expect(screen.getByLabelText('Parcel handed over in')).toHaveFocus());expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
   await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
@@ -197,7 +196,7 @@ describe('monthly account booking',{timeout:20000},()=>{
  async function selected(){
   override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
   await entered();options();fireEvent.change(await screen.findByRole('combobox',{name:'Bill-to account'}),{target:{value:account}});await screen.findByText('₹400.00',{selector:'strong'});expect(screen.getByRole('combobox',{name:'Bill-to account'})).toHaveValue(account);
-  fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await screen.findByText('Total payable ₹134.00');
+  await calculate();
  }
  it('shows source credit, retains an uncertain request identity and saves the exact approved debtor',async()=>{
   await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));
@@ -207,18 +206,18 @@ describe('monthly account booking',{timeout:20000},()=>{
   expect(within(within(sources).getAllByRole('row',{})[1]).getAllByRole('cell',{})[originalIndex]).toHaveTextContent('₹600.00');
   let first=true;override=c=>{if(c.path.startsWith('/api/v1/customer-credit-requests')&&c.options.method==='POST'&&first){first=false;return Promise.reject(new TypeError('SYN_ACK_LOST'));}const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
   fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
-  expect(screen.getByRole('button',{name:'Back to booking'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'Cancel booking'})).toBeDisabled();
   const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
   fireEvent.click(screen.getByRole('button',{name:'Retry same credit request'}));await screen.findByRole('button',{name:'Check owner approval'});
   const attempts=posts('/api/v1/customer-credit-requests');expect(attempts).toHaveLength(2);expect([attempts[0].path,attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].path,attempts[1].options.body,key(attempts[1])]);
-  fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);fireEvent.click(screen.getByRole('button',{name:'Confirm and save'}));await screen.findByRole('heading',{name:'Booking saved'});
+  fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);fireEvent.click(screen.getByRole('button',{name:'Save booking'}));await screen.findByRole('heading',{name:'Booking saved'});
   expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBe(approval);expect(body(posts('/api/v1/bookings?')[0]).tax_intent.pricing_input.customer_account_id).toBe(account);
   expect(screen.getByText(/Bill to Separate Debtor/)).toBeVisible();expect(screen.getByRole('link',{name:'Open payments / apply advance'})).toHaveAttribute('href',expect.stringContaining(debtor));
  });
  it('invalidates approval after any shipment edit and gives a clear held-account denial',async()=>{
   await selected();fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Check owner approval'});fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking:/);
   fill('Recipient name','Different Recipient');expect(screen.queryByText(/Owner approved this booking:/)).toBeNull();expect(screen.queryByRole('button',{name:'Check owner approval'})).toBeNull();
-  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;fireEvent.click(screen.getByRole('button',{name:'Confirm and save'}));await within(screen.getByRole('dialog',{name:'Confirm booking'})).findByText(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();
+  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;fireEvent.click(screen.getByRole('button',{name:'Save booking'}));await screen.findByText(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();
  });
 });
 
@@ -274,7 +273,7 @@ describe('counter post-save and scope boundaries',()=>{
  });
  it.each(['/api/v1/pricing/quote','/api/v1/tax/calculations'])('scope change cancels late %s and prevents private totals repaint',async path=>{
   await entered();fill('Weight (kg)','0.998');const slow=f.deferred<Response>();override=c=>c.path.startsWith(path)?slow.promise:undefined;
-  fireEvent.click(screen.getByRole('button',{name:'Booking options'}));fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBeGreaterThan(1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(screen.queryByText('Total payable ₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
+  fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBeGreaterThan(1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(summary().queryByText('₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
  });
  it('scope change cancels late receipt and drops its private snapshot',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});const slow=f.deferred<Response>();override=c=>c.path.includes('/receipt')?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await waitFor(()=>expect(calls.some(c=>c.path.includes('/receipt'))).toBe(true));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(f.receipt)));expect(document.body.textContent).not.toContain(f.receipt.number);
@@ -301,4 +300,23 @@ it('cancels an unsaved booking only after confirming discard and can keep editin
  expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('KEEP-002');
  fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
  expect(posts('/api/v1/bookings')).toHaveLength(0);
+});
+
+it('saves directly from the page without a billing confirmation popup or declaration checkbox',async()=>{
+ await start();core();fill('Parcel handed over in','27');save();
+ await screen.findByRole('heading',{name:'Booking saved'});expect(screen.queryByRole('dialog')).toBeNull();
+ expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts).toMatchObject({handover_state:'27',evidence_ref:'COUNTER_ENTRY'});
+ expect(screen.queryByLabelText('I checked these billing and handover details with the customer.')).toBeNull();
+});
+
+it.each(['/api/v1/pricing/quote','/api/v1/tax/intents','/api/v1/tax/calculations'])('direct save retains the exact %s request after a lost acknowledgement',async path=>{
+ await start();core();fill('Parcel handed over in','27');let first=true;
+ override=c=>c.path.startsWith(path)&&first?(first=false,Promise.reject(new TypeError('lost acknowledgement'))):undefined;
+ save();await screen.findByRole('button',{name:'Retry booking request'});expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.queryByRole('dialog')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Retry booking request'}));await screen.findByRole('heading',{name:'Booking saved'});
+ const attempts=posts(path);expect(attempts.length).toBeGreaterThanOrEqual(2);expect([attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].options.body,key(attempts[1])]);expect(posts('/api/v1/bookings?')).toHaveLength(1);
+});
+it('keeps required registered billing facts inline and does not save an invalid GSTIN',async()=>{
+ await start();core();fill('GST registration','registered');fill('Billing state','27');fill('GSTIN','invalid');save();
+ await waitFor(()=>expect(screen.getByLabelText('GSTIN')).toHaveAttribute('aria-invalid','true'));expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(posts('/api/v1/tax/intents')).toHaveLength(0);
 });

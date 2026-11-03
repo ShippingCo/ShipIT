@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "ec0f9f2cf0a2cb5871d294e307e86320aa8e26e30350435cb4d1cf498d90214d",
+      "apps/web/src/test/counter.test.tsx": "45334df237cedd7f6d14828cc9d3350aefe28e5a6cde5fe87b5e6ecdf9ea7fb4",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1681,7 +1681,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "invalidates the reviewed quote when a handover fact needs reconfirmation",
+        "name": "invalidates the total and shows a missing handover fact inline",
         "cases": null
       },
       {
@@ -1832,6 +1832,21 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "cancels an unsaved booking only after confirming discard and can keep editing",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves directly from the page without a billing confirmation popup or declaration checkbox",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "direct save retains the exact %s request after a lost acknowledgement",
+        "cases": "['/api/v1/pricing/quote','/api/v1/tax/intents','/api/v1/tax/calculations']"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "keeps required registered billing facts inline and does not save an invalid GSTIN",
         "cases": null
       },
       {
@@ -5501,11 +5516,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "invalidates the reviewed quote when a handover fact needs reconfirmation",
+      "name": "invalidates the total and shows a missing handover fact inline",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Changing a tax fact invalidates the calculated amount and requires fresh confirmation."
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5742,6 +5757,30 @@
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "cancels an unsaved booking only after confirming discard and can keep editing",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves directly from the page without a billing confirmation popup or declaration checkbox",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "direct save retains the exact %s request after a lost acknowledgement",
+      "cases": "['/api/v1/pricing/quote','/api/v1/tax/intents','/api/v1/tax/calculations']",
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "keeps required registered billing facts inline and does not save an invalid GSTIN",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
