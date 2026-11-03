@@ -554,24 +554,6 @@ Production counter and receipt modules use the scope runtime and purpose-specifi
 | Test | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/attachments.test.tsx: a booking attachment client cannot rebind to a newly selected franchise | preserve | attachments |
-| apps/web/src/test/counter.test.tsx: creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery | preserve | seam |
-| apps/web/src/test/counter.test.tsx: double click and lost commit acknowledgement retain identical path/body/key with one displayed result | preserve | seam |
-| apps/web/src/test/counter.test.tsx: network outage preserves draft and never fabricates a receipt or local booking | preserve | seam |
-| apps/web/src/test/counter.test.tsx: rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity | preserve | seam |
-| apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
-| apps/web/src/test/counter.test.tsx: repeat selection fills empty values while preserving deliberate edits | preserve | seam |
-| apps/web/src/test/counter.test.tsx: Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write | preserve | seam |
-| apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
-| apps/web/src/test/counter.test.tsx: keyboard form submission focuses first invalid field and describes the error | preserve | seam |
-| apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
-| apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
-| apps/web/src/test/counter.test.tsx: malformed successes fail safely and unknown private fields are projected out | preserve | seam |
-| apps/web/src/test/counter.test.tsx: focus revalidation preserves draft for unchanged permissions; revocation purges actual generation | preserve | seam |
-| apps/web/src/test/counter.test.tsx: handles safe %s without losing the draft or claiming success | preserve | seam |
-| apps/web/src/test/counter.test.tsx: malformed committed response is uncertain and retry uses its original identity | preserve | seam |
-| apps/web/src/test/counter.test.tsx: 401 purges private form and requires sign in without local fallback | preserve | seam |
-| apps/web/src/test/counter.test.tsx: reload with an unresolved marker forbids fresh-key booking and contains no persisted body | preserve | seam |
-| apps/web/src/test/counter.test.tsx: receipt discovery supports empty and safe denied/retry states | preserve | seam |
 
 | Transitive test caller | Owners |
 | --- | --- |
@@ -579,7 +561,6 @@ Production counter and receipt modules use the scope runtime and purpose-specifi
 
 | Additional regression | Disposition | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: scope switch during a dispatched booking retains opaque recovery and never replays under B | preserve | seam |
 
 ## Issue #34 production operational cutover
 
@@ -1086,8 +1067,6 @@ jsdom history do not substitute for actual-browser or PostgreSQL verification.
 
 | Test | Disposition | Group | Reason |
 | --- | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: shows source credit, retains an uncertain request identity and saves the exact approved debtor | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
-| apps/web/src/test/counter.test.tsx: invalidates approval after any shipment edit and gives a clear held-account denial | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
 | apps/web/src/test/customer-accounts.test.tsx: requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
 | apps/web/src/test/customer-accounts.test.tsx: reviews exact shipment evidence before approving and refreshes the pending queue | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
 | apps/web/src/test/customer-accounts.test.tsx: read-only cannot mount account directory reads or configuration | preserve | seam | Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes. |
@@ -1158,9 +1137,6 @@ Counter fingerprint changes add package editing and explicit confirmation tests;
 
 | Test | Disposition | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: payment choices and implicit form submission never confirm a booking | preserve | booking |
-| apps/web/src/test/counter.test.tsx: adds, edits and removes packages, prices combined weight and saves independent dockets atomically | preserve | booking |
-| apps/web/src/test/counter.test.tsx: rejects invalid extra package details and prevents edits during uncertain multi-package confirmation | preserve | booking |
 | apps/web/src/test/segmented-payment.test.tsx: chooses a payment segment without submitting its surrounding booking form | preserve | booking |
 
 ## Franchise feedback operational regression review (#186)
@@ -1190,7 +1166,6 @@ workspace navigation disclosure; no new persistence effect is introduced.
 
 | Regression | Disposition | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: does not claim an empty receipt result until the edited docket is searched | preserve | seam |
 | apps/web/src/test/operator.test.tsx: opens workspace navigation with keyboard focus and returns focus on Escape | preserve | seam |
 | apps/web/src/test/workspace-components.test.tsx: keeps native field names separate from options and connects helpers and validation messages | preserve | presentation |
 | apps/web/src/test/workspace-components.test.tsx: preserves supplied server record order and explicit action identity in a named accessible worklist | preserve | presentation |
@@ -1212,7 +1187,6 @@ The routine footer refresh is removed. Existing settings-departure regressions n
 
 Reviewed counter test changes: existing API assertions are retained in the All sections view; the new guided flow regression covers validation and Back navigation. Only the counter test fingerprint and four added declarations changed. No production Store callers or safety dispositions changed.
 
-| apps/web/src/test/counter.test.tsx: guides booking steps, validates the current fields and preserves entries on Back | preserve | seam |
 | apps/web/src/test/workspace-controls.test.tsx: clears a search draft without submitting the surrounding form | preserve | seam |
 | apps/web/src/test/workspace-controls.test.tsx: labels custom choices and exposes disabled state | preserve | seam |
 
@@ -1230,12 +1204,6 @@ The only added inventoried effect is `RateChoices.tsx` subscribing through the e
 | apps/web/src/test/booking-units.test.tsx: converts kg and rupees exactly at fractional and safe-integer boundaries | preserve | seam |
 | apps/web/src/test/booking-units.test.tsx: retains partial decimal editing and updates after an external draft change | preserve | seam |
 | apps/web/src/test/booking-units.test.tsx: accepts only published rate choices and discards unneeded pricing details | preserve | seam |
-| apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
-| apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
-| apps/web/src/test/counter.test.tsx: shows published destinations with a recoverable failure and no invented fallback choices | preserve | seam |
-| apps/web/src/test/counter.test.tsx: completes all three guided stages with exact kg conversion and a reviewed real quote | preserve | seam |
-| apps/web/src/test/counter.test.tsx: converts rupee overrides exactly and never silently drops an invalid non-empty amount | preserve | seam |
-| apps/web/src/test/counter.test.tsx: reveals a manually collapsed billing section before focusing a rejected field | preserve | seam |
 | apps/web/src/test/logistics-design.test.tsx: keeps customer context on the server query and clears both customer and booked-today route filters | preserve | seam |
 | apps/web/src/test/logistics-design.test.tsx: keeps drafted filters separate from applied filters and rejects a reversed date range before a read | preserve | seam |
 | apps/web/src/test/studio-workspace.test.tsx: builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals | preserve | reports |
@@ -1272,7 +1240,6 @@ Reviewed the three new setup event registrations: before-unload, navigation clic
 | apps/web/src/test/booking-policy-setup.test.tsx: converts exact prices and reviewed tax percentages without inventing a rate | preserve | pricing |
 | apps/web/src/test/booking-policy-setup.test.tsx: requires review before publication and retries the same uncertain draft without duplicate intent | preserve | pricing |
 | apps/web/src/test/booking-policy-setup.test.tsx: does not fetch configuration or offer publication to an operator | preserve | pricing |
-| apps/web/src/test/counter.test.tsx: recovers missing and empty rates through real setup without losing the booking draft or inventing services | preserve | seam |
 | apps/web/src/test/daily-dashboard.test.tsx: keeps date shortcuts local until capture and charts exact large or negative amounts without invented percentages | preserve | reports |
 
 
@@ -1338,12 +1305,6 @@ Reviewed the counter composition changes for From, To, Parcel and Billing, and R
 | apps/web/src/test/booking-attachments.test.tsx: uploads a selected batch in sequence so the server pending-upload quota is not exhausted | preserve | booking |
 | apps/web/src/test/booking-service-setup.test.tsx: saves a real named service under StrictMode and retries uncertain creation with the same intent | preserve | booking |
 | apps/web/src/test/booking-service-setup.test.tsx: publishes a reviewed first rate policy then waits for current rates before using the service | preserve | booking |
-| apps/web/src/test/counter.test.tsx: adds a typed customer inline and preserves the four-step draft when closing is cancelled | preserve | booking |
-| apps/web/src/test/counter.test.tsx: prints only after saving and does not recreate a booking when printing is cancelled | preserve | booking |
-| apps/web/src/test/counter.test.tsx: completes all four guided stages with exact kg conversion and a reviewed real quote | preserve | booking |
-| apps/web/src/test/counter.test.tsx: returns to billing when a changed handover fact needs reconfirmation | preserve | booking |
-| apps/web/src/test/counter.test.tsx: customer search selects the exact saved person and offers inline creation | preserve | booking |
-| apps/web/src/test/counter.test.tsx: keyboard continuation focuses the first missing sender field without creating a booking | preserve | booking |
 
 
 ### Task-first flow simplification
@@ -1438,14 +1399,53 @@ The counter fingerprint changes for visible section navigation, exact per-parcel
 
 | Regression | Decision | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: adds a typed customer inline and preserves the booking draft when cancellation is dismissed | preserve | booking |
-| apps/web/src/test/counter.test.tsx: can save a booking immediately after creating and using a service in its dialog | preserve | booking |
-| apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
-| apps/web/src/test/counter.test.tsx: invalidates the reviewed quote when a handover fact needs reconfirmation | preserve | booking |
-| apps/web/src/test/counter.test.tsx: keeps Customer, Parcel, Charges and Booking summary on one editable page | preserve | booking |
-| apps/web/src/test/counter.test.tsx: saves distinct parcel details once and retries only the unconfirmed lot assignment | preserve | booking |
-| apps/web/src/test/counter.test.tsx: explicit save focuses the first missing sender field without creating a booking | preserve | booking |
-| apps/web/src/test/counter.test.tsx: copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents | preserve | booking |
-| apps/web/src/test/counter.test.tsx: saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address | preserve | booking |
 | apps/web/src/test/logistics-parity.test.tsx: cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement | preserve | booking |
 | apps/web/src/test/logistics-parity.test.tsx: explains a payment block before offering any cancellation write | preserve | booking |
+
+### Original counter form: production workflow regression evidence
+
+The 2026-11-03 approved screenshot supersedes the separate customer-create and price-entry workflow. The tests below cover the original form, automatic customer handling, explicit tax review, real money receipts, multi-package operations and recovery. Earlier UI-specific assertions were replaced; scope and immutable-command boundaries remain covered.
+
+| Test declaration | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: uses the original demo field order and controls without separate customer or pricing steps | preserve | booking |
+| apps/web/src/test/counter.test.tsx: looks up repeat customers on phone blur and only fills the selected customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: creates a new customer as part of save and does not duplicate it after returning to the form | preserve | booking |
+| apps/web/src/test/counter.test.tsx: does not replace an existing customer with a different name or treat lookup failure as a new customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
+| apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
+| apps/web/src/test/counter.test.tsx: shows published destinations with a recoverable failure and no invented fallback choices | preserve | seam |
+| apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves declared goods value without making up structured delivery or contents facts | preserve | booking |
+| apps/web/src/test/counter.test.tsx: converts packing and freight to exact paise and rejects invalid non-empty amounts | preserve | booking |
+| apps/web/src/test/counter.test.tsx: invalidates the reviewed quote when a handover fact needs reconfirmation | preserve | booking |
+| apps/web/src/test/counter.test.tsx: payment choices and implicit form submission never confirm a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: prints only after saving and does not recreate a booking when printing is cancelled | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves three dockets in one booking and cancels all three from the saved screen | preserve | booking |
+| apps/web/src/test/counter.test.tsx: rejects duplicate extra dockets and focuses the field without creating a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents | preserve | booking |
+| apps/web/src/test/counter.test.tsx: double click and lost commit acknowledgement retain identical path/body/key with one displayed result | preserve | seam |
+| apps/web/src/test/counter.test.tsx: network outage preserves draft and never fabricates a receipt or local booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity | preserve | seam |
+| apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
+| apps/web/src/test/counter.test.tsx: Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write | preserve | seam |
+| apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
+| apps/web/src/test/counter.test.tsx: explicit save focuses the first missing sender field without creating a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: handles safe %s without losing the draft or claiming success | preserve | seam |
+| apps/web/src/test/counter.test.tsx: malformed committed response is uncertain and retry uses its original identity | preserve | seam |
+| apps/web/src/test/counter.test.tsx: 401 purges private form and requires sign in without local fallback | preserve | seam |
+| apps/web/src/test/counter.test.tsx: reload with an unresolved marker forbids fresh-key booking and contains no persisted body | preserve | seam |
+| apps/web/src/test/counter.test.tsx: scope switch during a dispatched booking retains opaque recovery and never replays under B | preserve | seam |
+| apps/web/src/test/counter.test.tsx: malformed successes fail safely and unknown private fields are projected out | preserve | seam |
+| apps/web/src/test/counter.test.tsx: focus revalidation preserves draft for unchanged permissions; revocation purges actual generation | preserve | seam |
+| apps/web/src/test/counter.test.tsx: does not claim an empty receipt result until the edited docket is searched | preserve | seam |
+| apps/web/src/test/counter.test.tsx: receipt discovery supports empty and safe denied/retry states | preserve | seam |
+| apps/web/src/test/counter.test.tsx: shows source credit, retains an uncertain request identity and saves the exact approved debtor | preserve | seam |
+| apps/web/src/test/counter.test.tsx: invalidates approval after any shipment edit and gives a clear held-account denial | preserve | seam |
+| apps/web/src/test/counter.test.tsx: can save a booking immediately after creating and using a service in its dialog | preserve | booking |
+| apps/web/src/test/counter.test.tsx: retries only the unconfirmed lot assignment after a multi-package booking is saved | preserve | booking |
+| apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
+| apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
+| apps/web/src/test/counter.test.tsx: keeps the entered booking when leaving the draft is cancelled | preserve | booking |
+| apps/web/src/test/counter.test.tsx: adds and removes packages directly below the docket row before saving a customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: cancels an unsaved booking only after confirming discard and can keep editing | preserve | booking |

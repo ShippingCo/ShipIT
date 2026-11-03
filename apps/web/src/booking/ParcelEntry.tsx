@@ -1,4 +1,4 @@
-import {useId,useState} from 'react';
+import {type ReactNode,useId,useState} from 'react';
 import {TextField,SelectField} from '../components/m3/Input';
 import {Msym} from '../components/m3/Icon';
 import {ConfirmDialog} from '../components/m3/Dialog';
@@ -11,7 +11,7 @@ const contentsTypes = [
   {value:'liquid',label:'Liquid'}, {value:'semi_liquid',label:'Semi-liquid'}, {value:'other',label:'Other'},
 ];
 
-export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,earlier=[],copyReceiver}:{
+export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,earlier=[],copyReceiver,primaryFields,hideReceiver=false}:{primaryFields?:ReactNode;hideReceiver?:boolean;
   parcel:ParcelDraft; number:number; errors:Errors; disabled:boolean;
   onChange:(field:keyof ParcelDraft,value:string)=>void; onRemove?:()=>void; earlier?:readonly ParcelDraft[]; copyReceiver?:(sourceNumber:number)=>boolean;
 }) {
@@ -39,15 +39,17 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
       <button type="button" className="btn btn-text" aria-controls={fieldsId} aria-expanded={!collapsed} onClick={()=>setCompact(!compact)}>{collapsed?'Edit parcel':'Hide parcel fields'} {number}<Msym name={collapsed?'expand_more':'expand_less'}/></button>
     </div>}
     <div id={fieldsId} hidden={collapsed}>
+    {primaryFields}
     <div className="counter-grid">
-      <TextField {...props('docket')} label={label('Docket number','docket number')} required maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
-      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} required placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/>
+      {!primaryFields&&<><TextField {...props('docket')} label={label('Docket number','docket number')} required maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
+      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} required placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/></>}
       <SelectField {...props('contentsType')} label={label('Contents type','contents type')} options={contentsTypes}/>
       <TextField {...props('contentsDescription')} label={label('Contents description','contents description')} required maxLength={200} placeholder="e.g. Cotton shirts"/>
       {['liquid','semi_liquid'].includes(parcel.contentsType)&&
         <UnitField {...props('liquidQuantity')} places={3} label={label('Liquid quantity (litres)','liquid quantity (litres)')} required/>}
-      <UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} helper="Optional"/>
+      {!primaryFields&&<UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} helper="Optional"/>}
     </div>
+    {!hideReceiver&&<>
     <h3 className="parcel-receiver-heading"><Msym name="pin_drop"/>Receiver {first?'':'for parcel '+number}<small className="booking-receiver-country">India</small></h3>
     {!first&&choices.length>0&&<div className="booking-copy-receiver">
       {choices.length===1&&source&&<span className="counter-help">{[source.recipientName.trim(),source.recipientCity.trim()].filter(Boolean).join(' · ')}</span>}
@@ -65,6 +67,7 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
       <TextField {...props('recipientCity')} label={label('City','city')} required maxLength={80}/>
       <TextField {...props('recipientRegion')} label={label('State / region','state')} required maxLength={80}/>
     </div>
+    </>}
     </div>
     {onRemove&&<button type="button" className="btn btn-text" disabled={disabled} onClick={onRemove}>Remove package {number}</button>}
   </fieldset>;

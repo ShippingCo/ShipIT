@@ -300,3 +300,19 @@ The cancellation result reports the confirmed parcel count and outstanding
 balance. Charge reversals follow the financial approval process separately.
 The [booking guide](../user-guides/new-booking.html) describes both leaving
 an unsaved draft and cancelling a confirmed booking.
+
+### Original counter form (2026-11-03)
+
+The production counter uses the original demo field placement with scoped API adapters.
+Save resolves or creates the actual customer, then collects explicit tax facts in a
+confirmation dialog. Server price/tax snapshots and immutable booking intents remain authoritative.
+Paid now opens the owned money-receipt workflow after booking confirmation; it is never
+a browser-only paid status. Multi-package and account/service options are in the confirmation
+dialog; cancellation uses the existing whole-booking command.
+
+A parcel may supply `details: {declared_value_paise: number}` alone, including zero. This
+freezes the original form's optional value without inventing a PIN, city or contents. If any
+structured address/contents fact is supplied, the complete structured contract remains required.
+No migration is needed: existing bounded JSON storage and snapshot/replay rules apply.
+API and frontend must ship together. A rollback must retain compact-details readers and the
+packing-override parser/calculator while records or quote snapshots using them remain readable.

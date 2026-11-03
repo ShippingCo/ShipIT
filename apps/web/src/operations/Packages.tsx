@@ -122,7 +122,7 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
   <section className="tracking-contacts" aria-label="Shipment contacts">
    <div><p className="tracking-caption"><Msym name="person"/>Sender</p><strong>{parcel.sender.name}</strong><span>{parcel.sender.phone_display}</span></div>
    <div><p className="tracking-caption"><Msym name="pin_drop"/>Recipient</p>{parcel.recipient.name&&<strong>{parcel.recipient.name}</strong>}<span>{parcel.recipient.phone_display??'No receiver phone provided'}</span>
-    {parcel.recipient.address&&<span>{parcel.recipient.address}</span>}{parcel.details&&<span>{parcel.details.city}, {parcel.details.region} {parcel.details.postal_code}</span>}
+    {parcel.recipient.address&&<span>{parcel.recipient.address}</span>}{parcel.details?.city&&<span>{parcel.details.city}, {parcel.details.region} {parcel.details.postal_code}</span>}
    </div>
   </section>
   <section className="tracking-history"><h3>Timeline</h3>

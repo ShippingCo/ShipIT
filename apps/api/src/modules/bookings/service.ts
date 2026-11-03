@@ -78,7 +78,7 @@ export function createBookingService(database: DatabasePool, cursorKey:Buffer, c
         if(body.tax_intent.facts.evidence_ref==='COUNTER_DECLARATION'&&body.tax_intent.facts.service_recipient_ref!==customer.id)throw new HttpError('TAX_CONFLICT');
         const frozen = customerSnapshot(customerDto(customer));
         const pricing = await validatePricingSnapshot(s.pricing,body.tax_intent.quote_id,body.tax_intent.pricing_input,now);
-        if(body.tax_intent.pricing_input.service_option_id)await assertServiceContents(s.pricing,body.tax_intent.pricing_input.service_option_id,body.parcels.some(p=>p.details&&['liquid','semi_liquid'].includes(p.details.contents_type)));
+        if(body.tax_intent.pricing_input.service_option_id)await assertServiceContents(s.pricing,body.tax_intent.pricing_input.service_option_id,body.parcels.some(p=>p.details&&['liquid','semi_liquid'].includes(p.details.contents_type??'')));
         const tax = await validateTaxSnapshot(s,body.tax_calculation_id,body.tax_intent,
           {source:'trusted-contemporaneous-records',evidenceRef:command,serviceAt:now,invoiceAt:now,paymentAt:null},now);
         const account=await prepareAccountBooking(s.bookings,body,pricing,tax,now);

@@ -182,7 +182,7 @@
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "df73ea3660f56a81c67aaf278794b52848082a64f4f7a04625642ba7d20df32b",
       "apps/web/src/components/m3/Controls.tsx": "cc35b02f2a3ee36bd09ebc8bc55d0e8828e6da7df8172c9137685459bb467466",
-      "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
+      "apps/web/src/components/m3/Journey.tsx": "6489abe596f224012f39a5c6a38874f7e0cb31950c45d5758201c0002b9e2057",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "6682b2972f267a4c656b519afd7c202d4a405a1c4fd793f0cd7d0be498df7d90",
+      "apps/web/src/test/counter.test.tsx": "ec0f9f2cf0a2cb5871d294e307e86320aa8e26e30350435cb4d1cf498d90214d",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -277,6 +277,14 @@
         {
           "target": "apps/web/src/data/types.ts",
           "syntax": "import type { ParcelStatus, TimelineEntry } from '../../data/types';"
+        },
+        {
+          "target": "apps/web/src/components/m3/StepTrack.tsx",
+          "syntax": "export {StepTrack} from './StepTrack';"
+        },
+        {
+          "target": "apps/web/src/components/m3/StepTrack.tsx",
+          "syntax": "export type {Step,StepTrackProps} from './StepTrack';"
         }
       ],
       "apps/web/src/context/AppContext.tsx": [
@@ -1623,22 +1631,22 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "adds a typed customer inline and preserves the booking draft when cancellation is dismissed",
+        "name": "uses the original demo field order and controls without separate customer or pricing steps",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+        "name": "looks up repeat customers on phone blur and only fills the selected customer",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "can save a booking immediately after creating and using a service in its dialog",
+        "name": "creates a new customer as part of save and does not duplicate it after returning to the form",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "recovers missing and empty rates through real setup without losing the booking draft or inventing services",
+        "name": "does not replace an existing customer with a different name or treat lookup failure as a new customer",
         "cases": null
       },
       {
@@ -1663,7 +1671,12 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "converts rupee overrides exactly and never silently drops an invalid non-empty amount",
+        "name": "saves declared goods value without making up structured delivery or contents facts",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
         "cases": null
       },
       {
@@ -1673,42 +1686,27 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "keeps Customer, Parcel, Charges and Booking summary on one editable page",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "does not claim an empty receipt result until the edited docket is searched",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
         "name": "payment choices and implicit form submission never confirm a booking",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "saves distinct parcel details once and retries only the unconfirmed lot assignment",
+        "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves three dockets in one booking and cancels all three from the saved screen",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "rejects duplicate extra dockets and focuses the field without creating a booking",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "rejects invalid extra package details and prevents edits during uncertain multi-package confirmation",
         "cases": null
       },
       {
@@ -1733,11 +1731,6 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "customer search selects the exact saved person and offers inline creation",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
         "name": "Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write",
         "cases": null
       },
@@ -1749,26 +1742,6 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "explicit save focuses the first missing sender field without creating a booking",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "scope change cancels late %s and prevents private totals repaint",
-        "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']"
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "scope change cancels late receipt and drops its private snapshot",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "malformed successes fail safely and unknown private fields are projected out",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
         "cases": null
       },
       {
@@ -1793,12 +1766,27 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "receipt discovery supports empty and safe denied/retry states",
+        "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
+        "name": "malformed successes fail safely and unknown private fields are projected out",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "does not claim an empty receipt result until the edited docket is searched",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "receipt discovery supports empty and safe denied/retry states",
         "cases": null
       },
       {
@@ -1809,6 +1797,41 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "can save a booking immediately after creating and using a service in its dialog",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "retries only the unconfirmed lot assignment after a multi-package booking is saved",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "scope change cancels late %s and prevents private totals repaint",
+        "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']"
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "scope change cancels late receipt and drops its private snapshot",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "keeps the entered booking when leaving the draft is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "adds and removes packages directly below the docket row before saving a customer",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "cancels an unsaved booking only after confirming discard and can keep editing",
         "cases": null
       },
       {
@@ -3182,6 +3205,10 @@
         "kind": "window.addEventListener"
       },
       {
+        "file": "apps/web/src/booking/NewBooking.tsx",
+        "kind": "window.setTimeout"
+      },
+      {
         "file": "apps/web/src/booking/RateChoices.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -3643,11 +3670,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "kind": "expect(localStorage.length).toBe"
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "kind": "expect(sessionStorage.length).toBe"
+        "kind": "expect(sessionStorage.getItem(sessionStorage.key(0)!)!).not.toMatch"
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
@@ -4344,64 +4367,64 @@
       "file": "apps/web/src/test/account-statements.test.tsx",
       "name": "shows independently checked balances, source debt, private history and exact uncertain issue recovery",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #142: source-reconciled account statements, explicit issuance permissions and exact uncertain-command recovery."
     },
     {
       "file": "apps/web/src/test/account-statements.test.tsx",
       "name": "allows accountant preview with no issuing action and rejects unreconciled DTO totals",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #142: source-reconciled account statements, explicit issuance permissions and exact uncertain-command recovery."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "captures with keyboard form, downloads matching artifact, and reloads saved filters",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "retries the exact uncertain intent while preserving disabled inputs and read-only export",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "opens exact saved source evidence with focus and clears private data after access loss",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "ignores a late capture result after the register unmounts",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "creates a readable USTAR archive with UTF-8 CSV content and valid checksum",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
       "file": "apps/web/src/test/accountant.test.tsx",
       "name": "rejects traversal and oversized archives",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #150: actor-owned accountant capture/reload/export, exact uncertain retry, saved-source focus and access-loss clearing, bounded portable CSV archive; controlled transport, not target software qualification."
     },
     {
@@ -4440,424 +4463,424 @@
       "file": "apps/web/src/test/agent-access.test.tsx",
       "name": "creates only this franchise agent grant, exposes one-time code in memory and revokes exact current membership version",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/agent-access.test.tsx",
       "name": "reconciles lost invitation by read and offers revocation, never replaying its unrecoverable token command",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/agent-access.test.tsx",
       "name": "rejects foreign tenant projections and never mutates a multiple-franchise grant through this screen",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
       "name": "agent opens handover-only controls and recovers the same request while settlement navigation is locked",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages."
     },
     {
       "file": "apps/web/src/test/agent-cash-handovers.test.tsx",
       "name": "own-source adapter minimizes fields, rejects foreign or broken pages and handover recovery requires the identical instant and amount",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: handover-only agent entry preserves original uncertain requests and navigation locks; minimum own-custodian sources reject broken paging and handover recovery binds canonical identical instants and exact amounts. Genuine HTTP tests cover current authority and complete source pages."
     },
     {
       "file": "apps/web/src/test/agent-money-requests.test.tsx",
       "name": "fee expense keeps full gross recognition, separate noncash direct amount and original advance binding",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
     },
     {
       "file": "apps/web/src/test/agent-money-requests.test.tsx",
       "name": "COD reversal binds the original receipt account/custodian, moves no cash and advance requests keep explicit payees",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
     },
     {
       "file": "apps/web/src/test/agent-money-requests.test.tsx",
       "name": "cashbook recovery accepts canonical timestamp spelling but rejects changed instants and financial fields",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: full fee entitlement with separate direct and original advance sources; exact COD reservation ownership and payment method; canonical timestamp recovery rejects changed instants and money. Controlled transport complements actual PostgreSQL and browser payment evidence."
     },
     {
       "file": "apps/web/src/test/agent-money.test.tsx",
       "name": "validates separate COD, direct cash/noncash and advance equations and bounded owned live pages",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
     },
     {
       "file": "apps/web/src/test/agent-money.test.tsx",
       "name": "retains immutable finance command content and key through uncertainty and rejects stale scope and mismatched operations",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
     },
     {
       "file": "apps/web/src/test/agent-money.test.tsx",
       "name": "owner workflow recovers the same seller revision while locking navigation and gives accountants source-only access",
       "cases": null,
-      "group": "payments",
       "disposition": "preserve",
+      "group": "payments",
       "reason": "Issue #144: exact owned source equations and noncash/direct fee split, minimum allowlists, immutable command recovery and owner-only configuration with read-only accountant sources. Controlled browser transport complements genuine PostgreSQL source/payment tests."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "keeps source-owned cash, seller liability and fees separate and rejects mismatched source frames or totals",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "captures first, separately submits exact evidence and recovers a lost submission without a new key",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "shows immutable sources before different-admin review and records only an explicit decision",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "preserves departed-agent correction identity and clears private evidence on scope loss",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "keeps accountant evidence read-only and prevents a submitting administrator from approving their revision",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve source-owned statement arithmetic, separate submission/review, exact uncertain recovery, departed-agent correction identity, scope clearing and read-only/self-approval controls. Controlled UI fixtures complement genuine database qualification."
     },
     {
       "file": "apps/web/src/test/agent-settlement-workspace.test.tsx",
       "name": "captures and downloads a fixed accountant statement export, retaining the exact uncertain request and clearing it on scope loss",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/agent-statements.test.ts",
       "name": "projects paged private headers and rejects impossible cutoffs, duplicate IDs and broken revision links",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
     },
     {
       "file": "apps/web/src/test/agent-statements.test.ts",
       "name": "retains exact immutable intent and key after a lost response and refuses a new derived revision or actor",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
     },
     {
       "file": "apps/web/src/test/agent-statements.test.ts",
       "name": "binds review outcome to the exact selected submission, reviewer, version and saved reason",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve private server statement metadata projection, exact immutable intent recovery and derived revision/reviewer validation. Controlled browser transport complements native independent-approval evidence."
     },
     {
       "file": "apps/web/src/test/agent-statements.test.ts",
       "name": "recovers captured export with the exact original key and projects only owned immutable metadata",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/agent-statements.test.ts",
       "name": "downloads the captured CSV schema and refuses mismatched private scope, columns and byte bounds",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Captured statement export: exact uncertain key recovery, owned immutable metadata, strict bounded public CSV schema, accountant capture/download and scope clearing. Controlled transport complements genuine PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "store seeds itself before first render even with empty localStorage",
       "cases": null,
-      "group": "demo",
       "disposition": "demo_only",
+      "group": "demo",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "heals corrupted persisted state",
       "cases": null,
-      "group": "demo",
       "disposition": "demo_only",
+      "group": "demo",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "renders both entry cards",
       "cases": null,
-      "group": "demo",
       "disposition": "demo_only",
+      "group": "demo",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "awaits native hash navigation, including repeated destinations and return to launcher",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Await native navigation and React commits without extending timeouts; retain same-route and return-to-launcher coverage with isolated browser history."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "renders the three headline numbers, dispatch board and ledger",
       "cases": null,
-      "group": "reports",
       "disposition": "replace",
+      "group": "reports",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "route %s renders",
       "cases": "[\n    ['/business/booking', 'Booking summary'],\n    ['/business/packages', 'SBC104201'],\n    ['/business/lots', 'Mumbai Metro Batch'],\n    ['/business/routes', 'RT-102'],\n    ['/business/feed', 'Sent automatically'],\n    ['/business/receipts', 'Reprint'],\n    ['/business/settings', 'Demo data'],\n    ['/business/reports', 'Sales register'],\n    ['/business/reports/gst', 'GST summary'],\n    ['/business/eway', /Consignments over/],\n  ]",
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "creates a booking; packages list updates live",
       "cases": null,
-      "group": "booking",
       "disposition": "replace",
+      "group": "booking",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "advances status reactively inside open dialog; verifies delivery OTP",
       "cases": null,
-      "group": "proof",
       "disposition": "replace",
+      "group": "proof",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "creates a lot via dialog",
       "cases": null,
-      "group": "lots",
       "disposition": "replace",
+      "group": "lots",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "reports delay from UI; affected customers notified",
       "cases": null,
-      "group": "routes",
       "disposition": "replace",
+      "group": "routes",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "depart event cascades parcel statuses + notifications",
       "cases": null,
-      "group": "routes",
       "disposition": "replace",
+      "group": "routes",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "lists queued outbound messages",
       "cases": null,
-      "group": "messaging",
       "disposition": "replace",
+      "group": "messaging",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "persona auto-selected, bot replies, proactive outbox lands in chat",
       "cases": null,
-      "group": "assistant",
       "disposition": "replace",
+      "group": "assistant",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "splits CGST + SGST intra-state and charges IGST inter-state",
       "cases": null,
-      "group": "pricing",
       "disposition": "replace",
+      "group": "pricing",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "e-way record stores Part-B vehicle and validity by distance",
       "cases": null,
-      "group": "eway",
       "disposition": "replace",
+      "group": "eway",
       "reason": "Retain current demo evidence. Production successor must satisfy the linked group verification rather than preserve browser authority or policy shortcuts."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "resets fictional data with zero API, auth or provider traffic and leaves legacy data untouched",
       "cases": null,
-      "group": "demo",
       "disposition": "demo_only",
+      "group": "demo",
       "reason": "Issue 18 demo reset only mutates the explicit fictional namespace and performs zero network requests."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "cancelled reprint preserves the saved booking, payments and outbox",
       "cases": null,
-      "group": "receipts",
       "disposition": "demo_only",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "opens today’s packages from the dashboard while keeping useful cross-day recent bookings",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/app.test.tsx",
       "name": "terminal parcels cannot be reassigned through the demo store and delivery keeps unpaid money separate",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "selects, shows progress and pending scan, then retains only approved metadata",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "cancels in-flight bytes, revokes preview, and sends durable cancel",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "retries the same intent after network failure and announces unsafe responses without rendering bytes",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "purges and aborts previews on %s",
       "cases": "['scope switch','logout','unmount']",
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "validates selection and provides native keyboard buttons and associated async text",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "loads durable metadata and fetches bytes only on explicit preview",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "public metadata discards unsafe extra fields and rejects a forged ready result",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "XHR uses current CSRF/session, progress, abort and safe response projection",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "photo decoding errors and aborts revoke the temporary object URL",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "download adapter bounds bytes and rejects a foreign signed URL before sending credentials",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Production private attachment transport, validation and ephemeral preview security under Issue #31."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "replacing the attachment client clears prior booking previews before the next list resolves",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Clear a previous Booking preview during asynchronous client replacement."
     },
     {
       "file": "apps/web/src/test/attachments.test.tsx",
       "name": "a booking attachment client cannot rebind to a newly selected franchise",
       "cases": null,
-      "group": "attachments",
       "disposition": "preserve",
+      "group": "attachments",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
@@ -4920,72 +4943,72 @@
       "file": "apps/web/src/test/booking-phone.test.tsx",
       "name": "adds the selected country code exactly once and keeps an empty phone empty",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve explicit country selection, one country prefix and an empty unset phone draft."
     },
     {
       "file": "apps/web/src/test/booking-phone.test.tsx",
       "name": "accepts a full pasted number, preserves unknown international codes and follows external customer changes",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve pasted full international numbers, unsupported-country escape and external saved-customer selection."
     },
     {
       "file": "apps/web/src/test/booking-phone.test.tsx",
       "name": "does not discard invalid phone characters and exposes an accessible field error",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve international-number validation, explicit invalid characters and accessible disabled/error controls."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "limits the courier template to confirmed selected courier services and never infers a customer jurisdiction",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve explicit domestic-courier scope confirmation, selected supported services and separate registration/jurisdiction rules without deciding booking place of supply."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "applies a reviewed domestic courier template only to the draft and submits exact user-supplied tax identity",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve draft-only template application, actual supplier/approval facts, sourced notification evidence, exact 18 percent components and explicit publication review."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "converts exact prices and reviewed tax percentages without inventing a rate",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve exact rupee/percentage conversion and explicit approved rate and tax input without fabricated values."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "requires review before publication and retries the same uncertain draft without duplicate intent",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve saved draft review and same-intent recovery before explicit scoped pricing publication."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "does not fetch configuration or offer publication to an operator",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve administrator-only policy setup affordances with server authorization remaining authoritative."
     },
     {
       "file": "apps/web/src/test/booking-policy-setup.test.tsx",
       "name": "records transparent publisher-review and manual-entry provenance without fabricating document references",
       "cases": null,
-      "group": "pricing",
       "disposition": "preserve",
+      "group": "pricing",
       "reason": "Preserve explicit semantic provenance markers, unset freight, convenience defaults and a separate actual publication-review step; external document mode retains actual supplied references."
     },
     {
@@ -5008,40 +5031,40 @@
       "file": "apps/web/src/test/booking-units.test.tsx",
       "name": "converts kg and rupees exactly at fractional and safe-integer boundaries",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve exact decimal conversion, precision rejection and safe-integer boundaries before API submission."
     },
     {
       "file": "apps/web/src/test/booking-units.test.tsx",
       "name": "retains partial decimal editing and updates after an external draft change",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve unfinished display input and synchronization with external authoritative draft changes."
     },
     {
       "file": "apps/web/src/test/booking-units.test.tsx",
       "name": "accepts only published rate choices and discards unneeded pricing details",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve the minimal published-card decoder and rejection of unsupported destination/service evidence."
     },
     {
       "file": "apps/web/src/test/business-dates.test.tsx",
       "name": "uses IST midnight and Monday weeks across Sunday, month and year boundaries",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/business-dates.test.tsx",
       "name": "date presets edit the range without submitting or replacing saved report evidence",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
@@ -5152,160 +5175,160 @@
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "rejects mismatched approvals, self approval and application linked to rejected evidence",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "checks integer position conservation, reservations and uncertainty without converting totals to floats",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "requires paired acceptance legs and conserves the whole handover even when history is paged",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "rejects source totals and cutoff mismatches and strips private extra report fields",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "rejects wrong returned request intent and clears stale scope before transport",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "retains the exact uncertain expense and blocks navigation until same-key replay",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "requires another admin to review and applies the original request instead of the returned decision id",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "allows the current receiving custodian to accept part of the reservation with captured versions",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "keeps every paise in a recording correction and retains the original occurrence evidence",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "submits category/method/employee filters with an exclusive Kolkata time boundary and current scope",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "uses real expense proof adapters and retains byte upload identity across an uncertain acknowledgement with navigation blocked",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "keeps receiver rejection available without active custody selectors or cross-custodian reads",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "gives finance readers permitted custody history without acknowledgement or reservation forms",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "keeps finance readers free of expense and custody mutation forms",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "uses the server default occurrence order when a capture omits optional filters",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "captures filtered evidence, pages and opens original source detail while retaining complete cutoff controls",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "retains capture identity after an uncertain response and rejects a mismatching CSV snapshot",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "downloads matching captured CSV in StrictMode and discards a late export after scope invalidation",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "shows current export permission and never gives an operator access to captured financial sources",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "uses the current actual receiving account revision and freezes the account/custodian of existing cash locations",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve scoped server cashbook authority, financial source conservation and same-intent recovery; controlled browser transport complements native PostgreSQL evidence."
     },
     {
@@ -5398,58 +5421,58 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "adds a typed customer inline and preserves the booking draft when cancellation is dismissed",
+      "name": "uses the original demo field order and controls without separate customer or pricing steps",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Keep an entered customer and the same unsaved booking when the operator chooses Keep editing."
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+      "name": "looks up repeat customers on phone blur and only fills the selected customer",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "can save a booking immediately after creating and using a service in its dialog",
+      "name": "creates a new customer as part of save and does not duplicate it after returning to the form",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Release the completed service-publication lock, use the confirmed named service and submit exactly one booking."
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "recovers missing and empty rates through real setup without losing the booking draft or inventing services",
+      "name": "does not replace an existing customer with a different name or treat lookup failure as a new customer",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
-      "reason": "Preserve real Settings setup navigation in a separate tab, retained booking input and explicit published-rate retry without fallback destinations."
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "loads an explicitly selected customer through the current scope and never creates a replacement",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve scoped customer identity from directory navigation and forbid automatic replacement creation."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "does not request an invalid customer link or substitute a customer when it fails",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve invalid-link rejection and safe customer-read failure without substituting identity."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "shows published destinations with a recoverable failure and no invented fallback choices",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve real published rate choices, explicit retry and absence of invented destinations."
     },
     {
@@ -5462,11 +5485,19 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "converts rupee overrides exactly and never silently drops an invalid non-empty amount",
+      "name": "saves declared goods value without making up structured delivery or contents facts",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
-      "reason": "Preserve exact paise conversion and rejection of invalid nonempty optional overrides."
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5478,103 +5509,15 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "keeps Customer, Parcel, Charges and Booking summary on one editable page",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "booking",
-      "reason": "Keep all sections visible, preserve entries on focus jumps and prevent navigation from submitting the booking."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "does not claim an empty receipt result until the edited docket is searched",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Preserve explicit search submission, truthful empty state and stable focus after clearing a searched docket."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "creates approved wire commands, To Pay obligation, optional immutable printing and fresh receipt discovery",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
       "name": "payment choices and implicit form submission never confirm a booking",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "saves distinct parcel details once and retries only the unconfirmed lot assignment",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "booking",
-      "reason": "Preserve each receiver, docket, declared paise, combined weight and confirmed parcel ID. Retry the unconfirmed lot addition with its original command identity."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents",
-      "cases": null,
-      "group": "booking",
-      "reason": "Keep each docket independent when staff reuse a receiver.",
-      "disposition": "preserve"
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address",
-      "cases": null,
-      "group": "booking",
-      "reason": "Preserve counter validation for optional contacts and required delivery address.",
-      "disposition": "preserve"
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "rejects invalid extra package details and prevents edits during uncertain multi-package confirmation",
-      "cases": null,
-      "group": "booking",
-      "disposition": "preserve",
-      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "network outage preserves draft and never fabricates a receipt or local booking",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "discards late franchise A search at viewport %i through real scope generation",
-      "cases": "[1280,375]",
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "customer search selects the exact saved person and offers inline creation",
+      "name": "prints only after saving and does not recreate a booking when printing is cancelled",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
@@ -5582,18 +5525,74 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves three dockets in one booking and cancels all three from the saved screen",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Preserve one atomic booking with three dockets and explicit whole-booking cancellation from the saved counter; dismissing cancellation must not write."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "rejects duplicate extra dockets and focuses the field without creating a booking",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Keep each docket independent when staff reuse a receiver."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "double click and lost commit acknowledgement retain identical path/body/key with one displayed result",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "network outage preserves draft and never fabricates a receipt or local booking",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "discards late franchise A search at viewport %i through real scope generation",
+      "cases": "[1280,375]",
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
       "name": "Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #138: replace legacy UI collection with the receipt-backed source workflow; retain booking and parcel safeguards. Exact receipt failure/retry coverage is in money-receipts.test.tsx."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "receipt outage has an independent retry and retains booking",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
@@ -5606,282 +5605,330 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "scope change cancels late %s and prevents private totals repaint",
-      "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']",
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "scope change cancels late receipt and drops its private snapshot",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "malformed successes fail safely and unknown private fields are projected out",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
-      "cases": null,
-      "group": "seam",
-      "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
       "name": "handles safe %s without losing the draft or claiming success",
       "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "malformed committed response is uncertain and retry uses its original identity",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "401 purges private form and requires sign in without local fallback",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "reload with an unresolved marker forbids fresh-key booking and contains no persisted body",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
-      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "receipt discovery supports empty and safe denied/retry states",
-      "cases": null,
       "group": "seam",
-      "disposition": "preserve",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "scope switch during a dispatched booking retains opaque recovery and never replays under B",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #33: old-scope dispatched mutation retains opaque recovery and cannot replay under a new franchise."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "malformed successes fail safely and unknown private fields are projected out",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "focus revalidation preserves draft for unchanged permissions; revocation purges actual generation",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "does not claim an empty receipt result until the edited docket is searched",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Preserve explicit search submission, truthful empty state and stable focus after clearing a searched docket."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "receipt discovery supports empty and safe denied/retry states",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "shows source credit, retains an uncertain request identity and saves the exact approved debtor",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "can save a booking immediately after creating and using a service in its dialog",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Release the completed service-publication lock, use the confirmed named service and submit exactly one booking."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "retries only the unconfirmed lot assignment after a multi-package booking is saved",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "scope change cancels late %s and prevents private totals repaint",
+      "cases": "['/api/v1/pricing/quote','/api/v1/tax/calculations']",
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "scope change cancels late receipt and drops its private snapshot",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "keeps the entered booking when leaving the draft is cancelled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "adds and removes packages directly below the docket row before saving a customer",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "cancels an unsaved booking only after confirming discard and can keep editing",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/custody-actions.test.tsx",
       "name": "requires reassignment instruction and source-specific grant for mixed custody cohort",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-actions.test.tsx",
       "name": "records missing separately from actual office receipt using exact source version",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-actions.test.tsx",
       "name": "prevents replacement submission while locked and keeps giver actions separate from administration",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "projects only source fields and rejects invented proof, wrong control totals and missing custody",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "rejects duplicate parcels and reused delivery or failure evidence across a full cohort",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "requires immutable snapshot count, same cutoff and exact expiry while dropping unknown private fields",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "does not accept partial acknowledgement or a proof masquerading as unknown physical custody",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "rejects mismatched capture manifest, export identity and sibling snapshot before display",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "never confirms another manifest or approval and rejects receipt claims from proposal-only actions",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-data-access.test.ts",
       "name": "discards an in-flight captured snapshot and its retry intent when scope changes",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-transfers.test.tsx",
       "name": "prepares and releases exact source evidence without manually entering approval, instruction or manifest references",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-transfers.test.tsx",
       "name": "rejects a mismatched named approval and does not offer giver controls to another account",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-transfers.test.tsx",
       "name": "rejects false preparation claims and office-grant destination/proof contradictions before display",
       "cases": null,
-      "group": "parcels",
       "disposition": "preserve",
+      "group": "parcels",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody-transfers.test.tsx",
       "name": "confirms named transfer revocation from both the approved list and manual reference form",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve explicit revocation review, cancel without mutation and exact approval identity/version for both entry points."
     },
     {
       "file": "apps/web/src/test/custody.test.tsx",
       "name": "retains exact acknowledgement after a lost response and blocks replacement navigation",
       "cases": null,
-      "group": "recovery",
       "disposition": "preserve",
+      "group": "recovery",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody.test.tsx",
       "name": "does not offer acknowledgement for another agent or export to readers, and purges private evidence on scope loss",
       "cases": null,
-      "group": "recovery",
       "disposition": "preserve",
+      "group": "recovery",
       "reason": "Issue #143: preserve scoped temporary-agent and physical-custody behavior, source/proof identity, minimum private projection and exact uncertain command recovery. Synthetic web transport is distinct from native persistence and real browser qualification."
     },
     {
       "file": "apps/web/src/test/custody.test.tsx",
       "name": "requires confirmation before cancelling a prepared handover and preserves its exact server command",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve no mutation before confirmation and the exact current expected version when a prepared handover is cancelled."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
       "name": "requires an explicit contact attestation, keeps an uncertain command and retries its exact body/key",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
       "name": "reviews exact shipment evidence before approving and refreshes the pending queue",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
       "name": "read-only cannot mount account directory reads or configuration",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
       "name": "creates a missing customer in the account flow and retries the same uncertain customer request",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve inline customer creation, exact lost-response retry and authority/navigation locks inside the staged monthly-account flow."
     },
     {
       "file": "apps/web/src/test/customer-accounts.test.tsx",
       "name": "keeps account setup focused and restores the directory and approval queue on cancel",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve focused account setup, restore the directory and approval queue after Cancel, and retain uncertain-request locks."
     },
     {
       "file": "apps/web/src/test/daily-dashboard.test.tsx",
       "name": "keeps date shortcuts local until capture and charts exact large or negative amounts without invented percentages",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve local date drafting, explicit report capture and exact large/signed server amounts in comparison visuals."
     },
     {
@@ -5912,224 +5959,224 @@
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "defaults to production and accepts only explicit demo or safe canonical API origins",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "rejects unsafe or noncanonical API base %s without echoing it",
       "cases": "['https://user:secret@example.test', 'https://example.test/?token=secret', 'https://example.test/#secret', '//example.test', 'javascript:secret', 'http://remote.test', 'https://example.test/path', 'https://example.test/', 'https://EXAMPLE.test']",
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "rejects unknown public settings, invalid mode/version and configured demo API",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "uses configured routing, credentials, no-store, no redirects, CSRF and exact mutation key",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "reads without bootstrap and supports approved future methods and 204",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "projects only known code, server correlation and declared validation fields",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "handles non-JSON HTTP %s without raw response leakage",
       "cases": "[401, 403, 404, 408, 429, 500, 503]",
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "classifies mutation HTTP %s %s as %s without replay",
       "cases": "[\n    [401, 'UNAUTHENTICATED', 'reauthenticate'], [403, 'ACTION_FORBIDDEN', 'unavailable'], [404, 'RESOURCE_NOT_FOUND', 'unavailable'],\n    [408, 'REQUEST_TIMEOUT', 'uncertain'], [409, 'VERSION_CONFLICT', 'refresh'], [409, 'IDEMPOTENCY_CONFLICT', 'conflict'],\n    [409, 'IDEMPOTENCY_IN_PROGRESS', 'pending'], [422, 'VALIDATION_FAILED', 'validate'], [429, 'RATE_LIMITED', 'retry'],\n    [500, 'INTERNAL_ERROR', 'uncertain'], [503, 'TEMPORARILY_UNAVAILABLE', 'uncertain'],\n  ]",
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "sanitizes network exceptions and malformed successes without manufacturing committed results",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "cancellation during ignored bootstrap prevents sending the mutation; after dispatch remains uncertain",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "never sends to an arbitrary destination or continues after invalid bootstrap",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "purges cache/cleanup before B and revisited A; rejects ignored cancellation and stale same-query results",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "isolates identity/permission changes and rejects late errors from an old scope",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "retries exact intent after uncertainty but refuses replay after identity/scope generation changes",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "never publishes a command result after scope changes and enforces expected-version consistency",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/data-access.test.ts",
       "name": "broadcasts only payload-free invalidation and closes its channel; missing channel needs no storage fallback",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/dialog-accessibility.test.tsx",
       "name": "names the confirmation, focuses Cancel, and restores the opener on Escape without confirming",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve accessible dialog title, safe initial focus, Escape dismissal and opener focus restoration without a destructive write."
     },
     {
       "file": "apps/web/src/test/dialog-accessibility.test.tsx",
       "name": "performs the confirmed action once and closes the modal",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve one explicit confirmed action and modal closure."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "rejects booking evidence and parent fields while projecting only expense metadata",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "uses only the expense parent route and rejects mismatched parent/command identities as uncertain",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "rejects booking grant URLs and wrong-parent/foreign URLs before sending credentials",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "uses exact expense binary content path, current CSRF and parent-projected upload result",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "aborts expense transport on scope change and refuses a new franchise rebind",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "bounds bytes and rejects an empty response or a late response after current scope loss",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "retains uncertain initiation and cancellation identities until durable cleanup is confirmed",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "reconciles ready evidence after an uncertain cancellation without replacing the original cancellation key",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "allows finance proof read without upload, retry or cancel and never locks review on another creator’s unsettled metadata",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "freezes new evidence after review and purges previews on scope loss",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Preserve private expense parent/grant isolation, bounded bytes, reviewed freeze and durable uncertain lifecycle recovery; no browser financial authority."
     },
     {
@@ -6232,96 +6279,96 @@
       "file": "apps/web/src/test/form-inputs.test.tsx",
       "name": "keeps bounded multiline inputs labelled, described and locked during a request",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve accessible input identity, bounded text, helper association and disabled/required state."
     },
     {
       "file": "apps/web/src/test/form-inputs.test.tsx",
       "name": "adds and removes holiday dates with date inputs without guessing operating days or duplicating dates",
       "cases": null,
-      "group": "settings",
       "disposition": "preserve",
+      "group": "settings",
       "reason": "Preserve explicit holiday editing, unique dates and the existing operating-day selection and review reason."
     },
     {
       "file": "apps/web/src/test/lint-regressions.test.tsx",
       "name": "can change between empty and populated series without changing hook order",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Keep accessible rendering/navigation and hook-order behavior with server-backed fixtures; demo/settings routes remain explicitly fictional."
     },
     {
       "file": "apps/web/src/test/logistics-design.test.tsx",
       "name": "keeps customer context on the server query and clears both customer and booked-today route filters",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve scoped customer filters in server reads and explicit clearing of route-provided filters."
     },
     {
       "file": "apps/web/src/test/logistics-design.test.tsx",
       "name": "keeps drafted filters separate from applied filters and rejects a reversed date range before a read",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve draft/apply separation, date validation, accessible error focus and role-limited actions."
     },
     {
       "file": "apps/web/src/test/logistics-design.test.tsx",
       "name": "offers first-use lot and route actions only to roles that can create them",
       "cases": null,
-      "group": "lots",
       "disposition": "preserve",
+      "group": "lots",
       "reason": "Preserve permission-filtered first-use actions and focus the actual create form when available."
     },
     {
       "file": "apps/web/src/test/logistics-design.test.tsx",
       "name": "recovers an empty filtered route list using the server all-states query",
       "cases": null,
-      "group": "routes",
       "disposition": "preserve",
+      "group": "routes",
       "reason": "Preserve explicit empty-filter recovery and the scoped server query without a fabricated local result."
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
       "name": "filters and sorts packages through scoped server queries while retaining the applied customer and date range",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
       "name": "opens package detail in a dialog and restores keyboard focus to its list action",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
       "name": "retains a delivery assignment after a lost response and retries the same handover evidence",
       "cases": null,
-      "group": "proof",
       "disposition": "preserve",
+      "group": "proof",
       "reason": "Retain server-authorized assignment, handover evidence and the original command identity through an uncertain response; do not claim delivery or payment."
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
       "name": "keeps a lot draft on dismissal and preserves its uncertain creation intent until the original request succeeds",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
       "name": "plans a route only after explicit submission and retains its retry identity when the response is lost",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
@@ -6344,32 +6391,32 @@
       "file": "apps/web/src/test/lot-candidates.test.tsx",
       "name": "filters candidates by server destination, ungrouped state and IST booking date before deliberate selection",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
       "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #65: server-authorized aggregate snapshot, explicit unknown delivery and disclosure, current schedule, accessible reload/drill-through and exact uncertain retry; no transcript or browser business authority."
     },
     {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
       "name": "retries saved failures and reuses the exact uncertain capture while keeping filters disabled",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #65: server-authorized aggregate snapshot, explicit unknown delivery and disclosure, current schedule, accessible reload/drill-through and exact uncertain retry; no transcript or browser business authority."
     },
     {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
       "name": "keeps measured zero, a withheld count and absent evidence distinct in the reach summary",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Show measured zero separately from withheld and unknown delivery evidence in saved reports."
     },
     {
@@ -6520,72 +6567,72 @@
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "uses complete scoped counts, distinct booking totals and Monday week dates without guessing payment balances",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "shows failed summaries as unavailable and retries without substituting mockup data",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "does not request operational or money data for a delivery agent",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "rejects unsafe counts, incomplete weeks and inconsistent business dates",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "applies dashboard stage links to the scoped package query",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "discards a payment capture completed after the franchise scope changes",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Real scoped dashboard counts and report evidence replace bounded prototype guesses; preserve unavailable, permission, calendar and stale-scope behavior."
     },
     {
       "file": "apps/web/src/test/operational-dashboard.test.tsx",
       "name": "counts provider acceptance from durable progress and never calls a queued message sent",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Provider acceptance uses durable progress; queued messages are never represented as sent."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid",
       "cases": null,
-      "group": "eway",
       "disposition": "preserve",
+      "group": "eway",
       "reason": "Preserve complete optional evidence groups and block partial reference/value submission instead of silently omitting entered facts."
     },
     {
@@ -6712,232 +6759,232 @@
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "booked-today links and destination/date filters use scoped IST boundaries, and close restores the list position",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "requires an explicit archive confirmation for lots and planning routes without changing server versions",
       "cases": null,
-      "group": "lots",
       "disposition": "preserve",
+      "group": "lots",
       "reason": "Preserve cancellation without writes, opener focus return, exact lot/route identifiers and expected server versions on confirmation."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "adds a route parcel by tracking lookup while retaining server references and version",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve tracking lookup selection, exact authorized parcel reference and current route version when attaching a parcel."
     },
     {
       "file": "apps/web/src/test/operations.test.tsx",
       "name": "shows the proof exception route when a parcel has no receiver phone",
       "cases": null,
+      "disposition": "preserve",
       "group": "proof",
-      "reason": "Never offer an unsendable code or bypass delivery proof review.",
-      "disposition": "preserve"
+      "reason": "Never offer an unsendable code or bypass delivery proof review."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "opens workspace navigation with keyboard focus and returns focus on Escape",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve one responsive navigation tree, focus entry, Escape return and dismissal when focus leaves the disclosure."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "shows booking and delivery administration with only %s",
       "cases": "['org_admin','franchise_admin'] as const",
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 190: administrative navigation and direct-route permissions agree without broadening dispatcher booking authority."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "denies dispatcher direct booking routes without loading counter prerequisites",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 190: administrative navigation and direct-route permissions agree without broadening dispatcher booking authority."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "completes onboarding, sends only approved fields and reloads server context without browser authority",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "associates required validation with focusable inputs and completes a form submit",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "lists only server scopes and clears the old shell immediately while switching",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "late A response cannot paint after B, even when transport ignores cancellation",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "protected navigation after revocation removes cached data and offers controlled recovery",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "a denied scoped action clears context and a late previous request cannot restore it",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "uncertain onboarding preserves the exact request key and body over remount",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "committed onboarding followed by context failure recovers from server state without a second create",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "accepts through the existing invitation API and never stores the secret",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "an invitation response after navigation refreshes the current route instead of stranding loading",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 navigation recovery: late invitation completion refreshes the current route."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "failed invitation acceptance preserves controlled recovery",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "authenticates through existing challenge routes and safely signs out",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "does not fall back to localStorage on an API outage",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 17 production regression: server context, retry identity and scope generation replace browser authority; retain this security outcome."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "production startup ignores URL/storage demo flags and never initializes fictional state",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "401 during a mutation purges workspace and requires sign-in without replay or request loops",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "401 on private cached work erases cache/context and late work cannot restore it",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "logout hides private data immediately and late context cannot repaint",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "keeps private data hidden after uncertain sign-out until an explicit logout retry succeeds",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve immediate private-data removal and block route/focus reauthorization until explicit sign-out retry is confirmed."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "revisiting A from B shows loading until fresh authorized retrieval",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "cross-tab invalidation immediately removes old context and revalidates without echo loops",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "sign-in works under Strict Mode effect replay",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
       "name": "malformed successful context becomes controlled recovery without private fields",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue 18 boundary regression: safe public configuration, API errors, immutable request identity and scope/cache invalidation."
     },
     {
@@ -6976,88 +7023,88 @@
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "network loss preserves exact immutable body, outer/item keys, versions and acting scope",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "scope switch aborts/discards late results and purges selection/private results, including repeated scope generations",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "keyboard-reachable selection/action/retry, disabled pending state and live textual partial results",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "malformed/partial/foreign success DTO cannot fabricate completion or expose extra fields",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "refresher cannot reinsert successful A and unavailable failures remain represented when omitted",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "refresh authentication denial purges the prior private selection and result",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 authoritative refresh authentication failures purge private bulk state."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "explicit demo composition refuses the production bulk adapter without contacting any endpoint",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "same outer adapter intent is a frozen snapshot and 503 retains command identity",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #25 production bulk selection, retry, scope and safe DTO contract; complete screen integration remains #34."
     },
     {
       "file": "apps/web/src/test/performance.test.tsx",
       "name": "keyboard submit saves identity, reloads, displays empty denominator and exports matching selection",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #64: saved operational cohort, accessible keyboard/reload states, exact uncertain retry and matching scoped export; no browser delivery or financial authority."
     },
     {
       "file": "apps/web/src/test/performance.test.tsx",
       "name": "reload errors expose retry, denied export remains disabled and uncertain capture reuses exact intent",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Issue #64: saved operational cohort, accessible keyboard/reload states, exact uncertain retry and matching scoped export; no browser delivery or financial authority."
     },
     {
@@ -7104,88 +7151,88 @@
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "renders booked paise and saved rounding without settlement or a moving ETA",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "keeps partial collection and reversal entry labels separate from booked total and settlement",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "renders frozen receipt allocation evidence without a second cash inflow or private external reference",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #138: decode frozen receipt allocation provenance and new recorded methods, require matching source kind, omit private references, and label applied/released funds without a second cash inflow."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "escapes every layout text context and ignores foreign download and executable logo URLs",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "prints only on explicit action; cancelled/no-op printing keeps source state and clears private DOM",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",
       "name": "cleans up private print markup even when browser print throws",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "shows disabled default and preserves the exact uncertain opt-in command across back navigation",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "requires explicit selection and reason before confirming an exact suggestion",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "captures controls and drills into verifier/source evidence; external references default out of CSV",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "read_only cannot mount private reconciliation requests",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "uploads a local CSV, publishes its selected mapping and preserves that version through preview and import",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
@@ -7240,40 +7287,40 @@
       "file": "apps/web/src/test/segmented-payment.test.tsx",
       "name": "chooses a payment segment without submitting its surrounding booking form",
       "cases": null,
-      "group": "booking",
       "disposition": "preserve",
+      "group": "booking",
       "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",
       "name": "filters receipts by the IST booking date and preserves applied bounds while paging an edited draft",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",
       "name": "rejects an inverted receipt date range without sending a new read",
       "cases": null,
-      "group": "receipts",
       "disposition": "preserve",
+      "group": "receipts",
       "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",
       "name": "shows queued provider work as waiting in the feed and uses scoped notification filters without send claims",
       "cases": null,
-      "group": "messaging",
       "disposition": "preserve",
+      "group": "messaging",
       "reason": "Provider waiting state stays truthful and filtering remains scoped."
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",
       "name": "keeps unavailable warnings and active draft validation visible when settings categories are collapsed",
       "cases": null,
-      "group": "settings",
       "disposition": "preserve",
+      "group": "settings",
       "reason": "Preserve visible unavailable-setting warnings and active draft validation when category disclosures are collapsed; retain entered values and explicit reviewed save."
     },
     {
@@ -7616,32 +7663,32 @@
       "file": "apps/web/src/test/shipment-cost.test.tsx",
       "name": "keeps a shipment cost draft while moving between details and booking allocation",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve entered source amounts and allocation context while moving backward and forward between cost steps."
     },
     {
       "file": "apps/web/src/test/shipment-cost.test.tsx",
       "name": "focuses cost entry and restores the report without writing when cancelled",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve cost-entry focus and restore report context on Cancel without sending a cost write."
     },
     {
       "file": "apps/web/src/test/sign-in-fields.test.tsx",
       "name": "focuses sign-in steps and retains the email while clearing a rejected code",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve sign-in focus, explicit error association, retained login email and cleared rejected verification secret."
     },
     {
       "file": "apps/web/src/test/sign-in-fields.test.tsx",
       "name": "preserves leading zeroes in a sign-in code and ignores a verification completed after unmount",
       "cases": null,
-      "group": "seam",
       "disposition": "preserve",
+      "group": "seam",
       "reason": "Preserve exact eight-digit strings, pending-state locking and cancellation before a late sign-in completion can advance the UI."
     },
     {
@@ -7656,152 +7703,152 @@
       "file": "apps/web/src/test/studio-workspace.test.tsx",
       "name": "searches customers with an explicit country code and focuses invalid phone input before any request",
       "cases": null,
-      "group": "customers",
       "disposition": "preserve",
+      "group": "customers",
       "reason": "Preserve selected international country code, scoped explicit customer search and local error focus without invalid reads."
     },
     {
       "file": "apps/web/src/test/studio-workspace.test.tsx",
       "name": "builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve exact BigInt paise aggregation, Kolkata day boundaries and complete reconciled evidence."
     },
     {
       "file": "apps/web/src/test/studio-workspace.test.tsx",
       "name": "searches real scoped customers only after valid input and links the selected record into booking",
       "cases": null,
-      "group": "customers",
       "disposition": "preserve",
+      "group": "customers",
       "reason": "Preserve bounded explicit customer search, scoped identity navigation and cleared private selection."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 52: accessible support dialog, Escape dismissal and restored keyboard focus."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "loads private detail on selection and returns keyboard focus after close",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "handles empty, loading and retriable read errors",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "claims a case then shows owner reply and internal-note actions",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "preserves an uncertain reply intent and exposes blocked delivery after retry",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "keeps drafts after stale state and denies read-only staff mutation",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
       "name": "requires a reason to reopen a resolved case",
       "cases": null,
-      "group": "assistant",
       "disposition": "preserve",
+      "group": "assistant",
       "reason": "Issue 50: scoped staff ownership, separate internal notes, accessible case handling and safe command retry."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "waits for every saved page before displaying complete counts and exact paise totals",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve complete saved-report pagination before presenting counts or money."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "recovers a failed next page using the same saved report without another capture",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve snapshot identity and offset when retrying a failed report page."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "offers a fresh capture after saved evidence expires and rejects inconsistent page identity",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve explicit expired-evidence recovery and rejection of mismatched snapshots."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "retains the exact capture request after an uncertain response and offers no fresh action",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve the original capture intent after uncertainty and prohibit a replacement request."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "loads on entry when requested and uses complete saved evidence for a 30-day preset",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve requested entry capture, complete saved pages and exact selected-period report intent for chart presets."
     },
     {
       "file": "apps/web/src/test/weekly-business.test.tsx",
       "name": "rejects invalid custom date ranges locally without creating a report",
       "cases": null,
-      "group": "reports",
       "disposition": "preserve",
+      "group": "reports",
       "reason": "Preserve custom date validation before creating any report capture intent."
     },
     {
       "file": "apps/web/src/test/workspace-components.test.tsx",
       "name": "keeps native field names separate from options and connects helpers and validation messages",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve canonical native field names and programmatic helper and validation associations."
     },
     {
       "file": "apps/web/src/test/workspace-components.test.tsx",
       "name": "preserves supplied server record order and explicit action identity in a named accessible worklist",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve server supplied row order, named semantic table and explicit action identity without fabricated sorting or totals."
     },
     {
       "file": "apps/web/src/test/workspace-components.test.tsx",
       "name": "sorts local ISO dates chronologically, exposes named filters and keeps zero totals and exported view exact",
       "cases": null,
-      "group": "presentation",
       "disposition": "preserve",
+      "group": "presentation",
       "reason": "Preserve explicitly local prototype filtering, chronological ISO date sorting, zero totals and exact export view."
     },
     {

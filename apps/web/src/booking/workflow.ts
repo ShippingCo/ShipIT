@@ -61,13 +61,13 @@ export function createBookingWorkflow(controller: ScopeController) {
         weight_grams:Number(parcel.weight),
         docket:parcel.docket.trim().toUpperCase(),
         recipient:{...(parcel.recipientName.trim()?{name:parcel.recipientName.trim()}:{}),...(parcel.recipientPhone.trim()?{phone:parcel.recipientPhone.trim()}:{}),address:parcel.recipientAddress},
-        ...(parcel.recipientPin||parcel.contentsDescription||parcel.declaredValue?{details:{
+        ...(parcel.recipientPin||parcel.recipientCity||parcel.recipientRegion||parcel.contentsDescription||parcel.liquidQuantity||parcel.contentsType!=='solid'?{details:{
           country:'IN' as const, postal_code:parcel.recipientPin, city:parcel.recipientCity, region:parcel.recipientRegion,
           contents_type:parcel.contentsType as import('@shippingco/shared').BookingParcelDetails['contents_type'],
           contents_description:parcel.contentsDescription,
           liquid_quantity_ml:['liquid','semi_liquid'].includes(parcel.contentsType)?Number(parcel.liquidQuantity):null,
           ...(parcel.declaredValue!==''?{declared_value_paise:Number(parcel.declaredValue)}:{}),
-        }}:{}),
+        }}:parcel.declaredValue!==''?{details:{declared_value_paise:Number(parcel.declaredValue)}}:{}),
       }))};
   };
   let unsubscribe = () => {};
@@ -166,6 +166,27 @@ export function createBookingWorkflow(controller: ScopeController) {
       } catch (error) { if (!failed(error, phase)) { quoteIntent = prepareIntent = calculateIntent = undefined; taxInput = undefined;
           set({ quote: undefined, tax: undefined }); } }
       finally { set({ busy: false }); }
+    },
+    validateEntry() {
+      const errors=validate(state.draft,'booking');
+      for(const key of ['recipientRef','evidenceRef','handoverState','recipientState','gstin','specialCase','method'] as const)delete errors[key];
+      const extra=additionalParcelErrors(state.draft,state.additionalParcels);
+      const invalid=Object.values(errors).some(Boolean)||extra.some(e=>Object.values(e).some(Boolean));
+      set({errors,parcelErrors:extra,message:invalid?'Check the highlighted fields.':'',validationAttempt:state.validationAttempt+(invalid?1:0)});
+      return !invalid;
+    },
+    async price() {
+      if(!current()||state.busy||state.recoveryBlocked||state.booking||bookingIntent||state.customerPhase==='uncertain'||state.taxPhase==='uncertain'||state.quote)return;
+      const d={...state.draft,weight:totalWeight(state.draft,state.additionalParcels)};
+      const errors=validate(d,'commercial');
+      if(['destination','service','weight','override','packing'].some(k=>errors[k as Field]))return;
+      set({busy:true,pricingPhase:'loading'});
+      try {
+        quoteIntent??=commercialApi.quote({...pricingInput(d),...(state.accountId?{customer_account_id:state.accountId}:{})});
+        const quote=await commercialApi.executeQuote(quoteIntent);
+        if(current())set({quote,pricingPhase:'ready',message:''});
+      }catch(error){if(!failed(error,'pricingPhase'))quoteIntent=undefined;}
+      finally{set({busy:false});}
     },
     async requestCredit() {
       if(!current()||state.busy||state.booking||state.recoveryBlocked||bookingIntent)return;

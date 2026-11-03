@@ -2,14 +2,14 @@ import type { PricingQuoteInput, TaxFacts } from '@shippingco/shared';
 export const emptyDraft = () => ({
   name: '', phone: '', address: '', recipientName: '', recipientPhone: '', recipientAddress: '',
   serviceOptionId:'', recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:'',
-  destination: '', weight: '', service: 'standard', docket: '', override: '', reason: 'customer_agreement',
+  destination: '', weight: '', service: 'standard', docket: '', override: '', packing: '', reason: 'customer_agreement',
   registration: 'unregistered', recipientState: '', gstin: '', handoverState: '', recipientRef: '', evidenceRef: '',
   specialCase: 'none', paymentMode: 'to_pay', method: '',
 });
 export type Draft = ReturnType<typeof emptyDraft>;
 export type Field = keyof Draft;
 export type Errors = Partial<Record<Field, string>>;
-export const commercialFields: Field[] = ['serviceOptionId', 'destination', 'weight', 'service', 'override', 'reason', 'registration', 'recipientState', 'gstin', 'handoverState', 'recipientRef', 'evidenceRef', 'specialCase'];
+export const commercialFields: Field[] = ['serviceOptionId', 'destination', 'weight', 'service', 'override', 'packing', 'reason', 'registration', 'recipientState', 'gstin', 'handoverState', 'recipientRef', 'evidenceRef', 'specialCase'];
 export function validPhone(value: string) {
   const display = value.replace(/^ +| +$/g, '');
   return value.length <= 40 && /^\+[1-9][0-9]*(?:[ -][0-9]+)*$/.test(display) && /^\+[1-9][0-9]{7,14}$/.test(display.replace(/[ -]/g, ''));
@@ -28,6 +28,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if (d.recipientPhone.trim() && !validPhone(d.recipientPhone)) e.recipientPhone = 'Choose the country code and enter the receiver’s phone number.';
     if (!validText(d.recipientAddress, 500, false)) e.recipientAddress = 'Use a single-line address up to 500 characters.';
     if(d.recipientCountry!=='IN')e.recipientCountry='Only India is supported for this booking.';
+    if(d.recipientPin||d.recipientCity||d.recipientRegion||d.contentsDescription||d.liquidQuantity||d.contentsType!=='solid'){
     if(!/^[1-9][0-9]{5}$/.test(d.recipientPin))e.recipientPin='Enter a six-digit PIN code.';
     if(!validText(d.recipientCity,80,true))e.recipientCity='Enter the receiver city.';
     if(!validText(d.recipientRegion,80,true))e.recipientRegion='Enter the receiver state.';
@@ -35,6 +36,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if(!validText(d.contentsDescription,200,true))e.contentsDescription='Enter a short contents description.';
     if(!['solid','documents','liquid','semi_liquid','other'].includes(d.contentsType))e.contentsType='Choose a contents type.';
     if(['liquid','semi_liquid'].includes(d.contentsType)&&(!/^[1-9][0-9]*$/.test(d.liquidQuantity)||Number(d.liquidQuantity)>100000000))e.liquidQuantity='Enter a positive quantity up to 100,000 litres, with up to three decimal places.';
+    }
     if(d.declaredValue&&(!/^(0|[1-9][0-9]*)$/.test(d.declaredValue)||!Number.isSafeInteger(Number(d.declaredValue))))e.declaredValue='Enter zero or a positive amount with up to two decimal places.';
     const docket = d.docket.replace(/^[ \t]+|[ \t]+$/g, '').toUpperCase();
     if (!docket) e.docket = 'Enter the docket number on this parcel.';
@@ -45,6 +47,8 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if(!['standard','express','same_city'].includes(d.service))e.service='Choose a delivery service.';
     if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Choose a destination from the published rates. If none are available, ask your branch administrator to set up rates.';
     if (!/^[1-9][0-9]*$/.test(d.weight) || !Number.isSafeInteger(Number(d.weight))) e.weight = 'Enter a positive whole number of grams.';
+    if (d.packing && (!/^(0|[1-9][0-9]*)$/.test(d.packing) || !Number.isSafeInteger(Number(d.packing)))) e.packing = 'Enter zero or a positive packing amount.';
+    if(d.packing!==''&&d.override==='')e.override='Enter the freight amount as well as packing.';
     if (d.override && (!/^(0|[1-9][0-9]*)$/.test(d.override) || !Number.isSafeInteger(Number(d.override)))) e.override = 'Enter whole paise, zero or greater.';
     for (const key of ['recipientRef', 'evidenceRef'] as const) if (!/^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/.test(d[key])) e[key] = 'Enter the actual record reference (letters, digits, colon, underscore or hyphen).';
     if (d.registration === 'registered' && !d.recipientState) e.recipientState = 'Select the registered service recipient state.';
@@ -56,7 +60,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
 }
 export function pricingInput(d: Draft): PricingQuoteInput {
   return { ...(d.serviceOptionId?{service_option_id:d.serviceOptionId}:{}),destination_key: d.destination, service: d.service as PricingQuoteInput['service'], weight_grams: Number(d.weight),
-    ...(d.override ? { override: { freight_paise: Number(d.override), reason_code: d.reason as NonNullable<PricingQuoteInput['override']>['reason_code'] } } : {}) };
+    ...(d.override ? { override: { freight_paise: Number(d.override), ...(d.packing!==''?{packing_paise:Number(d.packing)}:{}), reason_code: d.reason as NonNullable<PricingQuoteInput['override']>['reason_code'] } } : {}) };
 }
 export function taxFacts(d: Draft): TaxFacts {
   return { service_recipient_ref: d.recipientRef, registration: d.registration as TaxFacts['registration'], recipient_state: d.recipientState || null,

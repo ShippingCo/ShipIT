@@ -60,9 +60,9 @@ export function quote(value:unknown):PricingQuoteInput {
   const b=object(value,['destination_key','service','weight_grams','override','settings_version_id','customer_account_id','service_option_id']);
   let override:PricingQuoteInput['override'];
   if(b.override!==undefined) {
-    const o=object(b.override,['freight_paise','reason_code']);
+    const o=object(b.override,['freight_paise','packing_paise','reason_code']);
     if(!['customer_agreement','service_recovery','commercial_exception'].includes(o.reason_code as string))fail('reason_code','REQUIRED');
-    override={freight_paise:integer(o.freight_paise,'freight_paise'),reason_code:o.reason_code as PricingOverrideReason};
+    override={freight_paise:integer(o.freight_paise,'freight_paise'),...(o.packing_paise===undefined?{}:{packing_paise:integer(o.packing_paise,'packing_paise')}),reason_code:o.reason_code as PricingOverrideReason};
   }
   return {...(b.service_option_id===undefined?{}:{service_option_id:uuid(b.service_option_id,'version_id')}),...(b.customer_account_id===undefined?{}:{customer_account_id:uuid(b.customer_account_id,'account_id')}),...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),destination_key:key(b.destination_key,'destination_key'),service:service(b.service),weight_grams:integer(b.weight_grams,'weight_grams',1),...(override?{override}:{})};
 }

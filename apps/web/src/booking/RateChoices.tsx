@@ -1,4 +1,4 @@
-import {useEffect,useState,useSyncExternalStore} from 'react';
+import {type ReactNode,useEffect,useState,useSyncExternalStore} from 'react';
 import {SelectField,TextField} from '../components/m3/Input';
 import {array,choice,instant,object,text,uuid} from '../data-access/dto';
 import {useResource,usePagedResource} from '../operations/hooks';
@@ -10,7 +10,7 @@ import {Link} from 'react-router-dom';
 export const publishedChoices=object({id:uuid,state:choice('published'),effective_to:instant,
   rules:array(object({destination_key:text,service:choice('standard','express','same_city')}))});
 const services=[{value:'standard',label:'Standard'},{value:'express',label:'Express'},{value:'same_city',label:'Same-city'}];
-export function RateChoices({workflow,disabled,destinationError,serviceError,onChange,refreshKey=0,onAddService,onServiceLabel}:{workflow:BookingWorkflow;disabled:boolean;destinationError?:string;serviceError?:string;onChange:(key:'destination'|'service',value:string)=>void;refreshKey?:number;onAddService?:()=>void;onServiceLabel?:(label:string)=>void}) {
+export function RateChoices({workflow,disabled,destinationError,serviceError,onChange,refreshKey=0,onAddService,onServiceLabel,beforeDestination,afterDestination,beforeService,afterFields,compact=false}:{compact?:boolean;beforeDestination?:ReactNode;afterDestination?:ReactNode;beforeService?:ReactNode;afterFields?:ReactNode;workflow:BookingWorkflow;disabled:boolean;destinationError?:string;serviceError?:string;onChange:(key:'destination'|'service',value:string)=>void;refreshKey?:number;onAddService?:()=>void;onServiceLabel?:(label:string)=>void}) {
   const state=useSyncExternalStore(workflow.subscribe,workflow.snapshot),d=state.draft;
   const [accountEntry,setAccountEntry]=useState(false);
   const source=useResource(workflow.api.franchise+refreshKey,signal=>workflow.api.read(`/api/v1/organizations/${workflow.api.organization}/franchises/${workflow.api.franchise}/pricing/versions`,publishedChoices,signal));
@@ -30,11 +30,15 @@ export function RateChoices({workflow,disabled,destinationError,serviceError,onC
   const selectedLabel=namedSelected?named.find(option=>option.id===d.serviceOptionId)?.name:allowed.find(option=>option.value===serviceValue)?.label;
   useEffect(()=>{onServiceLabel?.(selectedLabel??'');},[selectedLabel,onServiceLabel]);
   return <div className="counter-rate-choices">
-    <div className="counter-grid">
-      {manual?<TextField id="counter-destination" label="Destination" value={d.destination} disabled={disabled} error={destinationError} helper="Use the destination key agreed for this monthly account." onChange={value=>onChange('destination',value)}/>:<SelectField id="counter-destination" label="Destination" value={d.destination} disabled={blocked} error={destinationError} options={[{value:'',label:waiting?'Loading destinations…':unavailable?'Rates need attention':'Choose destination'},...(missingDestination?[{value:d.destination,label:d.destination+' · not in current rates'}]:[]),...destinations.map(value=>({value,label:value.replaceAll('_',' ')}))]} onChange={value=>{workflow.change('serviceOptionId','');onChange('destination',value);if(!source.value?.rules.some(rule=>rule.destination_key===value&&rule.service===d.service))onChange('service','');}}/>}
-      <SelectField id="counter-service" label="Service" value={serviceValue} disabled={disabled||!manual&&(blocked||!d.destination||missingDestination)} error={serviceError} helper={state.additionalParcels.length ? "Applies to every parcel in this booking." : undefined} options={[{value:'',label:waiting?'Loading services…':!d.destination?'Choose destination first':'Choose service'},...allowed,...named.map(s=>({value:'option:'+s.id,label:s.name}))]} onChange={value=>{const option=named.find(s=>'option:'+s.id===value);workflow.change('serviceOptionId',option?.id??'');onChange('service',option?.service??value);}}/>
+    <div className={compact?"form-grid":"counter-grid"}>
+      {beforeDestination}
+      {compact?<><TextField id="counter-destination" label="Destination city" value={d.destination.replaceAll('_',' ')} list="booking-cities" required disabled={disabled} error={destinationError} onChange={value=>{workflow.change('serviceOptionId','');onChange('destination',value.toUpperCase().replaceAll(' ','_'));}}/><datalist id="booking-cities">{destinations.map(value=><option key={value} value={value.replaceAll('_',' ')}/>)}</datalist></>:manual?<TextField id="counter-destination" label="Destination" value={d.destination} disabled={disabled} error={destinationError} helper="Use the destination key agreed for this monthly account." onChange={value=>onChange('destination',value)}/>:<SelectField id="counter-destination" label="Destination" value={d.destination} disabled={blocked} error={destinationError} options={[{value:'',label:waiting?'Loading destinations…':unavailable?'Rates need attention':'Choose destination'},...(missingDestination?[{value:d.destination,label:d.destination+' · not in current rates'}]:[]),...destinations.map(value=>({value,label:value.replaceAll('_',' ')}))]} onChange={value=>{workflow.change('serviceOptionId','');onChange('destination',value);if(!source.value?.rules.some(rule=>rule.destination_key===value&&rule.service===d.service))onChange('service','');}}/>}
+      {afterDestination}
+      {beforeService}
+      <SelectField id="counter-service" label="Service" value={compact&&!d.destination?d.service:serviceValue} disabled={disabled||!compact&&!manual&&(blocked||!d.destination||missingDestination)} error={serviceError} helper={state.additionalParcels.length ? "Applies to every parcel in this booking." : undefined} options={[{value:'',label:waiting?'Loading services…':!d.destination?'Choose destination first':'Choose service'},...(compact&&!d.destination?services:allowed),...named.map(s=>({value:'option:'+s.id,label:s.name}))]} onChange={value=>{const option=named.find(s=>'option:'+s.id===value);workflow.change('serviceOptionId',option?.id??'');onChange('service',option?.service??value);}}/>
+      {afterFields}
     </div>
-    {waiting&&<p role="status">Loading this branch’s destinations and services…</p>}
+    {waiting&&!compact&&<p role="status">Loading this branch’s destinations and services…</p>}
     {onAddService&&<button type="button" className="btn btn-text" disabled={disabled} onClick={onAddService}>Add a service and its rates</button>}
     {catalog.page.has_more&&<button type="button" className="btn btn-text" disabled={disabled||catalog.phase==='more'} onClick={catalog.loadMore}>Load more services</button>}
     {catalog.phase==='error'&&<p role="status">Saved service options could not be loaded. <button type="button" className="btn btn-text" onClick={catalog.reload}>Retry service options</button></p>}

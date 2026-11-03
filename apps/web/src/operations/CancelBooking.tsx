@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom';
 import {TextField} from '../components/m3/Input';
 import {OperationDialog} from '../components/workspace/OperationDialog';
 import {choice,instant,integer,nullable,object,protocol,uuid} from '../data-access/dto';
+import {retainAccountNavigation} from '../data-access/account-navigation';
 import type {ScopedApi} from '../data-access/scoped-api';
 import {useCommand,useResource} from './hooks';
 import {formatMoney} from './format';
@@ -20,7 +21,7 @@ const preview=object({booking_id:uuid,parcel_count:integer(1),outstanding_paise:
   blocked_reason:nullable(choice('already_cancelled','parcel_processed','operational_commitment','money_recorded','account_billed'))});
 const response=object({id:uuid,booking_id:uuid,parcel_count:integer(1),outstanding_paise:paise,cancelled_at:instant});
 
-export function CancelBooking({api,bookingId,docket,close,refresh,canReviewCharges}:{api:ScopedApi;bookingId:string;docket:string;close:()=>void;refresh:()=>void;canReviewCharges:boolean}) {
+export function CancelBooking({api,bookingId,docket,close,refresh,canReviewCharges,onConfirmed}:{onConfirmed?:()=>void;api:ScopedApi;bookingId:string;docket:string;close:()=>void;refresh:()=>void;canReviewCharges:boolean}) {
   const path=api.path('/api/v1/bookings/'+uuid(bookingId)+'/cancellation');
   const [reason,setReason]=useState('');
   const review=useResource(bookingId,signal=>api.read(path,value=>{
@@ -31,6 +32,8 @@ export function CancelBooking({api,bookingId,docket,close,refresh,canReviewCharg
   },['reason','expected_financial_version','expected_payment_version']));
   const sending=useRef(false);
   const busy=command.phase==='pending'||command.phase==='uncertain';
+  const [navigationBlocked,setNavigationBlocked]=useState(false);
+  useEffect(()=>busy?retainAccountNavigation(api.scope,()=>setNavigationBlocked(true)):undefined,[busy,api.scope]);
   useEffect(()=>{
     if(!busy)return;
     const prevent=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
@@ -44,12 +47,14 @@ export function CancelBooking({api,bookingId,docket,close,refresh,canReviewCharg
       if(retry)await command.retry();
       else await command.run(api.intent('api.v1.bookings.cancel',path,{reason:reason.trim(),
         expected_financial_version:review.value.financial_version,expected_payment_version:review.value.payment_version}));
+      onConfirmed?.();
       refresh();
     } catch { /* The command retains the original request for uncertain outcomes. */ }
     finally {sending.current=false;}
   }
   const info=review.value,done=command.result,valid=reason.trim().length>=3&&reason.trim().length<=200&&Array.from(reason).every(char=>{const code=char.charCodeAt(0);return code>=32&&(code<127||code>159);});
   return <OperationDialog title={done?'Booking cancelled':'Cancel booking'} close={close} busy={busy}>
+    {busy&&navigationBlocked&&<p role="alert">Finish or retry this cancellation before leaving the booking.</p>}
     {done?<><p role="status">Cancelled {done.parcel_count} {done.parcel_count===1?'parcel':'parcels'} in this booking.</p>
       {BigInt(done.outstanding_paise)>0n&&<p>The bill still shows {formatMoney(done.outstanding_paise)} outstanding. Ask accounts to review the charges.{canReviewCharges&&<> <Link to={'/business/financials?booking_id='+bookingId}>Financial approvals</Link></>}</p>}
       <button type="button" className="btn btn-filled" onClick={close}>Done</button></>:

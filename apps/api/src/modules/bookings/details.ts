@@ -6,6 +6,7 @@ function text(value:unknown,max:number){if(typeof value!=='string'||!value.trim(
 export function bookingDetails(value:unknown):BookingParcelDetails|undefined{
  if(value===undefined)return undefined;
  const d=object(value,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml','declared_value_paise']);
+ if(Object.keys(d).length===1&&d.declared_value_paise!==undefined)return {declared_value_paise:integer(d.declared_value_paise,'parcels',0)};
  if(d.country!=='IN'||typeof d.postal_code!=='string'||!/^[1-9][0-9]{5}$/.test(d.postal_code)||!['solid','documents','liquid','semi_liquid','other'].includes(String(d.contents_type)))return invalid();
  const liquid=d.contents_type==='liquid'||d.contents_type==='semi_liquid';
  if(!liquid&&d.liquid_quantity_ml!==null)return invalid();
