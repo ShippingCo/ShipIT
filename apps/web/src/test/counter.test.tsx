@@ -46,14 +46,14 @@ const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
 function options(){fireEvent.click(screen.getByRole('button',{name:'Booking options'}));fireEvent.click(screen.getByText('More booking options'));}
 async function recalculate(){fireEvent.click(screen.getByRole('button',{name:'Booking options'}));fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await screen.findByText('Total payable ₹134.00');fireEvent.click(screen.getByRole('button',{name:'Back to booking'}));}
-function addPackage(number:number){options();fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
+function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
   expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
   for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
-  for(const name of ['Photo','Video','Voice note','Save booking'])expect(screen.getByRole('button',{name})).toBeVisible();
+  for(const name of ['Photo','Video','Voice note','Add package','Save booking','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Paid now'})).toHaveAttribute('aria-pressed','true');
  });
@@ -283,4 +283,22 @@ describe('counter post-save and scope boundaries',()=>{
 
 it('keeps the entered booking when leaving the draft is cancelled',async()=>{
  await start();fill('Customer name','Unsaved sender');fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(posts('/api/v1/bookings?')).toHaveLength(0);
+});
+
+it('adds and removes packages directly below the docket row before saving a customer',async()=>{
+ await start();
+ const add=screen.getByRole('button',{name:'Add package'});
+ expect(screen.getByLabelText('Docket number').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(add.compareDocumentPosition(screen.getByLabelText('Weight (kg)'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ fireEvent.click(add);fill('Parcel 2 docket number','SECOND-001');fireEvent.click(add);
+ expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('SECOND-001');expect(screen.getByLabelText('Parcel 3 docket number')).toHaveValue('');expect(screen.getByText('3 packages in this booking')).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'Remove package 3'}));expect(screen.queryByLabelText('Parcel 3 docket number')).toBeNull();expect(screen.getByText('2 packages in this booking')).toBeVisible();
+ expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+});
+it('cancels an unsaved booking only after confirming discard and can keep editing',async()=>{
+ await start();fill('Customer name','Unsaved sender');fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel 2 docket number','KEEP-002');
+ fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
+ expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('KEEP-002');
+ fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
+ expect(posts('/api/v1/bookings')).toHaveLength(0);
 });

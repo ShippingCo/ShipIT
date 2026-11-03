@@ -250,6 +250,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           <h2 className="form-sec-title">Parcel</h2>
           <RateChoices compact workflow={workflow} refreshKey={rateRefresh} onServiceLabel={setSelectedServiceLabel} disabled={disabled} destinationError={state.errors.destination} serviceError={state.errors.service} onChange={workflow.change}
             beforeDestination={<TextField id="counter-docket" label="Docket number" value={d.docket} disabled={disabled} error={state.errors.docket} className="mono" maxLength={32} autoCapitalize="characters" autoCorrect="off" spellCheck={false} helper="Copy it from your paper receipt book" onChange={value=>workflow.change('docket',value.toUpperCase())}/>}
+            afterDestination={<div className="span2 booking-add-package"><Button type="button" variant="outlined" icon="add" disabled={disabled||parcelCount>=50} onClick={()=>workflow.addParcel()}>Add package</Button><span className="counter-help" role="status">{parcelCount} {parcelCount===1?'package':'packages'} in this booking{parcelCount>=50?' · Maximum reached':''}</span></div>}
             beforeService={<UnitField id="counter-weight" label="Weight (kg)" places={3} value={d.weight} disabled={disabled} error={state.errors.weight} onChange={value=>workflow.change('weight',value)}/>}
             afterFields={<><UnitField id="counter-declaredValue" label="Declared goods value ₹" places={2} value={d.declaredValue} disabled={disabled} error={state.errors.declaredValue} helper={Number(d.declaredValue)>=5000000?'E-way bill likely needed':'Optional — used for e-way bill checks'} onChange={value=>workflow.change('declaredValue',value)}/>{lot.picker}</>}/>
           {state.additionalParcels.map((parcel,index)=><ParcelEntry key={parcel.localKey} number={index+2} parcel={parcel} earlier={[d,...state.additionalParcels.slice(0,index)]} copyReceiver={sourceNumber=>workflow.copyReceiver(index,sourceNumber)} errors={state.parcelErrors[index]??{}} disabled={disabled} onRemove={()=>workflow.removeParcel(index)} onChange={(key,value)=>workflow.changeParcel(index,key,value)}/>)}
@@ -278,6 +279,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           <div className="sum-total"><span>Total</span><strong>{state.tax?receiptMoney(state.tax.final_payable_paise):'—'}</strong></div>
           <span className={'pill '+(d.paymentMode==='to_pay'?'pill-warn':'st-delivered')+' sum-pay'}>{d.paymentMode==='to_pay'?'Collect on delivery':'Paid now'}</span>
           <Button type="button" icon="check" size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':'Save booking'}</Button>
+          <Button type="button" variant="text" icon="close" block disabled={busy||uncertain} onClick={close}>Cancel booking</Button>
           {state.customer&&<Button variant="text" disabled={busy||uncertain} onClick={()=>setCheckout(true)}>Booking options</Button>}
           {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
         </Card></aside>
@@ -296,7 +298,6 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
         <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
         {select('reason','Override reason',[{value:'customer_agreement',label:'Customer agreement'},{value:'service_recovery',label:'Service recovery'},{value:'commercial_exception',label:'Commercial exception'}])}
         <CustomerLookup workflow={workflow} disabled={disabled}/>
-        <button type="button" className="btn btn-text" disabled={disabled||parcelCount>=50} onClick={()=>{workflow.addParcel();setCheckout(false);}}>Add package</button>
         <button type="button" className="btn btn-text" disabled={disabled} onClick={()=>{setCheckout(false);setServiceSetup(true);}}>Add a service and its rates</button>
       </details>
       {state.tax&&<p className="sum-total">Total payable {receiptMoney(state.tax.final_payable_paise)}</p>}

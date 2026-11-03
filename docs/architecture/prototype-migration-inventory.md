@@ -1447,3 +1447,5 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
 | apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
 | apps/web/src/test/counter.test.tsx: keeps the entered booking when leaving the draft is cancelled | preserve | booking |
+| apps/web/src/test/counter.test.tsx: adds and removes packages directly below the docket row before saving a customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: cancels an unsaved booking only after confirming discard and can keep editing | preserve | booking |

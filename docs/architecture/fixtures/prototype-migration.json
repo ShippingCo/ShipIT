@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "ecba67727346763df710c19c8dca4b4e403edbf6e09405e502899e87b50f11b2",
+      "apps/web/src/test/counter.test.tsx": "ec0f9f2cf0a2cb5871d294e307e86320aa8e26e30350435cb4d1cf498d90214d",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1822,6 +1822,16 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "keeps the entered booking when leaving the draft is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "adds and removes packages directly below the docket row before saving a customer",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "cancels an unsaved booking only after confirming discard and can keep editing",
         "cases": null
       },
       {
@@ -5716,6 +5726,22 @@
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "keeps the entered booking when leaving the draft is cancelled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "adds and removes packages directly below the docket row before saving a customer",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "cancels an unsaved booking only after confirming discard and can keep editing",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
