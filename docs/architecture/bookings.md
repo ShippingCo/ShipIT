@@ -304,11 +304,15 @@ an unsaved draft and cancelling a confirmed booking.
 ### Original counter form (2026-11-03)
 
 The production counter uses the original demo field placement with scoped API adapters.
-Save resolves or creates the actual customer, then collects explicit tax facts in a
-confirmation dialog. Server price/tax snapshots and immutable booking intents remain authoritative.
+Save resolves or creates the actual customer, prepares the server price/tax calculation from
+the inline billing fields, and creates the booking directly. There is no billing confirmation
+dialog or declaration checkbox. `COUNTER_ENTRY` identifies staff-entered facts in the tax intent;
+it does not claim an independent declaration. Missing handover state/GSTIN remains an inline
+validation failure. Calculate total performs the same preparation without creating a booking.
+Server price/tax snapshots and immutable booking intents remain authoritative.
 Paid now opens the owned money-receipt workflow after booking confirmation; it is never
-a browser-only paid status. Multi-package and account/service options are in the confirmation
-dialog; cancellation uses the existing whole-booking command.
+a browser-only paid status. Add package is below the docket row; account/service options are
+in an inline disclosure below Payment. Cancellation uses the existing whole-booking command.
 
 A parcel may supply `details: {declared_value_paise: number}` alone, including zero. This
 freezes the original form's optional value without inventing a PIN, city or contents. If any

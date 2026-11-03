@@ -42,7 +42,6 @@ export default function NewBooking({controller}:{controller:ScopeController}) {
 
 function BookingForm({controller,startAnother}:{controller:ScopeController;startAnother:()=>void}) {
   const [workflow]=useState(()=>{const w=createBookingWorkflow(controller);w.change('weight','1000');w.change('paymentMode','paid_counter');w.change('method','cash');return w;});
-  const [checkout,setCheckout]=useState(false);
   const [repeat,setRepeat]=useState<CustomerDto[]>([]);
   const [lookupError,setLookupError]=useState('');
   const lookup=useRef<AbortController>();
@@ -117,7 +116,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     const index=snapshot.parcelErrors.findIndex(errors=>Object.values(errors).some(Boolean));
     const extra=index>=0?Object.keys(snapshot.parcelErrors[index]).find(key=>snapshot.parcelErrors[index][key as Field]):undefined;
     if(!first&&!extra)return;
-    const key=first==='recipientRef'?'evidenceRef':first;
+    const key=first==='recipientRef'||first==='evidenceRef'?'handoverState':first;
     const frame=requestAnimationFrame(()=>{
       const element=document.getElementById(key?'counter-'+key:'counter-package-'+index+'-'+extra);
       element?.closest('details')?.setAttribute('open','');
@@ -156,17 +155,17 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   useEffect(()=>()=>lookup.current?.abort(),[]);
   const priceKey=JSON.stringify([d.destination,d.service,d.serviceOptionId,d.weight,d.override,d.packing,state.additionalParcels.map(p=>p.weight),state.accountId]);
   useEffect(()=>{
-    if(state.booking||checkout)return;
+    if(state.booking||preparing)return;
     const timer=window.setTimeout(()=>{void workflow.price();},500);
     return()=>window.clearTimeout(timer);
-  },[priceKey,workflow,state.booking,checkout]);
-  async function save(){
+  },[priceKey,workflow,state.booking,preparing]);
+  async function save(saveBooking=true){
     if(busy)return;
     if(state.bookingPhase==='uncertain'){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);return;}
-    if(state.pricingPhase==='uncertain'){await workflow.price();return;}
     if(!workflow.validateEntry())return;
     setPreparing(true);
     try{
+      if(workflow.snapshot().pricingPhase==='uncertain'){await workflow.price();if(workflow.snapshot().pricingPhase!=='ready')return;}
       if(!workflow.snapshot().customer){
         const current=workflow.snapshot().draft;
         const result=await workflow.customerApi.search('phone',current.phone,workflow.api.scope.signal);
@@ -178,25 +177,17 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       }
       if(workflow.snapshot().customerPhase!=='ready')await workflow.confirmCustomer();
       if(workflow.snapshot().customerPhase!=='ready')return;
-      if(workflow.snapshot().tax){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);}
-      else setCheckout(true);
+      workflow.recordTaxEntry();
+      if(!workflow.snapshot().tax||!saveBooking)await workflow.preview();
+      if(saveBooking&&workflow.snapshot().tax){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);}
     }catch{setLookupError('Customer lookup could not finish. Retry before saving.');}
     finally{setPreparing(false);}
-  }
-  async function confirmBooking(){
-    if(busy)return;
-    if(state.customerPhase!=='ready')await workflow.confirmCustomer();
-    if(workflow.snapshot().customerPhase!=='ready')return;
-    if(!state.tax){await workflow.preview();return;}
-    await workflow.save();
-    if(workflow.snapshot().booking){setCheckout(false);if(d.paymentMode==='paid_counter')setPaymentOpen(true);}
   }
   const field=(key:Field,label:string,helper?:string)=><TextField id={'counter-'+key} label={label} value={d[key]} disabled={disabled} error={state.errors[key]} helper={helper} maxLength={key==='name'?120:key==='address'?500:key==='gstin'?15:undefined} required={key==='name'||key==='gstin'} onChange={value=>workflow.change(key,value)}/>;
   const select=(key:Field,label:string,options:{value:string;label:string}[])=><SelectField id={'counter-'+key} label={label} value={d[key]} disabled={disabled} error={state.errors[key]} onChange={value=>workflow.change(key,value)} options={options}/>;
   const parcelCount=1+state.additionalParcels.length;
   const packedWeight=displayUnits(totalWeight(d,state.additionalParcels),3);
   const serviceName=state.quote?.service_option?.name??selectedServiceLabel;
-  const customerReady=state.customerPhase==='ready';
   const parcelReady=!!serviceName&&!!packedWeight&&[parcelErrors(d),...additionalParcelErrors(d,state.additionalParcels)].every(errors=>Object.keys(errors).length===0);
   const sectionReady=[!!d.name&&!!d.phone&&!!d.destination,parcelReady,!!state.quote];
   const formHasError=Object.values(state.errors).some(Boolean)||state.parcelErrors.some(errors=>Object.values(errors).some(Boolean));
@@ -262,7 +253,22 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
             <UnitField id="counter-override" label="Freight ₹" places={2} value={d.override||(state.quote?String(state.quote.freight_paise):'')} disabled={disabled} error={state.errors.override} onChange={value=>workflow.change('override',value)}/>
           </div>
           {state.quote&&d.override!==''&&Math.abs(Number(d.override)-state.quote.freight_suggestion_paise)>=1000&&<button type="button" className="recall" disabled={disabled} onClick={()=>{workflow.change('override','');workflow.change('packing','');}}><Msym name="auto_fix_high"/><span className="u-grow">Usual rate for {d.destination.replaceAll('_',' ')} at {packedWeight} kg is <b>{receiptMoney(state.quote.freight_suggestion_paise)}</b> — use it</span><Msym name="arrow_forward"/></button>}
+          <div className="form-grid booking-billing-fields">
+            {select('registration','GST registration',[{value:'unregistered',label:'Not GST registered'},{value:'registered',label:'GST registered'}])}
+            {select('handoverState','Parcel handed over in',stateOptions)}
+            {d.registration==='registered'&&<>{select('recipientState','Billing state',stateOptions)}{field('gstin','GSTIN')}</>}
+          </div>
           <div className="pay-choice"><span className="field-legend">Payment</span><SegmentedControl options={[{value:'paid_counter',label:'Paid now'},{value:'to_pay',label:'To Pay'}]} value={d.paymentMode} onChange={value=>{if(!disabled)workflow.change('paymentMode',value);}}/></div>
+      <details className="booking-inline-options"><summary>More booking options</summary>
+        <div className="counter-grid">{field('address','Customer address')}{field('recipientName','Recipient name')}<PhoneField compact id="counter-recipientPhone" label="Recipient phone" error={state.errors.recipientPhone} value={d.recipientPhone} disabled={disabled} onChange={value=>workflow.change('recipientPhone',value)}/>{field('recipientPin','PIN code')}{field('recipientCity','City')}{field('recipientRegion','State / region')}{field('contentsDescription','Contents description')}
+        {select('contentsType','Contents type',[{value:'solid',label:'Solid'},{value:'documents',label:'Documents'},{value:'liquid',label:'Liquid'},{value:'semi_liquid',label:'Semi-liquid'},{value:'other',label:'Other'}])}
+        {['liquid','semi_liquid'].includes(d.contentsType)&&<UnitField label="Liquid quantity (litres)" places={3} value={d.liquidQuantity} onChange={value=>workflow.change('liquidQuantity',value)}/>}</div>
+        {state.customer&&<div className="counter-actions"><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void workflow.confirmCustomer()}>Save customer changes</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void workflow.refreshCustomer()}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>workflow.useLatestCustomer()}>Use latest customer details</button></div>}
+        <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
+        {select('reason','Override reason',[{value:'customer_agreement',label:'Customer agreement'},{value:'service_recovery',label:'Service recovery'},{value:'commercial_exception',label:'Commercial exception'}])}
+        <CustomerLookup workflow={workflow} disabled={disabled}/>
+        <button type="button" className="btn btn-text" disabled={disabled} onClick={()=>{setServiceSetup(true);}}>Add a service and its rates</button>
+      </details>
         </Card></div>
         <aside className="booking-side" aria-label="Booking summary"><Card pad>
           <h2 className="sum-head">Booking summary</h2>
@@ -280,30 +286,11 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           <span className={'pill '+(d.paymentMode==='to_pay'?'pill-warn':'st-delivered')+' sum-pay'}>{d.paymentMode==='to_pay'?'Collect on delivery':'Paid now'}</span>
           <Button type="button" icon="check" size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':'Save booking'}</Button>
           <Button type="button" variant="text" icon="close" block disabled={busy||uncertain} onClick={close}>Cancel booking</Button>
-          {state.customer&&<Button variant="text" disabled={busy||uncertain} onClick={()=>setCheckout(true)}>Booking options</Button>}
+          <Button type="button" variant="text" block disabled={busy||uncertain} onClick={()=>void save(false)}>Calculate total</Button>
           {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
         </Card></aside>
       </div>
     </form></div>}
-    <Dialog open={checkout&&!state.booking} title="Confirm booking" onClose={()=>{if(busy||uncertain)setCloseBlocked(true);else setCheckout(false);}} size="lg">
-      <p>Confirm the billing details to calculate GST and save this booking.</p>{closeBlocked&&<p role="alert">Finish or retry the current request before closing this booking.</p>}
-      <div className="counter-grid">{select('registration','GST registration',[{value:'unregistered',label:'Not GST registered'},{value:'registered',label:'GST registered'}])}{select('handoverState','Parcel handed over in',stateOptions)}
-        {d.registration==='registered'&&<>{select('recipientState','Billing state',stateOptions)}{field('gstin','GSTIN')}</>}</div>
-      <label className="booking-check"><input id="counter-evidenceRef" type="checkbox" disabled={disabled||!customerReady} checked={d.evidenceRef==='COUNTER_DECLARATION'} onChange={event=>workflow.confirmTaxFacts(event.target.checked)}/>I checked these billing and handover details with the customer.</label>
-      <details><summary>More booking options</summary>
-        <div className="counter-grid">{field('address','Customer address')}{field('recipientName','Recipient name')}<PhoneField compact id="counter-recipientPhone" label="Recipient phone" error={state.errors.recipientPhone} value={d.recipientPhone} disabled={disabled} onChange={value=>workflow.change('recipientPhone',value)}/>{field('recipientPin','PIN code')}{field('recipientCity','City')}{field('recipientRegion','State / region')}{field('contentsDescription','Contents description')}
-        {select('contentsType','Contents type',[{value:'solid',label:'Solid'},{value:'documents',label:'Documents'},{value:'liquid',label:'Liquid'},{value:'semi_liquid',label:'Semi-liquid'},{value:'other',label:'Other'}])}
-        {['liquid','semi_liquid'].includes(d.contentsType)&&<UnitField label="Liquid quantity (litres)" places={3} value={d.liquidQuantity} onChange={value=>workflow.change('liquidQuantity',value)}/>}</div>
-        {state.customer&&<div className="counter-actions"><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void workflow.confirmCustomer()}>Save customer changes</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void workflow.refreshCustomer()}>Refresh customer</button><button type="button" className="btn btn-text" disabled={disabled} onClick={()=>workflow.useLatestCustomer()}>Use latest customer details</button></div>}
-        <AccountSelection key={state.customer?.id??'none'} workflow={workflow} disabled={disabled}/>
-        {select('reason','Override reason',[{value:'customer_agreement',label:'Customer agreement'},{value:'service_recovery',label:'Service recovery'},{value:'commercial_exception',label:'Commercial exception'}])}
-        <CustomerLookup workflow={workflow} disabled={disabled}/>
-        <button type="button" className="btn btn-text" disabled={disabled} onClick={()=>{setCheckout(false);setServiceSetup(true);}}>Add a service and its rates</button>
-      </details>
-      {state.tax&&<p className="sum-total">Total payable {receiptMoney(state.tax.final_payable_paise)}</p>}
-      {state.message&&<p role={statusError?'alert':'status'}>{state.message}</p>}
-      <div className="counter-actions"><Button variant="outlined" disabled={busy||!state.tax} onClick={()=>void workflow.preview()}>Recalculate total</Button><Button disabled={busy} loading={busy} onClick={()=>void confirmBooking()}>{state.tax?'Confirm and save':'Calculate total'}</Button><Button variant="text" disabled={busy||uncertain} onClick={()=>setCheckout(false)}>Back to booking</Button></div>
-    </Dialog>
     {cancelling&&state.booking&&<CancelBooking api={workflow.api} bookingId={state.booking.id} docket={state.booking.parcels[0].docket} close={()=>setCancelling(false)} refresh={()=>{}} onConfirmed={()=>setCancelled(true)} canReviewCharges={roles.includes('operator')||roles.includes('accountant')||canAdminister(roles,'bookings.cancel')}/>}
     <Dialog open={serviceSetup} title="Add a service" onClose={()=>{if(serviceBusy)setCloseBlocked(true);else setServiceSetup(false);}} size="lg">
       {serviceSetup&&<BookingServiceSetup controller={controller} destination={d.destination} onBusyChange={setServiceBusy} onCancel={()=>setServiceSetup(false)} onSaved={option=>{

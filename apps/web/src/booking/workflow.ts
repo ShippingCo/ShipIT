@@ -104,7 +104,7 @@ export function createBookingWorkflow(controller: ScopeController) {
       set({draft:{...state.draft,service},settingsVersion:version,message:'Configured service accepted for this new booking draft.'});
       invalidateCommercial();
     },
-    confirmTaxFacts(confirmed:boolean) {if(locked()||!state.customer)return;invalidateCommercial();set({draft:{...state.draft,recipientRef:state.customer.id,evidenceRef:confirmed?'COUNTER_DECLARATION':''}});},
+    recordTaxEntry() {if(locked()||!state.customer||state.draft.evidenceRef)return;invalidateCommercial();set({draft:{...state.draft,recipientRef:state.customer.id,evidenceRef:'COUNTER_ENTRY'}});},
     change(field: Field, value: string) {
       if (locked()) return;
       creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined});

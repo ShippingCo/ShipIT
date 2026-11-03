@@ -1418,7 +1418,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves declared goods value without making up structured delivery or contents facts | preserve | booking |
 | apps/web/src/test/counter.test.tsx: converts packing and freight to exact paise and rejects invalid non-empty amounts | preserve | booking |
-| apps/web/src/test/counter.test.tsx: invalidates the reviewed quote when a handover fact needs reconfirmation | preserve | booking |
 | apps/web/src/test/counter.test.tsx: payment choices and implicit form submission never confirm a booking | preserve | booking |
 | apps/web/src/test/counter.test.tsx: prints only after saving and does not recreate a booking when printing is cancelled | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves three dockets in one booking and cancels all three from the saved screen | preserve | booking |
@@ -1449,3 +1448,7 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: keeps the entered booking when leaving the draft is cancelled | preserve | booking |
 | apps/web/src/test/counter.test.tsx: adds and removes packages directly below the docket row before saving a customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: cancels an unsaved booking only after confirming discard and can keep editing | preserve | booking |
+| apps/web/src/test/counter.test.tsx: invalidates the total and shows a missing handover fact inline | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves directly from the page without a billing confirmation popup or declaration checkbox | preserve | booking |
+| apps/web/src/test/counter.test.tsx: direct save retains the exact %s request after a lost acknowledgement | preserve | booking |
+| apps/web/src/test/counter.test.tsx: keeps required registered billing facts inline and does not save an invalid GSTIN | preserve | booking |
