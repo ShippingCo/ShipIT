@@ -23,11 +23,11 @@
   },
   {
     "file": "tax-policies.html",
-    "title": "Set up a tax policy",
-    "summary": "Give the app the reviewed tax rules it should use when pricing a booking.",
+    "title": "Set the GST treatment",
+    "summary": "Choose the business GST treatment used automatically in booking totals.",
     "sources": [
-      "apps/web/src/operations/BookingPolicySetup.tsx",
-      "apps/web/src/operations/DomesticCourierTemplate.tsx",
+      "apps/web/src/operations/BusinessGstSettings.tsx",
+      "apps/api/src/modules/tax/business-settings.ts",
       "apps/web/src/booking/form.ts"
     ]
   },

@@ -18,7 +18,7 @@ export function failureMessage(error: unknown): string {
     VERSION_CONFLICT: 'The customer changed. Refresh the customer, review the latest record alongside your entered values, then confirm your choice.',
     DOCKET_CONFLICT: 'That docket cannot be allocated. Enter another docket or leave it blank for server allocation.',
     NO_RATE: 'No configured rate matches this destination, service and weight. Ask your franchise administrator to review the rate card.',
-    TAX_POLICY_UNAVAILABLE: 'No approved tax policy matches these facts. Ask your franchise administrator to review the policy.',
+    TAX_POLICY_UNAVAILABLE: 'Choose the GST treatment in Settings, then retry this booking.',
     TAX_CONFLICT: 'Tax facts need authorized resolution. Check the service recipient and evidence with your franchise administrator.',
     TAX_TIME_UNSUPPORTED: 'This tax timing is unsupported. Ask your franchise administrator to review the evidence.',
     IDEMPOTENCY_CONFLICT: 'This request identity conflicts with saved evidence. Authorized reconciliation is required; do not resubmit with a new key.',

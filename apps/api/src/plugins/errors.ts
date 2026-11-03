@@ -69,7 +69,7 @@ const errors = {
   LOT_CODE_CONFLICT:[409,'Lot code cannot be allocated.'],
   LOT_DESTINATION_MISMATCH:[409,"Parcel destination does not match this lot. Choose or create a lot for the parcel's destination."],
   DOCKET_CONFLICT: [409, 'Docket cannot be allocated.'],
-  TAX_POLICY_UNAVAILABLE: [409, 'No approved tax policy matches this calculation.'],
+  TAX_POLICY_UNAVAILABLE: [409, 'GST settings are not available for this calculation.'],
   TAX_CONFLICT: [409, 'Tax policy or evidence conflicts.'],
   TAX_STALE: [409, 'Tax proposal is stale. Request a new calculation.'],
   TAX_TIME_UNSUPPORTED: [409, 'Tax timing requires approved confirmation evidence.'],

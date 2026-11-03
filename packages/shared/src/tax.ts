@@ -1,5 +1,9 @@
 import type { PricingQuoteInput, PricingService } from './index.ts';
 
+export type BusinessGstMode = 'courier18' | 'gta5' | 'gta18' | 'none';
+export interface BusinessGstSettingsInput { mode: BusinessGstMode; supplier_state: string; supplier_gstin: string; expected_version: number }
+export interface BusinessGstSettingsDto { id: string | null; mode: BusinessGstMode | null; supplier_state: string; version: number }
+
 export type TaxJurisdiction = 'intra' | 'inter';
 export type TaxRegistration = 'registered' | 'unregistered';
 export type TaxComponentKind = 'CGST' | 'SGST' | 'IGST';

@@ -22,6 +22,7 @@ beforeEach(()=>{
   if(path.includes('/customers'))return f.json(options.method==='GET'&&path.includes('?')?{items:[f.customer],page:{has_more:false,next_cursor:null}}:f.customer,options.method==='POST'?201:200);
   if(path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[],next_cursor:null});
   if(path.includes('/pricing/services'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/tax/settings'))return f.json({id:f.id(82),mode:null,supplier_state:'27',version:1});
   if(path.includes('/pricing/versions'))return f.json(f.rateCard);
   if(path.startsWith('/api/v1/pricing/quote'))return f.json(f.quote);
   if(path.startsWith('/api/v1/tax/intents'))return f.json(f.intent);
@@ -39,18 +40,18 @@ afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
 function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
-async function calculate(){fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(summary().getByText('₹134.00')).toBeVisible());}
+async function calculate(){options();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(summary().getByText('₹134.00')).toBeVisible());}
 async function entered(paid=false){await start();core(paid);fill('Parcel handed over in','27');await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
-function options(){fireEvent.click(screen.getByText('More booking options'));}
+function options(){const summary=screen.getByText('More booking options');if(!summary.closest('details')!.open)fireEvent.click(summary);}
 async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
-  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹','GST registration','Parcel handed over in']);
+  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
   for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
   for(const name of ['Photo','Video','Voice note','Add package','Save booking','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
@@ -273,7 +274,7 @@ describe('counter post-save and scope boundaries',()=>{
  });
  it.each(['/api/v1/pricing/quote','/api/v1/tax/calculations'])('scope change cancels late %s and prevents private totals repaint',async path=>{
   await entered();fill('Weight (kg)','0.998');const slow=f.deferred<Response>();override=c=>c.path.startsWith(path)?slow.promise:undefined;
-  fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBeGreaterThan(1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(summary().queryByText('₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
+  options();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBeGreaterThan(1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(summary().queryByText('₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
  });
  it('scope change cancels late receipt and drops its private snapshot',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});const slow=f.deferred<Response>();override=c=>c.path.includes('/receipt')?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await waitFor(()=>expect(calls.some(c=>c.path.includes('/receipt'))).toBe(true));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(f.receipt)));expect(document.body.textContent).not.toContain(f.receipt.number);
@@ -319,4 +320,13 @@ it.each(['/api/v1/pricing/quote','/api/v1/tax/intents','/api/v1/tax/calculations
 it('keeps required registered billing facts inline and does not save an invalid GSTIN',async()=>{
  await start();core();fill('GST registration','registered');fill('Billing state','27');fill('GSTIN','invalid');save();
  await waitFor(()=>expect(screen.getByLabelText('GSTIN')).toHaveAttribute('aria-invalid','true'));expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(posts('/api/v1/tax/intents')).toHaveLength(0);
+});
+
+it('uses the saved demo GST setting for a live summary and saves without billing steps',async()=>{
+ override=c=>c.path.includes('/tax/settings')?Promise.resolve(f.json({id:f.id(82),mode:'courier18',supplier_state:'27',version:2})):undefined;
+ await start();core();await waitFor(()=>expect(screen.getByLabelText('Parcel handed over in')).toHaveValue('27'));
+ await waitFor(()=>expect(summary().getByText('CGST 9%')).toBeVisible());expect(summary().getByText('SGST 9%')).toBeVisible();
+ expect(screen.getByRole('button',{name:'Calculate total'})).not.toBeVisible();expect(screen.getByLabelText('GST registration')).not.toBeVisible();
+ save();await screen.findByRole('heading',{name:'Booking saved'});
+ expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts.handover_state).toBe('27');
 });

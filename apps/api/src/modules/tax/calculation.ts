@@ -37,7 +37,7 @@ export function calculate(row: PolicyRow, quote: PricingQuoteDto, facts: TaxFact
     return { id: c.id, kind: c.kind, numerator: c.numerator, denominator: c.denominator,
       exact_numerator: c.n.toString(), exact_denominator: c.d.toString(), amount_paise: checked(c.n/c.d+extra) };
   }).sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  const before = BigInt(preTax)+total, final = ((before+50n)/100n)*100n;
+  const before = BigInt(preTax)+total, final = row.business_gst_mode ? before : ((before+50n)/100n)*100n;
   const expires = Math.min(Date.parse(binding.expiresAt),Date.parse(quote.expires_at),Date.parse(p.effective_to),at+p.validity_seconds*1000);
   if (!Number.isFinite(expires) || at < Date.parse(quote.created_at) || at >= expires) throw new HttpError('TAX_STALE');
   const value: Omit<TaxCalculationDto,'fingerprint'> = { id: binding.id, proposal: true, intent_id: binding.intentId, quote_id: quote.id,

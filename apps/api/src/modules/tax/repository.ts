@@ -16,13 +16,14 @@ export async function visible(scope: TenantAccess, active = false) {
 export async function find(scope: TenantAccess, id: string) {
   const c = assertTenantAccess(scope);
   return (await scopedQuery<PolicyRow>(scope,['tax.read','tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate'],
-    `SELECT id,version_number,revision,state,policy FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}} AND id=$1
+    `SELECT id,version_number,revision,state,policy,to_jsonb(tax_versions)->>'business_gst_mode' AS business_gst_mode FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}} AND id=$1
       AND (state='published' OR $2::boolean)`,[id,c.action === 'tax.draft' || c.action === 'tax.publish'])).rows[0];
 }
 export async function current(scope: TenantAccess, now: Date) {
-  const rows = (await scopedQuery<PolicyRow>(scope,['tax.read','tax.prepare','tax.resolve','tax.calculate','tax.validate'],
-    `SELECT id,version_number,revision,state,policy FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}}
-      AND state='published' AND effective_from<=$1 AND effective_to>$1 LIMIT 2`,[now])).rows;
+  const rows = (await scopedQuery<PolicyRow>(scope,['tax.read','tax.publish','tax.prepare','tax.resolve','tax.calculate','tax.validate'],
+    `SELECT id,version_number,revision,state,policy,to_jsonb(tax_versions)->>'business_gst_mode' AS business_gst_mode FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}}
+      AND state='published' AND effective_from<=$1 AND effective_to>$1 ORDER BY ((to_jsonb(tax_versions)->>'business_gst_mode') IS NOT NULL) DESC,version_number DESC LIMIT 2`,[now])).rows;
+  if (rows[0]?.business_gst_mode) return rows[0];
   if (rows.length !== 1) throw new HttpError('TAX_POLICY_UNAVAILABLE');
   return rows[0]!;
 }
@@ -34,6 +35,15 @@ export async function create(scope: TenantAccess, policy: TaxPolicyInput) {
   return (await scopedQuery<PolicyRow>(scope,['tax.draft'],`INSERT INTO shipit.tax_versions(id,organization_id,franchise_id,card_id,version_number,effective_from,effective_to,policy)
     SELECT $1,{{organization}},$2,$3,COALESCE((SELECT max(version_number) FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}}),0)+1,$4,$5,$6
     WHERE {{franchise:$7:$2}} RETURNING id,version_number,revision,state,policy`,[randomUUID(),franchise,card.id,policy.effective_from,policy.effective_to,policy,c.organizationId])).rows[0]!;
+}
+export async function createSettings(scope: TenantAccess, policy: TaxPolicyInput, mode: import('@shippingco/shared').BusinessGstMode) {
+  const c = assertTenantAccess(scope,['tax.publish']), franchise = c.permittedFranchiseIds[0]!;
+  let card = (await scopedQuery<{ id: string }>(scope,['tax.publish'],`SELECT id FROM shipit.tax_cards WHERE {{franchise:organization_id:franchise_id}}`)).rows[0];
+  if (!card) card = (await scopedQuery<{ id: string }>(scope,['tax.publish'],`INSERT INTO shipit.tax_cards(id,organization_id,franchise_id)
+    SELECT $1,{{organization}},$2 WHERE {{franchise:$3:$2}} RETURNING id`,[randomUUID(),franchise,c.organizationId])).rows[0]!;
+  return (await scopedQuery<PolicyRow>(scope,['tax.publish'],`INSERT INTO shipit.tax_versions(id,organization_id,franchise_id,card_id,version_number,effective_from,effective_to,policy,business_gst_mode)
+    SELECT $1,{{organization}},$2,$3,COALESCE((SELECT max(version_number) FROM shipit.tax_versions WHERE {{franchise:organization_id:franchise_id}}),0)+1,$4,$5,$6,$8
+    WHERE {{franchise:$7:$2}} RETURNING id,version_number,revision,state,policy,business_gst_mode`,[randomUUID(),franchise,card.id,policy.effective_from,policy.effective_to,policy,c.organizationId,mode])).rows[0]!;
 }
 export async function replace(scope: TenantAccess, id: string, expected: number, policy: TaxPolicyInput) {
   const row = (await scopedQuery<PolicyRow>(scope,['tax.draft'],`UPDATE shipit.tax_versions SET policy=$3,effective_from=$4,effective_to=$5,revision=revision+1
@@ -90,4 +100,10 @@ export async function saveReceipt(scope: TenantAccess, operation: TaxOperation, 
   await scopedQuery(scope,['tax.draft','tax.publish','tax.prepare','tax.resolve','tax.calculate'],
     `INSERT INTO shipit.tax_commands(id,organization_id,franchise_id,actor_id,operation,key_digest,fingerprint,result,correlation_id)
       SELECT $1,{{organization}},$2,$3,$4,$5,$6,$7,$9 WHERE {{franchise:$8:$2}}`,[randomUUID(),c.permittedFranchiseIds[0],c.actor.id,operation,key,fingerprint,result,c.organizationId,c.correlationId]);
+}
+
+/** Lock before any shared franchise lock, serializing first setup and concurrent saves. */
+export async function lockSettings(scope: TenantAccess) {
+  const result = await scopedQuery(scope,['tax.publish'],`SELECT id FROM shipit.franchises WHERE {{franchise:organization_id:id}} FOR UPDATE`);
+  if (!result.rows.length) throw new HttpError('RESOURCE_NOT_FOUND');
 }
