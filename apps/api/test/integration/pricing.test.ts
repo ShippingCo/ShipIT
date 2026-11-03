@@ -88,3 +88,12 @@ it('receipt projections drop future private fields at every exposed object bound
   expect(replayDto({...q,internal:'SYN_SECRET',policy:{...q.policy,internal:'SYN_SECRET'},inputs:{...q.inputs,internal:'SYN_SECRET'},breakdown:{...q.breakdown,internal:'SYN_SECRET'}} as typeof q)).toEqual(q);
   expect(replayDto({...version,internal:'SYN_SECRET',rules:version.rules.map(r=>({...r,internal:'SYN_SECRET'}))} as typeof version)).toEqual(version);
 });
+it('packing edits use the audited override and combined absolute tolerance without offsetting freight reductions',()=>{
+ const requested=quote({...input,override:{freight_paise:12451,packing_paise:349,reason_code:'customer_agreement'}});
+ const result=calculate(version,requested,new Date(start),'q','actor',false);
+ expect(result).toMatchObject({packing_paise:349,freight_paise:12451,subtotal_paise:12800,variance_paise:200,override_status:'within_tolerance'});
+ const excessive=quote({...input,override:{freight_paise:12051,packing_paise:749,reason_code:'customer_agreement'}});
+ expect(()=>calculate(version,excessive,new Date(start),'q','actor',false)).toThrow('ACTION_FORBIDDEN');
+ expect(calculate(version,excessive,new Date(start),'q','actor',true)).toMatchObject({variance_paise:1000,override_status:'privileged',approval_actor_id:'actor'});
+ for(const packing_paise of [-1,0.1,'100',Number.MAX_SAFE_INTEGER+1])expect(()=>quote({...input,override:{freight_paise:12551,packing_paise,reason_code:'customer_agreement'}})).toThrow('VALIDATION_FAILED');
+});

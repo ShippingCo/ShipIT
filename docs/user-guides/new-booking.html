@@ -1,60 +1,12 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Create a booking · ShippingCo</title>
-  <link rel="stylesheet" href="guide.css">
-</head>
-<body><main>
-  <nav><a href="index.html">All feature guides</a></nav>
-  <h1>Create a booking</h1>
-  <p class="lead">Choose the branch taking the booking and open <strong>New booking</strong>. Customer, Parcel and Charges are on one page. Use the section names to jump between them. The booking summary sits beside the form on a wide screen and below it on a phone.</p>
-  <figure><img src="images/revised/booking__demo-layout.jpg" alt="New booking page with WhatsApp number and customer name first, delivery address underneath, and booking summary and Save booking on the right."><figcaption>Start with the customer at the counter. Example screens use test records.</figcaption></figure>
-
-  <section><h2>Choose the customer</h2>
-    <p>For a returning customer, expand <strong>Find an existing customer</strong> and enter at least three letters of their name or their full phone number. Check the customer’s name and phone before selecting a match. If you need to add someone, select <strong>New customer</strong> or the Add option under the search.</p>
-    <p>For a new customer, enter the WhatsApp number first, then the customer name. India +91 is added to local numbers; include a country code for other countries. The customer’s shop or contact address is optional. Select <strong>Create customer</strong> and wait for <strong>Customer details confirmed</strong>.</p>
-    <p>To correct a saved customer, edit the visible fields and choose <strong>Save customer changes</strong>. If another staff member has updated the record, refresh it and check the latest details before using them.</p>
-  </section>
-
-  <section><h2>Enter each parcel</h2>
-    <p>Enter the first delivery address, PIN code, city and state below the customer name. Receiver name and phone are optional. Enter the docket beside Destination, weight beside Service, and declared goods value beside Add to lot.</p>
-    <p>Select the destination and service from the branch’s rates. All parcels in one booking use this destination and service. For two different destinations, make separate bookings.</p>
-    <dl>
-      <dt><strong>Docket number</strong></dt><dd>Copy the number from the parcel’s paper docket, including any leading zeroes. Each parcel needs its own unused number. Use up to 32 letters, numbers and hyphens.</dd>
-      <dt><strong>Weight (kg)</strong></dt><dd>Enter the packed weight in kilograms. For example, enter <strong>0.750</strong> for 750 grams.</dd>
-      <dt><strong>Contents type and description</strong></dt><dd>Choose the kind of goods and write a short description. For liquids and semi-liquids, also enter the quantity in litres.</dd>
-      <dt><strong>Declared goods value (₹)</strong></dt><dd>Enter the value of the goods in this parcel if supplied. Leave it blank when unknown. The value of the goods is separate from the freight you charge.</dd>
-      <dt><strong>Receiver</strong></dt><dd>Enter the complete delivery address. The recipient’s name and phone are optional. Include the building, street, six-digit PIN code, city and state. The current booking form supports deliveries within India.</dd>
-    </dl>
-    <p>Select <strong>Add package</strong> for another parcel. Enter its own docket, weight and contents. You can enter a different receiver or use receiver details from an earlier parcel. If existing details would change, review and confirm the replacement. Each parcel stays independently editable. One booking can contain up to 50 parcels.</p>
-    <p>To send the parcels in an existing lot, use the <strong>Add to lot</strong> field beside declared goods value to select an active lot for this destination. All parcels in this booking will be added to it after saving.</p>
-    <p>Choose <strong>Add files</strong> for an invoice, photo or other supporting file. The app accepts PDF, JPEG, PNG, MP3, WAV and MP4 files up to 8 MiB each, with up to 10 files and 32 MiB in total. Keep the booking open while uploads finish.</p>
-  </section>
-
-  <section><h2>Calculate the charges</h2>
-    <p>Choose who pays the bill. If the customer has a linked monthly account, check the account name and available credit. Choose <strong>To Pay</strong> or <strong>Paid now</strong>. For money received at the counter, select the method now and record the actual collection after saving.</p>
-    <p>Choose the customer’s GST registration and the state where the parcel was handed over. For a registered customer, enter their billing state and GSTIN. Confirm the billing and handover details you checked with the customer.</p>
-    <p>Select <strong>Calculate booking price</strong>. The app uses the branch’s published service and rates, the combined packed weight, and the applicable tax rules. Check freight, packing, GST and total payable in the summary. When the final bill is rounded, the <strong>Rounding</strong> line shows the difference. Edit <strong>Freight ₹</strong> only for an authorised change with a reason.</p>
-    <p>If the destination or price is missing, an authorised branch administrator can use <strong>Add a service and its rates</strong>. The booking stays open during setup. Use <strong>Open booking setup · new tab</strong> to publish policies in Settings, then return and retry destinations. <a href="rate-cards.html">Rate card guide</a> · <a href="tax-policies.html">Tax policy guide</a></p>
-  </section>
-
-  <section><h2>Save and issue a receipt</h2>
-    <figure><img src="images/revised/booking__single-page-summary.png" width="1440" height="1000" loading="lazy" alt="Calculated summary listing two dockets, their receivers, the combined weight, freight, GST and total payable."><figcaption>Check each docket and receiver before saving the calculated price.</figcaption></figure>
-    <p>Check each docket and receiver, the selected service, the bill-to customer or account, and the total. Choose <strong>Save booking</strong> to finish, or <strong>Save and print</strong> to save and open the issued receipt for printing. If the price expires, calculate it again and review the new total.</p>
-    <p>The <strong>Booking saved</strong> page shows the dockets, booked total and outstanding amount. Use <strong>Print booking receipt</strong> for another copy. If printing fails, retry printing from the saved booking.</p>
-    <p>If you chose a lot, check how many parcels were added. <strong>Retry same lot assignment</strong> continues the unconfirmed addition. A failed attachment can also be retried on the saved booking.</p>
-    <p>For money already collected, choose <strong>Record received money</strong>, check the amount and receiving account, and confirm the payment. <a href="money-receipts.html">Record a money receipt</a> · <a href="booking-receipts-files.html">Find receipts and files</a></p>
-    <figure><img src="images/revised/booking__single-page-saved.png" width="1440" height="1000" loading="lazy" alt="Saved booking with two dockets, outstanding balance, confirmed lot assignments, saved attachment and issued receipt."><figcaption>After saving, check the lot and file results and issue the receipt.</figcaption></figure>
-  </section>
-
-  <section><h2>Leave a draft or cancel a saved booking</h2>
-    <p>On the entry form, <strong>Discard draft</strong> lets you discard an unsaved draft. <strong>Keep editing</strong> returns you to your entries. A customer you already created stays in the directory.</p>
-    <p>If a save result is unclear, use <strong>Retry same booking</strong> to check the original request. If you see <strong>Booking recovery required</strong>, check Receipts and ask your branch administrator to check the original booking before entering a replacement.</p>
-    <p>For a saved booking, choose <strong>Cancel saved booking</strong> on its confirmation screen, or open <strong>Bookings</strong>, find its docket and choose <strong>Cancel booking</strong> when available. This cancels <strong>every parcel in that booking</strong>. Check the parcel count and outstanding amount, enter the reason, then select <strong>Confirm cancellation</strong>.</p>
-    <p>If the booking has recorded money or another restriction, read the reason shown. Accounts handles any charge reversal separately. If the cancelled booking still shows an outstanding bill, ask your accounts team to review it.</p>
-    <p>If a submitted cancellation has an unclear result, select <strong>Retry same cancellation</strong> and wait for the confirmed parcel count.</p>
-  </section>
-</main></body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Create a booking · ShippingCo</title><link rel="stylesheet" href="guide.css"></head><body><main>
+<nav><a href="index.html">All feature guides</a></nav><h1>Create a booking</h1>
+<p class="lead">Open <strong>New Booking</strong> in the branch taking the parcel. The original counter form puts Customer, Parcel and Charges on one page, with the booking summary and Save booking beside it. On a phone, the summary follows the form.</p>
+<figure><img src="images/revised/booking__demo-layout.jpg" alt="Production booking form with the original demo layout: WhatsApp number beside customer name, delivery address below, paired parcel and charge fields, and a summary on the right."><figcaption>The actual operator page, shown with disposable test data.</figcaption></figure>
+<section><h2>Customer</h2><p>Enter the WhatsApp number and customer name. India +91 is added to local phone numbers; include the country code for other countries. Leaving the phone field checks for a returning customer. Select the matching suggestion to fill their name. Enter the parcel’s delivery address below.</p><p>Save booking creates a new customer when necessary. If the phone already matches a different customer, choose the correct record before proceeding. A failed lookup never creates a replacement record.</p></section>
+<section><h2>Parcel</h2><p>Copy the docket from the paper receipt book, including leading zeroes. Each parcel needs its own unused docket. Choose a destination covered by the branch’s published rates, enter the weight in kilograms and select the service. For example, 0.750 means 750 grams.</p><p>Declared goods value is optional and entered in rupees. It can be saved on its own. Choose an active lot for this destination if needed. Photo, Video and Voice note select files for secure upload after saving. Files must be supported types, up to 8 MiB each, with at most 10 files and 32 MiB total.</p></section>
+<section><h2>Charges and payment</h2><p>Packing and freight load from server pricing once the destination, service and weight are valid. Both amounts can be edited in rupees. The server checks the permitted override amount and staff authority; the browser cannot invent an approved price. A monthly account uses its agreed rates.</p><p>Select Paid now or To Pay, then Save booking. Confirm the actual billing registration and handover state in the confirmation dialog. Select Calculate total, review the server-calculated GST and total, then Confirm and save. GST and totals stay blank until the necessary facts are confirmed. A changed or expired quote requires a fresh calculation and review.</p><p>To Pay records an outstanding obligation. Paid now opens the money-receipt form after saving: select the receiving account, enter the money actually received, allocate it to the booking and confirm. Selecting Paid now alone does not record collection. <a href="money-receipts.html">Money receipt guide</a>.</p></section>
+<section><h2>Additional booking options</h2><p>In the confirmation dialog, expand More booking options to select a linked monthly account, add a package or create an authorised service. Booking options also reopens these controls after reviewing the price.</p><p>One booking supports up to 50 packages for the same destination and service. Each package has its own docket and weight. Add package returns to the form; receiver details can be copied explicitly from an earlier package. Review the combined price again after adding or removing packages.</p><p>Optional detailed shipping fields cover receiver contact, PIN, city, state and contents. If structured details are supplied, complete them; liquids require a quantity. Declared value alone does not require these additional facts.</p><p>If rates are missing, use Open booking setup · new tab, then retry destinations. Only an authorised administrator can publish service rates or tax policies.</p></section>
+<section><h2>After saving</h2><p>Booking saved shows the dockets, booked total and outstanding amount. Print booking receipt loads the issued receipt; printing again never creates another booking. Files and lot assignments complete against this saved booking. Retry an unsuccessful attachment or the same unconfirmed lot assignment here.</p><p>If a booking request loses its response, Retry same booking reuses the original request. If Booking recovery required appears after reloading, check Receipts and ask the administrator to reconcile the original booking before creating a replacement.</p></section>
+<section><h2>Leave or cancel</h2><p>Leaving an unsaved form asks whether to discard the draft. A customer already saved remains in the directory. Use Start another booking after saving to open a blank form.</p><p>Cancel saved booking cancels every package in the booking when cancellation is permitted. Check the package count and outstanding amount, enter a reason and confirm. Recorded money or operational commitments can prevent cancellation. Any charge reversal remains a separate accounts action. If a cancellation response is unclear, retry the same cancellation.</p></section>
+</main></body></html>

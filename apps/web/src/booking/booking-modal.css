@@ -99,3 +99,19 @@
   .booking-entry > section { padding-block: 20px; }
   .booking-counter-page input, .booking-counter-page select { font-size: 1rem; }
 }
+
+/* Exact demo form: shared .page, .card-pad, .form-grid and summary rules. */
+.booking-original { max-width: none; }
+.booking-original .booking-page-heading[hidden] { display: none; }
+.booking-original .page { padding-top: 28px; }
+.booking-original .tf-label { font-size: 12px; }
+.booking-original .tf-box :is(input,select,textarea) { font-size: 14px; }
+.booking-original .tf-help { font-size: 12px; }
+.booking-original h2.form-sec-title { font-size: 13px; }
+.booking-original .booking-draft-attachments { margin-top: 0; }
+.booking-original .booking-attachment-list:empty { display: none; }
+.booking-original .counter-rate-choices > .form-grid { margin: 0; }
+
+.operator-workspace.ops-workspace:has(.booking-original > .page) { max-width: none; padding: 0; }
+.booking-original { width: 100%; }
+.booking-original .sum-head { margin-top: 0; }

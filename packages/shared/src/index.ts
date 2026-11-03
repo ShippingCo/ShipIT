@@ -78,7 +78,7 @@ export interface PricingQuoteInput {
   /** Source of an accepted booking service suggestion; omitted for manual/legacy intent. */
   settings_version_id?:string;
   destination_key:string; service:PricingService; weight_grams:number;
-  override?:{freight_paise:number;reason_code:PricingOverrideReason};
+  override?:{freight_paise:number;packing_paise?:number;reason_code:PricingOverrideReason};
 }
 export interface PricingQuoteDto {
   service_option?:{id:string;name:string};

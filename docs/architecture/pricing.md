@@ -64,7 +64,10 @@ reuse versions or delete historical evidence. No extension or production superus
 `POST /api/v1/pricing/quote?organization_id=...&franchise_id=...` retains the issue's path.
 These required query selectors follow the existing scope selection convention and are
 validated against current membership. Body: destination_key, service, weight_grams and
-optional override {freight_paise,reason_code}. No client total, tenant body field, approval
+optional override {freight_paise,reason_code,packing_paise?}. Packing is optional for existing callers.
+For the original counter form, packing edits use the same override action, audit reason and
+privilege checks as freight. Variance is the sum of the absolute freight and packing changes;
+opposite changes cannot cancel each other to evade the published tolerance. No client total, tenant body field, approval
 boolean, rule selector or client timestamp is accepted. All input objects are strict.
 Idempotency-Key is required: quotes persist finite evidence and overrides append audit.
 

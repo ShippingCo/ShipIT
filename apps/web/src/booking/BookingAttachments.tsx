@@ -1,4 +1,4 @@
-import {useEffect,useId,useMemo,useRef,useSyncExternalStore} from 'react';
+import {useEffect,useId,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {attachmentLimits,attachmentMedia,type AttachmentDto,type AttachmentIntent} from '@shippingco/shared';
 import {attachmentIntent,type AttachmentClient} from '../data-access/attachments';
 import {ApiFailure} from '../data-access/errors';
@@ -72,13 +72,14 @@ export function useBookingAttachments({runtime,client}:{runtime:Runtime;client:A
 }
 export type BookingAttachmentQueue=ReturnType<typeof useBookingAttachments>;
 const labels:Record<Phase,string>={preparing:'Preparing file',selected:'Ready to upload after booking',uploading:'Uploading',checking:'Checking file safety',ready:'Saved securely',failed:'Needs attention',rejected:'File rejected'};
-export function BookingAttachments({queue,disabled=false}:{queue:BookingAttachmentQueue;disabled?:boolean}) {
+export function BookingAttachments({queue,disabled=false,compact=false}:{queue:BookingAttachmentQueue;disabled?:boolean;compact?:boolean}) {
  const input=useRef<HTMLInputElement>(null),help=useId();
+ const [accept,setAccept]=useState('application/pdf,image/jpeg,image/png,audio/mpeg,audio/wav,video/mp4');
  return <section className="booking-draft-attachments" aria-label="Booking attachments">
-  <h3>Attachments <span className="muted">(optional)</span></h3>
-  {!queue.saved&&<><button type="button" className="btn btn-outlined" disabled={disabled} aria-describedby={help} onClick={()=>input.current?.click()}><Msym name="attach_file"/>Add files</button>
-   <input ref={input} hidden multiple type="file" disabled={disabled} aria-label="Choose booking attachments" accept="application/pdf,image/jpeg,image/png,audio/mpeg,audio/wav,video/mp4" onChange={event=>{for(const file of Array.from(event.target.files??[]))void queue.add(file);event.target.value='';}}/>
-   <p id={help} className="counter-help">PDF invoices, photos, voice notes or video. Up to 8 MiB each; 10 files. Files upload after the booking is saved.</p></>}
+  {!compact&&<h3>Attachments <span className="muted">(optional)</span></h3>}
+  {!queue.saved&&<>{compact?<div className="attach-buttons">{[{label:"Photo",icon:"photo_camera",accept:"image/jpeg,image/png"},{label:"Video",icon:"videocam",accept:"video/mp4"},{label:"Voice note",icon:"mic",accept:"audio/mpeg,audio/wav"}].map(kind=><button type="button" className="attach-btn" key={kind.label} disabled={disabled} onClick={()=>{setAccept(kind.accept);if(input.current){input.current.accept=kind.accept;input.current.click();}}}><Msym name={kind.icon}/>{kind.label}</button>)}</div>:<button type="button" className="btn btn-outlined" disabled={disabled} aria-describedby={help} onClick={()=>input.current?.click()}><Msym name="attach_file"/>Add files</button>}
+   <input ref={input} hidden multiple type="file" disabled={disabled} aria-label="Choose booking attachments" accept={accept} onChange={event=>{for(const file of Array.from(event.target.files??[]))void queue.add(file);event.target.value='';}}/>
+   <p id={help} className={compact?'sr-only':'counter-help'}>PDF invoices, photos, voice notes or video. Up to 8 MiB each; 10 files. Files upload after the booking is saved.</p></>}
   {queue.message&&<p role="status">{queue.message}</p>}
   {queue.saved&&queue.pending&&<p role="status">Your booking is saved. Keep this page open while attachments finish. Retry failed attachments here.</p>}
   <ul className="booking-attachment-list">{queue.entries.map(entry=><li key={entry.id}>

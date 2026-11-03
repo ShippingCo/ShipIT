@@ -245,3 +245,11 @@ await test('counter parcel details survive booking replay and immutable storage'
  const changed={...body,parcels:body.parcels.map(p=>({...p,details:{...details,contents_description:'Changed'}}))};
  assert.equal((await s.book(changed,key)).json().error.code,'IDEMPOTENCY_CONFLICT');
 });
+await test('the compact counter freezes declared value alone without inventing address or contents metadata',{timeout:30000},async t=>{
+ const s=await bookingSetup(t),key=randomUUID(),details={declared_value_paise:100001};
+ const body={...s.body,parcels:s.body.parcels.map(p=>({...p,details}))};
+ const first=await s.book(body,key);assert.equal(first.statusCode,201,first.body);assert.deepEqual(first.json().parcels[0].details,details);
+ assert.deepEqual((await s.book(body,key)).json(),first.json());
+ const stored=await s.db.adminQuery('SELECT booking_details FROM shipit.parcels');assert.deepEqual(stored.rows[0]!.booking_details,details);
+ assert.equal((await s.book({...body,parcels:body.parcels.map(p=>({...p,details:{declared_value_paise:100002}}))},key)).json().error.code,'IDEMPOTENCY_CONFLICT');
+});
