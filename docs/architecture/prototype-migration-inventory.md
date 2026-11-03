@@ -1254,7 +1254,6 @@ The domestic courier template requires scope confirmation and selected Standard/
 | Regression | Decision | Group |
 | --- | --- | --- |
 | apps/web/src/test/booking-policy-setup.test.tsx: limits the courier template to confirmed selected courier services and never infers a customer jurisdiction | preserve | pricing |
-| apps/web/src/test/booking-policy-setup.test.tsx: applies a reviewed domestic courier template only to the draft and submits exact user-supplied tax identity | preserve | pricing |
 | apps/web/src/test/booking-policy-setup.test.tsx: records transparent publisher-review and manual-entry provenance without fabricating document references | preserve | pricing |
 | apps/web/src/test/form-inputs.test.tsx: keeps bounded multiline inputs labelled, described and locked during a request | preserve | presentation |
 | apps/web/src/test/form-inputs.test.tsx: adds and removes holiday dates with date inputs without guessing operating days or duplicating dates | preserve | settings |
@@ -1452,3 +1451,5 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: saves directly from the page without a billing confirmation popup or declaration checkbox | preserve | booking |
 | apps/web/src/test/counter.test.tsx: direct save retains the exact %s request after a lost acknowledgement | preserve | booking |
 | apps/web/src/test/counter.test.tsx: keeps required registered billing facts inline and does not save an invalid GSTIN | preserve | booking |
+| apps/web/src/test/business-gst.test.tsx: saves the demo GST preference in one step and retries a lost response with the same key and body | preserve | booking |
+| apps/web/src/test/counter.test.tsx: uses the saved demo GST setting for a live summary and saves without billing steps | preserve | booking |

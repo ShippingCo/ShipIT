@@ -1,4 +1,6 @@
 /** Guarded, disposable #33/#34 browser fixture; no production data or credentials printed. */
+import {randomUUID} from 'node:crypto';
+import {createTaxService} from '../src/modules/tax/service.ts';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,6 +29,7 @@ try {
  const actor=await s.grant('operator',[A,B]);
  const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'franchise_admin',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:invite.acceptance_token});
  const dispatchInvite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'dispatcher',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:dispatchInvite.acceptance_token});
+ await createTaxService(s.pool,()=>new Date('2099-01-01T00:00:00Z')).configure(actor.token,org,A,randomUUID(),{mode:'courier18',supplier_state:'27',supplier_gstin:'27ABCDE1234F1Z5',expected_version:1},randomUUID());
  const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:'silent',ALLOWED_ORIGINS:previewOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
  const whatsapp={configuration:{graph_version:'v24.0',bindings:[]},provider:{validate:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},template:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},send:async()=>({kind:'unavailable' as const,reason:'synthetic_provider_disabled'})}};
  const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps,whatsapp});cleanup.push(()=>app.close());

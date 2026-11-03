@@ -206,3 +206,5 @@ export * from './admin-actions.ts';
 
 export type {BookingParcelDetails,BookingRecipientSnapshot} from './booking-details.ts';
 export * from './operational-dashboard.ts';
+
+export type {BusinessGstMode,BusinessGstSettingsInput,BusinessGstSettingsDto} from './tax.ts';

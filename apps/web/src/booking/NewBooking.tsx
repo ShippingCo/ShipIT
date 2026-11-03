@@ -32,9 +32,9 @@ import './counter.css';
 import './booking-modal.css';
 import {ParcelEntry} from './ParcelEntry';
 import {useBookingLotAssignment} from './BookingLotAssignment';
-const stateOptions = [{ value: '', label: 'Not supplied' }, ...[
-  ['02','Himachal Pradesh'],['03','Punjab'],['05','Uttarakhand'],['06','Haryana'],['08','Rajasthan'],['09','Uttar Pradesh'],['10','Bihar'],['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],['16','Tripura'],['17','Meghalaya'],['18','Assam'],['19','West Bengal'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],['23','Madhya Pradesh'],['24','Gujarat'],['27','Maharashtra'],['29','Karnataka'],['30','Goa'],['32','Kerala'],['33','Tamil Nadu'],['36','Telangana'],['37','Andhra Pradesh'],
-].map(([value, label]) => ({ value, label }))];
+import {bookingStates} from './states';
+import {businessGstDto,businessGstPath} from '../data-access/business-gst';
+const stateOptions=[{value:'',label:'Not supplied'},...bookingStates];
 export default function NewBooking({controller}:{controller:ScopeController}) {
   const [serial,setSerial]=useState(0);
   return <BookingForm key={serial} controller={controller} startAnother={()=>setSerial(value=>value+1)}/>;
@@ -48,6 +48,8 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const [preparing,setPreparing]=useState(false);
   const state=useSyncExternalStore(workflow.subscribe,workflow.snapshot);
   const d=state.draft;
+  const gst=useResource(workflow.api.franchise+'gst',signal=>workflow.api.read(businessGstPath(workflow.api),businessGstDto,signal));
+  useEffect(()=>{if(gst.value?.mode&&gst.value.supplier_state&&!workflow.snapshot().draft.handoverState)workflow.change('handoverState',gst.value.supplier_state);},[gst.value,workflow]);
   const navigate=useNavigate();
   const [params]=useSearchParams();
   const requestedCustomer=params.get('customer_id');
@@ -87,7 +89,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const uncertain=[state.bookingPhase,state.customerPhase,state.pricingPhase,state.taxPhase,state.creditPhase].includes('uncertain');
   const retained=state.creditPhase==='loading'||state.creditPhase==='uncertain'||paymentPending||serviceBusy||lot.busy;
   useEffect(()=>retained?retainAccountNavigation(workflow.api.scope,()=>setCloseBlocked(true)):undefined,[retained,workflow]);
-  const original={...emptyDraft(),weight:'1000',paymentMode:'paid_counter',method:'cash'};
+  const original={...emptyDraft(),weight:'1000',paymentMode:'paid_counter',method:'cash',handoverState:gst.value?.mode?gst.value.supplier_state:''};
   const dirty=(Object.keys(original) as Field[]).some(field=>original[field]!==d[field])||state.additionalParcels.length>0||attachments.count>0;
   const busy=preparing||state.busy||attachments.uploading||paymentPending||serviceBusy||lot.busy||printState==='loading';
   useEffect(()=>{
@@ -188,6 +190,10 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const parcelCount=1+state.additionalParcels.length;
   const packedWeight=displayUnits(totalWeight(d,state.additionalParcels),3);
   const serviceName=state.quote?.service_option?.name??selectedServiceLabel;
+  const previewRate=gst.value?.mode==='none'?0:gst.value?.mode==='gta5'?5:gst.value?.mode?18:null;
+  const previewTax=state.quote&&previewRate!==null?Math.round(state.quote.subtotal_paise*previewRate/100):null;
+  const previewInter=!!gst.value?.supplier_state&&(d.registration==='registered'?d.recipientState:d.handoverState)!==gst.value.supplier_state;
+  const displayTax=state.tax??(state.quote&&previewTax!==null?{taxable_basis_paise:state.quote.subtotal_paise,final_payable_paise:state.quote.subtotal_paise+previewTax,components:previewRate===0?[]:previewInter?[{id:'IGST',kind:'IGST',numerator:previewRate!,denominator:100,amount_paise:previewTax}]:[{id:'CGST',kind:'CGST',numerator:previewRate!,denominator:200,amount_paise:Math.ceil(previewTax/2)},{id:'SGST',kind:'SGST',numerator:previewRate!,denominator:200,amount_paise:Math.floor(previewTax/2)}]}:null);
   const parcelReady=!!serviceName&&!!packedWeight&&[parcelErrors(d),...additionalParcelErrors(d,state.additionalParcels)].every(errors=>Object.keys(errors).length===0);
   const sectionReady=[!!d.name&&!!d.phone&&!!d.destination,parcelReady,!!state.quote];
   const formHasError=Object.values(state.errors).some(Boolean)||state.parcelErrors.some(errors=>Object.values(errors).some(Boolean));
@@ -253,13 +259,15 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
             <UnitField id="counter-override" label="Freight ₹" places={2} value={d.override||(state.quote?String(state.quote.freight_paise):'')} disabled={disabled} error={state.errors.override} onChange={value=>workflow.change('override',value)}/>
           </div>
           {state.quote&&d.override!==''&&Math.abs(Number(d.override)-state.quote.freight_suggestion_paise)>=1000&&<button type="button" className="recall" disabled={disabled} onClick={()=>{workflow.change('override','');workflow.change('packing','');}}><Msym name="auto_fix_high"/><span className="u-grow">Usual rate for {d.destination.replaceAll('_',' ')} at {packedWeight} kg is <b>{receiptMoney(state.quote.freight_suggestion_paise)}</b> — use it</span><Msym name="arrow_forward"/></button>}
+          <div className="pay-choice"><span className="field-legend">Payment</span><SegmentedControl options={[{value:'paid_counter',label:'Paid now'},{value:'to_pay',label:'To Pay'}]} value={d.paymentMode} onChange={value=>{if(!disabled)workflow.change('paymentMode',value);}}/></div>
+      <details className="booking-inline-options"><summary>More booking options</summary>
+        <Button type="button" variant="text" disabled={busy||uncertain} onClick={()=>void save(false)}>Calculate total</Button>
           <div className="form-grid booking-billing-fields">
             {select('registration','GST registration',[{value:'unregistered',label:'Not GST registered'},{value:'registered',label:'GST registered'}])}
             {select('handoverState','Parcel handed over in',stateOptions)}
             {d.registration==='registered'&&<>{select('recipientState','Billing state',stateOptions)}{field('gstin','GSTIN')}</>}
           </div>
-          <div className="pay-choice"><span className="field-legend">Payment</span><SegmentedControl options={[{value:'paid_counter',label:'Paid now'},{value:'to_pay',label:'To Pay'}]} value={d.paymentMode} onChange={value=>{if(!disabled)workflow.change('paymentMode',value);}}/></div>
-      <details className="booking-inline-options"><summary>More booking options</summary>
+
         <div className="counter-grid">{field('address','Customer address')}{field('recipientName','Recipient name')}<PhoneField compact id="counter-recipientPhone" label="Recipient phone" error={state.errors.recipientPhone} value={d.recipientPhone} disabled={disabled} onChange={value=>workflow.change('recipientPhone',value)}/>{field('recipientPin','PIN code')}{field('recipientCity','City')}{field('recipientRegion','State / region')}{field('contentsDescription','Contents description')}
         {select('contentsType','Contents type',[{value:'solid',label:'Solid'},{value:'documents',label:'Documents'},{value:'liquid',label:'Liquid'},{value:'semi_liquid',label:'Semi-liquid'},{value:'other',label:'Other'}])}
         {['liquid','semi_liquid'].includes(d.contentsType)&&<UnitField label="Liquid quantity (litres)" places={3} value={d.liquidQuantity} onChange={value=>workflow.change('liquidQuantity',value)}/>}</div>
@@ -279,14 +287,14 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
             {parcelCount>1&&<div><dt>Packages</dt><dd>{parcelCount}</dd></div>}
             <div><dt>Packing</dt><dd>{state.quote?receiptMoney(state.quote.packing_paise):'—'}</dd></div>
             <div><dt>Freight</dt><dd>{state.quote?receiptMoney(state.quote.freight_paise):'—'}</dd></div>
-            <div><dt>Taxable</dt><dd>{state.tax?receiptMoney(state.tax.taxable_basis_paise):'—'}</dd></div>
-            {state.tax?.components.map(component=><div key={component.id}><dt>{component.kind} {100*component.numerator/component.denominator}%</dt><dd>{receiptMoney(component.amount_paise)}</dd></div>)}
+            <div><dt>Taxable</dt><dd>{displayTax?receiptMoney(displayTax.taxable_basis_paise):'—'}</dd></div>
+            {displayTax?.components.map(component=><div key={component.id}><dt>{component.kind} {100*component.numerator/component.denominator}%</dt><dd>{receiptMoney(component.amount_paise)}</dd></div>)}
           </dl>
-          <div className="sum-total"><span>Total</span><strong>{state.tax?receiptMoney(state.tax.final_payable_paise):'—'}</strong></div>
+          <div className="sum-total"><span>Total</span><strong>{displayTax?receiptMoney(displayTax.final_payable_paise):'—'}</strong></div>
           <span className={'pill '+(d.paymentMode==='to_pay'?'pill-warn':'st-delivered')+' sum-pay'}>{d.paymentMode==='to_pay'?'Collect on delivery':'Paid now'}</span>
           <Button type="button" icon="check" size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':'Save booking'}</Button>
           <Button type="button" variant="text" icon="close" block disabled={busy||uncertain} onClick={close}>Cancel booking</Button>
-          <Button type="button" variant="text" block disabled={busy||uncertain} onClick={()=>void save(false)}>Calculate total</Button>
+
           {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
         </Card></aside>
       </div>

@@ -11,6 +11,7 @@ import { policyDto, type TaxAction, type TaxOperation, type TaxResult, type Inte
 import { calculate } from './calculation.ts';
 import { jurisdiction, placeOfSupply } from './jurisdiction.ts';
 import * as v from './validation.ts';
+import { settingsInput, settingsDto, settingsPolicy } from './business-settings.ts';
 import * as r from './repository.ts';
 
 interface Scopes { tax: TenantAccess; pricing: TenantAccess|null }
@@ -88,7 +89,27 @@ export function createTaxService(database: DatabasePool, clock: () => Date = () 
     await r.saveReceipt(s.tax,operation,normalizedKey,fingerprint,result);
     return result;
   }
+  async function currentSettings(scope: TenantAccess) {
+    try { return await r.current(scope,clock()); }
+    catch (error) { if (error instanceof HttpError && error.code === 'TAX_POLICY_UNAVAILABLE') return null; throw error; }
+  }
   return {
+    settings(session: string, org: string, franchise: string, correlation: string) {
+      return scoped(session,org,franchise,'tax.read',correlation,async s => settingsDto(await currentSettings(s.tax)));
+    },
+    configure(session: string, org: string, franchise: string, key: unknown, input: unknown, correlation: string) {
+      return withTaxTenantScope(database,session,v.uuid(org),v.uuid(franchise),'tax.publish',correlation,async s => {
+        await r.lockSettings(s.tax); await r.visible(s.tax,true);
+        const body = settingsInput(input);
+        const saved = await command(s,'configure',key,body,async () => {
+          const existing = await currentSettings(s.tax);
+          if (body.expected_version !== (existing?.version_number??0)) throw new HttpError('VERSION_CONFLICT');
+          const row = await r.createSettings(s.tax,settingsPolicy(body,clock(),existing),body.mode);
+          return policyDto(await r.publish(s.tax,row.id,row.revision));
+        });
+        return { id: saved.id,mode: body.mode,supplier_state: saved.supplier_state,version: saved.version_number };
+      });
+    },
     effective(session: string, org: string, franchise: string, correlation: string) {
       return scoped(session,org,franchise,'tax.read',correlation,async s => policyDto(await r.current(s.tax,clock())));
     },

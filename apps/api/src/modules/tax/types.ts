@@ -1,8 +1,8 @@
 import type { TaxPolicyInput, TaxPolicyDto, TaxIntentInput, TaxIntentDto, TaxResolutionInput, TaxResolutionDto, TaxCalculationDto } from '@shippingco/shared';
 import { policy as normalizedPolicy } from './validation.ts';
 export type TaxAction = 'tax.read' | 'tax.draft' | 'tax.publish' | 'tax.prepare' | 'tax.resolve' | 'tax.calculate' | 'tax.validate';
-export type TaxOperation = 'draft' | 'replace' | 'publish' | 'prepare' | 'resolve' | 'calculate';
-export interface PolicyRow { id: string; version_number: number; revision: number; state: 'draft' | 'published'; policy: TaxPolicyInput }
+export type TaxOperation = 'draft' | 'replace' | 'configure' | 'publish' | 'prepare' | 'resolve' | 'calculate';
+export interface PolicyRow { id: string; version_number: number; revision: number; state: 'draft' | 'published'; policy: TaxPolicyInput; business_gst_mode?: import('@shippingco/shared').BusinessGstMode | null }
 export interface IntentRow { id: string; actor_id: string; input: TaxIntentInput; result: TaxIntentDto }
 export interface ResolutionRow { id: string; actor_id: string; input: TaxResolutionInput; result: TaxResolutionDto }
 export type TaxResult = TaxPolicyDto | TaxIntentDto | TaxResolutionDto | TaxCalculationDto;

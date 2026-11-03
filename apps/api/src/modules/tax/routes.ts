@@ -6,6 +6,13 @@ export function registerTax(app: FastifyInstance, service: ReturnType<typeof cre
   const session = (r: FastifyRequest) => r.cookies[secure ? '__Host-shipit_session' : 'shipit_session'] ?? '';
   const key = (r: FastifyRequest) => idempotencyKey(r.headers['idempotency-key'],r.raw.rawHeaders);
   const base = '/api/v1/organizations/:organization_id/franchises/:franchise_id/tax/versions';
+  const settings = '/api/v1/organizations/:organization_id/franchises/:franchise_id/tax/settings';
+  app.get<{ Params: Params }>(settings,request => {
+    noQuery(request.query); return service.settings(session(request),request.params.organization_id,request.params.franchise_id,request.id);
+  });
+  app.post<{ Params: Params }>(settings,request => {
+    noQuery(request.query); return service.configure(session(request),request.params.organization_id,request.params.franchise_id,key(request),request.body,request.id);
+  });
   app.get<{ Params: Params }>(base,request => {
     noQuery(request.query); return service.effective(session(request),request.params.organization_id,request.params.franchise_id,request.id);
   });

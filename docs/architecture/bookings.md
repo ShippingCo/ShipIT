@@ -320,3 +320,28 @@ structured address/contents fact is supplied, the complete structured contract r
 No migration is needed: existing bounded JSON storage and snapshot/replay rules apply.
 API and frontend must ship together. A rollback must retain compact-details readers and the
 packing-override parser/calculator while records or quote snapshots using them remain readable.
+
+
+### Demo GST preference (2026-11-03)
+
+The counter uses a scoped business GST setting: Courier 18%, GTA 5%, GTA 18% or no GST.
+`GET/POST /api/v1/organizations/:organization_id/franchises/:franchise_id/tax/settings`
+reads/saves it using the existing tax read/publish role boundaries. Saving is a single
+idempotent, version-checked transaction; it generates the complete ordinary service,
+registration and jurisdiction rule set and activates immediately. No approval reference,
+policy dates, declaration or separate publication is requested from staff.
+
+Migration `1793638805000-business-gst-settings.cjs` adds an immutable business-mode marker
+on tax versions. Latest active business settings take precedence over legacy published
+policies. Older rows, calculations and receipts are never rewritten. Legacy endpoints
+and their publication restrictions remain compatible. Deploy the migration before the
+API and frontend. Existing branches opt in by saving GST in Settings; no legacy rate
+is silently changed. The disposable workflow preview explicitly saves Courier 18%.
+
+New business-setting calculations keep paise instead of whole-rupee final rounding;
+legacy calculations retain their original rounding. The database checks the correct
+rounding against the referenced immutable version. Server quotes and calculated
+snapshots remain authoritative at booking save. The visible summary can preview GST
+from that branch setting before a customer is created. Counter handover defaults to
+the configured business state; destination text never invents a handover fact. Optional
+registered billing and handover overrides are in More booking options.

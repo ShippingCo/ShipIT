@@ -132,3 +132,45 @@ await test('SQL immutability, stale draft updates, overlaps and outage fail clos
   try { const failed = await s.post('calculations',{ intent_id: prepared.intent.id }); assert.equal(failed.statusCode,503); assert.ok(!/select|password|stack/i.test(failed.body)); }
   finally { await s.db.setAvailable(true); }
 });
+
+await test('business GST saves immediately, covers Haryana and all services, and preserves paise',{timeout:30000},async t=>{
+ const s=await taxSetup(t);await s.published();
+ const input={mode:'courier18',supplier_state:'27',supplier_gstin:'27ABCDE1234F1Z5',expected_version:1};
+ const path=taxPath().replace('/versions','/settings'),key=randomUUID();
+ const save=()=>s.app.inject({method:'POST',url:path,headers:{...s.headers,'idempotency-key':key},cookies:s.cookies(s.local.token),payload:input});
+ const [a,b]=await Promise.all([save(),save()]);assert.equal(a.statusCode,200,a.body);assert.deepEqual(a.json(),b.json());
+ assert.equal(a.json().mode,'courier18');
+ const current=await s.tax.effective(s.operator.token,org,A,randomUUID());assert.equal(current.rules.length,12);
+ for(const rule of current.rules)assert.equal(rule.components.reduce((n,c)=>n+c.numerator/c.denominator,0),0.18);
+ const {intent}=await s.prepared({...taxFacts,handover_state:'06'});
+ const calculated=await s.tax.calculate(s.operator.token,org,A,randomUUID(),{intent_id:intent.id},randomUUID());
+ assert.equal(calculated.jurisdiction,'inter');assert.equal(calculated.igst_paise,Math.round(calculated.pre_tax_paise*0.18));
+ assert.equal(calculated.final_payable_paise,calculated.pre_tax_paise+calculated.tax_total_paise);assert.equal(calculated.rounding_adjustment_paise,0);
+ assert.equal((await s.db.adminQuery("SELECT count(*)::int AS n FROM shipit.tax_commands WHERE operation='configure'")).rows[0]!.n,1);
+ assert.ok(!(await s.app.inject({url:path,cookies:s.cookies(s.operator.token)})).body.includes(input.supplier_gstin));
+});
+await test('GST preference changes are versioned, authorized and leave saved calculations immutable',{timeout:30000},async t=>{
+ const s=await taxSetup(t);await s.published();
+ const input={mode:'courier18',supplier_state:'27',supplier_gstin:'27ABCDE1234F1Z5',expected_version:1};
+ const configure=(body=input,token=s.local.token,franchise=A)=>s.tax.configure(token,org,franchise,randomUUID(),body,randomUUID());
+ await assert.rejects(configure(input,s.operator.token),{code:'ACTION_FORBIDDEN'});
+ await assert.rejects(configure(input,s.local.token,B),{code:'RESOURCE_NOT_FOUND'});
+ const first=await configure();const {intent}=await s.prepared();const calculation=await s.tax.calculate(s.operator.token,org,A,randomUUID(),{intent_id:intent.id},randomUUID());
+ await assert.rejects(configure({...input,mode:'gta5'}),{code:'VERSION_CONFLICT'});
+ const next=await configure({...input,mode:'gta5',supplier_gstin:'',expected_version:first.version});
+ assert.equal(next.version,first.version+1);assert.equal((await s.tax.settings(s.operator.token,org,A,randomUUID())).mode,'gta5');
+ assert.deepEqual(await s.tax.readCalculation(s.operator.token,org,A,calculation.id,randomUUID()),calculation);
+ await assert.rejects(s.db.adminQuery('UPDATE shipit.tax_versions SET policy=policy,revision=revision+1 WHERE id=$1',[first.id]));
+});
+await test('first GST setup is atomic and concurrent changes cannot silently replace each other',{timeout:30000},async t=>{
+ const s=await taxSetup(t);
+ assert.deepEqual(await s.tax.settings(s.operator.token,org,A,randomUUID()),{id:null,mode:null,supplier_state:'',version:0});
+ const input={mode:'courier18',supplier_state:'27',supplier_gstin:'27ABCDE1234F1Z5',expected_version:0};
+ const outcomes=await Promise.allSettled([1,2].map(()=>s.tax.configure(s.local.token,org,A,randomUUID(),input,randomUUID())));
+ assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
+ const rejected=outcomes.find(r=>r.status==='rejected');assert.equal(rejected?.status==='rejected'&&rejected.reason.code,'VERSION_CONFLICT');
+ const current=await s.tax.settings(s.local.token,org,A,randomUUID());assert.equal(current.version,1);
+ await s.tax.configure(s.local.token,org,A,randomUUID(),{...input,mode:'none',supplier_gstin:'',expected_version:1},randomUUID());
+ const rules=(await s.tax.effective(s.operator.token,org,A,randomUUID())).rules;
+ assert.equal(rules.length,12);assert.ok(rules.every(r=>r.treatment==='exempt'&&r.components.length===0));
+});
