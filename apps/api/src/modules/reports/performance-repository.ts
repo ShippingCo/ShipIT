@@ -52,7 +52,7 @@ export async function capturePerformance(scope:TenantAccess,filter:PerformanceFi
         min((c.input->>'effective_at')::timestamptz) FILTER (WHERE c.operation_id='api.v1.routes.arrival') arrived
         FROM shipit.route_commands c WHERE c.organization_id=p.organization_id AND c.franchise_id=p.franchise_id AND c.route_id=route.id
           AND c.state='committed' AND c.operation_id IN ('api.v1.routes.departure','api.v1.routes.arrival')) route_times
-      WHERE {{franchise:p.organization_id:p.franchise_id}} AND b.confirmed_at>=$1 AND b.confirmed_at<$2 AND ($4::uuid IS NULL OR assignment.agent_id=$4::uuid)
+      WHERE {{franchise:p.organization_id:p.franchise_id}} AND p.status<>'cancelled' AND b.confirmed_at>=$1 AND b.confirmed_at<$2 AND ($4::uuid IS NULL OR assignment.agent_id=$4::uuid)
       ORDER BY b.confirmed_at,p.id LIMIT $3
     ) x`,[range.from,range.to,reportLimits.rows+1,agentOnly?assertTenantAccess(scope,['reports.capture']).actor.id:null])).rows[0]!;
   if(result.rows.length>reportLimits.rows)throw new HttpError('REPORT_LIMIT_EXCEEDED');

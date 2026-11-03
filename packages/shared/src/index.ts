@@ -102,7 +102,7 @@ export const MAX_BULK_PARCELS = 50;
 export type BulkParcelAction = 'check_in' | 'dispatch';
 export interface ParcelTransitionDto {
   id: string; booking_id: string; docket: string; version: number;
-  status: 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto';
+  status: 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto'|'cancelled';
   custody: 'awaiting_intake'|'franchise_office'|'route_dispatch'|'delivery_agent'|'recipient';
   attempts_started: number; failed_attempt_count: number; event_id: string; transitioned_at: string;
   reason_code?: 'customer_unavailable'|'customer_requests_pickup'|'address_issue'|'recipient_refusal'|'payment_not_collected'|'operational_issue'|'other_controlled';
@@ -204,5 +204,5 @@ export * from './accountant.ts';
 
 export * from './admin-actions.ts';
 
-export type {BookingParcelDetails} from './booking-details.ts';
+export type {BookingParcelDetails,BookingRecipientSnapshot} from './booking-details.ts';
 export * from './operational-dashboard.ts';

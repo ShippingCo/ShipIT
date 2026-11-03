@@ -708,6 +708,7 @@ counter or transcript becomes operational evidence.
 | --- | --- | --- |
 | apps/web/src/test/messaging-effectiveness.test.tsx: keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy | preserve | reports |
 | apps/web/src/test/messaging-effectiveness.test.tsx: retries saved failures and reuses the exact uncertain capture while keeping filters disabled | preserve | reports |
+| apps/web/src/test/messaging-effectiveness.test.tsx: keeps measured zero, a withheld count and absent evidence distinct in the reach summary | preserve | reports |
 
 ## Issue #138 reviewed receipt workflow additions
 
@@ -1293,6 +1294,7 @@ The domestic courier template requires scope confirmation and selected Standard/
 | apps/web/src/test/operations.test.tsx: requires complete e-way evidence pairs and never drops partially entered evidence when another section is valid | preserve | eway |
 | apps/web/src/test/sign-in-fields.test.tsx: focuses sign-in steps and retains the email while clearing a rejected code | preserve | seam |
 | apps/web/src/test/sign-in-fields.test.tsx: preserves leading zeroes in a sign-in code and ignores a verification completed after unmount | preserve | seam |
+| apps/web/src/test/sign-in-fields.test.tsx: reuses the email challenge for resend and clears the cooldown when returning to email | preserve | seam |
 | apps/web/src/test/studio-workspace.test.tsx: searches customers with an explicit country code and focuses invalid phone input before any request | preserve | customers |
 | apps/web/src/test/weekly-business.test.tsx: loads on entry when requested and uses complete saved evidence for a 30-day preset | preserve | reports |
 | apps/web/src/test/weekly-business.test.tsx: rejects invalid custom date ranges locally without creating a report | preserve | reports |
@@ -1359,6 +1361,7 @@ Reviewed 3 additional regressions; 407 declarations remain inventoried. No regre
 | --- | --- | --- |
 | apps/web/src/test/customer-accounts.test.tsx: creates a missing customer in the account flow and retries the same uncertain customer request | preserve | seam |
 | apps/web/src/test/operations.test.tsx: adds a route parcel by tracking lookup while retaining server references and version | preserve | seam |
+| apps/web/src/test/operations.test.tsx: shows the proof exception route when a parcel has no receiver phone | preserve | proof |
 | apps/web/src/test/shipment-cost.test.tsx: keeps a shipment cost draft while moving between details and booking allocation | preserve | reports |
 
 
@@ -1425,3 +1428,24 @@ focus restoration, preserved drafts and immutable uncertain retries.
 | apps/web/src/test/service-parity.test.tsx: filters receipts by the IST booking date and preserves applied bounds while paging an edited draft | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
 | apps/web/src/test/service-parity.test.tsx: rejects an inverted receipt date range without sending a new read | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
 | apps/web/src/test/service-parity.test.tsx: shows queued provider work as waiting in the feed and uses scoped notification filters without send claims | preserve | messaging | Provider waiting state stays truthful and filtering remains scoped. |
+
+
+### Single-page counter and whole-booking cancellation, 3 November 2026
+
+Six former wizard declarations now exercise the same persisted operations through the Customer, Parcel and Charges sections. Three additional cases cover saving immediately after service setup, a lost cancellation acknowledgement and a server payment restriction. The reviewed inventory contains 433 test declarations.
+
+The counter fingerprint changes for visible section navigation, exact per-parcel addresses and declared values, named service selection and the post-save lot workflow. A new cancellation before-unload listener protects the unresolved request and removes itself when settled or unmounted. Booking click and unload guards still have matching cleanup. The prototype exports, Store ownership, consumer/import inventory, routes and existing safety controls are preserved.
+
+| Regression | Decision | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: adds a typed customer inline and preserves the booking draft when cancellation is dismissed | preserve | booking |
+| apps/web/src/test/counter.test.tsx: can save a booking immediately after creating and using a service in its dialog | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
+| apps/web/src/test/counter.test.tsx: invalidates the reviewed quote when a handover fact needs reconfirmation | preserve | booking |
+| apps/web/src/test/counter.test.tsx: keeps Customer, Parcel, Charges and Booking summary on one editable page | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves distinct parcel details once and retries only the unconfirmed lot assignment | preserve | booking |
+| apps/web/src/test/counter.test.tsx: explicit save focuses the first missing sender field without creating a booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address | preserve | booking |
+| apps/web/src/test/logistics-parity.test.tsx: cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement | preserve | booking |
+| apps/web/src/test/logistics-parity.test.tsx: explains a payment block before offering any cancellation write | preserve | booking |

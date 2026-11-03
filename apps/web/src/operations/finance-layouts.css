@@ -137,3 +137,55 @@
 @media(max-width:640px){.finance-cost-flow .service-allocation-row{grid-template-columns:1fr}.finance-flow-actions>.btn-filled{margin-left:0}}
 
 .cost-source-choices{margin:12px 0}.cost-source-choices>p{font-size:12px;color:var(--workspace-muted);margin:0}.shipment-cost-workspace .service-cost-editor{margin-top:0;padding-top:10px}
+
+.finance-customer-selection { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; padding-block: 12px; border-bottom: 1px solid var(--workspace-border); }
+.finance-customer-selection p { margin: 0; overflow-wrap: anywhere; }
+.finance-balance-strip { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(135px,100%),1fr)); gap: 12px 20px; margin: 20px 0; padding-block: 16px; border-block: 1px solid var(--workspace-border); }
+.finance-balance-strip dt { font-size: .8125rem; color: var(--workspace-muted); }
+.finance-balance-strip dd { margin: 4px 0 0; font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.finance-workflow-page > [hidden], .customer-accounts-workspace [hidden] { display: none !important; }
+.reconciliation-workspace .finance-workspace-intro > .tf { max-inline-size: 36rem; }
+.reconciliation-workspace .finance-workspace-intro > .finance-secondary-action { max-inline-size: 44rem; }
+
+/* Read the transaction total first, then the amounts that explain it. */
+.finance-position {
+ display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px 28px;
+ margin: 16px 0 24px; padding: 20px 0; border-block: 1px solid var(--workspace-border);
+}
+.finance-position > div { flex: 1 1 126px; align-content: center; min-width: 0; }
+.finance-position > div:first-child { flex-grow: 1.45; padding-left: 14px; border-left: 3px solid var(--md-primary); }
+.finance-position dt { font-size: .8125rem; line-height: 1.4; color: var(--workspace-muted); }
+.finance-position dd { margin: 6px 0 0; font-size: clamp(1.125rem,1.65vw,1.55rem); line-height: 1.18; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.finance-position > div:first-child dd { font-size: clamp(1.75rem,2.8vw,2.625rem); letter-spacing: -.035em; }
+.finance-position dd small { display: block; margin-top: 4px; color: var(--workspace-muted); font-size: .75rem; font-weight: 450; }
+.finance-review-customer { margin: 4px 0 0; font-size: 1rem; overflow-wrap: anywhere; }
+.finance-receipt-identifier { color: var(--workspace-muted); font: .78rem/1.5 ui-monospace, monospace; margin: 6px 0 0; overflow-wrap: anywhere; }
+.finance-bill-reference > summary { cursor: pointer; font-weight: 600; }
+.finance-bill-reference[open] > summary { margin-bottom: 6px; }
+.finance-payment-review:has(.finance-position) { width: 100%; max-width: 48rem; }
+.finance-payment-review h3, .finance-position, .finance-workspace-intro ~ section > h3 { scroll-margin-top: 82px; }
+.finance-saved-method { color: var(--workspace-muted); font-size: .875rem; }
+@media (max-width:600px) {
+ .finance-position { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); padding: 14px 0; gap: 16px 12px; }
+ .finance-position > div { align-content: start; }
+ .finance-position > div:first-child { grid-column: 1/-1; }
+ .finance-payment-review .finance-review-list > div { grid-template-columns: minmax(84px,.65fr) minmax(0,1fr); gap: 12px; padding: 10px 0; }
+}
+
+.finance-source-disclosure { border-bottom: 1px solid var(--workspace-border); padding: 0; margin: 8px 0; min-width: 0; }
+.finance-source-disclosure > summary, .receipt-date-disclosure > summary { padding: 12px 0; cursor: pointer; font-weight: 600; font-size: .875rem; }
+.finance-source-disclosure > summary:focus-visible, .receipt-date-disclosure > summary:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.receipt-date-disclosure { flex-basis: 100%; min-width: 0; }
+.reference-service .receipt-date-disclosure .reference-receipt-dates { margin: 0 0 12px; }
+.reference-service .receipt-index[hidden] { display: none; }
+.agent-statement-evidence .finance-review-list { max-inline-size: 48rem; }
+
+.finance-task-home .workspace-task-group { padding: 18px 0; border-top: 1px solid var(--workspace-border); }
+.finance-task-home .workspace-task-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 28px; }
+.finance-task-home .workspace-task-link { padding: 12px 0; min-width: 0; border-bottom: none; }
+@media(max-width:760px){ .finance-task-home .workspace-task-list { grid-template-columns: minmax(0,1fr); } }
+
+.agent-statement-evidence > section.card.ops-card { padding: 18px 0; box-shadow: none; border: 0; border-top: 1px solid var(--workspace-border); border-radius: 0; }
+.finance-proposal-comparison .record-table { min-width: 0; width: 100%; }
+.finance-proposal-comparison :is(td,th) { white-space: normal; overflow-wrap: anywhere; }
+@media(max-width:600px){ .finance-proposal-comparison :is(td,th) { padding: 10px 4px; } }

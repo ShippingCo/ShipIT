@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { receiptDiscovery, type ReceiptReference } from '../data-access/bookings';
-import { SearchField,TextField } from '../components/m3/Input';
+import { SearchField,DateField } from '../components/m3/Input';
 import { ReceiptPanel } from './ReceiptPanel';
 import { failureMessage } from './failures';
 import './counter.css';
@@ -19,7 +19,9 @@ export default function Receipts({ controller }: { controller: ScopeController }
   const pending = useRef<AbortController>();
   const [from,setFrom]=useState(''),[to,setTo]=useState('');
   const appliedDates=useRef<{from?:string;to?:string}>({});
+  const restoreReceiptFocus = useRef(false);
   const receiptTrigger = useRef<HTMLButtonElement | null>(null);
+  useEffect(()=>{if(!selected&&restoreReceiptFocus.current){restoreReceiptFocus.current=false;receiptTrigger.current?.focus();}},[selected]);
   async function load(next?: string,search=docket,clearDates=false) {
     if(!next&&!clearDates&&from&&to&&from>to){setPhase('error');setMessage('Choose an end date on or after the start date.');return;}
     if(!next)appliedDates.current=clearDates?{}:{...(from?{from:dayStart(from)}:{}),...(to?{to:dayStart(shiftDay(to,1))}:{})};
@@ -44,10 +46,10 @@ export default function Receipts({ controller }: { controller: ScopeController }
     return () => { pending.current?.abort(); unsubscribe(); };
   }, [api, controller]);
   return <div className="counter-flow reference-service"><PageHeader title="Receipts" eyebrow="Counter" description="Find a booking, retrieve its issued receipt and print only when needed."/>
-    <section className="card counter-section" aria-busy={phase==='loading'}><form className="receipt-search" aria-label="Find a receipt" onSubmit={event => { event.preventDefault(); void load(); }}>
+    <section className="card counter-section receipt-index" hidden={!!selected} aria-busy={phase==='loading'}><form className="receipt-search" aria-label="Find a receipt" onSubmit={event => { event.preventDefault(); void load(); }}>
       <SearchField id="receipt-docket-search" label="Find receipt by docket" maxLength={32} autoComplete="off" spellCheck={false} value={docket} onChange={v => { pending.current?.abort(); setDocket(v); setRows([]); setSelected(undefined); setCursor(null); setPhase('idle'); setMessage('Search to load matching bookings.'); }} helper="Use the tracking number, or leave blank for recent bookings." />
       <button className="btn btn-outlined" disabled={phase === 'loading'} aria-busy={phase === 'loading'}>{phase === 'error' ? 'Retry receipts' : 'Find receipts'}</button>
-    <div className="reference-receipt-dates"><DatePresets change={(start,end)=>{setFrom(start);setTo(end);}}/><TextField label="Booked from" type="date" value={from} onChange={setFrom}/><TextField label="Booked through" type="date" value={to} onChange={setTo}/>{(from||to)&&<button type="button" className="btn btn-text" onClick={()=>{setFrom('');setTo('');void load(undefined,docket,true);}}>All dates</button>}<p className="ops-note">Booking confirmation date · Asia/Kolkata · Monday week start. Select Find receipts to apply.</p></div></form><p role={phase === 'error' ? 'alert' : 'status'} aria-live="polite">{message}</p>
+    <details className="receipt-date-disclosure"><summary>Booking dates{from||to?' · range selected':''}</summary><div className="reference-receipt-dates"><DatePresets change={(start,end)=>{setFrom(start);setTo(end);}}/><DateField label="Booked from" value={from} onChange={setFrom}/><DateField label="Booked through" value={to} onChange={setTo}/>{(from||to)&&<button type="button" className="btn btn-text" onClick={()=>{setFrom('');setTo('');void load(undefined,docket,true);}}>All dates</button>}<p className="ops-note">Booking confirmation date · Asia/Kolkata · Monday week start. Select Find receipts to apply.</p></div></details></form><p role={phase === 'error' ? 'alert' : 'status'} aria-live="polite">{message}</p>
     {rows.length>0&&<RecordTable label="Receipt bookings" mobile="stack" rows={rows} rowKey={row=>row.booking_id} selectedKey={selected?.id} columns={[
       {key:'docket',label:'Docket',cell:row=><strong className="ops-mono">{row.docket}</strong>},
       {key:'confirmed',label:'Confirmed',cell:row=><time dateTime={row.confirmed_at} title={row.confirmed_at}>{formatKolkata(row.confirmed_at)}</time>},
@@ -57,6 +59,6 @@ export default function Receipts({ controller }: { controller: ScopeController }
     {rows.length>0&&<p className="ops-note">{rows.length} bookings loaded</p>}
     {cursor && <button className="btn btn-outlined" disabled={phase === 'loading'} onClick={() => { void load(cursor); }}>More bookings</button>}
     </section>
-    {selected && <ReceiptPanel key={selected.id} api={api} controller={controller} bookingId={selected.id} focusRequest={selected.reveal} onClose={()=>{setSelected(undefined);if(receiptTrigger.current?.isConnected)receiptTrigger.current.focus();}} />}
+    {selected && <ReceiptPanel key={selected.id} api={api} controller={controller} bookingId={selected.id} focusRequest={selected.reveal} onClose={()=>{restoreReceiptFocus.current=true;setSelected(undefined);}} />}
   </div>;
 }

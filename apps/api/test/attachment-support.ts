@@ -26,8 +26,8 @@ export function memoryStore() {
   };
   return {store,objects,setFault:(v:typeof fault)=>{fault=v;}};
 }
-export async function attachmentSetup(t:TestContext,database?:import('../../../packages/db/test/support.ts').DisposableDatabase){
-  const s=await bookingSetup(t,database);await s.db.prepareAttachments();const booked=await s.book();assert.equal(booked.statusCode,201,booked.body);
+export async function attachmentSetup(t:TestContext,database?:import('../../../packages/db/test/support.ts').DisposableDatabase,options?:{omitRecipientContact?:boolean}){
+  const s=await bookingSetup(t,database);await s.db.prepareAttachments();const booked=await s.book(options?.omitRecipientContact?{...s.body,parcels:s.body.parcels.map(parcel=>({...parcel,recipient:{address:parcel.recipient.address}}))}:s.body);assert.equal(booked.statusCode,201,booked.body);
   const bookingId=booked.json().id as string,parcelId=booked.json().parcels[0].id as string;
   const memory=memoryStore();let time=new Date('2099-01-01T01:00:00Z'),scan:'clean'|'infected'|'error'='clean';const clock=()=>new Date(time);
   const deps={store:memory.store,scanner:{scan:async()=>scan},signingKey:'SYN_ATTACHMENT_SIGNING_KEY_012345678901234567890',clock};

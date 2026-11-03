@@ -1,9 +1,10 @@
+import {ServiceActivity} from './ServiceActivity';
 import {MessageFeedRow} from '../components/workspace/ServiceCards';
 import {FilterChips} from '../components/m3/Controls';
 import {formatKolkata} from './format';
 import {PageHeader,SectionHeader,FilterBar,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
-import React,{useMemo,useRef,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { OperatorRole } from '@shippingco/shared';
 import type { ScopeController } from '../operator/scope';
@@ -27,14 +28,14 @@ export default function Messaging({controller,roles}:{controller:ScopeController
    <details className="form-secondary-options"><summary>Reference filter</summary><form onSubmit={e=>{e.preventDefault();setFilterCorrelation(correlation);}}><TextField label="Correlation reference (UUID)" autoCapitalize="none" spellCheck={false} maxLength={36} value={correlation} onChange={setCorrelation} pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"/><button className="btn btn-text">Apply correlation</button></form></details>
   </FilterBar>
   <FilterChips value={kind} onChange={setKind} options={[{value:'',label:'All notifications'},{value:'booking_confirmation',label:'Bookings'},{value:'route_delayed',label:'Route delays'},{value:'delivery_otp',label:'Delivery verification'},...(!['','booking_confirmation','route_delayed','delivery_otp'].includes(kind)?[{value:kind,label:kindLabel[kind]}]:[])]}/>
-  <Feed key={`${view}:${status}:${kind}:${filterCorrelation}`} source={source} view={view} status={status} kind={kind} correlation={filterCorrelation} roles={roles}/>
+  <Feed clearFilters={()=>{setStatus('');setKind('');setCorrelation('');setFilterCorrelation('');}} key={`${view}:${status}:${kind}:${filterCorrelation}`} source={source} view={view} status={status} kind={kind} correlation={filterCorrelation} roles={roles}/>
  </section>;
 }
-function Feed({source,view,status,kind,correlation,roles}:{source:MessagingSource;view:HistoryView;status:string;kind:string;correlation:string;roles:readonly OperatorRole[]}) {
+function Feed({source,view,status,kind,correlation,roles,clearFilters}:{clearFilters:()=>void;source:MessagingSource;view:HistoryView;status:string;kind:string;correlation:string;roles:readonly OperatorRole[]}) {
  const page=usePagedResource('history',(cursor,signal)=>source.list(view,{status,kind,correlation_id:correlation,cursor},signal));
- const [selected,setSelected]=useState<string|null>(null),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
+ const [selected,setSelected]=useState<string|null>(null),[locked,setLocked]=useState(false),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
  return <><SectionHeader title={view==='messages'?'Message history':'Automation history'} description="Latest recorded updates for this branch. Message content and verification codes stay private." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh history</button>}/>
-  {page.phase==='loading'?<Loading label="Loading messaging history…"/>:page.phase==='error'?<Failure retry={page.reload} label="Messaging history could not be loaded."/>:page.phase==='empty'?<Empty title="No matching history" body="No messages match these filters. Choose All for status and notification kind to broaden the results."/>:
+  {page.phase==='loading'?<Loading label="Loading messaging history…"/>:page.phase==='error'?<Failure retry={page.reload} label="Messaging history could not be loaded."/>:page.phase==='empty'?<Empty icon="forum" title={status||kind||correlation?'No matching history':view==='messages'?'No messages yet':'No automation history yet'} body={status||kind||correlation?'Clear the filters to see other updates for this branch.':view==='messages'?'Customer updates appear here when a booking, dispatch or delivery produces a message.':'Decisions appear here when an event is checked against a notification policy.'} action={status||kind||correlation?<button className="btn btn-outlined" onClick={clearFilters}>Clear history filters</button>:undefined}/>:
    view==='messages'?<ul className="reference-message-feed" aria-label="Message history">{page.items.map(row=><MessageFeedRow key={row.id} title={kindLabel[row.notification_kind]} status={<StatusBadge tone={['failed','uncertain','blocked'].includes((row.message?.state??row.fanout?.state??row.decision?.outcome??'uncertain'))?'warning':['delivered','read'].includes((row.message?.state??row.fanout?.state??row.decision?.outcome??'uncertain'))?'success':'neutral'}>{statusLabel[(row.message?.state??row.fanout?.state??row.decision?.outcome??'uncertain')]}</StatusBadge>} time={<time dateTime={row.effective_time}>{formatKolkata(row.effective_time)}</time>} action={<button className="btn btn-text" onClick={event=>{trigger.current=event.currentTarget;setSelected(row.id);}} aria-label={`Inspect ${kindLabel[row.notification_kind]} ${row.id}`}>Inspect</button>}><span>{row.message?row.message.attempt_count+' recorded attempts':'Automation record; inspect its evidence.'}</span>{row.recovery.kind!=='none'&&<span> · Recovery review available</span>}</MessageFeedRow>)}</ul>:
    <RecordTable mobile="stack" label="Automation history" rows={page.items} rowKey={row=>row.id} selectedKey={selected} columns={[
     {key:'kind',label:'Notification',cell:row=><strong>{kindLabel[row.notification_kind]}</strong>},
@@ -44,15 +45,15 @@ function Feed({source,view,status,kind,correlation,roles}:{source:MessagingSourc
     {key:'action',label:'Action',cell:row=><button ref={button=>{if(button&&row.id===selected)trigger.current=button;}} className="btn btn-text" onClick={e=>{trigger.current=e.currentTarget;setSelected(row.id);}} aria-label={`Inspect ${kindLabel[row.notification_kind]} ${row.id}`}>Inspect</button>},
    ]}/>}
   {page.page.has_more&&page.phase!=='error'&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>{page.phase==='more'?'Loading…':'Load older history'}</button>}
-  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" aria-describedby="history-description" onCloseAutoFocus={event=>{event.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
-   <Dialog.Close className="btn btn-outlined service-detail-close">Close</Dialog.Close>
+  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" aria-describedby="history-description" onCloseAutoFocus={event=>{event.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+   <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    <Dialog.Title className="t-title-lg">Notification evidence</Dialog.Title><Dialog.Description id="history-description">Current server status and safe references. Message bodies and verification codes are never shown.</Dialog.Description>
-   {selected&&<Detail key={selected} source={source} view={view} id={selected} roles={roles} changed={page.reload}/>}
+   {selected&&<Detail setLocked={setLocked} key={selected} source={source} view={view} id={selected} roles={roles} changed={page.reload}/>}
 
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </>;
 }
-function Detail({source,view,id,roles,changed}:{source:MessagingSource;view:HistoryView;id:string;roles:readonly OperatorRole[];changed:()=>void}) {
+function Detail({source,view,id,roles,changed,setLocked}:{setLocked:(locked:boolean)=>void;source:MessagingSource;view:HistoryView;id:string;roles:readonly OperatorRole[];changed:()=>void}) {
  const detail=useResource(id,signal=>source.detail(view,id,signal));
  const command=useCommand(source.execute),[confirm,setConfirm]=useState<HistoryDetail|null>(null),[preparing,setPreparing]=useState(false),[error,setError]=useState('');
  const confirmed=()=>{setConfirm(null);detail.reload();changed();};
@@ -69,10 +70,16 @@ function Detail({source,view,id,roles,changed}:{source:MessagingSource;view:Hist
   finally {setPreparing(false);}
  }
  const row=detail.value,busy=preparing||command.phase==='pending'||command.phase==='uncertain';
- return <><button className="btn btn-text" onClick={()=>{setConfirm(null);detail.reload();}}>Refresh detail</button>
+ useEffect(()=>{setLocked(busy);return()=>setLocked(false);},[busy,setLocked]);
+ return <><button className="btn btn-text" disabled={busy} onClick={()=>{setConfirm(null);detail.reload();}}>Refresh detail</button>
   {detail.phase==='loading'?<Loading/>:detail.phase==='error'?<Failure retry={detail.reload}/>:row&&<>
-   <h3>{kindLabel[row.notification_kind]}</h3><Evidence row={row}/>
-   {row.message&&<><h4>Provider attempts</h4>{row.attempts.length===0?<p>No recorded provider attempts.</p>:<ol className="ops-list">{row.attempts.map(attempt=><li key={attempt.attempt}>Attempt {attempt.attempt}: {attempt.outcome} · {attempt.reason_code.replaceAll('_',' ')} · {formatKolkata(attempt.recorded_at)}</li>)}</ol>}{row.history_truncated&&<p>Showing the newest 100 attempts. Earlier evidence is retained.</p>}</>}
+   <header className="service-record-head"><div><h3>{kindLabel[row.notification_kind]}</h3>
+    <time className="ops-note" dateTime={row.effective_time}>{formatKolkata(row.effective_time)}</time></div>
+    <span>{row.message?statusLabel[row.message.state]:row.decision?statusLabel[row.decision.outcome]:row.fanout?statusLabel[row.fanout.state]:null}</span></header><details className="logistics-secondary"><summary>Message and source references</summary><Evidence row={row}/></details>
+   {row.message&&<><h4>Provider attempts</h4>{row.attempts.length===0?<p>No recorded provider attempts.</p>:<ServiceActivity label="Provider attempts" items={row.attempts.map(attempt=>({
+     id:attempt.attempt,title:'Attempt '+attempt.attempt+' · '+attempt.outcome.replaceAll('_',' '),
+     time:attempt.recorded_at,detail:attempt.reason_code.replaceAll('_',' '),
+   }))}/>}{row.history_truncated&&<p>Showing the newest 100 attempts. Earlier evidence is retained.</p>}</>}
    {row.fanout_items.length>0&&<><h4>Route fanout decisions</h4><ul className="ops-list">{row.fanout_items.map(item=><li className="ops-row" key={item.parcel_id}><span className="ops-row-main">Parcel {item.parcel_id}<span>{statusLabel[item.outcome]} · {item.reason_code.replaceAll('_',' ')}</span>{item.outbound_intent_id&&<span>Message reference: {item.outbound_intent_id}</span>}</span></li>)}</ul></>}
    {canAdminister(roles,'whatsapp.write')&&row.recovery.kind!=='none'&&<button className="btn btn-outlined" disabled={busy||!!confirm} onClick={()=>{void prepare('redrive');}}>Redrive original message</button>}
    {(canAdminister(roles,'whatsapp.write')||roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role)))&&row.reminder.eligible&&<button className="btn btn-outlined" disabled={busy} onClick={()=>{void prepare('reminder');}}>Send route reminder</button>}

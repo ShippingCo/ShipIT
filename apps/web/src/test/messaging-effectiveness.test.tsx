@@ -37,3 +37,18 @@ describe('production effectiveness snapshot UI',()=>{
     await waitFor(()=>expect(source.execute).toHaveBeenCalledTimes(2));const calls=vi.mocked(source.execute).mock.calls;expect(calls[0]![0]).toBe(calls[1]![0]);
   });
 });
+
+it('keeps measured zero, a withheld count and absent evidence distinct in the reach summary',async()=>{
+  const source=fixture();
+  const cell=page.items[0]!;
+  vi.mocked(source.page).mockResolvedValue({...page,items:[
+    {...cell,category:'logical_intents',count:12},
+    {...cell,category:'delivery_unknown',count:null,suppressed:true},
+    {...cell,category:'confirmed_customers',count:0},
+  ]});
+  render(<MemoryRouter initialEntries={['/?effectiveness_snapshot='+id]}><EffectivenessView source={source}/></MemoryRouter>);
+  const measures=within(await screen.findByLabelText('Message reach and support workload'));
+  for(const [label,value] of [['Messages','12'],['Delivery unknown','Suppressed'],['Customers reached','0'],['Open or claimed cases','Unknown']]){
+    expect(measures.getByText(label).nextElementSibling).toHaveTextContent(value);
+  }
+});

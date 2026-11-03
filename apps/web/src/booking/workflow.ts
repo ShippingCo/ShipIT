@@ -7,20 +7,21 @@ import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
-import { emptyDraft, emptyParcel, additionalParcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
+import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
 export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 'stale';
 interface State {
-  draft: Draft; additionalParcels: ParcelDraft[]; parcelErrors: Errors[]; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
+  draft: Draft; additionalParcels: (ParcelDraft & {localKey:number})[]; parcelErrors: Errors[]; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
   accountId?:string;accountName?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
-  settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean;
+  settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean; validationAttempt:number;
 }
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api), accountApi=customerAccounts(api);
+  let nextParcelKey=0;
   let state: State = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing',
-    bookingPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false };
+    bookingPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false,validationAttempt:0 };
   const listeners = new Set<() => void>();
   let live = true, customerIntent: CommandIntent | undefined, quoteIntent: CommandIntent | undefined,
     prepareIntent: CommandIntent | undefined, calculateIntent: CommandIntent | undefined, bookingIntent: CommandIntent | undefined,
@@ -35,7 +36,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     const extra = section === 'customer' ? [] : additionalParcelErrors(state.draft,state.additionalParcels);
     if(section !== 'customer' && !totalWeight(state.draft,state.additionalParcels)) errors.weight = 'Enter valid package weights with a safe combined total.';
     const invalid = Object.keys(errors).length > 0 || extra.some(e => Object.keys(e).length > 0);
-    set({errors,parcelErrors:extra,message:invalid?'Review the highlighted fields.':''});
+    set({errors,parcelErrors:extra,message:invalid?'Review the highlighted fields.':'',validationAttempt:state.validationAttempt+(invalid?1:0)});
     return !invalid;
   }
   function failed(error: unknown, phase: 'customerPhase' | 'pricingPhase' | 'taxPhase' | 'bookingPhase') {
@@ -49,24 +50,48 @@ export function createBookingWorkflow(controller: ScopeController) {
       if (['QUOTE_STALE', 'TAX_STALE'].includes(error.code)) { invalidateCommercial(); set({ pricingPhase: 'stale', taxPhase: 'stale' }); }
       if (error.code === 'VERSION_CONFLICT') set({ customerPhase: 'stale' });
     }
-    set({ [phase]: pending ? 'uncertain' : 'error', errors, message: failureMessage(error) });
+    set({ [phase]: pending ? 'uncertain' : 'error', errors, message: failureMessage(error),validationAttempt:state.validationAttempt+(Object.keys(errors).length?1:0) });
     return pending;
   }
   const bookingBody=()=> {
     if(!state.customer||!state.tax||!taxInput)return null;
     const d=state.draft;
     return {customer_id:state.customer.id,expected_customer_version:state.customer.version,tax_calculation_id:state.tax.id,tax_intent:taxInput,
-      parcels:[d,...state.additionalParcels].map(p=>({...((d.recipientPin||p.contentsDescription)?{details:{country:'IN' as const,postal_code:d.recipientPin,city:d.recipientCity,region:d.recipientRegion,contents_type:p.contentsType as import('@shippingco/shared').BookingParcelDetails['contents_type'],contents_description:p.contentsDescription,liquid_quantity_ml:['liquid','semi_liquid'].includes(p.contentsType)?Number(p.liquidQuantity):null}}:{}),weight_grams:Number(p.weight),...(p.docket?{docket:p.docket}:{}),recipient:{name:d.recipientName,phone:d.recipientPhone,address:d.recipientAddress}}))};
+      parcels:[d,...state.additionalParcels].map(parcel=>({
+        weight_grams:Number(parcel.weight),
+        docket:parcel.docket.trim().toUpperCase(),
+        recipient:{...(parcel.recipientName.trim()?{name:parcel.recipientName.trim()}:{}),...(parcel.recipientPhone.trim()?{phone:parcel.recipientPhone.trim()}:{}),address:parcel.recipientAddress},
+        ...(parcel.recipientPin||parcel.contentsDescription||parcel.declaredValue?{details:{
+          country:'IN' as const, postal_code:parcel.recipientPin, city:parcel.recipientCity, region:parcel.recipientRegion,
+          contents_type:parcel.contentsType as import('@shippingco/shared').BookingParcelDetails['contents_type'],
+          contents_description:parcel.contentsDescription,
+          liquid_quantity_ml:['liquid','semi_liquid'].includes(parcel.contentsType)?Number(parcel.liquidQuantity):null,
+          ...(parcel.declaredValue!==''?{declared_value_paise:Number(parcel.declaredValue)}:{}),
+        }}:{}),
+      }))};
   };
   let unsubscribe = () => {};
   const purge = () => {
     live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = creditIntent = undefined; taxInput = undefined;
-    state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false };
+    state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false,validationAttempt:0 };
     listeners.forEach(l => l());
   };
   return {
     api, customerApi, accountApi,
-    addParcel() {if(locked()||state.additionalParcels.length>=49)return;set({additionalParcels:[...state.additionalParcels,{...emptyParcel(),recipientName:state.draft.recipientName,recipientPhone:state.draft.recipientPhone,recipientAddress:state.draft.recipientAddress}],parcelErrors:[]});invalidateCommercial();},
+    addParcel() {
+      if(locked()||state.additionalParcels.length>=49)return;
+      set({additionalParcels:[...state.additionalParcels,{...emptyParcel(),localKey:++nextParcelKey}],parcelErrors:[]});invalidateCommercial();
+    },
+    copyReceiver(targetIndex:number,sourceNumber:number) {
+      const target=state.additionalParcels[targetIndex];
+      const source=sourceNumber===1?state.draft:state.additionalParcels[sourceNumber-2];
+      if(locked()||!target||!source||sourceNumber<1||sourceNumber>targetIndex+1)return false;
+      const copied={...target};
+      for(const field of receiverFields)copied[field]=source[field];
+      set({additionalParcels:state.additionalParcels.map((parcel,index)=>index===targetIndex?copied:parcel),
+        parcelErrors:state.parcelErrors.map((errors,index)=>index===targetIndex?Object.fromEntries(Object.entries(errors).filter(([key])=>!receiverFields.some(field=>field===key))):errors)});
+      return true;
+    },
     changeParcel(index:number,field:keyof ParcelDraft,value:string) {if(locked()||!state.additionalParcels[index])return;set({additionalParcels:state.additionalParcels.map((p,i)=>i===index?{...p,[field]:value}:p),parcelErrors:[]});invalidateCommercial();},
     removeParcel(index:number) {if(locked())return;set({additionalParcels:state.additionalParcels.filter((_,i)=>i!==index),parcelErrors:[]});invalidateCommercial();},
     selectAccount(id:string,name?:string) {if(locked())return;set({accountId:id||undefined,accountName:id?name:undefined,...(id?{draft:{...state.draft,serviceOptionId:''}}:{})});invalidateCommercial();},
@@ -84,7 +109,6 @@ export function createBookingWorkflow(controller: ScopeController) {
       if (locked()) return;
       creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined});
       set({ ...(field === 'service' ? {settingsVersion:undefined} : {}), draft: { ...state.draft, [field]: value, ...(['registration','gstin','recipientState','handoverState','specialCase'].includes(field)?{evidenceRef:''}:{}) }, errors: { ...state.errors, [field]: undefined } });
-      if(['recipientName','recipientPhone','recipientAddress'].includes(field))set({additionalParcels:state.additionalParcels.map(p=>({...p,[field]:value}))});
       if (commercialFields.includes(field)) invalidateCommercial();
       if (['name', 'phone', 'address'].includes(field)) { customerIntent = undefined; set({ customerPhase: 'editing' }); }
     },
@@ -162,7 +186,7 @@ export function createBookingWorkflow(controller: ScopeController) {
       if (!current() || state.busy || state.recoveryBlocked || state.booking || state.creditPhase==='uncertain') return;
       if (!bookingIntent) {
         if (!validation('booking')) return;
-        if (state.customerPhase !== 'ready' || !state.customer) { set({ errors: { name: 'Confirm the customer before booking.' }, message: 'Confirm the customer before booking.' }); return; }
+        if (state.customerPhase !== 'ready' || !state.customer) { set({ errors: { name: 'Confirm the customer before booking.' }, message: 'Confirm the customer before booking.',validationAttempt:state.validationAttempt+1 }); return; }
         if (!state.tax || !state.quote || !taxInput) { set({ message: 'Get a server price and tax calculation before saving.' }); return; }
         if (Date.parse(state.quote.expires_at) <= Date.now() || Date.parse(state.tax.expires_at) <= Date.now()) {
           invalidateCommercial(); set({ pricingPhase: 'stale', taxPhase: 'stale', message: 'Pricing or tax expired. Refresh and review the new amounts before saving.' }); return;

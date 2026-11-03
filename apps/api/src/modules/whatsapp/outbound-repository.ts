@@ -58,7 +58,7 @@ export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput
 }
 export async function lockDeliveryRecipient(scope:TenantAccess,id:string|null) {
  if(!id)return undefined;
- return (await scopedQuery<{id:string;contact_version:string;phone_normalized:string}>(scope,['outbox.work'],`SELECT r.id,r.contact_version,r.phone_normalized FROM shipit.delivery_recipients r
+ return (await scopedQuery<{id:string;contact_version:string;phone_normalized:string|null}>(scope,['outbox.work'],`SELECT r.id,r.contact_version,r.phone_normalized FROM shipit.delivery_recipients r
   WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.id=$1`,[id])).rows[0];
 }
 export async function businessName(scope:TenantAccess) {

@@ -1,4 +1,5 @@
-import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {FinancePosition} from './FinancePosition';
+import {PageHeader,WorkflowTabs,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import {AccountStatements} from './AccountStatements';
 import {retainAccountNavigation} from '../data-access/account-navigation';
@@ -26,27 +27,34 @@ function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:r
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>customerAccounts(api),[api]);
  const list=usePagedResource('accounts',(cursor,signal)=>source.list(cursor??undefined,signal).then(paged));
  const [selected,setSelected]=useState<CustomerAccountDto|null>(null),[editing,setEditing]=useState(false),[revision,setRevision]=useState(0);
+ const [accountView,setAccountView]=useState('overview');
  const [locked,setLocked]=useState(false),[blocked,setBlocked]=useState(false);
  useEffect(()=>{const leave=(e:BeforeUnloadEvent)=>{if(locked){e.preventDefault();e.returnValue='';}};const navigate=(e:MouseEvent)=>{if(locked&&e.target instanceof Element&&e.target.closest('a[href]')){e.preventDefault();e.stopPropagation();setBlocked(true);}};const change=(e:Event)=>{if(locked&&e.target instanceof Element&&e.target.matches('select[aria-label="Franchise"]')){e.stopPropagation();(e.target as HTMLSelectElement).value=api.franchise;setBlocked(true);}};window.addEventListener('beforeunload',leave);document.addEventListener('click',navigate,true);document.addEventListener('change',change,true);return()=>{window.removeEventListener('beforeunload',leave);document.removeEventListener('click',navigate,true);document.removeEventListener('change',change,true);};},[locked,api.franchise]);
  useEffect(()=>locked?retainAccountNavigation(api.scope,()=>setBlocked(true)):undefined,[locked,api.scope]);
  const admin=canAdminister(roles,'customer_accounts.configure');
- const saved=(account:CustomerAccountDto)=>{setSelected(account);setEditing(false);list.reload();setRevision(n=>n+1);};
- return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader title="Customer accounts" description="Manage regular customers’ monthly bills, payment terms and agreed rates." eyebrow="Money · Customer dues"/>
-  {!editing&&<>{admin&&<button className="btn btn-filled finance-account-create" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
-  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty title="No customer accounts" body="An administrator can link an existing customer and attest the billing contact."/>:<RecordTable mobile="stack" label="Customer accounts" rows={list.items} rowKey={a=>a.id} selectedKey={selected?.id} columns={[
- {key:'account',label:'Account',cell:a=><button className="btn btn-text" disabled={locked} aria-label={a.name+' · '+(a.state==='held'?'Held':'Active')+' · Limit '+formatMoney(a.credit_limit_paise)} onClick={()=>{setSelected(a);setEditing(false);}}>{a.name}</button>},
+ useEffect(()=>{if(selected&&!editing)document.getElementById('customer-accounts-title')?.focus();},[selected,editing]);
+ const saved=(account:CustomerAccountDto)=>{setSelected(account);setAccountView('overview');setEditing(false);list.reload();setRevision(n=>n+1);};
+ return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader id="customer-accounts-title" title={selected&&!editing?selected.name:"Customer accounts"} description={selected&&!editing?undefined:"Manage monthly bills, payment terms and agreed rates."} eyebrow="Money · Customer dues"/>
+  {!editing&&!selected&&<>{admin&&<button className="btn btn-filled finance-account-create" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
+  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty icon="business" title="No customer accounts" body={admin?'Create an account for customers who pay by monthly bill.':'Monthly billing accounts appear here when your administrator sets them up.'}/>:<RecordTable mobile="stack" label="Customer accounts" rows={list.items} rowKey={a=>a.id} columns={[
+ {key:'account',label:'Account',cell:a=><button id={'customer-account-row-'+a.id} className="btn btn-text" disabled={locked} aria-label={a.name+' · '+(a.state==='held'?'Held':'Active')+' · Limit '+formatMoney(a.credit_limit_paise)} onClick={()=>{setSelected(a);setAccountView('overview');setEditing(false);}}>{a.name}</button>},
  {key:'state',label:'Status',cell:a=><StatusBadge tone={a.state==='held'?'warning':'success'}>{a.state==='held'?'Held':'Active'}</StatusBadge>},
  {key:'limit',label:'Credit limit',align:'right',cell:a=>formatMoney(a.credit_limit_paise)},
  ]}/>}
   {list.page.has_more&&<button className="btn btn-text" onClick={list.loadMore}>More accounts</button>}</>}
+ {selected&&!editing&&<><button type="button" className="btn btn-text" disabled={locked} onClick={()=>{const id=selected.id;setSelected(null);requestAnimationFrame(()=>document.getElementById('customer-account-row-'+id)?.focus());}}>Back to accounts</button>
+ <WorkflowTabs label="Account tasks" value={accountView} onChange={setAccountView} items={[
+  {value:'overview',label:'Account details',disabled:locked},{value:'statements',label:'Monthly statements',disabled:locked},
+  ...(admin?[{value:'terms',label:'Terms and rates',disabled:locked}]:[])
+ ]}/></>}
  </section>
  {blocked&&locked&&<p role="alert">Resolve the retained command before leaving or changing accounts.</p>}
  {editing&&admin?<AccountEditor key={selected?.revision_id??'new'} busyChanged={setLocked} controller={controller} source={source} selected={selected} saved={saved} cancel={()=>{setEditing(false);setSelected(null);list.reload();}}/>:selected&&<>
-  <AccountDetails key={selected.revision_id+revision} source={source} account={selected}/>
-  <AccountStatements key={selected.id} api={api} controller={controller} account={selected} admin={admin} canExport={admin||roles.includes('accountant')} busyChanged={setLocked}/>
-  {admin&&<section className="card ops-card"><button className="btn btn-outlined" disabled={locked} onClick={()=>setEditing(true)}>Revise terms, links or hold</button><RateEditor key={selected.id} source={source} account={selected} parentLocked={locked} busyChanged={setLocked} refreshed={()=>setRevision(n=>n+1)}/></section>}
+  <div hidden={accountView!=='overview'}><AccountDetails key={selected.revision_id+revision} source={source} account={selected}/></div>
+  <div hidden={accountView!=='statements'}><AccountStatements key={selected.id} api={api} controller={controller} account={selected} admin={admin} canExport={admin||roles.includes('accountant')} busyChanged={setLocked}/></div>
+  {admin&&<section hidden={accountView!=='terms'} className="card ops-card"><button className="btn btn-outlined" disabled={locked} onClick={()=>setEditing(true)}>Revise terms, links or hold</button><RateEditor key={selected.id} source={source} account={selected} parentLocked={locked} busyChanged={setLocked} refreshed={()=>setRevision(n=>n+1)}/></section>}
  </>}
- {admin&&!editing&&<CreditApprovals source={source} parentLocked={locked} busyChanged={setLocked}/>}
+ {admin&&!editing&&!selected&&<CreditApprovals source={source} parentLocked={locked} busyChanged={setLocked}/>}
  </div>;
 }
 function CustomerPicker({controller,disabled,onSelect,busyChanged}:{controller:ScopeController;disabled:boolean;onSelect:(id:string,name:string)=>void;busyChanged:(busy:boolean)=>void}) {
@@ -103,9 +111,22 @@ function AccountDetails({source,account}:{source:Source;account:CustomerAccountD
  const credit=useResource(account.id,s=>source.credit(account.id,s));
  const history=usePagedResource(account.revision_id,(cursor,s)=>source.history(account.id,cursor??undefined,s).then(paged));
  const rates=usePagedResource(account.revision_id,(cursor,s)=>source.rates(account.id,cursor??undefined,s).then(paged));
- return <section className="card ops-card"><h2 className="t-title-lg">{account.name}</h2><p>Version {account.version} · {account.state} · Closing day {account.closing_day} + {account.due_days} calendar days</p><p>Billing contact: {account.billing_contact.name} · {account.billing_contact.phone}</p><p>Admin attestation reference: {account.billing_contact.authorization_ref}</p>
-  {credit.phase==='loading'?<Loading/>:credit.phase==='error'?<Failure retry={credit.reload}/>:credit.value&&<p>Outstanding {formatMoney(credit.value.outstanding_paise)} · Available {formatMoney(credit.value.available_paise)} · Overdue {formatMoney(credit.value.overdue_paise)}</p>}
-  <>{credit.value&&<AccountCreditEvidence source={source} account={account.id} cutoff={credit.value.as_of}/>}</><h3 className="t-title-md">Terms and contact authority history</h3>{history.phase==='error'?<Failure retry={history.reload}/>:<ol>{history.items.map(h=><li key={h.revision_id}>Version {h.version} · {formatKolkata(h.recorded_at)} · {h.reason} · Limit {formatMoney(h.credit_limit_paise)} · {h.state} · Attested by {h.attested_by}</li>)}</ol>}{history.page.has_more&&<button className="btn btn-text" onClick={history.loadMore}>More revisions</button>}
+ return <section className="card ops-card"><h2 className="t-title-lg">Billing overview</h2>
+  {credit.phase==='loading'?<Loading/>:credit.phase==='error'?<Failure retry={credit.reload}/>:credit.value&&<FinancePosition label="Customer credit position" primary={{label:'Outstanding',value:formatMoney(credit.value.outstanding_paise)}} items={[
+   {label:'Available credit',value:formatMoney(credit.value.available_paise)},
+   {label:'Overdue',value:formatMoney(credit.value.overdue_paise)}
+  ]}/>}
+  <dl className="finance-review-list"><div><dt>Payment terms</dt><dd>Close on day {account.closing_day}, due {account.due_days} days later</dd></div><div><dt>Billing contact</dt><dd>{account.billing_contact.name} · {account.billing_contact.phone}</dd></div><div><dt>Attestation reference</dt><dd>{account.billing_contact.authorization_ref}</dd></div><div><dt>Account status</dt><dd>{account.state} · Version {account.version}</dd></div></dl>
+  <>{credit.value&&<AccountCreditEvidence source={source} account={account.id} cutoff={credit.value.as_of}/>}</>
+  {history.phase==='error'?<Failure retry={history.reload} label="Billing terms history unavailable."/>:<details className="finance-source-disclosure"><summary>Terms and contact authority history</summary>
+   {history.phase==='loading'?<Loading label="Loading billing terms history…"/>:<RecordTable mobile="stack" label="Billing terms revisions" rows={history.items} rowKey={row=>row.revision_id} empty="No saved revisions." columns={[
+    {key:'reason',label:'Reason',cell:row=><strong>{row.reason}</strong>},
+    {key:'terms',label:'Credit limit',align:'right',cell:row=>formatMoney(row.credit_limit_paise)},
+    {key:'status',label:'Status',cell:row=>row.state},
+    {key:'record',label:'Revision',cell:row=><details className="finance-bill-reference"><summary>Version {row.version}</summary><p>{formatKolkata(row.recorded_at)}</p><span className="finance-record-ref">Attested by {row.attested_by}</span></details>}
+   ]}/>}
+   {history.page.has_more&&<button className="btn btn-text" onClick={history.loadMore}>More revisions</button>}
+  </details>}
   <h3 className="t-title-md">Negotiated rate history</h3>{rates.phase==='error'?<Failure retry={rates.reload}/>:!rates.items.length?<p>No negotiated rates. Normal franchise pricing applies.</p>:rates.items.map(r=><div key={r.id}><p>Version {r.version} · {formatKolkata(r.effective_from)} to {formatKolkata(r.effective_to)} · {r.approval_ref}</p><ul>{r.rules.map((rule,i)=><li key={i}>{rule.destination_key} · {rule.service} · {rule.min_weight_grams}–{rule.max_weight_grams??'unlimited'} g · Freight {formatMoney(rule.freight_paise)} · Packing {formatMoney(rule.packing_paise)}</li>)}</ul></div>)}{rates.page.has_more&&<button className="btn btn-text" onClick={rates.loadMore}>More rate history</button>}
  </section>;
 }
@@ -138,7 +159,7 @@ function CreditApprovals({source,parentLocked,busyChanged}:{source:Source;parent
  return <section className="card ops-card"><h2 className="t-title-lg">Credit-limit exception requests</h2><p>Approval applies to one exact, unexpired booking. It never clears a hold or overdue debt.</p><button className="btn btn-outlined" disabled={locked} onClick={pending.reload}>Refresh requests</button>
   {pending.phase==='loading'?<Loading/>:pending.phase==='error'?<Failure retry={pending.reload}/>:!pending.items.length?<p>No unexpired requests waiting for approval.</p>:<ul className="ops-list">{pending.items.map(r=><li key={r.id}><label><input type="radio" name="credit-request" checked={selected===r.id} disabled={locked} onChange={()=>setSelected(r.id)}/>{r.name} · {formatMoney(r.total_paise)} · Expires {formatKolkata(r.expires_at)} · Operator {r.operator_id}</label></li>)}</ul>}
   {pending.page.has_more&&<button className="btn btn-text" onClick={pending.loadMore}>More requests</button>}
-  {selected&&(review.phase==='loading'?<Loading label="Loading exact booking intent…"/>:review.phase==='error'?<Failure retry={review.reload}/>:review.value&&<div><h3 className="t-title-md">Review requested booking</h3><p>Shipping customer {review.value.customer_id}, version {review.value.customer_version} · {review.value.destination_key} · {review.value.service}</p><ul>{review.value.parcels.map((p,i)=><li key={i}>{p.recipient_name} · {p.weight_grams} g · Docket {p.docket??'Generated at booking'}</li>)}</ul><p>Credit limit {formatMoney(review.value.credit.credit_limit_paise)} · Available {formatMoney(review.value.credit.available_paise)} · Overdue {formatMoney(review.value.credit.overdue_paise)} · {review.value.account.state}</p><p>Quote {review.value.quote_id} · Tax calculation {review.value.tax_calculation_id}</p><AccountCreditEvidence source={source} account={review.value.account.id} cutoff={review.value.credit.as_of}/></div>)}
+  {selected&&(review.phase==='loading'?<Loading label="Loading exact booking intent…"/>:review.phase==='error'?<Failure retry={review.reload}/>:review.value&&<div><h3 className="t-title-md">Review requested booking</h3><p>Shipping customer {review.value.customer_id}, version {review.value.customer_version} · {review.value.destination_key} · {review.value.service}</p><ul>{review.value.parcels.map((p,i)=><li key={i}>{p.recipient_name??'Parcel '+(i+1)} · {p.weight_grams} g · Docket {p.docket??'Generated at booking'}</li>)}</ul><p>Credit limit {formatMoney(review.value.credit.credit_limit_paise)} · Available {formatMoney(review.value.credit.available_paise)} · Overdue {formatMoney(review.value.credit.overdue_paise)} · {review.value.account.state}</p><p>Quote {review.value.quote_id} · Tax calculation {review.value.tax_calculation_id}</p><AccountCreditEvidence source={source} account={review.value.account.id} cutoff={review.value.credit.as_of}/></div>)}
   {selected&&<form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();void command.run(source.approve(selected,reason)).then(()=>{pending.reload();setSelected('');setReason('');}).catch(()=>{});}}><TextField label="Credit exception approval reason" value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!selected||review.phase!=='ready'||!review.value||!!review.value.approval_id||reason.trim().length<3}>Approve this booking only</button></form>}
   {command.phase==='error'&&command.error&&<><p role="alert">{failureMessage(command.error)}</p><button type="button" className="btn btn-text" onClick={()=>{command.reset();pending.reload();review.reload();}}>Reload after rejected approval</button></>}
   <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(()=>pending.reload()).catch(()=>{});}:undefined}/>

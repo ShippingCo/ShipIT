@@ -14,7 +14,7 @@ afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('filters receipts by the IST booking date and preserves applied bounds while paging an edited draft',async()=>{
  const request=vi.fn(async(path:string)=>Response.json(page([{id:id(4),booking_id:id(5),docket:'SYN-RECEIPT',confirmed_at:at}],!path.includes('cursor='))));vi.stubGlobal('fetch',request);
  render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByRole('table',{name:'Receipt bookings'});
- fireEvent.click(screen.getByRole('button',{name:'This week'}));expect(screen.getByLabelText('Booked from')).toHaveValue(weekMonday(businessDay()));
+ fireEvent.click(screen.getByText('Booking dates'));fireEvent.click(screen.getByRole('button',{name:'This week'}));expect(screen.getByLabelText('Booked from')).toHaveValue(weekMonday(businessDay()));
  fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));await waitFor(()=>expect(request.mock.calls.at(-1)![0]).toContain('from='));
  const original=new URL(request.mock.calls.at(-1)![0],'http://localhost').searchParams;
  expect(original.get('from')).toBe(dayStart(weekMonday(businessDay())));expect(original.get('to')).toBe(dayStart(shiftDay(businessDay(),1)));expect(original.get('franchise_id')).toBe(id(3));
@@ -23,7 +23,7 @@ it('filters receipts by the IST booking date and preserves applied bounds while 
  await screen.findByRole('table',{name:'Receipt bookings'});fireEvent.click(screen.getByRole('button',{name:'All dates'}));await waitFor(()=>expect(new URL(request.mock.calls.at(-1)![0],'http://localhost').searchParams.has('from')).toBe(false));
 });
 it('rejects an inverted receipt date range without sending a new read',async()=>{
- const request=vi.fn(async()=>Response.json(page([])));vi.stubGlobal('fetch',request);render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByRole('heading',{name:'No receipts found'});
+ const request=vi.fn(async()=>Response.json(page([])));vi.stubGlobal('fetch',request);render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByRole('heading',{name:'No receipts found'});fireEvent.click(screen.getByText('Booking dates'));
  fireEvent.change(screen.getByLabelText('Booked from'),{target:{value:'2026-11-03'}});fireEvent.change(screen.getByLabelText('Booked through'),{target:{value:'2026-11-02'}});const count=request.mock.calls.length;fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));expect(screen.getByRole('alert')).toHaveTextContent('Choose an end date');expect(request).toHaveBeenCalledTimes(count);
 });
 it('shows queued provider work as waiting in the feed and uses scoped notification filters without send claims',async()=>{

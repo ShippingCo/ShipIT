@@ -93,7 +93,8 @@ async function accountIntent(s:Awaited<ReturnType<typeof bookingSetup>>,account:
 }
 await test('request-review-approve is scoped, recovers lost acknowledgement and rechecks current grants',{timeout:30000},async t=>{
  const s=await bookingSetup(t);await s.db.prepareCustomerAccounts();s.pricing=createPricingService(s.pool,s.clock,true);const service=createCustomerAccountService(s.pool,true,s.clock),disabled=createCustomerAccountService(s.pool,false,s.clock);
- const a=await service.configure(s.local.token,null,q,randomUUID(),headers,profile(s.source.id,0),randomUUID()),{body}=await accountIntent(s,a.id),key=randomUUID();
+ const a=await service.configure(s.local.token,null,q,randomUUID(),headers,profile(s.source.id,0),randomUUID()),{body:sourced}=await accountIntent(s,a.id),key=randomUUID();
+ const body={...sourced,parcels:sourced.parcels.map(p=>({...p,recipient:{address:p.recipient.address},details:{country:'IN',postal_code:'400001',city:'Mumbai',region:'Maharashtra',contents_type:'documents',contents_description:'Papers',liquid_quantity_ml:null}}))};
  const invoke=(source=service)=>source.requestCredit(s.operator.token,q,key,headers,body,randomUUID());
  await assert.rejects(invoke(createCustomerAccountService(paymentFault(s.pool,'COMMIT','after'),true,s.clock)),{code:'TEMPORARILY_UNAVAILABLE'});
  const request=await invoke(disabled);assert.deepEqual(await invoke(),request);
@@ -105,7 +106,7 @@ await test('request-review-approve is scoped, recovers lost acknowledgement and 
  await assert.rejects(service.read(beta.token,a.id,{organization_id:otherOrg,franchise_id:C},randomUUID()),{code:'RESOURCE_NOT_FOUND'});
  await assert.rejects(service.history(beta.token,a.id,{organization_id:otherOrg,franchise_id:C},randomUUID(),true),{code:'RESOURCE_NOT_FOUND'});
  const pending=await service.pendingCredit(s.local.token,q,randomUUID());assert.equal(pending.items.length,1);assert.equal(pending.items[0]!.id,request.id);
- const review=await service.reviewCredit(s.local.token,request.id,q,randomUUID());assert.equal(review.customer_id,s.source.id);assert.equal(review.parcels[0]!.recipient_name,'Synthetic Recipient');
+ const review=await service.reviewCredit(s.local.token,request.id,q,randomUUID());assert.equal(review.customer_id,s.source.id);assert.equal(review.parcels[0]!.recipient_name,null);
  const approvalKey=randomUUID(),approve=(source=service)=>source.approveRequest(s.local.token,request.id,q,approvalKey,headers,{reason:'Reviewed this exact intent'},randomUUID());
  await assert.rejects(approve(createCustomerAccountService(paymentFault(s.pool,'COMMIT','after'),true,s.clock)),{code:'TEMPORARILY_UNAVAILABLE'});
  const approval=await approve(disabled);assert.deepEqual(await approve(),approval);assert.equal((await service.creditRequest(s.operator.token,request.id,q,randomUUID())).approval_id,approval.id);

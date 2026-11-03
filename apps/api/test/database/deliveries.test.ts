@@ -224,11 +224,11 @@ await test('sibling, foreign, other-agent and unknown delivery identifiers are i
  assert.deepEqual(errors,['RESOURCE_NOT_FOUND','RESOURCE_NOT_FOUND','RESOURCE_NOT_FOUND','RESOURCE_NOT_FOUND']);assert.deepEqual((await s.db.adminQuery('SELECT failed_verifications,resend_count FROM shipit.delivery_attempts WHERE id=$1',[s.state.attempt_id])).rows,baseline.rows);
 });
 
-async function exceptionalSetup(t:Parameters<typeof attachmentSetup>[0]){
- const s=await attachmentSetup(t),agent=await s.grant('delivery_agent',[A]),started=await startTestDelivery(s,s.parcelId,agent),code=await testDeliveryCode(s,s.parcelId);
+async function exceptionalSetup(t:Parameters<typeof attachmentSetup>[0],omitRecipientContact=false){
+ const s=await attachmentSetup(t,undefined,{omitRecipientContact}),agent=await s.grant('delivery_agent',[A]),started=await startTestDelivery(s,s.parcelId,agent),code=await testDeliveryCode(s,s.parcelId);
  const body={...attachmentIntent(),purpose:'parcel_proof',parcel_id:s.parcelId},created=await s.request('POST','/uploads',body,agent.token);assert.equal(created.statusCode,201,created.body);const evidence=created.json().id as string;
  assert.equal((await s.request('PUT',`/uploads/${evidence}/content`,photo,agent.token)).statusCode,200);assert.equal((await s.request('POST',`/uploads/${evidence}/finalize`,{},agent.token)).statusCode,200);
- let key=randomUUID();const requested=await started.service.requestException(agent.token,s.parcelId,selector,key,headers(key),{expected_version:5,reason_code:'provider_unavailable',evidence_id:evidence,recipient_present:true},randomUUID());
+ let key=randomUUID();const requested=await started.service.requestException(agent.token,s.parcelId,selector,key,headers(key),{expected_version:5,reason_code:omitRecipientContact?'recipient_channel_unavailable':'provider_unavailable',evidence_id:evidence,recipient_present:true},randomUUID());
  key=randomUUID();const approved=await started.service.approveException(s.local.token,s.parcelId,selector,key,headers(key),{expected_version:5,request_id:requested.exception!.request_id},randomUUID());
  return {...s,agent,...started,code,evidence,approved};
 }
@@ -237,6 +237,19 @@ await test('exceptional completion requires protected evidence and an independen
  const s=await exceptionalSetup(t);const key=randomUUID(),result=await s.service.complete(s.agent.token,s.parcelId,selector,key,headers(key),{expected_version:5,approval_ref:s.approved.exception!.approval_ref},true,randomUUID()) as DeliveryStateDto;
  assert.equal(result.proof_method,'exceptional');const proof=(await s.db.adminQuery('SELECT proof_method,reason_code,evidence_id,requester_id,approver_id FROM shipit.delivery_proofs')).rows[0]!;
  assert.equal(proof.proof_method,'exceptional');assert.equal(proof.reason_code,'provider_unavailable');assert.equal(proof.evidence_id,s.evidence);assert.equal(proof.requester_id,s.agent.id);assert.notEqual(proof.approver_id,s.agent.id);
+});
+
+await test('a parcel without a recipient phone cannot send or verify an OTP and can complete by independently approved physical evidence',{timeout:30000},async t=>{
+ const s=await exceptionalSetup(t,true),state=await s.service.read(s.agent.token,s.parcelId,selector,randomUUID());
+ assert.equal((await s.service.list(s.agent.token,selector,randomUUID())).items.find(row=>row.parcel_id===s.parcelId)?.proof_channel_available,false);
+ assert.equal(state.proof_channel_available,false);assert.equal(state.send_reason,'contact_unavailable');
+ assert.equal(state.resends_remaining,0);assert.equal(state.verification_attempts_remaining,0);
+ const saved=(await s.db.adminQuery('SELECT r.phone_normalized,s.outbound_intent_id FROM shipit.delivery_recipients r JOIN shipit.delivery_challenge_sends s ON s.recipient_ref=r.id WHERE r.parcel_id=$1',[s.parcelId])).rows;
+ assert.deepEqual(saved,[{phone_normalized:null,outbound_intent_id:null}]);
+ const otpKey=randomUUID();await assert.rejects(s.service.complete(s.agent.token,s.parcelId,selector,otpKey,headers(otpKey),{expected_version:5,challenge_ref:state.challenge_ref,challenge_version:state.challenge_version,proof:s.code},false,randomUUID()),{code:'DELIVERY_PROOF_INVALID'});
+ const resendKey=randomUUID();await assert.rejects(s.service.resend(s.agent.token,s.parcelId,selector,resendKey,headers(resendKey),{expected_version:5,challenge_ref:state.challenge_ref},false,randomUUID()),{code:'DELIVERY_PROOF_INVALID'});
+ const completeKey=randomUUID(),result=await s.service.complete(s.agent.token,s.parcelId,selector,completeKey,headers(completeKey),{expected_version:5,approval_ref:s.approved.exception!.approval_ref},true,randomUUID()) as DeliveryStateDto;
+ assert.equal(result.proof_method,'exceptional');assert.equal(result.proof_channel_available,false);
 });
 
 await test('OTP and approved exceptional proof race to one permanent proof and one delivery completion',{timeout:30000},async t=>{

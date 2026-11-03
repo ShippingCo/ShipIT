@@ -27,9 +27,11 @@ it('filters and sorts packages through scoped server queries while retaining the
  expect(screen.getByRole('button',{name:'Delivered'})).toHaveAttribute('aria-pressed','true');expect(screen.getByRole('button',{name:'Delivered'}).querySelector('.fchip-n')).toBeNull();
 });
 it('opens package detail in a dialog and restores keyboard focus to its list action',async()=>{
+ const withoutContact={...parcel,recipient:{...parcel.recipient,name:null,phone_display:null,phone_normalized:null}};
  const scroll=vi.spyOn(window,'scrollTo').mockImplementation(()=>{});
- vi.stubGlobal('fetch',vi.fn(async(path:string)=>{if(path.includes('/timeline'))return json({items:[]});if(path.includes('/lot-membership'))return json(null);if(path.includes('/parcels/'+parcel.id+'?'))return json(parcel);if(path.includes('/parcels?'))return json(page([parcel]));throw new Error('Unexpected read');}));
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>{if(path.includes('/timeline'))return json({items:[]});if(path.includes('/lot-membership'))return json(null);if(path.includes('/parcels/'+parcel.id+'?'))return json(withoutContact);if(path.includes('/parcels?'))return json(page([withoutContact]));throw new Error('Unexpected read');}));
  render(<MemoryRouter><Packages controller={controller()} roles={['read_only']}/></MemoryRouter>);const open=await screen.findByRole('button',{name:'Open'});open.focus();fireEvent.click(open);const dialog=await screen.findByRole('dialog',{name:'Package details'});await within(dialog).findByRole('heading',{name:parcel.docket});
+ expect(within(dialog).getByText('No receiver phone provided')).toBeVisible();expect(within(dialog).getByText(parcel.recipient.address)).toBeVisible();
  fireEvent.click(within(dialog).getByRole('button',{name:'Close detail'}));await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());expect(open).toHaveFocus();expect(scroll).toHaveBeenCalled();
 });
 it('retains a delivery assignment after a lost response and retries the same handover evidence',async()=>{
@@ -45,7 +47,7 @@ it('retains a delivery assignment after a lost response and retries the same han
   if(path.includes('/parcels?'))return json(page([parcel]));throw new Error('Unexpected delivery request');
  }));
  render(<MemoryRouter><Packages controller={controller()} roles={['dispatcher']}/></MemoryRouter>);
- fireEvent.click(await screen.findByRole('button',{name:'Open'}));await screen.findByLabelText('Assigned delivery agent');fill('Handover evidence reference (UUID)',id(15));fireEvent.click(screen.getByRole('button',{name:'Assign and send challenge'}));
+ fireEvent.click(await screen.findByRole('button',{name:'Open'}));await screen.findByLabelText('Assigned delivery agent');fill('Handover evidence reference (UUID)',id(15));expect(screen.getByRole('button',{name:'Assign and send challenge'})).toBeDisabled();fill('Assigned delivery agent',id(14));fireEvent.click(screen.getByRole('button',{name:'Assign and send challenge'}));
  const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.getByRole('button',{name:'Assign and send challenge'})).toBeDisabled();expect(screen.getByRole('button',{name:'Close detail'})).toBeDisabled();fireEvent.keyDown(document,{key:'Escape'});expect(screen.getByRole('dialog')).toBeVisible();
  failed=false;fireEvent.click(retry);await waitFor(()=>expect(screen.queryByRole('button',{name:'Assign and send challenge'})).not.toBeInTheDocument());expect(writes).toHaveLength(2);expect(writes[0]!.body).toBe(writes[1]!.body);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(JSON.parse(String(writes[0]!.body))).toEqual({expected_version:1,agent_id:id(14),handover_evidence_ref:id(15)});
  expect(screen.getByRole('button',{name:'Close detail'})).toBeEnabled();
@@ -64,4 +66,30 @@ it('plans a route only after explicit submission and retains its retry identity 
  render(<MemoryRouter><Routes controller={controller()} roles={['operator']}/></MemoryRouter>);fireEvent.click(screen.getByRole('button',{name:'Plan Route'}));expect(screen.getByLabelText('Origin')).toHaveFocus();fill('Origin','Synthetic Origin');fill('Destination','Synthetic Destination');fill('Scheduled departure (Asia/Kolkata)','2099-01-01T05:30');fill('Mode','road');await act(async()=>Promise.resolve());expect(writes).toHaveLength(0);
  fireEvent.click(screen.getByRole('button',{name:'Create route'}));const retry=await screen.findByRole('button',{name:'Retry same request'});fireEvent.keyDown(document,{key:'Escape'});expect(screen.getByRole('dialog',{name:'Plan route'})).toBeVisible();failed=false;fireEvent.click(retry);
  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());expect(writes).toHaveLength(2);expect(writes[0]!.body).toBe(writes[1]!.body);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(JSON.parse(String(writes[0]!.body)).scheduled_departure_at).toBe(now);
+});
+
+it('cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement',async()=>{
+ const writes:RequestInit[]=[];let cancelled=false;
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
+  if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});
+  if(path.includes('/cancellation?')){
+   if(options.method==='POST'){writes.push(options);if(writes.length===1)throw new TypeError('Synthetic lost acknowledgement');cancelled=true;return json({id:id(15),booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'12000',cancelled_at:now});}
+   return json({booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'12000',financial_version:1,payment_version:0,blocked_reason:null});
+  }
+  return json(page([{...parcel,status:cancelled?'cancelled':'booked'}]));
+ }));
+ render(<MemoryRouter><Packages controller={controller()} roles={['operator']}/></MemoryRouter>);
+ fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));const dialog=await screen.findByRole('dialog');
+ expect(await within(dialog).findByText('₹120.00')).toBeVisible();expect(within(dialog).getByRole('button',{name:'Confirm cancellation'})).toBeDisabled();
+ fill('Reason for cancellation','Sender withdrew both parcels');fireEvent.click(within(dialog).getByRole('button',{name:'Confirm cancellation'}));
+ const retry=await within(dialog).findByRole('button',{name:'Retry same cancellation'});fireEvent.keyDown(document,{key:'Escape'});expect(dialog).toBeVisible();fireEvent.click(retry);
+ expect(await within(dialog).findByText('Cancelled 2 parcels in this booking.')).toBeVisible();expect(writes).toHaveLength(2);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(writes[0]!.body).toBe(writes[1]!.body);
+ expect(JSON.parse(String(writes[0]!.body))).toEqual({reason:'Sender withdrew both parcels',expected_financial_version:1,expected_payment_version:0});
+ fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));expect(screen.queryByRole('button',{name:'Cancel booking'})).not.toBeInTheDocument();
+});
+it('explains a payment block before offering any cancellation write',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>path.includes('/cancellation?')?json({booking_id:parcel.booking_id,parcel_count:1,outstanding_paise:'0',financial_version:2,payment_version:1,blocked_reason:'money_recorded'}):json(page([parcel]))));
+ render(<MemoryRouter><Packages controller={controller()} roles={['operator']}/></MemoryRouter>);
+ fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));expect(await screen.findByText(/Money has already been recorded/)).toBeVisible();
+ expect(screen.queryByRole('button',{name:'Confirm cancellation'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Reason for cancellation')).not.toBeInTheDocument();
 });

@@ -355,6 +355,10 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.prepareTax();
       const owner = handle.ownerPool();
       try {
+        if ((await owner.query("SELECT to_regclass('shipit.booking_cancellations') AS present")).rows[0]?.present) {
+          await owner.query(`GRANT SELECT,INSERT ON shipit.booking_cancellations TO ${identifier(resource.runtimeRole)}`);
+          await owner.query(`GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+        }
         await owner.query(`GRANT SELECT,INSERT ON shipit.bookings,shipit.parcels,shipit.booking_commands,shipit.booking_obligations,shipit.domain_events TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,http_status,result,committed_at,retain_until) ON shipit.booking_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,uuid,timestamptz) TO ${identifier(resource.runtimeRole)}`);

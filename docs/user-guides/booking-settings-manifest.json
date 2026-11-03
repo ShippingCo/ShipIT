@@ -5,6 +5,8 @@
     "summary": "Save the customer, parcels, price and billing details in one booking.",
     "sources": [
       "apps/web/src/booking/NewBooking.tsx",
+      "apps/web/src/booking/ParcelEntry.tsx",
+      "apps/web/src/booking/BookingLotAssignment.tsx",
       "apps/web/src/booking/form.ts",
       "apps/web/src/booking/AccountSelection.tsx",
       "apps/web/src/booking/CustomerLookup.tsx",

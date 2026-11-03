@@ -3,14 +3,15 @@ import type { CommandIntent } from './command-intent';
 import { array, choice, instant, integer, list, object, text, uuid, type Decoder, protocol, optional, nullable } from './dto';
 import type { ScopedApi } from './scoped-api';
 
-export const parcelStatuses = ['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'] as const;
+const liveStatuses = ['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'] as const;
+export const parcelStatuses = [...liveStatuses,'cancelled'] as const;
 export type ParcelStatus = typeof parcelStatuses[number];
 export interface ParcelRead {
   details?:import('@shippingco/shared').BookingParcelDetails;
   id:string; booking_id:string; version:number; status:ParcelStatus; custody:string; docket:string;
   weight_grams:number; confirmed_at:string;
   sender:{source_customer_id:string;source_customer_version:number;name:string;phone:string;phone_display:string;address:string};
-  recipient:{name:string;phone_normalized:string;phone_display:string;address:string};
+  recipient:{name:string|null;phone_normalized:string|null;phone_display:string|null;address:string};
 }
 export interface ParcelTimelineItem {event_id:string;sequence:number;occurred_at:string;code:string;status:ParcelStatus;label:string}
 export interface ParcelListFilter {customer_id?:string;destination_key?:string;ungrouped?:boolean;docket?:string;status?:ParcelStatus;from?:string;to?:string;sort?:'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';limit?:number;cursor?:string|null}
@@ -22,11 +23,11 @@ export type ParcelCommand =
   {kind:'rto';parcelId:string;body:{expected_version:number;evidence_ref:string;approval_ref:string;return_plan_ref:string;override_reason_code?:'safety_risk'|'legal_restriction'|'operationally_unserviceable'}};
 
 const party = object({source_customer_id:uuid,source_customer_version:integer(1),name:text,phone:text,phone_display:text,address:text});
-const recipient = object({name:text,phone_normalized:text,phone_display:text,address:text});
+const recipient = object({name:nullable(text),phone_normalized:nullable(text),phone_display:nullable(text),address:text});
 export const parcelDto:Decoder<ParcelRead> = object({id:uuid,booking_id:uuid,version:integer(1),status:choice(...parcelStatuses),custody:text,
-  details:optional(object({country:choice('IN'),postal_code:text,city:text,region:text,contents_type:choice('solid','documents','liquid','semi_liquid','other'),contents_description:text,liquid_quantity_ml:nullable(integer(1))})),docket:text,weight_grams:integer(1),confirmed_at:instant,sender:party,recipient});
+  details:optional(object({country:choice('IN'),postal_code:text,city:text,region:text,contents_type:choice('solid','documents','liquid','semi_liquid','other'),contents_description:text,liquid_quantity_ml:nullable(integer(1)),declared_value_paise:optional(integer(0))})),docket:text,weight_grams:integer(1),confirmed_at:instant,sender:party,recipient});
 export const timelineItem:Decoder<ParcelTimelineItem> = object({event_id:uuid,sequence:integer(),occurred_at:instant,code:text,status:choice(...parcelStatuses),label:text});
-const transition:Decoder<ParcelTransitionDto> = object({id:uuid,booking_id:uuid,docket:text,version:integer(1),status:choice(...parcelStatuses),
+const transition:Decoder<ParcelTransitionDto> = object({id:uuid,booking_id:uuid,docket:text,version:integer(1),status:choice(...liveStatuses),
   custody:choice('awaiting_intake','franchise_office','route_dispatch','delivery_agent','recipient'),attempts_started:integer(),failed_attempt_count:integer(),event_id:uuid,transitioned_at:instant});
 const transitionTarget:Record<ParcelCommand['kind'],ParcelStatus>={check_in:'checked_in',dispatch:'dispatched',transit:'in_transit',failed_attempt:'failed_attempt',rto:'rto'};
 const paths:Record<ParcelCommand['kind'],string>={check_in:'check-in',dispatch:'dispatch',transit:'transit',failed_attempt:'failed-attempt',rto:'rto'};

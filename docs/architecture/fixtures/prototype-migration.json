@@ -181,7 +181,7 @@
       "apps/web/src/App.tsx": "467b6dbc36c98ba5fc6f00989a9d28737ca3b0a04e9051efab4398573a1d2dba",
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "df73ea3660f56a81c67aaf278794b52848082a64f4f7a04625642ba7d20df32b",
-      "apps/web/src/components/m3/Controls.tsx": "ac106b600ec77dce5739a898fdc9d73693abbfe796dbc5d69322ff633d55c784",
+      "apps/web/src/components/m3/Controls.tsx": "cc35b02f2a3ee36bd09ebc8bc55d0e8828e6da7df8172c9137685459bb467466",
       "apps/web/src/components/m3/Journey.tsx": "3357c305725a70385686c899e217c4c742b19a6033efebbcfe91b0f2b23d7e18",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
@@ -189,7 +189,7 @@
       "apps/web/src/data/store.ts": "4254155ea29a147800f9775b6e8875afd270294adcc800ede48aa333fbab6960",
       "apps/web/src/data/types.ts": "a6754054d29b9a94091f90a176e991db9de836d38ad75a266ed14d5c393bfd5f",
       "apps/web/src/main.tsx": "77772ed3563f5455b02478900a8990899070fe59f6075c6b3354c3d39cea8035",
-      "apps/web/src/pages/CustomerWhatsApp.tsx": "4f908ed0834a40d48d28fa7ebb44b070bf0281858644ecc30e33c7e31cd448fc",
+      "apps/web/src/pages/CustomerWhatsApp.tsx": "f954ddbd63c51eaeccc4c21bd1982da0feb2a522f427e37b33793cee4bc8a63b",
       "apps/web/src/pages/Launcher.tsx": "e1f71c9341419e1215af21e94d839292059fec6e72d35c843f6a59b20dfb902d",
       "apps/web/src/pages/business/Dashboard.tsx": "d0a4ebaf488a3964a99051a83186e11d625d45e574aa7a3e24c75c1bc8b97f88",
       "apps/web/src/pages/business/DemoBusinessShell.tsx": "71441335d4ae999e3af7701ea99823a66f43be3102a70e52a87227c8a134450b",
@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "bb83f480a0c42b627767faf8a982cb9039b88acbbbeb9d18935abe6a2522f159",
+      "apps/web/src/test/counter.test.tsx": "6682b2972f267a4c656b519afd7c202d4a405a1c4fd793f0cd7d0be498df7d90",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -320,6 +320,10 @@
         }
       ],
       "apps/web/src/pages/CustomerWhatsApp.tsx": [
+        {
+          "target": "apps/web/src/components/m3/Input.tsx",
+          "syntax": "import {Dropdown} from '../components/m3/Input';"
+        },
         {
           "target": "apps/web/src/demo/storage.ts",
           "syntax": "import { DEMO_PERSONA_KEY } from '../demo/storage';"
@@ -1619,12 +1623,17 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "adds a typed customer inline and preserves the four-step draft when closing is cancelled",
+        "name": "adds a typed customer inline and preserves the booking draft when cancellation is dismissed",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "prints only after saving and does not recreate a booking when printing is cancelled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "can save a booking immediately after creating and using a service in its dialog",
         "cases": null
       },
       {
@@ -1649,7 +1658,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "completes all four guided stages with exact kg conversion and a reviewed real quote",
+        "name": "saves from the single booking page with exact kg conversion and a reviewed quote",
         "cases": null
       },
       {
@@ -1659,12 +1668,12 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "returns to billing when a changed handover fact needs reconfirmation",
+        "name": "invalidates the reviewed quote when a handover fact needs reconfirmation",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "guides booking steps, validates the current fields and preserves entries on Back",
+        "name": "keeps Customer, Parcel, Charges and Booking summary on one editable page",
         "cases": null
       },
       {
@@ -1684,7 +1693,17 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "adds, edits and removes packages, prices combined weight and saves independent dockets atomically",
+        "name": "saves distinct parcel details once and retries only the unconfirmed lot assignment",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address",
         "cases": null
       },
       {
@@ -1729,7 +1748,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "keyboard continuation focuses the first missing sender field without creating a booking",
+        "name": "explicit save focuses the first missing sender field without creating a booking",
         "cases": null
       },
       {
@@ -2183,6 +2202,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/logistics-parity.test.tsx",
+        "name": "explains a payment block before offering any cancellation write",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/lot-candidates.test.tsx",
         "name": "filters candidates by server destination, ungrouped state and IST booking date before deliberate selection",
         "cases": null
@@ -2195,6 +2224,11 @@
       {
         "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
         "name": "retries saved failures and reuses the exact uncertain capture while keeping filters disabled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+        "name": "keeps measured zero, a withheld count and absent evidence distinct in the reach summary",
         "cases": null
       },
       {
@@ -2420,6 +2454,11 @@
       {
         "file": "apps/web/src/test/operations.test.tsx",
         "name": "adds a route parcel by tracking lookup while retaining server references and version",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/operations.test.tsx",
+        "name": "shows the proof exception route when a parcel has no receiver phone",
         "cases": null
       },
       {
@@ -2988,6 +3027,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/sign-in-fields.test.tsx",
+        "name": "reuses the email challenge for resend and clears the cooldown when returning to email",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/studio-workspace.test.tsx",
         "name": "searches customers with an explicit country code and focuses invalid phone input before any request",
         "cases": null
@@ -3298,6 +3342,10 @@
         "kind": "document.addEventListener"
       },
       {
+        "file": "apps/web/src/operations/CancelBooking.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
         "file": "apps/web/src/operations/CashClosing.tsx",
         "kind": "window.addEventListener"
       },
@@ -3434,6 +3482,10 @@
         "kind": "useSyncExternalStore"
       },
       {
+        "file": "apps/web/src/operations/SettingsContents.tsx",
+        "kind": "window.addEventListener"
+      },
+      {
         "file": "apps/web/src/operations/SettingsPreferences.tsx",
         "kind": "useSyncExternalStore"
       },
@@ -3460,6 +3512,10 @@
       {
         "file": "apps/web/src/operations/reconciliation/Review.tsx",
         "kind": "setTimeout"
+      },
+      {
+        "file": "apps/web/src/operator/AccessLayout.tsx",
+        "kind": "window.addEventListener"
       },
       {
         "file": "apps/web/src/operator/Onboarding.tsx",
@@ -3492,6 +3548,10 @@
       {
         "file": "apps/web/src/operator/SettingsNavigationGuard.tsx",
         "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operator/SignIn.tsx",
+        "kind": "window.setInterval"
       },
       {
         "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
@@ -4806,7 +4866,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4814,7 +4874,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4822,7 +4882,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4830,7 +4890,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4838,7 +4898,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4846,7 +4906,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
@@ -4854,7 +4914,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-phone.test.tsx",
@@ -4934,7 +4994,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-service-setup.test.tsx",
@@ -4942,7 +5002,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/booking-units.test.tsx",
@@ -5338,11 +5398,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "adds a typed customer inline and preserves the four-step draft when closing is cancelled",
+      "name": "adds a typed customer inline and preserves the booking draft when cancellation is dismissed",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Keep an entered customer and the same unsaved booking when the operator chooses Keep editing."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5350,7 +5410,15 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "can save a booking immediately after creating and using a service in its dialog",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Release the completed service-publication lock, use the confirmed named service and submit exactly one booking."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5386,11 +5454,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "completes all four guided stages with exact kg conversion and a reviewed real quote",
+      "name": "saves from the single booking page with exact kg conversion and a reviewed quote",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Use the reviewed quote and exact integer grams for a single explicit booking command."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5402,19 +5470,19 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "returns to billing when a changed handover fact needs reconfirmation",
+      "name": "invalidates the reviewed quote when a handover fact needs reconfirmation",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Changing a tax fact invalidates the calculated amount and requires fresh confirmation."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "guides booking steps, validates the current fields and preserves entries on Back",
+      "name": "keeps Customer, Parcel, Charges and Booking summary on one editable page",
       "cases": null,
       "disposition": "preserve",
-      "group": "seam",
-      "reason": "Preserve guided booking draft retention and accessible permission-scoped workspace controls without local business writes."
+      "group": "booking",
+      "reason": "Keep all sections visible, preserve entries on focus jumps and prevent navigation from submitting the booking."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5442,11 +5510,27 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "adds, edits and removes packages, prices combined weight and saves independent dockets atomically",
+      "name": "saves distinct parcel details once and retries only the unconfirmed lot assignment",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Preserve each receiver, docket, declared paise, combined weight and confirmed parcel ID. Retry the unconfirmed lot addition with its original command identity."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents",
       "cases": null,
       "group": "booking",
-      "disposition": "preserve",
-      "reason": "Issue #186 explicit confirmation and multi-package editing preserve server pricing, payment independence and immutable retries."
+      "reason": "Keep each docket independent when staff reuse a receiver.",
+      "disposition": "preserve"
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves without optional receiver contacts and still rejects an invalid supplied phone or missing delivery address",
+      "cases": null,
+      "group": "booking",
+      "reason": "Preserve counter validation for optional contacts and required delivery address.",
+      "disposition": "preserve"
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5494,7 +5578,7 @@
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Production booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5514,11 +5598,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "keyboard continuation focuses the first missing sender field without creating a booking",
+      "name": "explicit save focuses the first missing sender field without creating a booking",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Four-step booking uses actual scoped customer, pricing, service, attachment and receipt contracts; preserve uncertainty, scope cleanup and keyboard navigation."
+      "reason": "Focus the first invalid sender field and avoid a booking write when validation fails."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -6241,6 +6325,22 @@
       "reason": "Reference presentation retains server filtering, keyboard return and uncertain command identity."
     },
     {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Require a reviewed whole-booking cancellation, reason and current financial/payment versions. Retry the exact intent when acknowledgement is lost."
+    },
+    {
+      "file": "apps/web/src/test/logistics-parity.test.tsx",
+      "name": "explains a payment block before offering any cancellation write",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Expose the server payment restriction before offering a cancellation command."
+    },
+    {
       "file": "apps/web/src/test/lot-candidates.test.tsx",
       "name": "filters candidates by server destination, ungrouped state and IST booking date before deliberate selection",
       "cases": null,
@@ -6263,6 +6363,14 @@
       "group": "reports",
       "disposition": "preserve",
       "reason": "Issue #65: server-authorized aggregate snapshot, explicit unknown delivery and disclosure, current schedule, accessible reload/drill-through and exact uncertain retry; no transcript or browser business authority."
+    },
+    {
+      "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
+      "name": "keeps measured zero, a withheld count and absent evidence distinct in the reach summary",
+      "cases": null,
+      "group": "reports",
+      "disposition": "preserve",
+      "reason": "Show measured zero separately from withheld and unknown delivery evidence in saved reports."
     },
     {
       "file": "apps/web/src/test/messaging.test.tsx",
@@ -6623,6 +6731,14 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Preserve tracking lookup selection, exact authorized parcel reference and current route version when attaching a parcel."
+    },
+    {
+      "file": "apps/web/src/test/operations.test.tsx",
+      "name": "shows the proof exception route when a parcel has no receiver phone",
+      "cases": null,
+      "group": "proof",
+      "reason": "Never offer an unsendable code or bypass delivery proof review.",
+      "disposition": "preserve"
     },
     {
       "file": "apps/web/src/test/operator.test.tsx",
@@ -7527,6 +7643,14 @@
       "group": "seam",
       "disposition": "preserve",
       "reason": "Preserve exact eight-digit strings, pending-state locking and cancellation before a late sign-in completion can advance the UI."
+    },
+    {
+      "file": "apps/web/src/test/sign-in-fields.test.tsx",
+      "name": "reuses the email challenge for resend and clears the cooldown when returning to email",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "seam",
+      "reason": "Resend uses the current email challenge and respects its cooldown without retaining a previous sign-in step."
     },
     {
       "file": "apps/web/src/test/studio-workspace.test.tsx",

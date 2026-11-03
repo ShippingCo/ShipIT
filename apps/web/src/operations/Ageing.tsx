@@ -1,3 +1,4 @@
+import {ReportMeasures} from './ReportMeasures';
 import './customer-report-flows.css';
 import {SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import React,{useEffect,useState} from 'react';
@@ -50,8 +51,13 @@ export function AgeingView({source,canExport}:{source:AgeingSource;canExport:boo
     {result&&<>
       <p>Saved {result.snapshot.filter.anchor==='booking'?'booking age':'due-date age'} · {result.snapshot.filter.status??'all statuses'} · {result.snapshot.filter.balances} · Customer {result.snapshot.filter.customer_id??'all'}</p>
       <p>Captured {new Date(result.snapshot.as_of).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST · {result.snapshot.count} bookings</p>
-      <div className="ops-facts">{(['gross','net_collections','outstanding','refundable_credit'] as const).map(k=><div key={k}><span>{k.replaceAll('_',' ')}</span><p className="t-headline-sm">{salesAmount(result.snapshot.totals[k])}</p></div>)}</div>
-      <ul>{ageingBuckets.map(k=><li key={k}>{bucketLabels[k]}: {salesAmount(result.snapshot.buckets[k])} outstanding</li>)}</ul>
+      <ReportMeasures label="Debtor balances" items={[
+        {label:'Outstanding',value:salesAmount(result.snapshot.totals.outstanding)},
+        {label:'Billed amount',value:salesAmount(result.snapshot.totals.gross)},
+        {label:'Net collections',value:salesAmount(result.snapshot.totals.net_collections)},
+        {label:'Refundable credit',value:salesAmount(result.snapshot.totals.refundable_credit)}
+      ]}/>
+      <BalanceAgeChart buckets={result.snapshot.buckets} anchor={result.snapshot.filter.anchor}/>
       <button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching ageing CSV</button>
       {!canExport&&<p>Your role can read reports but cannot export them.</p>}
       {result.snapshot.advance_source==='receipt_ledger'?<details><summary>Unallocated advances: {salesAmount(result.snapshot.unallocated_advance??'0')}</summary><p>For the selected debtor or whole franchise, regardless of parcel status, overdue or balance filters. Never deducted from outstanding until allocated. Seller COD reservations and actual returns are excluded.</p><ul>{result.snapshot.advances?.map(a=><li key={a.receipt_id}>Debtor {a.customer_id} · Receipt {a.receipt_id}: received {salesAmount(a.received)} − allocated {salesAmount(a.allocated)} − seller COD {salesAmount(a.cod_reserved)} − returned {salesAmount(a.returned)} = available {salesAmount(a.unallocated)}</li>)}</ul></details>:<p>Advance evidence unavailable in this older snapshot.</p>}
@@ -72,4 +78,14 @@ function StatementEvidence({source,id}:{source:AgeingSource;id:string}) {
  const [opened,setOpened]=useState(false),[document,setDocument]=useState<AccountStatement|null>(null),[error,setError]=useState(false),[revision,setRevision]=useState(0);
  useEffect(()=>{if(!opened)return;const abort=new AbortController();setDocument(null);setError(false);void source.statement(id,abort.signal).then(s=>{if(!abort.signal.aborted)setDocument(s);}).catch(()=>{if(!abort.signal.aborted)setError(true);});return()=>abort.abort();},[opened,id,source,revision]);
  return <details onToggle={e=>setOpened(e.currentTarget.open)}><summary>Issued account statement {id}</summary>{opened&&(document?<><p>Immutable statement as of {document.as_of}; this may precede the ageing snapshot. Period {document.from_day} to {document.to_day}. Not a tax invoice.</p><p>Opening + charges − credits − allocated payments + refunds = closing.</p><ul>{statementMeasures.map(k=><li key={k}>{k.replaceAll('_',' ')}: {salesAmount(document.totals[k])}</li>)}</ul><p>Separate unallocated advance: {salesAmount(document.unallocated_advance)}</p><ul>{document.lines.map(l=><li key={l.booking_id}>Booking {l.booking_id}: closing {salesAmount(l.amounts.closing)} · Payments {l.payment_ids.join(', ')||'None'} · Adjustments {l.adjustment_ids.join(', ')||'None'}</li>)}</ul></>:error?<><p role="alert">Statement unavailable. Check current access and retry.</p><button type="button" onClick={()=>setRevision(n=>n+1)}>Retry statement</button></>:<p role="status">Loading statement…</p>)}</details>;
+}
+
+function BalanceAgeChart({buckets,anchor}:{buckets:AgeingPage['snapshot']['buckets'];anchor:AgeingFilter['anchor']}) {
+  const max=ageingBuckets.reduce((largest,key)=>BigInt(buckets[key])>largest?BigInt(buckets[key]):largest,0n);
+  return <section className="report-outcomes balance-age-chart" aria-label="Outstanding by age">
+    <h3>Outstanding by age</h3><p>Balances grouped by {anchor==='due'?'due date':'booking date'}. Bars use the largest balance as their scale.</p>
+    <dl>{ageingBuckets.map(key=><div key={key}>
+      <dt>{bucketLabels[key]}</dt><dd><span className="report-outcome-track" aria-hidden="true"><i style={{width:(max?Number(BigInt(buckets[key])*10000n/max)/100:0)+'%'}}/></span><strong>{salesAmount(buckets[key])}</strong></dd>
+    </div>)}</dl>
+  </section>;
 }

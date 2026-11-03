@@ -83,6 +83,7 @@ const errors = {
   RATE_CONFLICT: [409, 'Pricing rules or effective intervals conflict.'],
   QUOTE_STALE: [409, 'Pricing proposal is stale. Request a new quote.'],
   VERSION_CONFLICT: [409, 'Resource version has changed.'],
+  BOOKING_CANCELLATION_BLOCKED: [409, 'This booking is no longer eligible for cancellation.'],
   PARCEL_STATE_CONFLICT: [409, 'Parcel state does not permit this command.'],
   RTO_NOT_ELIGIBLE: [409, 'Parcel is not eligible for return to origin.'],
   MEMBERSHIP_CONFLICT: [409, 'An active membership already grants this role.'],

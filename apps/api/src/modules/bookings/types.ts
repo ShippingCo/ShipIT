@@ -2,7 +2,7 @@ import type { CustomerSnapshot, PricingQuoteDto, TaxCalculationDto } from '@ship
 import type { TenantAccess } from '../security/scope.ts';
 import type { ParcelInput } from './validation.ts';
 export interface BookingScopes { bookings: TenantAccess; parcels: TenantAccess; customer: TenantAccess; pricing: TenantAccess; tax: TenantAccess; audit: TenantAccess; events: TenantAccess }
-export type ParcelStatus = 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto';
+export type ParcelStatus = 'booked'|'checked_in'|'dispatched'|'in_transit'|'out_for_delivery'|'failed_attempt'|'held_at_office'|'delivered'|'rto'|'cancelled';
 export type ParcelSort = 'created_at_desc'|'created_at_asc'|'docket_asc'|'docket_desc';
 export interface ParcelFilter {
   organizationId:string;franchiseId:string|null;docket:string|null;status:ParcelStatus|null;
@@ -57,7 +57,7 @@ export function bookingDto(value: BookingDto): BookingDto {
       tax:{...pick(tax,['id','intent_id','quote_id','policy_id','policy_version','rule_id','resolution_id','supplier_state','place_of_supply','jurisdiction','registration','classification','treatment','pre_tax_paise','taxable_basis_paise','cgst_paise','sgst_paise','igst_paise','tax_total_paise','unrounded_payable_paise','rounding_adjustment_paise','final_payable_paise','approval_ref','source_ref','rule_evidence_ref','allocation','time_rule','proposed_tax_point_at','created_at','expires_at']),
         components:tax.components.map(c=>pick(c,['id','kind','numerator','denominator','exact_numerator','exact_denominator','amount_paise']))}},
     payment_obligation:pick(value.payment_obligation,['id','currency','total_paise','collected_paise','outstanding_paise','state']),
-    parcels:value.parcels.map(p=>({...((p.details)?{details:pick(p.details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml'])}:{}),...pick(p,['id','version','status','custody','docket','weight_grams','event_id']),sender:party(p.sender),
+    parcels:value.parcels.map(p=>({...((p.details)?{details:pick(p.details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml','declared_value_paise'])}:{}),...pick(p,['id','version','status','custody','docket','weight_grams','event_id']),sender:party(p.sender),
       recipient:pick(p.recipient,['name','phone_normalized','phone_display','address'])})) };
 }
 
@@ -67,11 +67,12 @@ function safeInteger(value:string|number) {
   return parsed;
 }
 export function parcelReadDto(row:ParcelReadRow):ParcelReadDto {
-  return {...(row.booking_details?{details:pick(row.booking_details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml'])}:{}),id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
+  return {...(row.booking_details?{details:pick(row.booking_details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml','declared_value_paise'])}:{}),id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
     weight_grams:safeInteger(row.weight_grams),confirmed_at:row.confirmed_at.toISOString(),sender:party(row.sender_snapshot),
     recipient:pick(row.recipient_snapshot,['name','phone_normalized','phone_display','address'])};
 }
 const timelineProjection:Readonly<Record<string,{status:ParcelStatus;label:string}>>={
+  'booking.cancelled':{status:'cancelled',label:'Booking cancelled'},
   'parcel.booked':{status:'booked',label:'Booking received'},'parcel.checked_in':{status:'checked_in',label:'Received at office'},
   'parcel.dispatched':{status:'dispatched',label:'Dispatched'},'parcel.in_transit':{status:'in_transit',label:'In transit'},
   'delivery.attempt_started':{status:'out_for_delivery',label:'Out for delivery'},

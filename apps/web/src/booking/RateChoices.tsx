@@ -1,4 +1,4 @@
-import {useState,useSyncExternalStore} from 'react';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {SelectField,TextField} from '../components/m3/Input';
 import {array,choice,instant,object,text,uuid} from '../data-access/dto';
 import {useResource,usePagedResource} from '../operations/hooks';
@@ -10,7 +10,7 @@ import {Link} from 'react-router-dom';
 export const publishedChoices=object({id:uuid,state:choice('published'),effective_to:instant,
   rules:array(object({destination_key:text,service:choice('standard','express','same_city')}))});
 const services=[{value:'standard',label:'Standard'},{value:'express',label:'Express'},{value:'same_city',label:'Same-city'}];
-export function RateChoices({workflow,disabled,destinationError,serviceError,onChange,refreshKey=0,onAddService}:{workflow:BookingWorkflow;disabled:boolean;destinationError?:string;serviceError?:string;onChange:(key:'destination'|'service',value:string)=>void;refreshKey?:number;onAddService?:()=>void}) {
+export function RateChoices({workflow,disabled,destinationError,serviceError,onChange,refreshKey=0,onAddService,onServiceLabel}:{workflow:BookingWorkflow;disabled:boolean;destinationError?:string;serviceError?:string;onChange:(key:'destination'|'service',value:string)=>void;refreshKey?:number;onAddService?:()=>void;onServiceLabel?:(label:string)=>void}) {
   const state=useSyncExternalStore(workflow.subscribe,workflow.snapshot),d=state.draft;
   const [accountEntry,setAccountEntry]=useState(false);
   const source=useResource(workflow.api.franchise+refreshKey,signal=>workflow.api.read(`/api/v1/organizations/${workflow.api.organization}/franchises/${workflow.api.franchise}/pricing/versions`,publishedChoices,signal));
@@ -27,10 +27,12 @@ export function RateChoices({workflow,disabled,destinationError,serviceError,onC
   const named=state.accountId?[]:catalog.items.filter(s=>s.destination_key===d.destination);
   const namedSelected=!!d.serviceOptionId;
   const serviceValue=namedSelected?'option:'+d.serviceOptionId:missingService?'':d.service;
+  const selectedLabel=namedSelected?named.find(option=>option.id===d.serviceOptionId)?.name:allowed.find(option=>option.value===serviceValue)?.label;
+  useEffect(()=>{onServiceLabel?.(selectedLabel??'');},[selectedLabel,onServiceLabel]);
   return <div className="counter-rate-choices">
     <div className="counter-grid">
-      {manual?<TextField id="counter-destination" label="Destination" value={d.destination} disabled={disabled} error={destinationError} helper="Use the destination key agreed for this monthly account." onChange={value=>onChange('destination',value)}/>:<SelectField id="counter-destination" label="Destination" value={d.destination} disabled={blocked} error={destinationError} helper="Choose a destination from this branch’s published rates." options={[{value:'',label:waiting?'Loading destinations…':unavailable?'Rates need attention':'Choose destination'},...(missingDestination?[{value:d.destination,label:d.destination+' · not in current rates'}]:[]),...destinations.map(value=>({value,label:value.replaceAll('_',' ')}))]} onChange={value=>{workflow.change('serviceOptionId','');onChange('destination',value);if(!source.value?.rules.some(rule=>rule.destination_key===value&&rule.service===d.service))onChange('service','');}}/>}
-      <SelectField id="counter-service" label="Service" value={serviceValue} disabled={disabled||!manual&&(blocked||!d.destination||missingDestination)} error={serviceError} helper="All parcels in this booking use the same service." options={[{value:'',label:waiting?'Loading services…':!d.destination?'Choose destination first':'Choose service'},...allowed,...named.map(s=>({value:'option:'+s.id,label:s.name}))]} onChange={value=>{const option=named.find(s=>'option:'+s.id===value);workflow.change('serviceOptionId',option?.id??'');onChange('service',option?.service??value);}}/>
+      {manual?<TextField id="counter-destination" label="Destination" value={d.destination} disabled={disabled} error={destinationError} helper="Use the destination key agreed for this monthly account." onChange={value=>onChange('destination',value)}/>:<SelectField id="counter-destination" label="Destination" value={d.destination} disabled={blocked} error={destinationError} options={[{value:'',label:waiting?'Loading destinations…':unavailable?'Rates need attention':'Choose destination'},...(missingDestination?[{value:d.destination,label:d.destination+' · not in current rates'}]:[]),...destinations.map(value=>({value,label:value.replaceAll('_',' ')}))]} onChange={value=>{workflow.change('serviceOptionId','');onChange('destination',value);if(!source.value?.rules.some(rule=>rule.destination_key===value&&rule.service===d.service))onChange('service','');}}/>}
+      <SelectField id="counter-service" label="Service" value={serviceValue} disabled={disabled||!manual&&(blocked||!d.destination||missingDestination)} error={serviceError} helper={state.additionalParcels.length ? "Applies to every parcel in this booking." : undefined} options={[{value:'',label:waiting?'Loading services…':!d.destination?'Choose destination first':'Choose service'},...allowed,...named.map(s=>({value:'option:'+s.id,label:s.name}))]} onChange={value=>{const option=named.find(s=>'option:'+s.id===value);workflow.change('serviceOptionId',option?.id??'');onChange('service',option?.service??value);}}/>
     </div>
     {waiting&&<p role="status">Loading this branch’s destinations and services…</p>}
     {onAddService&&<button type="button" className="btn btn-text" disabled={disabled} onClick={onAddService}>Add a service and its rates</button>}

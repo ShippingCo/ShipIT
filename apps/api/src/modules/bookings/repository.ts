@@ -1,9 +1,9 @@
 import { scopedQuery, assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import type { BookingDto,ParcelBoundary,ParcelFilter,ParcelReadRow,TimelineRow } from './types.ts';
-export async function active(scope: TenantAccess) {
-  const row = (await scopedQuery<{ lifecycle:string }>(scope,['bookings.create'],`SELECT lifecycle FROM shipit.franchises
-    WHERE {{franchise:organization_id:id}} FOR SHARE`)).rows[0];
+export async function active(scope: TenantAccess,lockForWrite=false) {
+  const row = (await scopedQuery<{ lifecycle:string }>(scope,['bookings.create','bookings.cancel'],`SELECT lifecycle FROM shipit.franchises
+    WHERE {{franchise:organization_id:id}} ${lockForWrite?'FOR UPDATE':'FOR SHARE'}`)).rows[0];
   if (!row) throw new HttpError('RESOURCE_NOT_FOUND');
   if (row.lifecycle !== 'active') throw new HttpError('FRANCHISE_DISABLED');
 }
@@ -88,5 +88,8 @@ export async function parcelTimeline(scope:TenantAccess,id:string) {
     FROM shipit.domain_events e JOIN shipit.parcels p
       ON p.organization_id=e.organization_id AND p.franchise_id=e.franchise_id AND p.booking_id=e.booking_id AND p.id=e.parcel_id
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.parcel_id=$1
-    ORDER BY e.occurred_at ASC,e.aggregate_sequence ASC,e.event_id ASC`,[id])).rows;
+    UNION ALL SELECT c.id AS event_id,'booking.cancelled' AS event_type,2 AS aggregate_sequence,c.cancelled_at AS occurred_at
+    FROM shipit.booking_cancellations c JOIN shipit.parcels p ON p.organization_id=c.organization_id AND p.franchise_id=c.franchise_id AND p.booking_id=c.booking_id
+    WHERE {{franchise:c.organization_id:c.franchise_id}} AND p.id=$1
+    ORDER BY aggregate_sequence ASC,occurred_at ASC,event_id ASC`,[id])).rows;
 }

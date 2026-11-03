@@ -25,7 +25,11 @@ it('uses complete scoped counts, distinct booking totals and Monday week dates w
  expect(screen.getByText('Loading dashboard…')).toBeVisible();expect(screen.queryByRole('button',{name:/Booked today/})).not.toBeInTheDocument();await act(async()=>release());
  expect(await screen.findByRole('link',{name:'150 parcels Booked'})).toHaveAttribute('href','/business/packages?status=booked');
  const booked=screen.getByRole('button',{name:/Booked today/});expect(within(booked).getByText('3')).toBeVisible();expect(within(screen.getByRole('button',{name:/Money to collect/})).getByText('—')).toBeVisible();
- expect(screen.getByRole('img',{name:/Bookings by day, Monday to Sunday/})).toHaveAccessibleName(/Thursday, 1 Jan: 3/);
+ const chart=screen.getByRole('img',{name:/Bookings by day, Monday to Sunday/});
+ expect(chart).toHaveAccessibleName(/Monday, 29 Dec: 0/);
+ expect(chart).toHaveAccessibleName(/Thursday, 1 Jan: 3/);
+ expect(chart).toHaveAccessibleName(/Friday, 2 Jan: upcoming/);
+ expect(within(chart).getByText('Today')).toBeVisible();
  expect(request.mock.calls.every(([path])=>path.includes('organization_id='+org)&&path.includes('franchise_id='+franchise))).toBe(true);
  expect(request.mock.calls.some(([path])=>path.includes('/reports/'))).toBe(false);expect(screen.queryByText('Every parcel is paid')).not.toBeInTheDocument();
  fireEvent.keyDown(booked,{key:'Enter'});expect(screen.getByLabelText('Destination')).toHaveTextContent('/business/packages?booked=today');

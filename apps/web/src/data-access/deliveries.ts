@@ -1,15 +1,15 @@
 import type { CommandIntent } from './command-intent';
-import { array,choice,instant,integer,nullable,object,text,uuid,type Decoder,protocol } from './dto';
+import { array,choice,instant,integer,nullable,optional,object,text,uuid,type Decoder,protocol } from './dto';
 import type { ScopedApi } from './scoped-api';
 
 export const challengeStatuses=['pending','active','expired','locked','consumed','superseded','closed'] as const;
 export type ChallengeStatus=typeof challengeStatuses[number];
 export type ExceptionalReason='recipient_channel_unavailable'|'provider_unavailable'|'challenge_locked_reviewed';
-export interface DeliveryQueueItem {parcel_id:string;docket:string;attempt_id:string;attempt_number:number;expires_at:string;failed_verifications:number;resend_count:number}
+export interface DeliveryQueueItem {proof_channel_available?:boolean;parcel_id:string;docket:string;attempt_id:string;attempt_number:number;expires_at:string;failed_verifications:number;resend_count:number}
 export interface DeliveryState {
  parcel_id:string;docket:string;parcel_version:number;attempt_id:string;assignment_id:string;attempt_number:number;
  challenge_ref:string;challenge_version:number;status:ChallengeStatus;expires_at:string;resend_available_at:string;
- resends_remaining:number;verification_attempts_remaining:number;send_state:string;send_reason:string;proof_method:'otp_verified'|'exceptional'|null;
+ proof_channel_available?:boolean;resends_remaining:number;verification_attempts_remaining:number;send_state:string;send_reason:string;proof_method:'otp_verified'|'exceptional'|null;
  exception:{request_id:string;state:'pending'|'approved'|'denied'|'invalidated';reason_code:ExceptionalReason;approval_ref:string|null}|null;
 }
 export interface ProofRejected {outcome:'proof_invalid';remaining_attempts:number;locked:boolean}
@@ -23,11 +23,11 @@ export type DeliveryCommand=
  |{kind:'exception_approve';parcelId:string;body:{expected_version:number;request_id:string}}
  |{kind:'exception_complete';parcelId:string;body:{expected_version:number;approval_ref:string}};
 
-const queueItem:Decoder<DeliveryQueueItem>=object({parcel_id:uuid,docket:text,attempt_id:uuid,attempt_number:integer(1),expires_at:instant,failed_verifications:integer(),resend_count:integer()});
+const queueItem:Decoder<DeliveryQueueItem>=object({proof_channel_available:optional(choice(true,false)),parcel_id:uuid,docket:text,attempt_id:uuid,attempt_number:integer(1),expires_at:instant,failed_verifications:integer(),resend_count:integer()});
 const exception=object({request_id:uuid,state:choice('pending','approved','denied','invalidated'),reason_code:choice('recipient_channel_unavailable','provider_unavailable','challenge_locked_reviewed'),approval_ref:nullable(uuid)});
 const state:Decoder<DeliveryState>=object({parcel_id:uuid,docket:text,parcel_version:integer(1),attempt_id:uuid,assignment_id:uuid,attempt_number:integer(1),challenge_ref:uuid,
  challenge_version:integer(1),status:choice(...challengeStatuses),expires_at:instant,resend_available_at:instant,resends_remaining:integer(),verification_attempts_remaining:integer(),
- send_state:text,send_reason:text,proof_method:nullable(choice('otp_verified','exceptional')),exception:nullable(exception)});
+ proof_channel_available:optional(choice(true,false)),send_state:text,send_reason:text,proof_method:nullable(choice('otp_verified','exceptional')),exception:nullable(exception)});
 const rejected:Decoder<ProofRejected>=object({outcome:choice('proof_invalid'),remaining_attempts:integer(),locked:choice(true,false)});
 const result:Decoder<DeliveryResult>=value=>value&&typeof value==='object'&&'outcome' in value?rejected(value):state(value);
 const paths:Record<DeliveryCommand['kind'],string>={start:'start',retry:'retry',resend:'resend',replace:'replace',complete:'complete',exception_request:'exception-requests',exception_approve:'exception-approvals',exception_complete:'exception-complete'};

@@ -1,0 +1,10 @@
+.verification-code { max-inline-size: 24rem; width: 100%; }
+.verification-code input { font-variant-numeric: tabular-nums; letter-spacing: .3em; }
+.verification-code-progress { display: grid; grid-template-columns: repeat(var(--code-length), minmax(0, 1fr)); gap: .375rem; margin: .5rem 0 0; }
+.verification-code-progress span { height: .1875rem; border-radius: 2px; background: var(--workspace-border); }
+.verification-code-progress [data-filled] { background: var(--md-primary); }
+.verification-code:has(input[aria-invalid="true"]) .verification-code-progress [data-filled] { background: var(--md-error); }
+@media (forced-colors: active) {
+  .verification-code-progress span { border-block-end: 1px solid GrayText; }
+  .verification-code-progress [data-filled] { border-block-end: 3px solid Highlight; }
+}

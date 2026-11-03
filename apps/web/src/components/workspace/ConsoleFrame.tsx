@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Link,useLocation,useNavigate} from 'react-router-dom';
 import {Msym} from '../m3/Icon';
-import {consoleTasks,type ConsoleLink} from './console-navigation';
+import {consoleTasks,taskGroups,toolGroup,type ConsoleLink} from './console-navigation';
 import './console-frame.css';
 
 export function ConsoleNavigation({links,area,onNavigate}:{links:readonly ConsoleLink[];area:string;onNavigate:()=>void}) {
@@ -12,8 +12,18 @@ export function ConsoleNavigation({links,area,onNavigate}:{links:readonly Consol
   useEffect(()=>{if(extraActive)setExpanded(true);},[extraActive]);
   const render=(link:ConsoleLink)=><Link key={link.area} to={link.to} onClick={onNavigate} aria-current={area===link.area?'page':undefined} className={`drawer-item${area===link.area?' active':''}`}><Msym name={link.icon}/><span>{link.label}</span>{link.badge!==undefined&&<span className="count">{link.badge}</span>}</Link>;
   return <nav id="workspace-navigation" className="drawer-section console-navigation" aria-label="Workspace navigation">
-    {primary.map(render)}
-    {extra.length>0&&<details open={expanded} className="console-more"><summary onClick={event=>{event.preventDefault();setExpanded(value=>!value);}}>More tools</summary><div role="group" aria-label="More tools">{extra.map(render)}</div></details>}
+    {primary.filter(link=>link.area==='booking').map(link=><Link key={link.area} className="console-create" to={link.to}
+      aria-current={area===link.area?'page':undefined} onClick={onNavigate}><Msym name="add"/>{link.label}</Link>)}
+    {taskGroups.map(group=>{
+      const items=group.areas.flatMap(id=>primary.filter(link=>link.area===id));
+      if(!items.length)return null;
+      return <div key={group.label} role="group" aria-label={group.label} className="console-task-group">
+        <div className="console-group-label" aria-hidden="true">{group.label}</div>{items.map(render)}
+      </div>;
+    })}
+    {extra.length>0&&<details open={expanded} className="console-more"><summary onClick={event=>{event.preventDefault();setExpanded(value=>!value);}}>More tools</summary><div role="group" aria-label="More tools">{toolGroup(extra).map(group=><div key={group.label} className="console-tool-branch">
+      <div className="console-group-label">{group.label}</div>{group.links.map(render)}
+    </div>)}</div></details>}
   </nav>;
 }
 

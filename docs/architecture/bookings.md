@@ -266,8 +266,37 @@ of package weights; package changes invalidate the preview and any exact credit
 approval. Lots and deliveries continue to act on individual parcel IDs. There is
 no per-package payment balance or cancellation added here.
 
-Only activating **Save booking** (mouse, Enter or Space on that button) submits the
-command. Implicit form submission elsewhere does nothing. Choosing payment method
-records no receipt. Uncertain confirmation locks all package edits and retries the
-same request body/key. Draft contacts remain memory-only and scope invalidation
-purges the additional packages alongside the original draft.
+The counter requires a paper docket for every parcel. Operators enter the
+domestic PIN code, city, region and contents for each parcel, with quantity
+in litres for liquids or semi-liquids. The API receives millilitres.
+Optional `details.declared_value_paise` holds the declared value of that
+parcel's goods as a nonnegative safe integer. Omitting the field preserves
+older parcel detail records. A supplied zero is stored explicitly.
+
+Activating **Save booking** or **Save and print** submits the reviewed
+booking. Implicit submission from another field leaves the draft open.
+Save and print retrieves the issued receipt after the save succeeds.
+Choosing a payment method leaves the actual receipt to a separate
+collection command. An uncertain save locks the parcel edits and retries
+the original request body and key. Private contact drafts stay in memory
+and are cleared when the authorized scope changes.
+
+The counter can select an active lot for the chosen destination. After the
+booking succeeds it adds each saved parcel with the selected lot version,
+advancing the version after each confirmed addition. An uncertain addition
+retains its original intent. The UI reports the confirmed count and retries
+the pending addition before continuing. Booking and lot membership remain
+separate transactions.
+
+## Cancellation from the bookings list
+
+The operator can open the cancellation review from a parcel's docket. The
+review covers the entire booking. It returns the parcel count, outstanding
+balance, financial and payment versions, and any current restriction.
+Submission requires a reason and both reviewed versions. An unconfirmed
+response retains the original command identity for retry.
+
+The cancellation result reports the confirmed parcel count and outstanding
+balance. Charge reversals follow the financial approval process separately.
+The [booking guide](../user-guides/new-booking.html) describes both leaving
+an unsaved draft and cancelling a confirmed booking.

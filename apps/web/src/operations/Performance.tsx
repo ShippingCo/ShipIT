@@ -1,11 +1,12 @@
 import {SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
+import {ReportMeasures} from './ReportMeasures';
 import {DatePresets} from './DatePresets';
 import React,{useEffect,useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import type {PerformancePage,PerformanceFilter} from '@shippingco/shared';
 import type {PerformanceSource} from '../data-access/performance';
 import {useCommand} from './hooks';
-import {TextField,SelectField} from '../components/m3/Input';
+import {DateField,SelectField} from '../components/m3/Input';
 import {ApiFailure} from '../data-access/errors';
 export function PerformanceView({source,canExport}:{source:PerformanceSource;canExport:boolean}) {
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -26,14 +27,15 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
   async function more(){if(!result||result.next_offset===null||pending)return;setBusy(true);try{const p=await source.page(result.snapshot.id,result.next_offset,undefined,destination||null,route||null);setResult({...p,rows:[...result.rows,...p.rows]});}catch(e){fail(e);}finally{setBusy(false);}}
   async function download(){if(!result||pending)return;setBusy(true);try{const p=await source.export(result.snapshot.id,destination||null,route||null),url=URL.createObjectURL(new Blob([p.csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`performance-${p.snapshot.id}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('Matching CSV ready. Check your downloads.');}catch(e){fail(e);}finally{setBusy(false);}}
   const s=result?.selection.summary;
-  return <section className="service-report-view" aria-label="Delivery and route performance"><SectionHeader title="Delivery and route performance"/>
-    <details className="form-secondary-options"><summary>How delivery performance is measured</summary><p>Booking-date parcel cohort · Asia/Kolkata. One parcel is counted once, including overlapping lot and direct route membership.</p>
-    <p>On-time uses delivered parcels with actual proof and the chosen saved ETA version. Open parcels and RTO are separate; missing timing is excluded explicitly.</p></details>
+  return <section className="service-report-view" aria-label="Delivery and route performance"><SectionHeader title="Delivery and route performance" description="Check booked, delivered, late and returned parcels for a date range."/>
+
     <form className="service-report-controls" onSubmit={e=>{e.preventDefault();void create();}}><fieldset disabled={pending||command.canRetry}>
-      <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><TextField label="From day" type="date" value={from} onChange={setFrom}/><TextField label="Through day" type="date" value={to} onChange={setTo}/>
-      <SelectField label="ETA basis" value={eta} onChange={v=>setEta(v as typeof eta)} options={[{value:'original',label:'Original dispatch-route ETA'},{value:'revised',label:'Last applied ETA before delivery'}]}/>
+      <DatePresets disabled={busy||command.canRetry} change={(from,to)=>{setFrom(from);setTo(to);}}/><DateField label="From day" value={from} onChange={setFrom}/><DateField label="Through day" value={to} onChange={setTo}/>
+      <details className="report-more-options"><summary>Delivery estimate to compare</summary><SelectField label="ETA basis" value={eta} onChange={v=>setEta(v as typeof eta)} options={[{value:'original',label:'Original dispatch-route ETA'},{value:'revised',label:'Last applied ETA before delivery'}]}/></details>
       <p>Up to 31 days and 5,000 parcels. Snapshots expire after 24 hours.</p><button className="btn btn-filled">Create performance snapshot</button>
     </fieldset></form>
+    <details className="form-secondary-options"><summary>How delivery performance is measured</summary><p>Dates use the booking day in India. Each parcel counts once, even if it was added to a route both directly and through a lot.</p>
+    <p>On-time figures compare recorded delivery proof with the selected ETA. Open parcels, returns and deliveries without timing are shown separately.</p></details>
     {command.canRetry&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void create(true)}>Retry same performance request</button>}
     {pending&&<p role="status">Loading performance…</p>}<p role="status" aria-live="polite">{notice}</p>
     {!pending&&notice&&id&&!result&&<button className="btn btn-outlined" onClick={()=>setRevision(n=>n+1)}>Retry saved performance</button>}
@@ -41,7 +43,18 @@ export function PerformanceView({source,canExport}:{source:PerformanceSource;can
       <p>Captured {new Date(result.snapshot.as_of).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST · {result.snapshot.count} total cohort parcels; {result.selection.count} selected.</p>
       <fieldset disabled={pending}><legend>Saved cohort selection</legend><SelectField label="Destination drill-through" value={destination} onChange={v=>{setDestination(v);setRoute('');}} options={[{value:'',label:'All destinations'},...result.snapshot.destinations.map(g=>({value:g.key??'$unknown',label:`${g.key??'Unknown destination'} · ${g.summary.booked} parcels`}))]}/>
       <SelectField label="Route drill-through" value={route} onChange={setRoute} options={[{value:'',label:'All routes'},...result.snapshot.routes.map(g=>({value:g.key??'$unknown',label:`${g.key??'Unknown route'} · ${g.summary.booked} parcels`}))]}/>
-      </fieldset><div className="ops-facts">{(['booked','dispatched','delivered','open','rto','failed_parcels','failed_attempts'] as const).map(k=><div key={k}><span>{k.replaceAll('_',' ')}</span><p className="t-headline-sm">{s[k]}</p></div>)}</div>
+      </fieldset><ReportMeasures label="Parcel totals" items={[
+        {label:'Booked',value:s.booked},{label:'Dispatched',value:s.dispatched},
+        {label:'Delivered',value:s.delivered},{label:'Still open',value:s.open}
+      ]}/>
+      <div className="report-outcomes">
+        <h3>Delivery outcomes</h3>
+        <p>Share of the {s.booked} booked {s.booked===1?'parcel':'parcels'} in this selection.</p>
+        <dl>{[{label:'Delivered',count:s.delivered},{label:'Still open',count:s.open},{label:'Returned to origin',count:s.rto}].map(item=><div key={item.label}>
+          <dt>{item.label}</dt><dd><span className="report-outcome-track" aria-hidden="true"><i style={{width:(s.booked?item.count/s.booked*100:0)+'%'}}/></span><strong>{item.count}</strong></dd>
+        </div>)}</dl>
+        <p>{s.failed_attempts} failed {s.failed_attempts===1?'attempt':'attempts'} across {s.failed_parcels} {s.failed_parcels===1?'parcel':'parcels'}.</p>
+      </div>
       <p>On-time: {s.on_time.denominator?`${s.on_time.numerator}/${s.on_time.denominator} (${(s.on_time.numerator*100/s.on_time.denominator).toFixed(1)}%)`:'Unavailable (no eligible deliveries)'} · {s.on_time.excluded} delivered parcels excluded for missing timing.</p>
       <p>Dispatch-to-delivery mean: {s.duration.denominator?`${(s.duration.total_seconds/s.duration.denominator/3600).toFixed(2)} hours`:'Unknown'} · {s.duration.denominator} eligible; {s.duration.excluded} excluded. Unknown destination: {s.unknown_destination}; unknown courier: {s.unknown_courier}.</p>
       <button className="btn btn-outlined" disabled={pending||!canExport} onClick={()=>void download()}>Download matching performance CSV</button>

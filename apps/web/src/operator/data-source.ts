@@ -10,7 +10,8 @@ export interface OperatorDataSource {
   onboard(intent: CommandIntent, current: () => ScopeTicket): Promise<unknown>;
   acceptInvitation(token: string, signal?: AbortSignal): Promise<unknown>;
   logout(signal?: AbortSignal): Promise<unknown>;
-  startSignIn(email: string, signal?: AbortSignal): Promise<{ challenge_id: string }>;
+  startSignIn(email: string, signal?: AbortSignal): Promise<{ challenge_id: string; resend_after?: number }>;
+  resendSignIn(challenge: string, signal?: AbortSignal): Promise<{resend_after: number}>;
   verifySignIn(challenge: string, code: string, signal?: AbortSignal): Promise<unknown>;
 }
 export function createOperatorDataSource(client = createApiClient()): OperatorDataSource {
@@ -22,6 +23,7 @@ export function createOperatorDataSource(client = createApiClient()): OperatorDa
     acceptInvitation: (token, signal) => client.request('/api/v1/membership-invitations/accept', { body: { token }, signal }),
     logout: signal => client.request('/auth/logout', { body: {}, signal }),
     startSignIn: (email, signal) => client.request('/auth/challenges', { body: { channel: 'email', address: email }, signal }),
+    resendSignIn: (challenge, signal) => client.request('/auth/challenges/resend', {body:{challenge_id:challenge}, signal}),
     verifySignIn: (challenge, code, signal) => client.request('/auth/challenges/verify', { body: { challenge_id: challenge, code }, signal }),
   };
 }

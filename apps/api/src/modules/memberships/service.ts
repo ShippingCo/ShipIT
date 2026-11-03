@@ -440,30 +440,45 @@ export function createMembershipService(database:DatabasePool) {
   return {...createMembershipCore(database),withCorrelation:(id:string)=>createMembershipCore(database,id)};
 }
 
-/** W01 / policy v2: a live owner, assigned franchise admin or operator in the selected franchise.
- * Every capability is independent and expires with this transaction. */
-export async function withBookingTenantScope<T>(database: DatabasePool, sessionToken: string, organizationId: string,
-  franchiseId: string, correlationId: string, work: (s: import('../bookings/types.ts').BookingScopes) => Promise<T>): Promise<T> {
-  validate.uuid(organizationId); validate.uuid(franchiseId);
-  return membershipTransaction(database,async tx => {
-    const session = await authenticated(tx,sessionToken);
-    if (!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId)) throw new HttpError('RESOURCE_NOT_FOUND');
-    const parent = await authorityRepository.lockOrganization(tx,organizationId);
-    if (!parent) throw new HttpError('RESOURCE_NOT_FOUND');
-    const memberships = await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
-    const all=await authorityRepository.organizationFranchiseIds(tx,organizationId);
-    const permitted=[...administrativeScope('bookings.create',memberships,all),...memberships.filter(m=>m.role==='operator').flatMap(m=>m.franchiseIds)];
-    if (!permitted.length) throw new HttpError('ACTION_FORBIDDEN');
-    if (!permitted.includes(franchiseId)) throw new HttpError('RESOURCE_NOT_FOUND');
-    if (parent.lifecycle !== 'active') throw new HttpError('ORGANIZATION_DISABLED');
-    const context = { actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
-      organizationWide:false,correlationId,provenance:'membership' as const };
-    const scopes = { bookings:issueTenantAccess(tx,{...context,action:'bookings.create'}),
+/** Both commands resolve live membership and the selected branch in their transaction. */
+async function bookingAuthority(tx:TransactionExecutor,sessionToken:string,organizationId:string,franchiseId:string,
+  correlationId:string,action:'bookings.create'|'bookings.cancel') {
+  validate.uuid(organizationId);validate.uuid(franchiseId);
+  const session=await authenticated(tx,sessionToken);
+  if(!(await authorityRepository.userOrganizationIds(tx,session.user_id)).includes(organizationId))throw new HttpError('RESOURCE_NOT_FOUND');
+  const parent=await authorityRepository.lockOrganization(tx,organizationId);
+  if(!parent)throw new HttpError('RESOURCE_NOT_FOUND');
+  const memberships=await authorityRepository.activeMemberships(tx,session.user_id,organizationId);
+  const all=await authorityRepository.organizationFranchiseIds(tx,organizationId);
+  const permitted=[...administrativeScope(action,memberships,all),...memberships.filter(m=>m.role==='operator').flatMap(m=>m.franchiseIds)];
+  if(!permitted.length)throw new HttpError('ACTION_FORBIDDEN');
+  if(!permitted.includes(franchiseId))throw new HttpError('RESOURCE_NOT_FOUND');
+  if(parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
+  return {memberships,all,context:{actor:{type:'user' as const,id:session.user_id},organizationId,
+    permittedFranchiseIds:[franchiseId],organizationWide:false,correlationId,provenance:'membership' as const}};
+}
+
+/** W01 booking creation capabilities expire together with the transaction. */
+export function withBookingTenantScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,
+  franchiseId:string,correlationId:string,work:(s:import('../bookings/types.ts').BookingScopes)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const {context,memberships,all}=await bookingAuthority(tx,sessionToken,organizationId,franchiseId,correlationId,'bookings.create');
+    const scopes={bookings:issueTenantAccess(tx,{...context,action:'bookings.create'}),
       parcels:issueTenantAccess(tx,{...context,action:'parcels.create'}),customer:issueTenantAccess(tx,{...context,action:'customer.snapshot.read'}),
       pricing:issueTenantAccess(tx,{...context,action:pricingScope('pricing.override.approve',memberships,all).includes(franchiseId)?'pricing.override.approve':'pricing.validate'}),tax:issueTenantAccess(tx,{...context,action:'tax.validate'}),
-      audit:issueTenantAccess(tx,{...context,action:'bookings.audit'}),events:issueTenantAccess(tx,{...context,action:'bookings.events'}) };
+      audit:issueTenantAccess(tx,{...context,action:'bookings.audit'}),events:issueTenantAccess(tx,{...context,action:'bookings.events'})};
     await bookingActive(scopes.bookings);
     return work(scopes);
+  });
+}
+
+export function withBookingCancellationScope<T>(database:DatabasePool,sessionToken:string,organizationId:string,
+  franchiseId:string,correlationId:string,lockForWrite:boolean,work:(scope:import('../security/scope.ts').TenantAccess)=>Promise<T>):Promise<T> {
+  return membershipTransaction(database,async tx=>{
+    const {context}=await bookingAuthority(tx,sessionToken,organizationId,franchiseId,correlationId,'bookings.cancel');
+    const scope=issueTenantAccess(tx,{...context,action:'bookings.cancel'});
+    await bookingActive(scope,lockForWrite);
+    return work(scope);
   });
 }
 

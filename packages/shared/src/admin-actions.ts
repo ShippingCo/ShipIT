@@ -13,6 +13,7 @@ export const administrativeActions = [
   'attachments.read',
   'attachments.write',
   'audit.read',
+  'bookings.cancel',
   'bookings.create',
   'bookings.list',
   'bookings.read',

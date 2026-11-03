@@ -1,7 +1,7 @@
 /** Read-only financial evidence; never a new balance or due-date authority. */
 export const ageingBuckets = ['0_30','31_60','61_plus','unknown','future'] as const;
 export type AgeingBucket = typeof ageingBuckets[number];
-export const ageingStatuses = ['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto'] as const;
+export const ageingStatuses = ['booked','checked_in','dispatched','in_transit','out_for_delivery','failed_attempt','held_at_office','delivered','rto','cancelled'] as const;
 export interface AgeingFilter {
   overdue_only?:boolean; anchor:'booking'|'due'; status:typeof ageingStatuses[number]|null;
   customer_id:string|null; balances:'outstanding'|'all';

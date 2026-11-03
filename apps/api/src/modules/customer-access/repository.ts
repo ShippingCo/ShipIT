@@ -18,7 +18,7 @@ export async function source(scope:TenantAccess,inbox:string) {
     AND j.occurred_at<=clock_timestamp() AND j.occurred_at>clock_timestamp()-interval '15 minutes' FOR SHARE OF i,f,o`,[inbox])).rows[0];
 }
 export async function parcel(scope:TenantAccess,id:string) {
-  return (await scopedQuery<{id:string;customer_id:string;contact_version:string;phone_normalized:string;recipient_phone:string}>(scope,['customer.access.manage'],
+  return (await scopedQuery<{id:string;customer_id:string;contact_version:string;phone_normalized:string;recipient_phone:string|null}>(scope,['customer.access.manage'],
     `SELECT p.id,b.customer_id,c.contact_version,c.phone_normalized,p.recipient_snapshot->>'phone_normalized' AS recipient_phone
      FROM shipit.parcels p JOIN shipit.bookings b ON b.organization_id=p.organization_id AND b.franchise_id=p.franchise_id AND b.id=p.booking_id
      JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id
@@ -92,11 +92,14 @@ export async function tracking(scope:TenantAccess,digest:string,docket:string|nu
     AND (b.relation='recipient' OR c.contact_version=b.contact_version) FOR SHARE OF b,i,f,o,p`,[digest,docket])).rows[0];
 }
 export async function timeline(scope:TenantAccess,id:string) {
-  return (await scopedQuery<{event_type:string;occurred_at:Date}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT e.event_type,e.occurred_at FROM shipit.domain_events e
+  return (await scopedQuery<{event_type:string;occurred_at:Date}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT event_type,occurred_at FROM (SELECT e.event_type,e.occurred_at,e.aggregate_sequence,e.event_id FROM shipit.domain_events e
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.parcel_id=$1 AND e.event_type IN
     ('parcel.booked','parcel.checked_in','parcel.dispatched','parcel.in_transit','delivery.attempt_started','delivery.retry_started','delivery.attempt_failed',
      'parcel.held_at_office','delivery.completed','delivery.collected','delivery.reversed','parcel.rto_approved')
-    ORDER BY e.aggregate_sequence DESC,e.event_id DESC LIMIT 20`,[id])).rows;
+    UNION ALL SELECT 'booking.cancelled',c.cancelled_at,2,c.id FROM shipit.booking_cancellations c JOIN shipit.parcels p
+     ON p.organization_id=c.organization_id AND p.franchise_id=c.franchise_id AND p.booking_id=c.booking_id
+     WHERE {{franchise:c.organization_id:c.franchise_id}} AND p.id=$1) events
+     ORDER BY aggregate_sequence DESC,event_id DESC LIMIT 20`,[id])).rows;
 }
 export async function eta(scope:TenantAccess,id:string) {
   return (await scopedQuery<{revised_eta_at:Date|null}>(scope,['customer.tracking.read','whatsapp.inbox.work'],`SELECT x.revised_eta_at FROM shipit.route_parcel_effects x

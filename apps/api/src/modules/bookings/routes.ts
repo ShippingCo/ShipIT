@@ -17,6 +17,15 @@ export function registerBookings(app: FastifyInstance, service: ReturnType<typeo
     service.timeline(session(request),request.params.parcel_id,request.query,request.id));
   app.get<{Params:{parcel_id:string}}>('/api/v1/parcels/:parcel_id',request=>
     service.read(session(request),request.params.parcel_id,request.query,request.id));
+  app.get<{Params:{id:string}}>('/api/v1/bookings/:id/cancellation',async(request,reply)=>{
+    reply.header('Cache-Control','no-store');
+    return service.cancellationPreview(session(request), request.query, request.params.id, request.id);
+  });
+  app.post<{Params:{id:string}}>('/api/v1/bookings/:id/cancellation',async(request,reply)=>{
+    const key=idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders);
+    reply.header('Cache-Control','no-store');
+    return service.cancelBooking(session(request),request.query,request.params.id,key,request.body,request.id);
+  });
   app.post('/api/v1/bookings',async (request,reply) => {
     const s = selection(request.query), key = idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders);
     return reply.code(201).send(await service.create(session(request),s.organizationId,s.franchiseId,key,request.body,request.id));
