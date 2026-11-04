@@ -3187,19 +3187,11 @@
     ],
     "effects": [
       {
-        "file": "apps/web/src/booking/AccountSelection.tsx",
-        "kind": "useSyncExternalStore"
-      },
-      {
         "file": "apps/web/src/booking/BookingAttachments.tsx",
         "kind": "useSyncExternalStore"
       },
       {
         "file": "apps/web/src/booking/BookingServiceSetup.tsx",
-        "kind": "window.setTimeout"
-      },
-      {
-        "file": "apps/web/src/booking/CustomerLookup.tsx",
         "kind": "window.setTimeout"
       },
       {
