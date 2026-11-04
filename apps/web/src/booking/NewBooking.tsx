@@ -85,7 +85,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const dirty=(Object.keys(original) as Field[]).some(field=>original[field]!==d[field])||state.additionalParcels.length>0||attachments.count>0;
   const busy=preparing||state.busy||attachments.uploading||paymentPending||lot.busy||printState==='loading';
   useEffect(()=>{
-    if(!dirty||state.booking||uncertain||retained)return;
+    if(!dirty||state.booking||state.entry||uncertain||retained)return;
     const guardLink=(event:MouseEvent)=>{
       if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
       const link=event.target instanceof Element?event.target.closest<HTMLAnchorElement>('a[href]'):null;
@@ -97,13 +97,13 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     };
     document.addEventListener('click',guardLink,true);
     return()=>document.removeEventListener('click',guardLink,true);
-  },[dirty,state.booking,uncertain,retained,busy]);
+  },[dirty,state.booking,state.entry,uncertain,retained,busy]);
   useEffect(()=>{
-    const prevent=(event:BeforeUnloadEvent)=>{if(busy||uncertain||dirty&&!state.booking){event.preventDefault();event.returnValue='';}};
+    const prevent=(event:BeforeUnloadEvent)=>{if(busy||uncertain||dirty&&!state.booking&&!state.entry){event.preventDefault();event.returnValue='';}};
     window.addEventListener('beforeunload',prevent);
     return()=>window.removeEventListener('beforeunload',prevent);
-  },[busy,uncertain,dirty,state.booking]);
-  useEffect(()=>{heading.current?.focus();},[state.booking]);
+  },[busy,uncertain,dirty,state.booking,state.entry]);
+  useEffect(()=>{heading.current?.focus();},[state.booking,state.entry]);
   useEffect(()=>{
     const snapshot=workflow.snapshot();
     const first=(Object.keys(snapshot.errors) as Field[]).find(key=>!!snapshot.errors[key]);
@@ -154,6 +154,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   },[priceKey,workflow,state.booking,preparing]);
   async function save(){
     if(busy)return;
+    if(workflow.entryPending()||workflow.requiresEntry()){await workflow.saveEntry();return;}
     if(state.bookingPhase==='uncertain'){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);return;}
     if(!workflow.validateEntry())return;
     setPreparing(true);
@@ -164,15 +165,23 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
         const result=await workflow.customerApi.search('phone',current.phone,workflow.api.scope.signal);
         if(result.items.length){
           const match=result.items.length===1&&result.items[0].name.trim()===current.name.trim()?result.items[0]:undefined;
-          if(!match){setRepeat(result.items);setLookupError('Choose the matching customer below before saving.');return;}
+          if(!match){await workflow.saveEntry();return;}
           workflow.select(match);
         }
       }
       if(workflow.snapshot().customerPhase!=='ready')await workflow.confirmCustomer();
-      if(workflow.snapshot().customerPhase!=='ready')return;
+      if(workflow.snapshot().customerPhase!=='ready'){
+        if(workflow.snapshot().failureCode==='VALIDATION_FAILED')await workflow.saveEntry();
+        return;
+      }
       workflow.recordTaxEntry();
       if(!workflow.snapshot().tax)await workflow.preview();
-      if(workflow.snapshot().tax){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);}
+      if(workflow.snapshot().tax){
+        await workflow.save();
+        if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);
+        else if(['VALIDATION_FAILED','DOCKET_CONFLICT'].includes(workflow.snapshot().failureCode??''))await workflow.saveEntry();
+      }
+      else if(Object.values(workflow.snapshot().errors).some(Boolean)||['NO_RATE','TAX_POLICY_UNAVAILABLE','TAX_CONFLICT','VALIDATION_FAILED'].includes(workflow.snapshot().failureCode??''))await workflow.saveEntry();
     }catch{setLookupError('Customer lookup could not finish. Retry before saving.');}
     finally{setPreparing(false);}
   }
@@ -187,7 +196,14 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const sectionReady=[!!d.name&&!!d.phone&&!!d.destination,parcelReady,!!state.quote];
   const formHasError=Object.values(state.errors).some(Boolean)||state.parcelErrors.some(errors=>Object.values(errors).some(Boolean));
   const statusError=formHasError||['error','uncertain','stale'].some(phase=>[state.customerPhase,state.pricingPhase,state.taxPhase,state.bookingPhase].some(value=>value===phase));
-  if(state.recoveryBlocked)return <section className="counter-section"><h1>Booking recovery required</h1><p role="alert">An earlier request may have saved. Check Receipts and ask your administrator to reconcile it before creating a replacement.</p><Link to="/business/receipts">Open Receipts</Link></section>;
+  if(state.recoveryBlocked)return <section className="counter-section"><h1>Booking recovery required</h1><p role="alert">An earlier request may have saved. Check Bookings and Receipts before creating a replacement.</p><Link to="/business/bookings">Open Bookings</Link><Link to="/business/receipts">Open Receipts</Link></section>;
+  if(state.entry)return <section className="counter-section counter-confirmation">
+    <h1 ref={heading} tabIndex={-1}>Booking saved</h1><p role="status">Confirmed. All entered details have been saved.</p>
+    <p>Booking reference <span className="ops-mono">{state.entry.id}</span></p>
+    <p>{d.docket?`Docket ${d.docket}. `:''}Missing details are marked as not recorded. Tax, payment and shipment processing have not been confirmed for this record.</p>
+    {attachments.count>0&&<p role="alert">Your selected files are still on this device and have not been attached.</p>}
+    <div className="counter-actions"><Link className="btn btn-filled" to="/business/bookings">View saved bookings</Link><button type="button" className="btn btn-outlined" onClick={()=>{attachments.clear();startAnother();}}>Start another booking</button></div>
+  </section>;
   return <div className="booking-counter-page booking-original">
     {!state.booking&&<h1 className="workspace-visually-hidden">New booking</h1>}
     <header className="booking-page-heading" hidden={!state.booking}>
@@ -195,6 +211,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       {state.booking&&<p>{cancelled?'All packages in this booking are cancelled.':'Your dockets are ready.'}</p>}</div>
       <button type="button" className="btn btn-text" onClick={close}>{state.booking?'Back to bookings':'Discard draft'}</button>
     </header>
+    {!state.booking&&<p className="counter-help" id="booking-optional-fields">All fields are optional. Save with the details you have; blank fields stay unrecorded.</p>}
     {closeBlocked&&<p role="alert" className="booking-inline-note">Finish or retry the current request before closing this booking.</p>}
     {state.booking?<div className="booking-saved-content">
       <section className="counter-confirmation">
@@ -219,14 +236,14 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       <BookingAttachments queue={attachments}/>
       {paymentOpen&&!cancelled&&<BookingPayment controller={controller} booking={state.booking} onPendingChange={setPaymentPending}/>}
       <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id}/>
-    </div>:<div className="page"><form aria-label="New booking" noValidate onSubmit={event=>event.preventDefault()}>
+    </div>:<div className="page"><form aria-label="New booking" aria-describedby="booking-optional-fields" noValidate onSubmit={event=>event.preventDefault()}>
       <div className="booking-layout">
         <div><Card pad>
           <div className="jrn-wrap"><StepTrack steps={['Customer','Parcel','Charges'].map((label,index)=>({key:label,label,icon:['person','inventory_2','currency_rupee'][index],done:sectionReady[index]}))}/></div>
           <h2 className="form-sec-title">Customer</h2>
           <div className="form-grid">
-            <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} required error={state.errors.phone} onBlur={()=>void lookupCustomer()} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');}}/>
-            <TextField id="counter-name" label="Customer name" value={d.name} disabled={disabled} required error={state.errors.name} autoComplete="name" onChange={value=>workflow.change('name',value)}/>
+            <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} error={state.errors.phone} onBlur={()=>void lookupCustomer()} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');}}/>
+            <TextField id="counter-name" label="Customer name" value={d.name} disabled={disabled} error={state.errors.name} autoComplete="name" onChange={value=>workflow.change('name',value)}/>
             <TextField id="counter-recipientAddress" label="Delivery address" value={d.recipientAddress} disabled={disabled} error={state.errors.recipientAddress} autoComplete="street-address" className="span2" onChange={value=>workflow.change('recipientAddress',value)}/>
           </div>
           {repeat.map(customer=><button key={customer.id} type="button" className="recall" disabled={disabled} onClick={()=>{workflow.select(customer);workflow.useLatestCustomer();setRepeat([]);setLookupError('');}}><Msym name="history"/><span className="u-grow"><b>{customer.name}</b> · {customer.phone_display} — fill it in</span><Msym name="arrow_forward"/></button>)}

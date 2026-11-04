@@ -22,13 +22,14 @@ import { formatKolkata,formatMoney } from './format';
 import { TextField, DateField,SelectField } from '../components/m3/Input';
 import { Msym } from '../components/m3/Icon';
 import {DatePresets} from './DatePresets';
+import {SavedBookings} from './SavedBookings';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const has=(roles:readonly OperatorRole[],...wanted:OperatorRole[])=>(wanted.some(role=>role!=='delivery_agent'&&role!=='org_admin')&&canAdminister(roles,'parcels.read'))||roles.some(role=>wanted.includes(role));
 const parcelTones={booked:'neutral',checked_in:'info',dispatched:'info',in_transit:'info',out_for_delivery:'info',failed_attempt:'warning',held_at_office:'warning',delivered:'success',rto:'warning',cancelled:'neutral'} as const;
 const statusOptions=[{value:'',label:'All statuses'},...parcelStatuses.map(value=>({value,label:value.replaceAll('_',' ')}))];
 
-export default function Packages({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
+export function OperationalPackages({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]);
  const [params,setParams]=useSearchParams();
  const [cancelling,setCancelling]=useState<ParcelRead|null>(null);
@@ -82,10 +83,11 @@ export default function Packages({controller,roles}:{controller:ScopeController;
  </div>;
 }
 
-function PackageBulk({controller,source,rows,reload}:{controller:ScopeController;source:ReturnType<typeof parcels>;rows:ParcelRead[];reload:()=>void}){
- const [action,setAction]=useState<BulkParcelAction>('check_in'),[evidence,setEvidence]=useState(''),[context,setContext]=useState('');
+function PackageBulk({controller,source,rows,reload,initialAction='check_in',onBusyChange}:{controller:ScopeController;source:ReturnType<typeof parcels>;rows:ParcelRead[];reload:()=>void;initialAction?:BulkParcelAction;onBusyChange?:(busy:boolean)=>void}){
+ const [action,setAction]=useState<BulkParcelAction>(initialAction),[evidence,setEvidence]=useState(''),[context,setContext]=useState('');
  const bulk=useMemo(()=>createParcelBulkController(controller),[controller]);useEffect(()=>()=>bulk.dispose(),[bulk]);
  const state=useSyncExternalStore(bulk.subscribe,bulk.snapshot),last=useRef(0);
+ useEffect(()=>{onBusyChange?.(state.phase==='pending'||state.phase==='uncertain');},[state.phase,onBusyChange]);
  useEffect(()=>{if(state.phase==='confirmed'&&state.result&&state.result.summary.succeeded!==last.current){last.current=state.result.summary.succeeded;reload();}},[state.phase,state.result,reload]);
  const keys=useRef(new Map<string,string>()),valid=uuid.test(evidence)&&uuid.test(context);
  const candidates=useMemo(()=>rows.filter(row=>row.status===(action==='check_in'?'booked':'checked_in')).map(row=>{
@@ -99,7 +101,7 @@ function PackageBulk({controller,source,rows,reload}:{controller:ScopeController
  </section>;
 }
 
-function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:ScopeController;roles:readonly OperatorRole[];parcelId:string;close:()=>void;refreshed:()=>void}){
+function PackageDetail({controller,roles,parcelId,close,refreshed,embedded=false,onBusyChange}:{controller:ScopeController;roles:readonly OperatorRole[];parcelId:string;close:()=>void;refreshed:()=>void;embedded?:boolean;onBusyChange?:(busy:boolean)=>void}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const deliverySource=useMemo(()=>deliveries(api),[api]),[deliveryBusy,setDeliveryBusy]=useState(false);
  const detail=useResource(parcelId,signal=>source.read(parcelId,signal));
@@ -111,7 +113,9 @@ function PackageDetail({controller,roles,parcelId,close,refreshed}:{controller:S
  const paymentSource=useMemo(()=>detail.value?payments(api,detail.value.booking_id):null,[api,detail.value]);
  const payment=useResource<PaymentProjection|null>(parcelId+'-payment-'+String(paymentAllowed)+'-'+(detail.value?.booking_id??'pending'),signal=>paymentAllowed&&paymentSource?paymentSource.read(signal):Promise.resolve(null));
  const remove=useCommand<LotDto|LotMembershipResult>(value=>lotSource.execute(value)),life=useCommand(value=>source.execute(value));
- const busy=deliveryBusy||[remove.phase,life.phase].some(phase=>phase==='pending'||phase==='uncertain');const frame=(content:React.ReactNode)=><OperationDialog title="Package details" close={close} busy={busy}>{content}</OperationDialog>;
+ const busy=deliveryBusy||[remove.phase,life.phase].some(phase=>phase==='pending'||phase==='uncertain');
+ useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
+ const frame=(content:React.ReactNode)=>embedded?<>{content}</>:<OperationDialog title="Package details" close={close} busy={busy}>{content}</OperationDialog>;
  if(detail.phase==='loading')return frame(<Loading label="Loading package detail…"/>);
  if(detail.phase==='error')return frame(<Failure retry={detail.reload} label="Package detail is unavailable."/>);
  const parcel=detail.value!;
@@ -179,4 +183,11 @@ function PaymentPanel({roles,resource}:{roles:readonly OperatorRole[];resource:R
  if(resource.phase==='loading')return <section><p role="status">Loading payment ledger…</p>{link}</section>;if(resource.phase==='error')return <section><button className="btn btn-outlined" onClick={resource.reload}>Retry payment ledger</button>{link}</section>;
  const payment=resource.value;if(!payment)return null;
  return <section><h3>To-Pay ledger</h3><div className="ops-facts"><Fact label="Gross" value={formatMoney(payment.gross_paise)}/><Fact label="Applied funds" value={formatMoney(payment.collected_paise)}/><Fact label="Outstanding" value={formatMoney(payment.outstanding_paise)}/><Fact label="Ledger state" value={payment.state.replaceAll('_',' ')}/></div><p>Record new money and apply existing advances through named receipt evidence. Legacy single-booking records retain their original amounts and unknown source details.</p>{link}</section>;
+}
+
+export default function Packages({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
+ const [params]=useSearchParams();
+ const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]);
+ if(params.get('view')==='operations')return <OperationalPackages controller={controller} roles={roles}/>;
+ return <SavedBookings operationalBulk={(rows,action,busy,refresh)=><PackageBulk controller={controller} source={source} rows={rows} reload={refresh} initialAction={action} onBusyChange={busy}/>} controller={controller} roles={roles} operationalDetail={(id,close,refresh,busy)=><PackageDetail onBusyChange={busy} controller={controller} roles={roles} parcelId={id} close={close} refreshed={refresh} embedded/>}/>;
 }

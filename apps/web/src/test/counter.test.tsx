@@ -9,12 +9,13 @@ import { quoteDto, taxDto } from '../data-access/commercial';
 import { customerDto } from '../data-access/customers';
 import * as f from './counter-fixture';
 type Call={path:string;options:RequestInit};
+let savedEntries:Record<string,unknown>[]=[];
 let calls:Call[], override:((c:Call)=>Promise<Response>|undefined)|undefined;
 const posts=(part:string)=>calls.filter(c=>c.path.startsWith(part)&&c.options.method==='POST');
 const body=(c:Call)=>JSON.parse(c.options.body as string);
 const key=(c:Call)=>(c.options.headers as Record<string,string>)['Idempotency-Key'];
 beforeEach(()=>{
- window.location.hash='/business/new-booking';calls=[];override=undefined;vi.stubEnv('VITE_DATA_MODE','production');
+ window.location.hash='/business/new-booking';calls=[];override=undefined;savedEntries=[];vi.stubEnv('VITE_DATA_MODE','production');
  vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
   const c={path,options};calls.push(c);const result=override?.(c);if(result)return result;
   if(path==='/auth/bootstrap')return f.json({csrf_token:'synthetic-csrf'});
@@ -27,10 +28,11 @@ beforeEach(()=>{
   if(path.startsWith('/api/v1/pricing/quote'))return f.json(f.quote);
   if(path.startsWith('/api/v1/tax/intents'))return f.json(f.intent);
   if(path.startsWith('/api/v1/tax/calculations'))return f.json(f.tax);
-  if(path.startsWith('/api/v1/parcels'))return f.json({items:[{...f.booking.parcels[0],booking_id:f.bookingId,confirmed_at:f.now}],page:{next_cursor:null,has_more:false}});
+  if(path.startsWith('/api/v1/parcels'))return f.json({items:[{...f.booking.parcels[0],version:1,custody:'awaiting_intake',booking_id:f.bookingId,confirmed_at:f.now,sender:{...f.customer,source_customer_id:f.customerId,source_customer_version:1},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Synthetic destination'}}],page:{next_cursor:null,has_more:false}});
   if(path.includes('/receipt'))return f.json(f.receipt);
   if(path.includes('/payments'))return f.json(options.method==='GET'?f.balance:{payment:f.balance,entry:{...body(c),id:f.id(16),kind:'collection',reversal_of:null,reason_code:null,version:1,occurred_at:f.now}},options.method==='POST'?201:200);
   if(path.includes('/attachments'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/bookings/entries?')){if(options.method==='POST'){const entry={id:f.id(300+savedEntries.length),state:'confirmed',organization_id:f.org,franchise_id:f.A,confirmed_at:f.now,data:body(c)};savedEntries.push(entry);return f.json(entry,201);}return f.json({items:savedEntries});}
   if(path.startsWith('/api/v1/bookings?'))return f.json(f.booking,201);
   if(path==='/auth/logout')return f.json({ok:true});
   throw new Error('Unexpected synthetic endpoint');
@@ -48,6 +50,26 @@ async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
+ it('confirms a booking with all user fields blank and no fabricated contact or charges',async()=>{
+  await start();fill('Weight (kg)','');save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);
+  expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'',phone:'',docket:'',weight:'',override:'',packing:''});
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  expect(posts('/api/v1/pricing/quote')).toHaveLength(0);
+  expect(screen.getByRole('status')).toHaveTextContent('Confirmed. All entered details have been saved.');
+ });
+ it('saves partial confirmed details without requiring freight, phone or destination',async()=>{
+  await start();fill('Customer name','Partial sender');fill('Delivery address','Partial address');fill('Packing ₹','39');save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'Partial sender',recipientAddress:'Partial address',phone:'',destination:'',packing:'3900',override:''});
+ });
+ it('retries an uncertain optional save with the same key and unchanged fields',async()=>{
+  let fail=true;override=c=>c.path.startsWith('/api/v1/bookings/entries?')&&c.options.method==='POST'&&fail?Promise.reject(new TypeError('offline')):undefined;
+  await start();fill('Customer name','Retained entry');save();await screen.findByText(/Outcome uncertain/);
+  const first=posts('/api/v1/bookings/entries?')[0];expect(screen.getByLabelText('Customer name')).toBeDisabled();
+  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
+  const second=posts('/api/v1/bookings/entries?')[1];expect(key(second)).toBe(key(first));expect(body(second)).toEqual(body(first));expect(savedEntries).toHaveLength(1);
+ });
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
   expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
@@ -62,13 +84,18 @@ describe('production counter API composition',{timeout:20000},()=>{
   expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('creates a new customer once when save is retried after a rejected booking',async()=>{
-  let reject=true;override=c=>c.path.includes('/customers?')?Promise.resolve(f.json({items:[],page:{has_more:false,next_cursor:null}})):c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'DOCKET_CONFLICT'}},409)):undefined;
+  let reject=true;override=c=>c.path.includes('/customers?')?Promise.resolve(f.json({items:[],page:{has_more:false,next_cursor:null}})):c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'VERSION_CONFLICT'}},409)):undefined;
   await entered();save();await screen.findByRole('alert');expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
   reject=false;save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
  });
- it('does not replace an existing customer with a different name or treat lookup failure as a new customer',async()=>{
-  await start();core();fill('Customer name','Another sender');save();await screen.findByText(/Choose the matching customer below/);expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
-  override=c=>c.path.includes('/customers?')?Promise.reject(new TypeError('offline')):undefined;save();await screen.findByText(/Customer lookup could not finish/);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('preserves entered contact details without replacing an ambiguous existing customer',async()=>{
+  await start();core();fill('Customer name','Another sender');save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
+  expect(body(posts('/api/v1/bookings/entries?')[0]).fields.name).toBe('Another sender');
+ });
+ it('does not treat failed customer lookup as a new customer',async()=>{
+  await entered();override=c=>c.path.includes('/customers?')?Promise.reject(new TypeError('offline')):undefined;
+  save();await screen.findByText(/Customer lookup could not finish/);expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
  });
  it('loads an explicitly selected customer through the current scope and never creates a replacement',async()=>{
   window.location.hash='/business/new-booking?customer_id='+f.customerId;render(<App/>);await waitFor(()=>expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name));
@@ -93,9 +120,12 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('saves declared goods value without making up structured delivery or contents facts',async()=>{
   await entered();fill('Declared goods value ₹','1000.01');save();await screen.findByRole('heading',{name:'Booking saved'});expect(body(posts('/api/v1/bookings?')[0]).parcels[0].details).toEqual({declared_value_paise:100001});
  });
- it('converts packing and freight to exact paise and rejects invalid non-empty amounts',async()=>{
-  await entered();fill('Freight ₹','12.345');save();await waitFor(()=>expect(screen.getByLabelText('Freight ₹')).toHaveAttribute('aria-invalid','true'));expect(posts('/api/v1/bookings?')).toHaveLength(0);
-  fill('Freight ₹','125.51');fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
+ it('preserves an unassessed decimal entry without inventing a calculated charge',async()=>{
+  await entered();fill('Freight ₹','12.345');save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts('/api/v1/bookings/entries?')[0]).fields.override).toBe('invalid-decimal:12.345');expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('continues converting valid packing and freight to exact paise',async()=>{
+  await entered();fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
   await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
@@ -110,8 +140,9 @@ describe('production counter API composition',{timeout:20000},()=>{
   save();await screen.findByRole('heading',{name:'Booking saved'});expect(body(posts('/api/v1/bookings?')[0]).parcels.map(p=>p.docket)).toEqual(['00123-A','SYN-PACK-2','SYN-PACK-3']);expect(body(posts('/api/v1/pricing/quote').at(-1)!).weight_grams).toBe(1999);
   fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fireEvent.click(screen.getByRole('button',{name:'Keep booking'}));expect(posts(cancelPath)).toHaveLength(0);fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fill('Reason for cancellation','Sender withdrew all packages');fireEvent.click(screen.getByRole('button',{name:'Confirm cancellation'}));await screen.findByText('Cancelled 3 parcels in this booking.');fireEvent.click(screen.getByRole('button',{name:'Done'}));expect(screen.getByRole('heading',{name:'Booking cancelled',level:1})).toBeVisible();expect(posts(cancelPath)).toHaveLength(1);
  });
- it('rejects duplicate extra dockets and focuses the field without creating a booking',async()=>{
-  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');save();await screen.findByText('Another parcel in this booking already has this docket number.');await waitFor(()=>expect(screen.getByLabelText('Parcel 2 docket number')).toHaveFocus());expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('records entered duplicate dockets without creating conflicting dispatch parcels',async()=>{
+  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(body(posts('/api/v1/bookings/entries?')[0]).additional_parcels[0].docket).toBe('00123-a');
  });
  it('copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents',async()=>{
   await entered();addPackage(2);fill('Parcel 2 recipient address','Second address');addPackage(3);fill('Copy receiver for parcel 3 from','2');fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 2'}));fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(screen.getByLabelText('Parcel 3 recipient address')).toHaveValue('21 Fictional Street');fireEvent.click(screen.getByRole('button',{name:'Use receiver from parcel 2'}));fireEvent.click(screen.getByRole('button',{name:'Replace receiver'}));expect(screen.getByLabelText('Parcel 3 recipient address')).toHaveValue('Second address');expect(screen.getByLabelText('Parcel 3 docket number')).toHaveValue('SYN-PACK-3');
@@ -134,10 +165,10 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Retry receipt'});fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
- it('explicit save focuses the first missing sender field without creating a booking',async()=>{
-  await start();save();await waitFor(()=>expect(screen.getByLabelText('Customer name')).toHaveFocus());expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('explicit save confirms an entry without requiring sender fields',async()=>{
+  await start();save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
- it.each(['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND'])('handles safe %s without losing the draft or claiming success',async code=>{
+ it.each(['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND'])('handles safe %s without losing the draft or claiming success',async code=>{
   await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code,private_details:'SYN_PRIVATE'}},code==='ACTION_FORBIDDEN'?403:code==='RESOURCE_NOT_FOUND'?404:409)):undefined;save();await screen.findByRole('alert');expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(document.body.textContent).not.toContain('SYN_PRIVATE');
  });
  it('malformed committed response is uncertain and retry uses its original identity',async()=>{
@@ -164,22 +195,16 @@ describe('production counter API composition',{timeout:20000},()=>{
   override=c=>c.path.startsWith('/api/v1/operator-context')?Promise.resolve(f.json({...f.context,franchises:f.context.franchises.map(x=>({...x,roles:['read_only']}))})):undefined;
   await controller.revalidate();expect(controller.runtime.ticket().generation).not.toBe(generation);expect(flow.snapshot().draft.name).toBe('');expect(()=>scopedApi(controller)).not.toThrow();flow.dispose();
  });
- it('does not claim an empty receipt result until the edited docket is searched',async()=>{
+ it('filters receipt rows immediately and restores them when the search is cleared',async()=>{
   window.location.hash='/business/receipts';render(<App/>);
-  await screen.findByRole('table',{name:'Receipt bookings'});
-  fill('Find receipt by docket','UNKNOWN');
-  expect(screen.getByText('Search to load matching bookings.')).toBeVisible();
-  expect(screen.queryByRole('heading',{name:'No receipts found'})).not.toBeInTheDocument();
-  override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));
-  await screen.findByRole('heading',{name:'No receipts found'});
-  expect(calls.filter(c=>c.path.startsWith('/api/v1/parcels')).at(-1)!.path).toContain('docket=UNKNOWN');
-  fireEvent.click(screen.getByRole('button',{name:'Clear search'}));
-  expect(screen.getByRole('searchbox',{name:'Find receipt by docket'})).toHaveFocus();
+  await screen.findByText('SYN-33');fill('Search receipts','UNKNOWN');
+  expect(screen.getByText('No receipts match')).toBeVisible();
+  fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
+  expect(screen.getByText('SYN-33')).toBeVisible();
  });
  it('receipt discovery supports empty and safe denied/retry states',async()=>{
   window.location.hash='/business/receipts';let denied=true;override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(denied?f.json({error:{code:'ACTION_FORBIDDEN'}},403):f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  render(<App/>);await screen.findByRole('button',{name:'Retry receipts'});expect(screen.getByRole('alert')).toHaveTextContent('not permitted');denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipts'}));await screen.findByText('No bookings found in this workspace.');
+  render(<App/>);await screen.findByText(/Receipts could not be loaded/);denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No receipts yet');
  });
 });
 

@@ -4,7 +4,7 @@ import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react
 import {MemoryRouter,useLocation} from 'react-router-dom';
 import {ageingBuckets,ageingMeasures,operationalParcelStatuses,type AgeingPage} from '@shippingco/shared';
 import Dashboard from '../operations/Dashboard';
-import Packages from '../operations/Packages';
+import {OperationalPackages as Packages} from '../operations/Packages';
 import {createScopeController} from '../operator/scope';
 import {operationalDashboardDto} from '../data-access/operational-dashboard';
 

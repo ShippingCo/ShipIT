@@ -41,12 +41,12 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
     <div id={fieldsId} hidden={collapsed}>
     {primaryFields}
     <div className="counter-grid">
-      {!primaryFields&&<><TextField {...props('docket')} label={label('Docket number','docket number')} required maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
-      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} required placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/></>}
+      {!primaryFields&&<><TextField {...props('docket')} label={label('Docket number','docket number')} maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
+      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/></>}
       <SelectField {...props('contentsType')} label={label('Contents type','contents type')} options={contentsTypes}/>
-      <TextField {...props('contentsDescription')} label={label('Contents description','contents description')} required maxLength={200} placeholder="e.g. Cotton shirts"/>
+      <TextField {...props('contentsDescription')} label={label('Contents description','contents description')} maxLength={200} placeholder="e.g. Cotton shirts"/>
       {['liquid','semi_liquid'].includes(parcel.contentsType)&&
-        <UnitField {...props('liquidQuantity')} places={3} label={label('Liquid quantity (litres)','liquid quantity (litres)')} required/>}
+        <UnitField {...props('liquidQuantity')} places={3} label={label('Liquid quantity (litres)','liquid quantity (litres)')}/>}
       {!primaryFields&&<UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} helper="Optional"/>}
     </div>
     {!hideReceiver&&<>
@@ -61,11 +61,11 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
     <div className="counter-grid booking-address-grid">
       <TextField {...props('recipientName')} label={label('Recipient name','recipient name')} helper="Optional" maxLength={120}/>
       <PhoneField {...props('recipientPhone')} label={label('Recipient phone','recipient phone')} helper="Optional. Add a number for delivery updates and the recipient code."/>
-      <TextField {...props('recipientAddress')} label={label('Recipient address','recipient address')} required maxLength={500} className="booking-span" placeholder="Building, street and area"/>
+      <TextField {...props('recipientAddress')} label={label('Recipient address','recipient address')} maxLength={500} className="booking-span" placeholder="Building, street and area"/>
 
-      <TextField {...props('recipientPin')} label={label('PIN code','PIN code')} required inputMode="numeric" maxLength={6}/>
-      <TextField {...props('recipientCity')} label={label('City','city')} required maxLength={80}/>
-      <TextField {...props('recipientRegion')} label={label('State / region','state')} required maxLength={80}/>
+      <TextField {...props('recipientPin')} label={label('PIN code','PIN code')} inputMode="numeric" maxLength={6}/>
+      <TextField {...props('recipientCity')} label={label('City','city')} maxLength={80}/>
+      <TextField {...props('recipientRegion')} label={label('State / region','state')} maxLength={80}/>
     </div>
     </>}
     </div>

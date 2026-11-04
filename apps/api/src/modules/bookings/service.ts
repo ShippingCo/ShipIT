@@ -21,9 +21,11 @@ import { parcelCursorCodec } from './cursor.ts';
 import {operationalDashboard} from './dashboard.ts';
 import {selection} from './validation.ts';
 import {bookingCancellations} from './cancellation.ts';
+import {counterEntries} from './counter-entries.ts';
 export function createBookingService(database: DatabasePool, cursorKey:Buffer, clock?: () => Date,customerAccountsEnabled=false) {
   const codec=parcelCursorCodec(cursorKey);
   return {
+    ...counterEntries(database),
     ...bookingCancellations(database),
     async dashboard(session:string,input:unknown,correlation:string) {
       const selected=selection(input);

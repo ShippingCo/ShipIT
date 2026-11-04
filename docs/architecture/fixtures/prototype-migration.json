@@ -156,7 +156,6 @@
       "apps/web/src/App.tsx",
       "apps/web/src/DemoApp.tsx",
       "apps/web/src/components/CommandPalette.tsx",
-      "apps/web/src/components/m3/Journey.tsx",
       "apps/web/src/context/AppContext.tsx",
       "apps/web/src/data/bot.ts",
       "apps/web/src/data/store.ts",
@@ -182,7 +181,6 @@
       "apps/web/src/DemoApp.tsx": "ee7b0345989c6fdafba231a300a1ff154cb5ee442618ec7be9bde0d15163d386",
       "apps/web/src/components/CommandPalette.tsx": "df73ea3660f56a81c67aaf278794b52848082a64f4f7a04625642ba7d20df32b",
       "apps/web/src/components/m3/Controls.tsx": "cc35b02f2a3ee36bd09ebc8bc55d0e8828e6da7df8172c9137685459bb467466",
-      "apps/web/src/components/m3/Journey.tsx": "6489abe596f224012f39a5c6a38874f7e0cb31950c45d5758201c0002b9e2057",
       "apps/web/src/context/AppContext.tsx": "018179975d06f2a506e7a69e19119a4fda96609e6ec94ccc9559c0e1eff39e34",
       "apps/web/src/data/bot.ts": "ff612b9cd72b53826deaee187cbfa329cfd07829a61a6ea3b1acfd9e36a7bf4b",
       "apps/web/src/data/messages.ts": "55138f4b7300b80cd2b3cda0cbff8d4744934aefd6d480f8c459916907b5edfb",
@@ -201,7 +199,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "c82c8d970153edf350e3ec554c2afe2b6a7c28cefd07f30f786b1780b5e07c3e",
+      "apps/web/src/test/counter.test.tsx": "b09cfb1d6330ed547fd0ea9d7cd29add2430f2ed396f11bda5ef7c3ee23b1e8e",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -263,28 +261,6 @@
         {
           "target": "apps/web/src/components/workspace/use-command-palette.ts",
           "syntax": "export {useCommandPalette} from './workspace/use-command-palette';"
-        }
-      ],
-      "apps/web/src/components/m3/Journey.tsx": [
-        {
-          "target": "apps/web/src/components/m3/Icon.tsx",
-          "syntax": "import { Msym, cx } from './Icon';"
-        },
-        {
-          "target": "apps/web/src/data/store.ts",
-          "syntax": "import { STATUS_FLOW } from '../../data/store';"
-        },
-        {
-          "target": "apps/web/src/data/types.ts",
-          "syntax": "import type { ParcelStatus, TimelineEntry } from '../../data/types';"
-        },
-        {
-          "target": "apps/web/src/components/m3/StepTrack.tsx",
-          "syntax": "export {StepTrack} from './StepTrack';"
-        },
-        {
-          "target": "apps/web/src/components/m3/StepTrack.tsx",
-          "syntax": "export type {Step,StepTrackProps} from './StepTrack';"
         }
       ],
       "apps/web/src/context/AppContext.tsx": [
@@ -1631,6 +1607,21 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
+        "name": "confirms a booking with all user fields blank and no fabricated contact or charges",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves partial confirmed details without requiring freight, phone or destination",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "retries an uncertain optional save with the same key and unchanged fields",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
         "name": "uses the original demo field order and controls without separate customer or pricing steps",
         "cases": null
       },
@@ -1646,7 +1637,12 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "does not replace an existing customer with a different name or treat lookup failure as a new customer",
+        "name": "preserves entered contact details without replacing an ambiguous existing customer",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "does not treat failed customer lookup as a new customer",
         "cases": null
       },
       {
@@ -1676,7 +1672,12 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
+        "name": "preserves an unassessed decimal entry without inventing a calculated charge",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "continues converting valid packing and freight to exact paise",
         "cases": null
       },
       {
@@ -1696,7 +1697,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "rejects duplicate extra dockets and focuses the field without creating a booking",
+        "name": "records entered duplicate dockets without creating conflicting dispatch parcels",
         "cases": null
       },
       {
@@ -1736,13 +1737,13 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "explicit save focuses the first missing sender field without creating a booking",
+        "name": "explicit save confirms an entry without requiring sender fields",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "handles safe %s without losing the draft or claiming success",
-        "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']"
+        "cases": "['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']"
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
@@ -1776,7 +1777,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "does not claim an empty receipt result until the edited docket is searched",
+        "name": "filters receipt rows immediately and restores them when the search is cleared",
         "cases": null
       },
       {
@@ -2750,6 +2751,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/receipts-demo.test.tsx",
+        "name": "uses demo columns, search, date filter, count and actual total",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipts-demo.test.tsx",
+        "name": "searches phone and clears unmatched filters",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipts-demo.test.tsx",
+        "name": "prints the shared receipt sheet only on Reprint and cleans private print DOM",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/receipts-demo.test.tsx",
+        "name": "keeps missing values and payment truthful",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/reconciliation.test.tsx",
         "name": "shows disabled default and preserves the exact uncertain opt-in command across back navigation",
         "cases": null
@@ -2805,18 +2826,43 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "shows the exact table columns, search, date menu and counted chips with real saved data",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "searches the saved customer phone and filters delivered without inserting demo rows",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "opens the matching journey and two-column dialog on row click, with the actual confirmation timeline",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "does not misrepresent selected Paid now as recorded money or missing amounts as zero",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/segmented-payment.test.tsx",
         "name": "chooses a payment segment without submitting its surrounding booking form",
         "cases": null
       },
       {
         "file": "apps/web/src/test/service-parity.test.tsx",
-        "name": "filters receipts by the IST booking date and preserves applied bounds while paging an edited draft",
+        "name": "filters saved receipts by IST booking date and keeps the range while paging",
         "cases": null
       },
       {
         "file": "apps/web/src/test/service-parity.test.tsx",
-        "name": "rejects an inverted receipt date range without sending a new read",
+        "name": "uses exclusive IST day boundaries and native custom-range constraints",
         "cases": null
       },
       {
@@ -4267,9 +4313,6 @@
     "apps/web/src/components/CommandPalette.tsx": [
       "presentation"
     ],
-    "apps/web/src/components/m3/Journey.tsx": [
-      "presentation"
-    ],
     "apps/web/src/context/AppContext.tsx": [
       "seam"
     ],
@@ -5431,6 +5474,30 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
+      "name": "confirms a booking with all user fields blank and no fabricated contact or charges",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves partial confirmed details without requiring freight, phone or destination",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "retries an uncertain optional save with the same key and unchanged fields",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
       "name": "uses the original demo field order and controls without separate customer or pricing steps",
       "cases": null,
       "disposition": "preserve",
@@ -5455,11 +5522,19 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "does not replace an existing customer with a different name or treat lookup failure as a new customer",
+      "name": "preserves entered contact details without replacing an ambiguous existing customer",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "does not treat failed customer lookup as a new customer",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5503,11 +5578,19 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
+      "name": "preserves an unassessed decimal entry without inventing a calculated charge",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "continues converting valid packing and freight to exact paise",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5535,11 +5618,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "rejects duplicate extra dockets and focuses the field without creating a booking",
+      "name": "records entered duplicate dockets without creating conflicting dispatch parcels",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5599,16 +5682,16 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "explicit save focuses the first missing sender field without creating a booking",
+      "name": "explicit save confirms an entry without requiring sender fields",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Focus the first invalid sender field and avoid a booking write when validation fails."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "handles safe %s without losing the draft or claiming success",
-      "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
+      "cases": "['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
       "disposition": "preserve",
       "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
@@ -5663,11 +5746,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "does not claim an empty receipt result until the edited docket is searched",
+      "name": "filters receipt rows immediately and restores them when the search is cleared",
       "cases": null,
       "disposition": "preserve",
-      "group": "seam",
-      "reason": "Preserve explicit search submission, truthful empty state and stable focus after clearing a searched docket."
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -7222,6 +7305,38 @@
       "reason": "Issue #30: escaped issued DTO presentation, exact paise, entry-only semantics, explicit print and cancellation cleanup. Demo state remains fictional; #33 owns production screens."
     },
     {
+      "file": "apps/web/src/test/receipts-demo.test.tsx",
+      "name": "uses demo columns, search, date filter, count and actual total",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/receipts-demo.test.tsx",
+      "name": "searches phone and clears unmatched filters",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/receipts-demo.test.tsx",
+      "name": "prints the shared receipt sheet only on Reprint and cleans private print DOM",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/receipts-demo.test.tsx",
+      "name": "keeps missing values and payment truthful",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
       "file": "apps/web/src/test/reconciliation.test.tsx",
       "name": "shows disabled default and preserves the exact uncertain opt-in command across back navigation",
       "cases": null,
@@ -7310,6 +7425,46 @@
       "reason": "Issue #62: saved sales evidence, keyboard access, exact uncertain retry and export permission; no browser ledger."
     },
     {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "shows the exact table columns, search, date menu and counted chips with real saved data",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "searches the saved customer phone and filters delivered without inserting demo rows",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "opens the matching journey and two-column dialog on row click, with the actual confirmation timeline",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "does not misrepresent selected Paid now as recorded money or missing amounts as zero",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves.",
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
+      "cases": null
+    },
+    {
       "file": "apps/web/src/test/segmented-payment.test.tsx",
       "name": "chooses a payment segment without submitting its surrounding booking form",
       "cases": null,
@@ -7319,19 +7474,19 @@
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",
-      "name": "filters receipts by the IST booking date and preserves applied bounds while paging an edited draft",
+      "name": "filters saved receipts by IST booking date and keeps the range while paging",
       "cases": null,
       "disposition": "preserve",
       "group": "receipts",
-      "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",
-      "name": "rejects an inverted receipt date range without sending a new read",
+      "name": "uses exclusive IST day boundaries and native custom-range constraints",
       "cases": null,
       "disposition": "preserve",
       "group": "receipts",
-      "reason": "Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination."
+      "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
       "file": "apps/web/src/test/service-parity.test.tsx",

@@ -14,6 +14,8 @@ Selected files remain queued locally until the booking has saved. Upload and man
 
 A payment choice does not record money received. After a confirmed booking, actual receipt entry separately records the amount, receiving account and applicable receipt details. Printing loads the issued booking receipt and can be retried without making a new booking.
 
+Saving from the counter accepts blank fields. Incomplete entries are persisted as confirmed counter bookings, with exactly the entered values and missing details left unrecorded. They appear in Bookings under Confirmed counter bookings. Their save does not create dispatchable parcels, assessed tax, a payment obligation, a receipt, or customer messages. The existing fully assessed booking workflow continues to own those records. Request identity, transaction-scoped authorization and an atomic confirmation event protect optional counter saves too.
+
 ## Access and recovery
 
 Actions remain subject to organization and branch scope and server authorization. In-flow service setup uses the existing `pricing.publish` administration capability; this document does not create a new staff role or permission. Preserve pending and uncertain command recovery, retained requests, stale-price checks and draft-loss protection.

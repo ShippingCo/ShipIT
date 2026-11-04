@@ -10,15 +10,19 @@ import { ApiFailure } from '../data-access/errors';
 import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
+import {bookingEntries,type CounterEntry} from '../data-access/booking-entries';
 export type Phase = 'editing' | 'loading' | 'ready' | 'error' | 'uncertain' | 'stale';
 interface State {
   draft: Draft; additionalParcels: (ParcelDraft & {localKey:number})[]; parcelErrors: Errors[]; errors: Errors; customer?: CustomerDto; customerPhase: Phase; quote?: Quote; tax?: TaxCalculationDto;
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
   accountId?:string;accountName?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
   settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean; validationAttempt:number;
+  entry?:CounterEntry; failureCode?:string;
 }
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api), accountApi=customerAccounts(api);
+  const entryApi=bookingEntries(api);
+  let entryIntent:CommandIntent|undefined;
   let nextParcelKey=0;
   let state: State = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing',
     bookingPhase: 'editing', message: '', recoveryBlocked: recoveryMarker(api.scope), busy: false,validationAttempt:0 };
@@ -30,7 +34,7 @@ export function createBookingWorkflow(controller: ScopeController) {
   const set = (patch: Partial<State>) => { if (!current()) return; state = { ...state, ...patch }; listeners.forEach(l => l()); };
   const invalidateCommercial = () => { quoteIntent = prepareIntent = calculateIntent = undefined; taxInput = undefined;
     creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined,creditPhase:'editing',quote: undefined, tax: undefined, pricingPhase: 'editing', taxPhase: 'editing' }); };
-  const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking;
+  const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || !!entryIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking || !!state.entry;
   function validation(section: Parameters<typeof validate>[1]) {
     const errors = validate(state.draft, section);
     if(section!=='customer'&&!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='')errors.override='Enter the freight amount.';
@@ -51,7 +55,7 @@ export function createBookingWorkflow(controller: ScopeController) {
       if (['QUOTE_STALE', 'TAX_STALE'].includes(error.code)) { invalidateCommercial(); set({ pricingPhase: 'stale', taxPhase: 'stale' }); }
       if (error.code === 'VERSION_CONFLICT') set({ customerPhase: 'stale' });
     }
-    set({ [phase]: pending ? 'uncertain' : 'error', errors, message: failureMessage(error),validationAttempt:state.validationAttempt+(Object.keys(errors).length?1:0) });
+    set({ [phase]: pending ? 'uncertain' : 'error', errors, failureCode:error instanceof ApiFailure?error.code:undefined, message: failureMessage(error),validationAttempt:state.validationAttempt+(Object.keys(errors).length?1:0) });
     return pending;
   }
   const bookingBody=()=> {
@@ -73,12 +77,30 @@ export function createBookingWorkflow(controller: ScopeController) {
   };
   let unsubscribe = () => {};
   const purge = () => {
-    live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = creditIntent = undefined; taxInput = undefined;
+    live = false; customerIntent = quoteIntent = prepareIntent = calculateIntent = bookingIntent = creditIntent = entryIntent = undefined; taxInput = undefined;
     state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false,validationAttempt:0 };
     listeners.forEach(l => l());
   };
   return {
     api, customerApi, accountApi,
+    entryPending:()=>!!entryIntent,
+    requiresEntry() {
+      const errors=validate(state.draft,'booking');
+      for(const key of ['recipientRef','evidenceRef','handoverState','recipientState','gstin','specialCase','method'] as const)delete errors[key];
+      return Object.values(errors).some(Boolean)||additionalParcelErrors(state.draft,state.additionalParcels).some(e=>Object.values(e).some(Boolean))||!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='';
+    },
+    async saveEntry() {
+      if(!current()||state.busy||state.recoveryBlocked||state.booking||state.entry||bookingIntent)return;
+      entryIntent??=entryApi.create({fields:{...state.draft},additional_parcels:state.additionalParcels.map(({localKey:_,...parcel})=>parcel)});
+      set({busy:true,bookingPhase:'loading',errors:{},parcelErrors:[],message:'Saving booking…'});
+      try {
+        retainRecovery(entryIntent);
+        const entry=await entryApi.execute(entryIntent);if(!current())return;
+        clearRecovery(api.scope);entryIntent=undefined;
+        set({entry,bookingPhase:'ready',message:'Booking saved and confirmed. Missing details are not recorded.'});
+      }catch(error){if(!current())return;if(!failed(error,'bookingPhase')){clearRecovery(api.scope);entryIntent=undefined;}}
+      finally{set({busy:false});}
+    },
     addParcel() {
       if(locked()||state.additionalParcels.length>=49)return;
       set({additionalParcels:[...state.additionalParcels,{...emptyParcel(),localKey:++nextParcelKey}],parcelErrors:[]});invalidateCommercial();
