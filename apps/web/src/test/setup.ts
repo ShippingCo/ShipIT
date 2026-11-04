@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach } from 'vitest';
 import { transferableAbortController } from 'node:util';
+import { setTimeout as nextTimerTurn } from 'node:timers/promises';
 
 // jsdom supplies its own AbortSignal, while Request comes from Node's fetch.
 // Keep cancellation in the same realm as Request; Node 24 checks that identity.
@@ -34,6 +35,9 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  // Radix restores focus in a zero-delay timer after unmount. Let that callback
+  // finish in this jsdom realm before Vitest tears it down for the next file.
+  await nextTimerTurn(0);
 });
