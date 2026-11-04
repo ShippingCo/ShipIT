@@ -131,7 +131,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1792947600000-cash-closing',
     '1793034000000-shipment-costs',
     '1793120400000-versioned-settings',
-    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings',
+    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings','1793725200000-counter-entered-charges',
   ]);
 });
 
