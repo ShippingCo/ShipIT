@@ -1473,3 +1473,11 @@ Journey now owns its pure stage list and no longer imports the fictional store. 
 | apps/web/src/test/service-parity.test.tsx: uses exclusive IST day boundaries and native custom-range constraints | preserve | receipts |
 
 | apps/web/src/test/saved-bookings-demo.test.tsx: keeps the saved-booking popup open while an embedded shipment command is pending or uncertain | preserve | booking |
+
+Lots parity preserves the operational command view while using the demo card and destination-first dialog composition for the default screen. Incomplete counter entries remain planning records.
+
+| apps/web/src/test/lots-demo.test.tsx: matches destination-first demo creation, preselects saved entries, totals charges and saves the staff note | preserve | lots |
+| apps/web/src/test/lots-demo.test.tsx: shows the demo card metrics, progress, city, staff note and counted actions from saved data | preserve | lots |
+| apps/web/src/test/lots-demo.test.tsx: blocks closing an uncertain create and retries the identical idempotency key without a second lot | preserve | lots |
+| apps/web/src/test/lots-demo.test.tsx: reports queued, suppressed and unverified planning recipients separately without claiming delivery | preserve | lots |
+| apps/web/src/test/lots-demo.test.tsx: reads every cursor page and rejects a repeated cursor instead of presenting partial totals | preserve | lots |

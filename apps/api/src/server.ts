@@ -176,7 +176,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerOwnerReports(instance,database,config.environment!=='developer',config.ownerSummariesEnabled===true);
       registerAccountant(instance,database,config.environment!=='developer');
       registerDaily(instance,database,config.environment!=='developer');
-      registerLots(instance,createLotService(database,auth.keys.browser),config.environment!=='developer');
+      registerLots(instance,createLotService(database,auth.keys.browser,whatsapp),config.environment!=='developer');
       registerTax(instance,createTaxService(database,pricingClock),config.environment!=='developer');
       registerCustomers(instance,createCustomerService(database,auth.keys.browser),config.environment!=='developer');
       registerMemberships(instance,createMembershipService(database),config.environment!=='developer');

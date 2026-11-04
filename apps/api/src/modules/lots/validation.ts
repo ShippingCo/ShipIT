@@ -14,13 +14,20 @@ function name(value:unknown):string {
   return result;
 }
 export function command(operation:LotOperation,input:unknown):LotInput {
-  const fields=operation==='lots.create'?['name','destination_key']:operation==='lots.update'?['expected_version','name']:
+  const fields=operation==='lots.create'?['name','destination_key','note','planning_entry_ids','planning_route_id']:operation==='lots.update'?['expected_version','name','note','planning_entry_ids','planning_route_id']:
     operation==='lots.archive'?['expected_version']:operation==='lots.membership.add'?['expected_version','parcel_id']:
     operation==='lots.membership.remove'?['expected_version','membership_id']:['expected_version','membership_id','target_lot_id','expected_target_version'];
   const b=object(input,fields);
-  if(operation==='lots.create')return {name:name(b.name),destination_key:destination(b.destination_key)};
+  const metadata:Pick<LotInput,'note'|'planning_entry_ids'|'planning_route_id'>={};
+  if(b.planning_route_id!==undefined)metadata.planning_route_id=b.planning_route_id===null?null:uuid(b.planning_route_id,'route_id');
+  if(b.note!==undefined){if(typeof b.note!=='string'||b.note.length>1000)throw new FieldValidationError('note','OUT_OF_RANGE');metadata.note=b.note;}
+  if(b.planning_entry_ids!==undefined){
+    if(!Array.isArray(b.planning_entry_ids)||b.planning_entry_ids.length>50)throw new FieldValidationError('planning_entry_ids','OUT_OF_RANGE');
+    metadata.planning_entry_ids=[...new Set(b.planning_entry_ids.map(id=>uuid(id,'planning_entry_ids')))].sort();
+  }
+  if(operation==='lots.create')return {name:name(b.name),destination_key:destination(b.destination_key),...metadata};
   const common={expected_version:integer(b.expected_version,'expected_version',1,2147483646)};
-  if(operation==='lots.update')return {...common,name:name(b.name)};
+  if(operation==='lots.update')return {...common,name:name(b.name),...metadata};
   if(operation==='lots.archive')return common;
   if(operation==='lots.membership.add')return {...common,parcel_id:uuid(b.parcel_id,'parcel_id')};
   const member={...common,membership_id:uuid(b.membership_id,'membership_id')};

@@ -3,7 +3,7 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {OperationalPackages as Packages} from '../operations/Packages';
-import Lots from '../operations/Lots';
+import {OperationalLots as Lots} from '../operations/Lots';
 import Routes from '../operations/Routes';
 import {createScopeController} from '../operator/scope';
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;

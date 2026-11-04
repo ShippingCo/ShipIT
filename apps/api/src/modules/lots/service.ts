@@ -1,3 +1,5 @@
+import {createLotMessages} from './messages.ts';
+import type {WhatsappDependencies} from '../whatsapp/types.ts';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { HttpError,FieldValidationError } from '../../plugins/errors.ts';
@@ -11,12 +13,12 @@ import { appendLot } from '../audit/repository.ts';
 import * as repository from './repository.ts';
 export function lotDto(r:LotRow):LotDto {
   return {id:r.id,code:r.code,name:r.name,destination_key:r.destination_key,state:r.state,version:r.version,
-    created_at:instant(r.created_at),updated_at:instant(r.updated_at),archived_at:r.archived_at?instant(r.archived_at):null,active_member_count:r.active_member_count};
+    created_at:instant(r.created_at),updated_at:instant(r.updated_at),archived_at:r.archived_at?instant(r.archived_at):null,active_member_count:r.active_member_count,...(!r.planning_route_set?{}:{planning_route_id:r.planning_route_id??null}),...(r.note==null?{}:{note:r.note}),...(r.planning_entry_ids==null?{}:{planning_entry_ids:r.planning_entry_ids})};
 }
 export function membershipDto(r:MembershipRow):LotMembershipDto {
   return {id:r.id,lot_id:r.lot_id,parcel_id:r.parcel_id,started_at:instant(r.started_at),ended_at:r.ended_at?instant(r.ended_at):null,end_reason:r.end_reason};
 }
-export function createLotService(database:DatabasePool,cursorKey:Buffer) {
+export function createLotService(database:DatabasePool,cursorKey:Buffer,whatsapp?:WhatsappDependencies) {
   const codec=lotCursorCodec(cursorKey);
   async function execute(session:string,lotInput:unknown,parcelInput:unknown,query:unknown,keyInput:unknown,rawHeaders:readonly string[],bodyInput:unknown,
     operation:LotOperation,correlation:string):Promise<LotDto|LotMembershipResult> {
@@ -38,7 +40,9 @@ export function createLotService(database:DatabasePool,cursorKey:Buffer) {
       const parcel=parcelId?await repository.parcel(s.command,parcelId,true):null;
       if(body.membership_id)await repository.membershipById(s.command,body.membership_id);
       const current=parcel?await repository.currentMembership(s.command,parcel.id):null;
-      if(operation==='lots.create'&&!await repository.knownDestination(s.command,body.destination_key!))throw new FieldValidationError('destination_key','INVALID_FORMAT');
+      if(body.planning_route_id)await repository.validatePlanningRoute(s.command,body.planning_route_id);
+      if(body.planning_entry_ids)await repository.validatePlanningEntries(s.command,body.planning_entry_ids,id);
+      if(operation==='lots.create'&&!body.planning_entry_ids?.length&&!await repository.knownDestination(s.command,body.destination_key!))throw new FieldValidationError('destination_key','INVALID_FORMAT');
       if(body.target_lot_id===id)throw new HttpError('LOT_MEMBERSHIP_CONFLICT');
       for(const lot of lots){
         if(lot.state!=='active')throw new HttpError('LOT_STATE_CONFLICT');
@@ -101,5 +105,5 @@ export function createLotService(database:DatabasePool,cursorKey:Buffer) {
         codec.encode(binding,{id:last.id,value:instant('created_at' in last?last.created_at:last.started_at)}):null}};
     });
   }
-  return {execute,read,list};
+  return {execute,read,list,message:createLotMessages(database,whatsapp)};
 }

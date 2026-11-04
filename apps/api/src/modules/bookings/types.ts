@@ -9,11 +9,11 @@ export interface ParcelFilter {
   destination?:string|null;ungrouped?:boolean;customerId:string|null;from:string|null;to:string|null;sort:ParcelSort;limit:number;cursor:string|null;
 }
 export interface ParcelBoundary { value:string;id:string }
-export interface ParcelReadRow { booking_details?:import('@shippingco/shared').BookingParcelDetails|null;
+export interface ParcelReadRow { destination_key?:string; booking_details?:import('@shippingco/shared').BookingParcelDetails|null;
   id:string;booking_id:string;organization_id:string;franchise_id:string;version:number;status:ParcelStatus;custody:string;
   docket:string;weight_grams:string|number;sender_snapshot:CustomerSnapshot;recipient_snapshot:ParcelInput['recipient'];confirmed_at:Date;
 }
-export interface ParcelReadDto { details?:import('@shippingco/shared').BookingParcelDetails;
+export interface ParcelReadDto { destination_key?:string; details?:import('@shippingco/shared').BookingParcelDetails;
   id:string;booking_id:string;version:number;status:ParcelStatus;custody:string;docket:string;weight_grams:number;confirmed_at:string;
   sender:CustomerSnapshot;recipient:ParcelInput['recipient'];
 }
@@ -67,7 +67,7 @@ function safeInteger(value:string|number) {
   return parsed;
 }
 export function parcelReadDto(row:ParcelReadRow):ParcelReadDto {
-  return {...(row.booking_details?{details:pick(row.booking_details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml','declared_value_paise'])}:{}),id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
+  return {...(row.destination_key?{destination_key:row.destination_key}:{}),...(row.booking_details?{details:pick(row.booking_details,['country','postal_code','city','region','contents_type','contents_description','liquid_quantity_ml','declared_value_paise'])}:{}),id:row.id,booking_id:row.booking_id,version:row.version,status:row.status,custody:row.custody,docket:row.docket,
     weight_grams:safeInteger(row.weight_grams),confirmed_at:row.confirmed_at.toISOString(),sender:party(row.sender_snapshot),
     recipient:pick(row.recipient_snapshot,['name','phone_normalized','phone_display','address'])};
 }

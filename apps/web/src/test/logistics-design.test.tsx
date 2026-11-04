@@ -3,7 +3,7 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter,useLocation} from 'react-router-dom';
 import {OperationalPackages as Packages} from '../operations/Packages';
-import Lots from '../operations/Lots';
+import {OperationalLots as Lots} from '../operations/Lots';
 import Routes from '../operations/Routes';
 import {createScopeController} from '../operator/scope';
 

@@ -1,7 +1,10 @@
 import { scopedQuery,assertTenantAccess,type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import type { LotRow,MembershipRow,LotInput,LotOperation,LotFilter,LotBoundary,ParcelReference,LotDto,LotMembershipResult } from './types.ts';
-const lotColumns=`l.id,l.code,l.name,l.destination_key,l.state,l.version,l.created_at,l.updated_at,l.archived_at,
+const planningColumns=`(SELECT c.input->'planning_entry_ids' FROM shipit.lot_commands c WHERE c.organization_id=l.organization_id AND c.franchise_id=l.franchise_id AND c.lot_id=l.id AND c.input ? 'planning_entry_ids' ORDER BY COALESCE(c.expected_version,0) DESC,c.id DESC LIMIT 1)`;
+const noteColumns=`(SELECT c.input->>'note' FROM shipit.lot_commands c WHERE c.organization_id=l.organization_id AND c.franchise_id=l.franchise_id AND c.lot_id=l.id AND c.input ? 'note' ORDER BY COALESCE(c.expected_version,0) DESC,c.id DESC LIMIT 1)`;
+const routeColumns=`(SELECT c.input->'planning_route_id' FROM shipit.lot_commands c WHERE c.organization_id=l.organization_id AND c.franchise_id=l.franchise_id AND c.lot_id=l.id AND c.input ? 'planning_route_id' ORDER BY COALESCE(c.expected_version,0) DESC LIMIT 1)`;
+const lotColumns=`EXISTS(SELECT 1 FROM shipit.lot_commands c WHERE c.organization_id=l.organization_id AND c.franchise_id=l.franchise_id AND c.lot_id=l.id AND c.input ? 'planning_route_id') AS planning_route_set,${routeColumns} AS planning_route_id,${planningColumns} AS planning_entry_ids,${noteColumns} AS note,l.id,l.code,l.name,l.destination_key,l.state,l.version,l.created_at,l.updated_at,l.archived_at,
   (SELECT count(*)::int FROM shipit.lot_memberships m WHERE m.organization_id=l.organization_id AND m.franchise_id=l.franchise_id AND m.lot_id=l.id AND m.ended_at IS NULL) AS active_member_count`;
 const memberColumns='m.id,m.lot_id,m.parcel_id,m.started_at,m.ended_at,m.end_reason';
 // Cross-domain and evidence-only capabilities cannot read operational lot records.
@@ -147,4 +150,24 @@ export async function guardActiveRoute(scope:TenantAccess,id:string) {
     JOIN shipit.routes r ON r.organization_id=s.organization_id AND r.franchise_id=s.franchise_id AND r.id=s.route_id
     WHERE {{franchise:s.organization_id:s.franchise_id}} AND s.lot_id=$1 AND s.ended_at IS NULL AND r.state='planning') AS active`,[id])).rows[0];
   if(row?.active)throw new HttpError('LOT_ACTIVE_ROUTE');
+}
+
+/** The franchise lock held by active() serializes planning assignment with every lot command. */
+export async function validatePlanningEntries(scope:TenantAccess,ids:string[],lotId:string|null){
+ const c=assertTenantAccess(scope,['lots.create','lots.update']);
+ if(!ids.length)return;
+ const rows=await scopedQuery<{id:string}>(scope,[c.action],`SELECT id FROM shipit.counter_bookings
+   WHERE {{franchise:organization_id:franchise_id}} AND id=ANY($1::uuid[])`,[ids]);
+ if(rows.rows.length!==ids.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ const conflict=await scopedQuery(scope,[c.action],`SELECT l.id FROM shipit.lots l
+   WHERE {{franchise:l.organization_id:l.franchise_id}} AND l.state='active' AND ($1::uuid IS NULL OR l.id<>$1)
+   AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(COALESCE(${planningColumns},'[]'::jsonb)) e WHERE e.value=ANY($2::text[]))`,[lotId,ids]);
+ if(conflict.rows.length)throw new HttpError('LOT_MEMBERSHIP_CONFLICT');
+}
+
+export async function validatePlanningRoute(scope:TenantAccess,id:string){
+ const c=assertTenantAccess(scope,['lots.create','lots.update']);
+ const rows=await scopedQuery<{state:string}>(scope,[c.action],`SELECT state FROM shipit.routes WHERE {{franchise:organization_id:franchise_id}} AND id=$1`,[id]);
+ if(!rows.rows.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ if(rows.rows[0]!.state!=='planning')throw new HttpError('ROUTE_MANIFEST_CONFLICT');
 }

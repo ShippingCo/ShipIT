@@ -27,6 +27,11 @@ export async function sourceValid(scope:TenantAccess,input:ResolvedOutboundInput
  if(!input.customer_id)return false;
  if(input.source_kind==='inbox')return (await scopedQuery(scope,['outbox.work'],`SELECT r.inbox_id FROM shipit.whatsapp_consent_receipts r
  WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.inbox_id=$1 AND r.customer_id=$2 AND r.intent='other' AND r.outcome='unchanged'`,[input.source_id,input.customer_id])).rows.length===1;
+ const lotRequest=(await scopedQuery(scope,['outbox.work'],`SELECT r.id FROM shipit.lot_message_requests r
+  WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.id=$1
+    AND EXISTS(SELECT 1 FROM jsonb_array_elements(r.targets) t JOIN shipit.parcels p ON p.id::text=t->>'parcel_id' AND p.organization_id=r.organization_id AND p.franchise_id=r.franchise_id JOIN shipit.bookings b ON b.id=p.booking_id AND b.organization_id=p.organization_id AND b.franchise_id=p.franchise_id JOIN shipit.customers c ON c.id=b.customer_id AND c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id WHERE t->>'parcel_id'=$2 AND t->>'customer_id'=$3 AND c.id::text=$3 AND b.customer_snapshot->>'phone'=c.phone_normalized)`,
+  [input.source_id,input.affected_entity_id,input.customer_id])).rows.length===1;
+ if(lotRequest)return true;
  const direct=(await scopedQuery(scope,['outbox.work'],`SELECT e.event_id FROM shipit.domain_events e JOIN shipit.bookings b
  ON b.organization_id=e.organization_id AND b.franchise_id=e.franchise_id
  JOIN shipit.customers c ON c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.customer_id

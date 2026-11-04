@@ -25,3 +25,7 @@
 .operation-dialog-body .ops-grid>.ops-fact { display:grid; gap:6px; }
 .operation-dialog-body .ops-detail>.ops-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media(max-width:600px) { .reference-logistics .workspace-page-header { flex-wrap:wrap; } .reference-logistics .workspace-filterbar .tf { flex:1; } }
+.lot-editor-fields { border:0; padding:0; margin:0; min-width:0; }
+.live-lots .lot-dests { overflow-wrap:anywhere; }
+.live-lots .grid3 { align-items:start; }
+@media(max-width:600px) { .lotpick-list li { flex-wrap:wrap; } .lotpick-dk { overflow-wrap:anywhere; } }
