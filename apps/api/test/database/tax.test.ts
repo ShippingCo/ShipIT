@@ -174,3 +174,26 @@ await test('first GST setup is atomic and concurrent changes cannot silently rep
  const rules=(await s.tax.effective(s.operator.token,org,A,randomUUID())).rules;
  assert.equal(rules.length,12);assert.ok(rules.every(r=>r.treatment==='exempt'&&r.components.length===0));
 });
+
+await test('two parcels save with entered charges and 18 percent GST without any published pricing',{timeout:30000},async t=>{
+ const s=await taxSetup(t);await s.db.prepareBookings();
+ const {createCustomerService}=await import('../../src/modules/customers/service.ts');
+ const {createBookingService}=await import('../../src/modules/bookings/service.ts');
+ const {contact}=await import('../customer-support.ts');
+ const customer=await createCustomerService(s.pool,s.keys.browser).create(s.operator.token,org,A,randomUUID(),contact,randomUUID());
+ await s.tax.configure(s.local.token,org,A,randomUUID(),{mode:'courier18',supplier_state:'27',supplier_gstin:taxPolicy.supplier_gstin,expected_version:0},randomUUID());
+ const pricing_input={destination_key:'NEW_CITY',service:'express' as const,weight_grams:6500,charges:{freight_paise:15000,packing_paise:3000}};
+ const quote=await s.pricing.quote(s.operator.token,org,A,randomUUID(),pricing_input,randomUUID());
+ const tax_intent={quote_id:quote.id,pricing_input,facts:{...taxFacts,handover_state:'06'}};
+ const intent=await s.tax.prepare(s.operator.token,org,A,randomUUID(),tax_intent,randomUUID());
+ const tax=await s.tax.calculate(s.operator.token,org,A,randomUUID(),{intent_id:intent.id},randomUUID());
+ assert.equal(tax.final_payable_paise,21240);assert.equal(tax.igst_paise,3240);
+ const service=createBookingService(s.pool,s.keys.browser,s.clock),key=randomUUID();
+ const body={customer_id:customer.id,expected_customer_version:customer.version,tax_calculation_id:tax.id,tax_intent,
+ parcels:[{docket:'ENTERED-A',weight_grams:3000,recipient:{address:'21 Fictional Street'}},{docket:'ENTERED-B',weight_grams:3500,recipient:{address:'21 Fictional Street'}}]};
+ const booking=await service.create(s.operator.token,org,A,key,body,randomUUID());
+ assert.equal(booking.parcels.length,2);assert.equal(booking.payment_obligation.total_paise,21240);
+ assert.deepEqual(booking.charges.pricing.inputs.charges,pricing_input.charges);
+ assert.deepEqual(await service.create(s.operator.token,org,A,key,body,randomUUID()),booking);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.pricing_versions')).rows[0]!.n,0);
+});

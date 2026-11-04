@@ -1409,11 +1409,9 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | --- | --- | --- |
 | apps/web/src/test/counter.test.tsx: uses the original demo field order and controls without separate customer or pricing steps | preserve | booking |
 | apps/web/src/test/counter.test.tsx: looks up repeat customers on phone blur and only fills the selected customer | preserve | booking |
-| apps/web/src/test/counter.test.tsx: creates a new customer as part of save and does not duplicate it after returning to the form | preserve | booking |
 | apps/web/src/test/counter.test.tsx: does not replace an existing customer with a different name or treat lookup failure as a new customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
 | apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
-| apps/web/src/test/counter.test.tsx: shows published destinations with a recoverable failure and no invented fallback choices | preserve | seam |
 | apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves declared goods value without making up structured delivery or contents facts | preserve | booking |
 | apps/web/src/test/counter.test.tsx: converts packing and freight to exact paise and rejects invalid non-empty amounts | preserve | booking |
@@ -1438,18 +1436,18 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: focus revalidation preserves draft for unchanged permissions; revocation purges actual generation | preserve | seam |
 | apps/web/src/test/counter.test.tsx: does not claim an empty receipt result until the edited docket is searched | preserve | seam |
 | apps/web/src/test/counter.test.tsx: receipt discovery supports empty and safe denied/retry states | preserve | seam |
-| apps/web/src/test/counter.test.tsx: shows source credit, retains an uncertain request identity and saves the exact approved debtor | preserve | seam |
-| apps/web/src/test/counter.test.tsx: invalidates approval after any shipment edit and gives a clear held-account denial | preserve | seam |
-| apps/web/src/test/counter.test.tsx: can save a booking immediately after creating and using a service in its dialog | preserve | booking |
 | apps/web/src/test/counter.test.tsx: retries only the unconfirmed lot assignment after a multi-package booking is saved | preserve | booking |
 | apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
 | apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
 | apps/web/src/test/counter.test.tsx: keeps the entered booking when leaving the draft is cancelled | preserve | booking |
 | apps/web/src/test/counter.test.tsx: adds and removes packages directly below the docket row before saving a customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: cancels an unsaved booking only after confirming discard and can keep editing | preserve | booking |
-| apps/web/src/test/counter.test.tsx: invalidates the total and shows a missing handover fact inline | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves directly from the page without a billing confirmation popup or declaration checkbox | preserve | booking |
 | apps/web/src/test/counter.test.tsx: direct save retains the exact %s request after a lost acknowledgement | preserve | booking |
-| apps/web/src/test/counter.test.tsx: keeps required registered billing facts inline and does not save an invalid GSTIN | preserve | booking |
 | apps/web/src/test/business-gst.test.tsx: saves the demo GST preference in one step and retries a lost response with the same key and body | preserve | booking |
 | apps/web/src/test/counter.test.tsx: uses the saved demo GST setting for a live summary and saves without billing steps | preserve | booking |
+| apps/web/src/test/counter.test.tsx: allows any destination and service when no rate card exists | preserve | booking |
+| apps/web/src/test/counter.test.tsx: creates a new customer once when save is retried after a rejected booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: retains an uncertain credit request identity and saves the exact approved debtor | preserve | booking |
+| apps/web/src/test/counter.test.tsx: invalidates credit approval after shipment edits and preserves held-account denial | preserve | booking |
+| apps/web/src/test/counter.test.tsx: removes the entire additional-options section and every control inside it | preserve | booking |

@@ -72,6 +72,8 @@ export interface PricingVersionDto extends PricingDraftInput {
   rules:(PricingRuleInput & {id:string})[];
 }
 export interface PricingQuoteInput {
+  /** Counter-entered charges; no rate card or override approval is required. */
+  charges?:{freight_paise:number;packing_paise:number};
   /** Immutable named service and rate selected from this branch's catalog. */
   service_option_id?:string;
   customer_account_id?:string;
@@ -82,7 +84,7 @@ export interface PricingQuoteInput {
 }
 export interface PricingQuoteDto {
   service_option?:{id:string;name:string};
-  id:string; proposal:true; card_id:string; rate_version_id:string; rate_version_number:number; rule_id:string|null;
+  id:string; proposal:true; card_id:string|null; rate_version_id:string|null; rate_version_number:number; rule_id:string|null;
   account?:{id:string;revision_id:string;version:number;rate_source:'account'|'normal';rate_revision_id:string|null;rule_index:number|null};
   policy:{effective_from:string;effective_to:string;quote_validity_seconds:number;override_tolerance_paise:number;approval_ref:string;source_ref:string};
   inputs:PricingQuoteInput; freight_suggestion_paise:number; packing_paise:number; freight_paise:number;
