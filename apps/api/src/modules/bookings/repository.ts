@@ -56,7 +56,7 @@ const listOrder={
   docket_desc:{expression:'p.docket COLLATE "C"',comparison:'<',direction:'DESC'},
 } as const;
 const readColumns=`p.id,p.booking_id,p.organization_id,p.franchise_id,p.version,p.status,p.custody,p.docket,p.weight_grams,
-  p.sender_snapshot,p.recipient_snapshot,p.booking_details,b.confirmed_at`;
+  p.sender_snapshot,p.recipient_snapshot,p.booking_details,b.confirmed_at,b.tax_intent->'pricing_input'->>'destination_key' AS destination_key`;
 
 export async function listParcels(scope:TenantAccess,filter:ParcelFilter,boundary:ParcelBoundary|null) {
   assertTenantAccess(scope,['parcels.list']);

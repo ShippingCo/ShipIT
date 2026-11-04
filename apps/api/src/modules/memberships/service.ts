@@ -570,7 +570,7 @@ export async function withLotScope<T>(database:DatabasePool,sessionToken:string,
       if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
       const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
         organizationWide:false,correlationId,provenance:'membership' as const};
-      return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'lots.audit'}),
+      return await work({command:issueTenantAccess(tx,{...context,action}),outbound:action==='lots.update'?issueTenantAccess(tx,{...context,action:'outbox.work',actor:{type:'service',id:'outbox-worker'},provenance:'trusted-event'}):null,audit:reading?null:issueTenantAccess(tx,{...context,action:'lots.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'lots.events'}),
         dispatcher:administrativeScope('lots.update',memberships,all).includes(franchiseId)||memberships.some(m=>m.role==='dispatcher'&&m.franchiseIds.includes(franchiseId)),
         revision:JSON.stringify(memberships.map(m=>[m.id,m.version,m.role,m.franchiseIds]))});

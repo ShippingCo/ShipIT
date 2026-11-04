@@ -9,6 +9,7 @@ export function registerLots(app:FastifyInstance,service:ReturnType<typeof creat
         request.headers['idempotency-key'],request.raw.rawHeaders,request.body,operation,request.id);
       return reply.code(operation==='lots.create'?201:200).send(result);
     }});
+  app.post<{Params:{lot_id:string}}>('/api/v1/lots/:lot_id/messages',request=>service.message(session(request),request.params.lot_id,request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
   route('POST','/api/v1/lots','lots.create');
   route('PATCH','/api/v1/lots/:lot_id','lots.update');
   route('POST','/api/v1/lots/:lot_id/archive','lots.archive');

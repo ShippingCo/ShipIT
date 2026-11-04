@@ -183,9 +183,10 @@ await test('docket, UUID, status, customer and date reads return only allowliste
     assert.equal(filtered.statusCode,200,filtered.body);assert.equal(filtered.json().items.length,expected);
   }
   const detail=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
-  assert.equal(detail.statusCode,200,detail.body);assert.deepEqual(Object.keys(detail.json()).sort(),['booking_id','confirmed_at','custody','docket','id','recipient','sender','status','version','weight_grams']);
+  assert.equal(detail.statusCode,200,detail.body);assert.deepEqual(Object.keys(detail.json()).sort(),['booking_id','confirmed_at','custody','destination_key','docket','id','recipient','sender','status','version','weight_grams']);
   const timeline=await s.app.inject({url:'/api/v1/parcels/'+parcel.id+'/timeline?'+new URLSearchParams(base),cookies:s.cookies(s.operator.token)});
   assert.equal(timeline.statusCode,200,timeline.body);assert.deepEqual(timeline.json().items.map((item:{sequence:number;code:string;label:string})=>[item.sequence,item.code,item.label]),[[1,'parcel.booked','Booking received']]);
+  assert.equal(detail.json().destination_key,'SYN_DEST');
   const surfaces=list.body+detail.body+timeline.body;
   for(const prohibited of ['key_digest','fingerprint','token_hash','challenge','verifier','supplier_gstin','recipient_gstin','private_note'])assert.ok(!surfaces.includes(prohibited));
   for(const query of [{sort:'created_at_desc;SELECT 1'},{docket:'SYN%'},{status:'anything'},{limit:'101'},{from:'not-a-date'}]) {

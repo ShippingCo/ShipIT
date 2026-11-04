@@ -2251,6 +2251,36 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "matches destination-first demo creation, preselects saved entries, totals charges and saves the staff note",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "shows the demo card metrics, progress, city, staff note and counted actions from saved data",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "blocks closing an uncertain create and retries the identical idempotency key without a second lot",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "reports queued, suppressed and unverified planning recipients separately without claiming delivery",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "reads every cursor page and rejects a repeated cursor instead of presenting partial totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "reattaches an existing shipment route when only planning entries are added",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
         "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
         "cases": null
@@ -2848,6 +2878,11 @@
       {
         "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
         "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "shows the server planning lot on an incomplete saved booking without fabricating a shipment membership",
         "cases": null
       },
       {
@@ -6505,6 +6540,54 @@
       "reason": "Issue #186 regression: scoped operational date/filter/navigation behavior and terminal/action safeguards; no production demo authority."
     },
     {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "matches destination-first demo creation, preselects saved entries, totals charges and saves the staff note",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "shows the demo card metrics, progress, city, staff note and counted actions from saved data",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "blocks closing an uncertain create and retries the identical idempotency key without a second lot",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "reports queued, suppressed and unverified planning recipients separately without claiming delivery",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "reads every cursor page and rejects a repeated cursor instead of presenting partial totals",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "reattaches an existing shipment route when only planning entries are added",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Preserve the existing shipment route when adding only planning entries."
+    },
+    {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
       "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
       "cases": null,
@@ -7463,6 +7546,14 @@
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
       "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
       "cases": null
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "shows the server planning lot on an incomplete saved booking without fabricating a shipment membership",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Keep the saved booking lot display consistent with audited planning assignments."
     },
     {
       "file": "apps/web/src/test/segmented-payment.test.tsx",

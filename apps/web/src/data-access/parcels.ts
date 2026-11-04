@@ -7,6 +7,7 @@ const liveStatuses = ['booked','checked_in','dispatched','in_transit','out_for_d
 export const parcelStatuses = [...liveStatuses,'cancelled'] as const;
 export type ParcelStatus = typeof parcelStatuses[number];
 export interface ParcelRead {
+  destination_key?:string;
   details?:import('@shippingco/shared').BookingParcelDetails;
   id:string; booking_id:string; version:number; status:ParcelStatus; custody:string; docket:string;
   weight_grams:number; confirmed_at:string;
@@ -25,7 +26,7 @@ export type ParcelCommand =
 const party = object({source_customer_id:uuid,source_customer_version:integer(1),name:text,phone:text,phone_display:text,address:text});
 const recipient = object({name:nullable(text),phone_normalized:nullable(text),phone_display:nullable(text),address:text});
 export const parcelDto:Decoder<ParcelRead> = object({id:uuid,booking_id:uuid,version:integer(1),status:choice(...parcelStatuses),custody:text,
-  details:optional(object({country:optional(choice('IN')),postal_code:optional(text),city:optional(text),region:optional(text),contents_type:optional(choice('solid','documents','liquid','semi_liquid','other')),contents_description:optional(text),liquid_quantity_ml:optional(nullable(integer(1))),declared_value_paise:optional(integer(0))})),docket:text,weight_grams:integer(1),confirmed_at:instant,sender:party,recipient});
+  destination_key:optional(text),details:optional(object({country:optional(choice('IN')),postal_code:optional(text),city:optional(text),region:optional(text),contents_type:optional(choice('solid','documents','liquid','semi_liquid','other')),contents_description:optional(text),liquid_quantity_ml:optional(nullable(integer(1))),declared_value_paise:optional(integer(0))})),docket:text,weight_grams:integer(1),confirmed_at:instant,sender:party,recipient});
 export const timelineItem:Decoder<ParcelTimelineItem> = object({event_id:uuid,sequence:integer(),occurred_at:instant,code:text,status:choice(...parcelStatuses),label:text});
 const transition:Decoder<ParcelTransitionDto> = object({id:uuid,booking_id:uuid,docket:text,version:integer(1),status:choice(...liveStatuses),
   custody:choice('awaiting_intake','franchise_office','route_dispatch','delivery_agent','recipient'),attempts_started:integer(),failed_attempt_count:integer(),event_id:uuid,transitioned_at:instant});

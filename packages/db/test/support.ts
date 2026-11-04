@@ -374,6 +374,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.prepareBookings();
       const owner=handle.ownerPool();
       try {
+        if((await owner.query("SELECT to_regclass('shipit.lot_message_requests') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT,UPDATE ON shipit.lot_message_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.lots,shipit.lot_memberships,shipit.lot_commands TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(name,state,version,updated_at,archived_at,last_command_id) ON shipit.lots TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(ended_at,end_command_id,end_reason) ON shipit.lot_memberships TO ${identifier(resource.runtimeRole)}`);
@@ -632,6 +633,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.prepareWhatsappConsent();await handle.prepareBookings();
       const owner=handle.ownerPool();
       try {
+        if((await owner.query("SELECT to_regclass('shipit.lot_message_requests') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT,UPDATE ON shipit.lot_message_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.whatsapp_outbound,shipit.whatsapp_outbound_attempts,shipit.whatsapp_outbound_redrives TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,reason_code,version,attempts,cycle_attempts,attempt_id,lease_until,available_at,sealed_payload) ON shipit.whatsapp_outbound TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT EXECUTE ON FUNCTION shipit.whatsapp_outbound_scope(uuid,timestamptz,boolean),shipit.whatsapp_outbound_disclose(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);

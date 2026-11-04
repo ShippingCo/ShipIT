@@ -67,7 +67,8 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
    const balance=metadata.value?.balances.get(p.booking_id),member=metadata.value?.memberships.get(p.id),lot=member?lotMap.get(member.lot_id):null;
    return {id:'parcel:'+p.id,docket:p.docket,name:p.sender.name,phone:p.sender.phone_display,city:cityName(p.details?.city||lot?.destination_key||''),address:p.recipient.address,service:'—',weight:p.weight_grams/1000,amount:balance?.gross_paise??null,payment:balance?balance.outstanding_paise===0?'paid':'topay':'unknown',status:p.status,createdAt:Date.parse(p.confirmed_at),lotId:member?.lot_id??null,lotCode:lot?.code??(member?'Assigned':''),parcel:p};
   });
-  return [...(entries.value?.items??[]).map(counterBookingRow),...shipmentRows];
+  const planningLots=new Map((lotPage.value?.items??[]).filter(l=>l.state==='active').flatMap(l=>(l.planning_entry_ids??[]).map(id=>[id,l] as const)));
+  return [...(entries.value?.items??[]).map(entry=>{const row=counterBookingRow(entry),lot=planningLots.get(entry.id);return {...row,lotId:lot?.id??null,lotCode:lot?.code??''};}),...shipmentRows];
  },[page.items,entries.value,metadata.value,lotPage.value]);
  const [bulkAction,setBulkAction]=useState<'check_in'|'dispatch'|null>(null),[bulkBusy,setBulkBusy]=useState(false);
  const [q,setQ]=useState(''),[filter,setFilter]=useState(params.get('filter')||'all'),[range,setRange]=useState<DatePreset>(params.get('booked')==='today'?'today':'all'),[custom,setCustom]=useState<CustomRange>({from:'',to:''});

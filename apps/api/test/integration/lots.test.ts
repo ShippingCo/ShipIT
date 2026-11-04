@@ -12,7 +12,9 @@ describe('lot strict contract',()=>{
   it('normalizes only name; code, destination and ownership cannot be mass assigned',()=>{
     expect(command('lots.create',{name:'  Batch  ',destination_key:'SYN_DEST'})).toEqual({name:'Batch',destination_key:'SYN_DEST'});
     for(const value of ['', 'a',' SYN','SYN\n','A'.repeat(33),'Mumbai City'])expect(()=>destination(value)).toThrow();
-    for(const extra of ['code','actor','organization_id','franchise_id','version','state','route_id','note'])expect(()=>command('lots.create',{name:'Lot',destination_key:'SYN', [extra]:id})).toThrow();
+    for(const extra of ['code','actor','organization_id','franchise_id','version','state','route_id'])expect(()=>command('lots.create',{name:'Lot',destination_key:'SYN', [extra]:id})).toThrow();
+    expect(command('lots.create',{name:'Lot',destination_key:'SYN',note:'Keep upright',planning_entry_ids:[id]})).toMatchObject({note:'Keep upright',planning_entry_ids:[id]});
+    expect(()=>command('lots.create',{name:'Lot',destination_key:'SYN',note:'x'.repeat(1001)})).toThrow();
     for(const name of ['', ' '.repeat(4),'a'.repeat(121),'bad\u0000','bad\ud800'])expect(()=>command('lots.create',{name,destination_key:'SYN'})).toThrow();
   });
   it('requires versions and exact membership identity with closed operation inputs',()=>{

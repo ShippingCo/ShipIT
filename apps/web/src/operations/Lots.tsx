@@ -20,7 +20,7 @@ import { Msym } from '../components/m3/Icon';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const canWrite=(roles:readonly OperatorRole[])=>(canAdminister(roles,'lots.create')||roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role)));
-export default function Lots({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
+export function OperationalLots({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>lots(api),[api]);
  const parcelSource=useMemo(()=>parcels(api),[api]);
  const [state,setState]=useState<'active'|'archived'>('active'),[selected,setSelected]=useState<string|null>(null),[createOpen,setCreateOpen]=useState(false),[addingParcels,setAddingParcels]=useState(false);
@@ -79,3 +79,5 @@ function MoveLotForm({source,sourceLot,member,command,moved,cancel}:{source:Retu
 }
 function MemberActions({lot,write,busy,remove,move}:{lot:LotDto;write:boolean;busy:boolean;remove:()=>void;move:()=>void}){return write?<span className="ops-row-actions"><button className="btn btn-outlined" disabled={busy||lot.state!=='active'} onClick={move}>Move</button><button className="btn btn-text" disabled={busy||lot.state!=='active'} onClick={remove}>Remove</button></span>:<span className="ops-note">—</span>;}
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>}
+
+export {default} from './LotsWorkspace';
