@@ -48,3 +48,20 @@ describe('saved bookings use the demo composition',()=>{
   expect(filterSavedBookings([row],'topay')).toHaveLength(0);expect(filterSavedBookings([row],'active')).toHaveLength(1);
  });
 });
+it('keeps the saved-booking popup open while an embedded shipment command is pending or uncertain',async()=>{
+ const parcel={...f.booking.parcels[0],booking_id:f.bookingId,version:1,custody:'awaiting_intake',confirmed_at:f.now,sender:{source_customer_id:f.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>{
+  if(path.startsWith('/api/v1/bookings/entries?'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/parcels?'))return f.json({items:[parcel],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/lot-membership'))return f.json(null);
+  if(path.includes('/timeline'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/lots?'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/payments'))return f.json(f.balance);
+  throw Error('Unexpected read');
+ }));
+ const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
+ render(<MemoryRouter><SavedBookings controller={controller} roles={['org_admin']} operationalDetail={(_id,_close,_refresh,busy)=><><button onClick={()=>busy(true)}>Start synthetic shipment command</button><button onClick={()=>busy(false)}>Resolve synthetic shipment command</button></>}/></MemoryRouter>);
+ fireEvent.click(await screen.findByText('SYN-33'));fireEvent.click(screen.getByRole('button',{name:'Check In at Hub'}));fireEvent.click(screen.getByRole('button',{name:'Start synthetic shipment command'}));
+ expect(screen.queryByRole('button',{name:'Close'})).toBeNull();fireEvent.keyDown(screen.getByRole('dialog'),{key:'Escape'});expect(screen.getByRole('dialog')).toBeVisible();expect(screen.getByLabelText('Move to lot')).toBeDisabled();
+ fireEvent.click(screen.getByRole('button',{name:'Resolve synthetic shipment command'}));fireEvent.click(screen.getByRole('button',{name:'Close'}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+});

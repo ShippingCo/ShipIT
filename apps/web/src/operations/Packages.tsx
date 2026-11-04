@@ -101,7 +101,7 @@ function PackageBulk({controller,source,rows,reload,initialAction='check_in',onB
  </section>;
 }
 
-function PackageDetail({controller,roles,parcelId,close,refreshed,embedded=false}:{controller:ScopeController;roles:readonly OperatorRole[];parcelId:string;close:()=>void;refreshed:()=>void;embedded?:boolean}){
+function PackageDetail({controller,roles,parcelId,close,refreshed,embedded=false,onBusyChange}:{controller:ScopeController;roles:readonly OperatorRole[];parcelId:string;close:()=>void;refreshed:()=>void;embedded?:boolean;onBusyChange?:(busy:boolean)=>void}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const deliverySource=useMemo(()=>deliveries(api),[api]),[deliveryBusy,setDeliveryBusy]=useState(false);
  const detail=useResource(parcelId,signal=>source.read(parcelId,signal));
@@ -113,7 +113,9 @@ function PackageDetail({controller,roles,parcelId,close,refreshed,embedded=false
  const paymentSource=useMemo(()=>detail.value?payments(api,detail.value.booking_id):null,[api,detail.value]);
  const payment=useResource<PaymentProjection|null>(parcelId+'-payment-'+String(paymentAllowed)+'-'+(detail.value?.booking_id??'pending'),signal=>paymentAllowed&&paymentSource?paymentSource.read(signal):Promise.resolve(null));
  const remove=useCommand<LotDto|LotMembershipResult>(value=>lotSource.execute(value)),life=useCommand(value=>source.execute(value));
- const busy=deliveryBusy||[remove.phase,life.phase].some(phase=>phase==='pending'||phase==='uncertain');const frame=(content:React.ReactNode)=>embedded?<>{content}</>:<OperationDialog title="Package details" close={close} busy={busy}>{content}</OperationDialog>;
+ const busy=deliveryBusy||[remove.phase,life.phase].some(phase=>phase==='pending'||phase==='uncertain');
+ useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
+ const frame=(content:React.ReactNode)=>embedded?<>{content}</>:<OperationDialog title="Package details" close={close} busy={busy}>{content}</OperationDialog>;
  if(detail.phase==='loading')return frame(<Loading label="Loading package detail…"/>);
  if(detail.phase==='error')return frame(<Failure retry={detail.reload} label="Package detail is unavailable."/>);
  const parcel=detail.value!;
@@ -187,5 +189,5 @@ export default function Packages({controller,roles}:{controller:ScopeController;
  const [params]=useSearchParams();
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]);
  if(params.get('view')==='operations')return <OperationalPackages controller={controller} roles={roles}/>;
- return <SavedBookings operationalBulk={(rows,action,busy,refresh)=><PackageBulk controller={controller} source={source} rows={rows} reload={refresh} initialAction={action} onBusyChange={busy}/>} controller={controller} roles={roles} operationalDetail={(id,close,refresh)=><PackageDetail controller={controller} roles={roles} parcelId={id} close={close} refreshed={refresh} embedded/>}/>;
+ return <SavedBookings operationalBulk={(rows,action,busy,refresh)=><PackageBulk controller={controller} source={source} rows={rows} reload={refresh} initialAction={action} onBusyChange={busy}/>} controller={controller} roles={roles} operationalDetail={(id,close,refresh,busy)=><PackageDetail onBusyChange={busy} controller={controller} roles={roles} parcelId={id} close={close} refreshed={refresh} embedded/>}/>;
 }

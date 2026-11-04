@@ -47,7 +47,7 @@ const time=(ts:number)=>new Date(ts).toLocaleString('en-IN',{day:'numeric',month
 const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':undefined}/>;
 const payChip=(row:SavedBookingRow)=><span className={'pill '+(row.payment==='paid'?'st-delivered':row.payment==='topay'?'pill-warn':'')}>{row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'}</span>;
 
-export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void)=>React.ReactNode}){
+export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void)=>React.ReactNode}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),entrySource=useMemo(()=>bookingEntries(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const [params,setParams]=useSearchParams();
  const canCreate=roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)),canMoney=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
@@ -111,13 +111,14 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
  </div>;
 }
 
-function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetail}:{row:SavedBookingRow;api:ScopedApi;lots:LotDto[];close:()=>void;refresh:()=>void;operationalDetail:(id:string,close:()=>void,refresh:()=>void)=>React.ReactNode}){
+function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetail}:{row:SavedBookingRow;api:ScopedApi;lots:LotDto[];close:()=>void;refresh:()=>void;operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode}){
  const source=useMemo(()=>parcels(api),[api]);
  const timeline=useResource(row.id+'saved-timeline',signal=>row.parcel?source.timeline(row.parcel.id,signal):Promise.resolve({items:[]}));
  const lotSource=useMemo(()=>lots(api),[api]);
  const membership=useResource(row.id+'detail-lot',signal=>row.parcel?lotSource.currentMembership(row.parcel.id,signal):Promise.resolve(null));
  const lotCommand=useCommand<LotDto|LotMembershipResult>(value=>lotSource.execute(value));
- const moving=lotCommand.phase==='pending'||lotCommand.phase==='uncertain';
+ const [operationBusy,setOperationBusy]=useState(false);
+ const moving=operationBusy||lotCommand.phase==='pending'||lotCommand.phase==='uncertain';
  async function assignLot(id:string){
   if(!row.parcel||moving)return;
   try{
@@ -143,7 +144,7 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
    <div className="ph-box u-center u-col" style={{height:130,borderRadius:'var(--shape-md)',gap:4}}><Msym name="image" style={{fontSize:30}}/><span className="t-body-sm">No parcel photo</span></div>
    <div className="t-body-sm" style={{display:'grid',gap:8,marginTop:14}}>{[['Customer',[row.name,row.phone].filter(Boolean).join(' · ')],['Address',row.address||'—'],['Service',service],['Amount',money(row.amount)],['Payment',row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'],['Lot',row.lotCode||'—']].map(([k,v])=><div key={k} className="u-between" style={{borderBottom:'1px solid var(--md-outline-variant)',paddingBottom:6}}><span className="muted">{k}</span><span style={{textAlign:'right'}}>{v}</span></div>)}</div>
    {!['delivered','rto','cancelled'].includes(row.status)&&<SelectField label="Move to lot" value={row.lotId||''} disabled={!row.parcel||moving||membership.phase==='loading'} onChange={id=>void assignLot(id)} options={[{value:'',label:'Not in a lot'},...lotList.filter(l=>l.state==='active'||l.id===row.lotId).map(l=>({value:l.id,label:`${l.code} · ${l.name}`}))]} trailing="layers" style={{marginTop:12}}/>}
-   {['booked','checked_in','dispatched','in_transit','failed_attempt'].includes(row.status)&&<div className="u-row u-wrap" style={{marginTop:12}}><Button size="sm" icon={row.status==='booked'?'warehouse':row.status==='checked_in'?'local_shipping':'mark_email_read'} disabled={!row.parcel} title={!row.parcel?'Shipment details are needed before intake or dispatch':undefined} onClick={()=>setShowActions(true)}>{row.status==='booked'?'Check In at Hub':row.status==='checked_in'?'Dispatch':row.status==='failed_attempt'?'Try Delivery Again':'Out for Delivery'}</Button></div>}
+   {['booked','checked_in','dispatched','in_transit','failed_attempt'].includes(row.status)&&<div className="u-row u-wrap" style={{marginTop:12}}><Button size="sm" icon={row.status==='booked'?'warehouse':row.status==='checked_in'?'local_shipping':'mark_email_read'} disabled={!row.parcel||moving} title={!row.parcel?'Shipment details are needed before intake or dispatch':undefined} onClick={()=>setShowActions(true)}>{row.status==='booked'?'Check In at Hub':row.status==='checked_in'?'Dispatch':row.status==='failed_attempt'?'Try Delivery Again':'Out for Delivery'}</Button></div>}
    <CommandNotice phase={lotCommand.phase} code={lotCommand.error?.code} retry={lotCommand.canRetry?()=>{void lotCommand.retry().then(()=>{membership.reload();refresh();}).catch(()=>{});}:undefined}/>
    {row.entry&&<p className="counter-help" style={{marginTop:10}}>Entered charges are shown. Tax and payment are not recorded; shipment actions need a shipment record.</p>}
   </div><div>
@@ -154,7 +155,7 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
    <div className="dlg-actions" style={{justifyContent:'flex-start',marginTop:8}}><Button size="sm" variant="tonal" icon="send" disabled title="Custom WhatsApp sending is not connected for this workspace">Send now</Button><Button size="sm" variant="text" icon="print" disabled={printing} onClick={()=>void print()}>Print receipt</Button></div>
    {printMessage&&<p role="alert">{printMessage}</p>}
   </div></div>
-  {showActions&&row.parcel&&<div className="saved-booking-operation">{operationalDetail(row.parcel.id,()=>setShowActions(false),refresh)}</div>}
+  {showActions&&row.parcel&&<div className="saved-booking-operation">{operationalDetail(row.parcel.id,()=>{if(!moving)setShowActions(false);},refresh,setOperationBusy)}</div>}
  </Dialog>;
 }
 function printCounterRecord(row:SavedBookingRow){

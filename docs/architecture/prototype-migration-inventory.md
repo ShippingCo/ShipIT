@@ -1471,3 +1471,5 @@ Journey now owns its pure stage list and no longer imports the fictional store. 
 | apps/web/src/test/saved-bookings-demo.test.tsx: does not misrepresent selected Paid now as recorded money or missing amounts as zero | preserve | booking |
 | apps/web/src/test/service-parity.test.tsx: filters saved receipts by IST booking date and keeps the range while paging | preserve | receipts |
 | apps/web/src/test/service-parity.test.tsx: uses exclusive IST day boundaries and native custom-range constraints | preserve | receipts |
+
+| apps/web/src/test/saved-bookings-demo.test.tsx: keeps the saved-booking popup open while an embedded shipment command is pending or uncertain | preserve | booking |

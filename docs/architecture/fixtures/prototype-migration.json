@@ -2846,6 +2846,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/segmented-payment.test.tsx",
         "name": "chooses a payment segment without submitting its surrounding booking form",
         "cases": null
@@ -7450,6 +7455,14 @@
       "disposition": "preserve",
       "group": "booking",
       "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
+    },
+    {
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves.",
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
+      "cases": null
     },
     {
       "file": "apps/web/src/test/segmented-payment.test.tsx",
