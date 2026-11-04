@@ -6,14 +6,14 @@ import type {CommandIntent} from '../data-access/command-intent';
 /** A resumable sequence of existing audited commands. A lost response retries
  * the exact current intent; confirmed steps are never repeated with new keys. */
 export function lotPlan(input:{lots:LotSource;routes:RouteSource;lot?:LotDto;attachedRouteId?:string;planningSources?:LotDto[];name:string;destination:string;note:string;entries:string[];parcels:string[];routeId:string}){
- let lot=input.lot,initialized=false,index=0,planningIndex=0,attached=false,detached=false;
+ let lot=input.lot,initialized=false,index=0,planningIndex=0,attached=false,detached=false,changed=false;
  let pending:{source:'lot'|'route';intent:CommandIntent}|null=null;
  async function send(){
   if(!pending)throw new Error('Missing lot plan step');
   const result=pending.source==='lot'?await input.lots.execute(pending.intent):await input.routes.execute(pending.intent);
-  pending=null;return result;
+  changed=true;pending=null;return result;
  }
- return {get currentLot(){return lot;},async execute():Promise<LotDto>{
+ return {get currentLot(){return lot;},get hasChanges(){return changed;},async execute():Promise<LotDto>{
   if(input.attachedRouteId&&!detached){
    if(!pending){const route=await input.routes.read(input.attachedRouteId);pending={source:'route',intent:input.routes.intent({kind:'detach_lot',routeId:route.id,lotId:lot!.id,body:{expected_version:route.version}})};}
    await send();detached=true;

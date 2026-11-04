@@ -79,7 +79,7 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
    </LotCardView>;
   })}</div>
   {!value.lots.length&&<Card variant="outlined"><EmptyState icon="layers" title="No lots yet" sub="Lots group many customers' parcels travelling together — e.g., everything on tonight's Mumbai flight. Create one to unlock batch updates." action={write?<Button icon="add" style={{marginTop:12}} onClick={()=>setCreate(true)}>Create your first lot</Button>:undefined}/></Card>}
-  {(create||add)&&<LotEditor source={source} routeSource={routeSource} data={value} lot={add??undefined} close={()=>{setCreate(false);setAdd(null);}} saved={(lot,n)=>{setCreate(false);setAdd(null);data.reload();setNotice(`${lot.code} saved with ${n} selected parcel${n===1?'':'s'}.`);}}/>}
+  {(create||add)&&<LotEditor source={source} routeSource={routeSource} data={value} lot={add??undefined} close={()=>{setCreate(false);setAdd(null);data.reload();}} saved={(lot,n)=>{setCreate(false);setAdd(null);data.reload();setNotice(`${lot.code} saved with ${n} selected parcel${n===1?'':'s'}.`);}}/>}
   <Dialog open={!!remove} onClose={()=>{if(!busy)setRemove(null);}} hideClose={busy} title={`Delete ${remove?.code}?`} actions={<><Button variant="text" disabled={busy} onClick={()=>setRemove(null)}>Cancel</Button><Button disabled={busy} onClick={()=>{if(remove)void archive.run(source.intent({kind:'archive',lotId:remove.id,body:{expected_version:remove.version}})).then(deleted).catch(()=>{});}}>Delete lot</Button></>}>
    <p>Parcels inside stay safe — they just become ungrouped. The lot’s history stays saved.</p><CommandNotice phase={archive.phase} code={archive.error?.code} retry={archive.canRetry?()=>{void archive.retry().then(deleted).catch(()=>{});}:undefined}/>
   </Dialog>
@@ -112,7 +112,7 @@ function LotEditor({source,routeSource,data,lot,close,saved}:{source:LotSource;r
     </div>
    </fieldset>
    <div className="lotsum"><span><b>{selected.length}</b> parcels</span><span><b>{knownWeight?weight.toFixed(1):'—'}</b> kg</span><span><b>{knownAmount?money(amount):'—'}</b> value</span></div>
-   {command.phase==='error'&&plan.current?.currentLot&&<p role="status">Lot {plan.current.currentLot.code} is saved. Remaining selections or route assignment have not completed. You can finish later without creating another lot.</p>}
+   {command.phase==='error'&&plan.current?.hasChanges&&<p role="status">{plan.current.currentLot?`Lot ${plan.current.currentLot.code} is saved.`:'Some parcel or route changes were saved.'} Remaining selections or route assignment have not completed. Finish later or retry the remaining steps.</p>}
    <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(result=>{if(result)saved(result,selected.length);}).catch(()=>{});}:undefined}/>
   </>}
  </Dialog>;
