@@ -5686,7 +5686,7 @@
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "handles safe %s without losing the draft or claiming success",
-      "cases": "['DOCKET_CONFLICT','VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
+      "cases": "['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND']",
       "disposition": "preserve",
       "group": "seam",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
