@@ -22,7 +22,7 @@ beforeEach(()=>{
   if(path.includes('/customers'))return f.json(options.method==='GET'&&path.includes('?')?{items:[f.customer],page:{has_more:false,next_cursor:null}}:f.customer,options.method==='POST'?201:200);
   if(path.startsWith('/api/v1/customer-account-choices'))return f.json({items:[],next_cursor:null});
   if(path.includes('/pricing/services'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
-  if(path.includes('/tax/settings'))return f.json({id:f.id(82),mode:null,supplier_state:'27',version:1});
+  if(path.includes('/tax/settings'))return f.json({id:f.id(82),mode:'courier18',supplier_state:'27',version:1});
   if(path.includes('/pricing/versions'))return f.json(f.rateCard);
   if(path.startsWith('/api/v1/pricing/quote'))return f.json(f.quote);
   if(path.startsWith('/api/v1/tax/intents'))return f.json(f.intent);
@@ -40,11 +40,10 @@ afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
 function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
-async function calculate(){options();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(summary().getByText('₹134.00')).toBeVisible());}
-async function entered(paid=false){await start();core(paid);fill('Parcel handed over in','27');await calculate();}
+async function calculate(){await waitFor(()=>expect(summary().getByText('₹151.04')).toBeVisible());}
+async function entered(paid=false){await start();core(paid);await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
-function options(){const summary=screen.getByText('More booking options');if(!summary.closest('details')!.open)fireEvent.click(summary);}
 async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
@@ -62,10 +61,10 @@ describe('production counter API composition',{timeout:20000},()=>{
   const recall=await screen.findByRole('button',{name:/Synthetic Sender.*fill it in/});expect(screen.getByLabelText('Customer name')).toHaveValue('');fireEvent.click(recall);
   expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
- it('creates a new customer as part of save and does not duplicate it after returning to the form',async()=>{
-  override=c=>c.path.includes('/customers?')?Promise.resolve(f.json({items:[],page:{has_more:false,next_cursor:null}})):undefined;
-  await start();core();fill('Parcel handed over in','27');await calculate();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
-  await calculate();expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
+ it('creates a new customer once when save is retried after a rejected booking',async()=>{
+  let reject=true;override=c=>c.path.includes('/customers?')?Promise.resolve(f.json({items:[],page:{has_more:false,next_cursor:null}})):c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'DOCKET_CONFLICT'}},409)):undefined;
+  await entered();save();await screen.findByRole('alert');expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
+  reject=false;save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
  });
  it('does not replace an existing customer with a different name or treat lookup failure as a new customer',async()=>{
   await start();core();fill('Customer name','Another sender');save();await screen.findByText(/Choose the matching customer below/);expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
@@ -81,7 +80,7 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('allows any destination and service when no rate card exists',async()=>{
   override=c=>c.path.includes('/pricing/versions')?Promise.resolve(f.json({error:{code:'NO_RATE'}},422)):c.path.startsWith('/api/v1/pricing/quote')?Promise.resolve(f.json({...f.quote,rate_version_id:null,rate_version_number:0,rule_id:null})):c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({...f.booking,parcels:[{...f.booking.parcels[0],weight_grams:6500}]},201)):undefined;
   render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});core();
-  fill('Destination city','New City');fill('Service','express');fill('Weight (kg)','6.5');fill('Parcel handed over in','27');save();
+  fill('Destination city','New City');fill('Service','express');fill('Weight (kg)','6.5');save();
   await screen.findByRole('heading',{name:'Booking saved'});
   expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({destination_key:'NEW_CITY',service:'express',weight_grams:6500,charges:{freight_paise:12551,packing_paise:249}});
   expect(document.body.textContent).not.toMatch(/Set up booking rates|No configured rate|publish.*before you can book/);
@@ -97,9 +96,6 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('converts packing and freight to exact paise and rejects invalid non-empty amounts',async()=>{
   await entered();fill('Freight ₹','12.345');save();await waitFor(()=>expect(screen.getByLabelText('Freight ₹')).toHaveAttribute('aria-invalid','true'));expect(posts('/api/v1/bookings?')).toHaveLength(0);
   fill('Freight ₹','125.51');fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
- });
- it('invalidates the total and shows a missing handover fact inline',async()=>{
-  await entered();options();fill('Parcel handed over in','');expect(summary().queryByText('₹134.00')).toBeNull();save();await waitFor(()=>expect(screen.getByLabelText('Parcel handed over in')).toHaveFocus());expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
   await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
@@ -127,7 +123,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.reject(new TypeError('offline')):undefined;save();await screen.findByRole('button',{name:'Retry same booking'});expect(screen.getByLabelText('Delivery address')).toHaveValue('21 Fictional Street');expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(calls.some(c=>c.path.includes('/receipt'))).toBe(false);expect(localStorage.length).toBe(0);
  });
  it('rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity',async()=>{
-  await entered();summary().getByText('₹134.00').textContent='₹0.00';let reject=true;override=c=>c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'QUOTE_STALE'}},409)):undefined;save();await screen.findByText(/Pricing expired|Pricing changed|quote.*expired/i);expect(body(posts('/api/v1/bookings?')[0])).not.toHaveProperty('total_paise');reject=false;await recalculate();save();await screen.findByRole('heading',{name:'Booking saved'});expect(key(posts('/api/v1/bookings?')[0])).not.toBe(key(posts('/api/v1/bookings?')[1]));
+  await entered();summary().getByText('₹151.04').textContent='₹0.00';let reject=true;override=c=>c.path.startsWith('/api/v1/bookings?')&&reject?Promise.resolve(f.json({error:{code:'QUOTE_STALE'}},409)):undefined;save();await screen.findByText(/Pricing expired|Pricing changed|quote.*expired/i);expect(body(posts('/api/v1/bookings?')[0])).not.toHaveProperty('total_paise');reject=false;await recalculate();save();await screen.findByRole('heading',{name:'Booking saved'});expect(key(posts('/api/v1/bookings?')[0])).not.toBe(key(posts('/api/v1/bookings?')[1]));
  });
  it.each([1280,375])('discards late franchise A search at viewport %i through real scope generation',async width=>{
   Object.defineProperty(window,'innerWidth',{configurable:true,value:width});await start();const slow=f.deferred<Response>();override=c=>c.path.includes('/customers?')?slow.promise:undefined;fill('WhatsApp number',f.customer.phone_display);fireEvent.blur(screen.getByLabelText('WhatsApp number'));await waitFor(()=>expect(calls.some(c=>c.path.includes('/customers?'))).toBe(true));const prior=calls.find(c=>c.path.includes('/customers?'))!;fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json({items:[f.customer],page:{next_cursor:null,has_more:false}})));expect(prior.options.signal?.aborted).toBe(true);expect(screen.getByLabelText('WhatsApp number')).toHaveValue('');expect(document.body.textContent).not.toContain(f.customer.address);
@@ -199,64 +195,23 @@ describe('monthly account booking',{timeout:20000},()=>{
  }
  async function selected(){
   override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
-  await entered();options();fireEvent.change(await screen.findByRole('combobox',{name:'Bill-to account'}),{target:{value:account}});await screen.findByText('₹400.00',{selector:'strong'});expect(screen.getByRole('combobox',{name:'Bill-to account'})).toHaveValue(account);
-  await calculate();
+  const controller=createScopeController();await controller.load();const flow=createBookingWorkflow(controller);flow.activate();flow.select(f.customer);
+  for(const [field,value] of Object.entries({recipientAddress:'21 Fictional Street',destination:'SYN_DEST',docket:'00123-A',weight:'999',handoverState:'27'}))flow.change(field as Parameters<typeof flow.change>[0],value);
+  flow.selectAccount(account);flow.recordTaxEntry();await flow.preview();return flow;
  }
- it('shows source credit, retains an uncertain request identity and saves the exact approved debtor',async()=>{
-  await selected();fireEvent.click(screen.getByRole('button',{name:'Credit source bookings'}));
-  const sources=await screen.findByRole('table',{name:'Credit source bookings'});
-  expect(within(sources).getByRole('columnheader',{name:'Original'})).toBeInTheDocument();
-  const originalIndex=within(sources).getAllByRole('columnheader',{}).findIndex(header=>header.textContent==='Original');
-  expect(within(within(sources).getAllByRole('row',{})[1]).getAllByRole('cell',{})[originalIndex]).toHaveTextContent('₹600.00');
+ it('retains an uncertain credit request identity and saves the exact approved debtor',async()=>{
+  const flow=await selected();
   let first=true;override=c=>{if(c.path.startsWith('/api/v1/customer-credit-requests')&&c.options.method==='POST'&&first){first=false;return Promise.reject(new TypeError('SYN_ACK_LOST'));}const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
-  fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Retry same credit request'});expect(screen.getByLabelText('Recipient name')).toBeDisabled();
-  expect(screen.getByRole('button',{name:'Cancel booking'})).toBeDisabled();
-  const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
-  fireEvent.click(screen.getByRole('button',{name:'Retry same credit request'}));await screen.findByRole('button',{name:'Check owner approval'});
-  const attempts=posts('/api/v1/customer-credit-requests');expect(attempts).toHaveLength(2);expect([attempts[0].path,attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].path,attempts[1].options.body,key(attempts[1])]);
-  fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking: Owner reviewed/);fireEvent.click(screen.getByRole('button',{name:'Save booking'}));await screen.findByRole('heading',{name:'Booking saved'});
-  expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBe(approval);expect(body(posts('/api/v1/bookings?')[0]).tax_intent.pricing_input.customer_account_id).toBe(account);
-  expect(screen.getByText(/Bill to Separate Debtor/)).toBeVisible();expect(screen.getByRole('link',{name:'Open payments / apply advance'})).toHaveAttribute('href',expect.stringContaining(debtor));
+  await flow.requestCredit();expect(flow.snapshot().creditPhase).toBe('uncertain');expect(flow.locked()).toBe(true);
+  await flow.requestCredit();const attempts=posts('/api/v1/customer-credit-requests');expect(attempts).toHaveLength(2);expect([attempts[0].path,attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].path,attempts[1].options.body,key(attempts[1])]);
+  await flow.refreshCreditApproval();await flow.save();expect(flow.snapshot().booking?.account?.debtor.name).toBe('Separate Debtor');
+  expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBe(approval);expect(body(posts('/api/v1/bookings?')[0]).tax_intent.pricing_input.customer_account_id).toBe(account);flow.dispose();
  });
- it('invalidates approval after any shipment edit and gives a clear held-account denial',async()=>{
-  await selected();fireEvent.click(screen.getByRole('button',{name:'Request credit-limit exception'}));await screen.findByRole('button',{name:'Check owner approval'});fireEvent.click(screen.getByRole('button',{name:'Check owner approval'}));await screen.findByText(/Owner approved this booking:/);
-  fill('Recipient name','Different Recipient');expect(screen.queryByText(/Owner approved this booking:/)).toBeNull();expect(screen.queryByRole('button',{name:'Check owner approval'})).toBeNull();
-  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;fireEvent.click(screen.getByRole('button',{name:'Save booking'}));await screen.findByText(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();
- });
-});
-
-describe('counter service setup',()=>{
- it('can save a booking immediately after creating and using a service in its dialog',async()=>{
-  await entered();options();
-  const service={id:f.id(91),name:'New counter service',service:'standard',destination_key:'SYN_DEST',accepts_liquids:false,
-   pricing:{kind:'flat',first_kg_paise:12551,additional_kg_paise:0,packing_paise:249},created_at:f.now};
-  let published=false;
-  override=c=>{
-   if(c.path.includes('/pricing/services')){
-    if(c.options.method==='POST'){
-     published=true;
-     return Promise.resolve(f.json(service,201));
-    }
-    return Promise.resolve(f.json({items:published?[service]:[],page:{has_more:false,next_cursor:null}}));
-   }
-   if(c.path.startsWith('/api/v1/pricing/quote'))return Promise.resolve(f.json({...f.quote,service_option:{id:service.id,name:service.name}}));
-  };
-  fireEvent.click(screen.getByRole('button',{name:'Add a service and its rates'}));
-  const dialog=within(await screen.findByRole('dialog',{name:'Add a service'}));
-  fireEvent.change(dialog.getByLabelText('Service name'),{target:{value:service.name}});
-  fireEvent.click(dialog.getByRole('button',{name:'Continue setup'}));
-  fireEvent.change(dialog.getByLabelText('Charge per booking (₹)'),{target:{value:'125.51'}});
-  fireEvent.click(dialog.getByRole('button',{name:'Continue setup'}));
-  fireEvent.click(dialog.getByRole('checkbox',{name:'I reviewed these prices and the service category.'}));
-  fireEvent.click(dialog.getByRole('button',{name:'Save and use service'}));
-  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(screen.getByLabelText('Service',{exact:true})).toHaveValue('option:'+service.id);
-  await recalculate();
-  await summary().findByText(service.name);
-  expect(summary().getByRole('button',{name:'Save booking'})).toBeEnabled();
-  save();
-  await screen.findByRole('heading',{name:'Booking saved'});
-  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ it('invalidates credit approval after shipment edits and preserves held-account denial',async()=>{
+  const flow=await selected();await flow.requestCredit();await flow.refreshCreditApproval();expect(flow.snapshot().creditApprovalId).toBe(approval);
+  flow.change('recipientName','Different Recipient');expect(flow.snapshot().creditApprovalId).toBeUndefined();
+  override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code:'ACCOUNT_HELD'}},409)):undefined;await flow.save();
+  expect(flow.snapshot().message).toMatch(/account is held/i);expect(body(posts('/api/v1/bookings?')[0]).credit_approval_id).toBeUndefined();expect(flow.snapshot().booking).toBeUndefined();flow.dispose();
  });
 });
 
@@ -277,7 +232,7 @@ describe('counter post-save and scope boundaries',()=>{
  });
  it.each(['/api/v1/pricing/quote','/api/v1/tax/calculations'])('scope change cancels late %s and prevents private totals repaint',async path=>{
   await entered();fill('Weight (kg)','0.998');const slow=f.deferred<Response>();override=c=>c.path.startsWith(path)?slow.promise:undefined;
-  options();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(calls.filter(c=>c.path.startsWith(path)).length).toBeGreaterThan(1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(summary().queryByText('₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
+  save();await waitFor(()=>expect(posts(path).length).toBe(path.includes('pricing')?2:1));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(path.includes('pricing')?f.quote:f.tax)));expect(summary().queryByText('₹134.00')).toBeNull();expect(screen.getByLabelText('Customer name')).toHaveValue('');
  });
  it('scope change cancels late receipt and drops its private snapshot',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});const slow=f.deferred<Response>();override=c=>c.path.includes('/receipt')?slow.promise:undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await waitFor(()=>expect(calls.some(c=>c.path.includes('/receipt'))).toBe(true));fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json(f.receipt)));expect(document.body.textContent).not.toContain(f.receipt.number);
@@ -307,29 +262,32 @@ it('cancels an unsaved booking only after confirming discard and can keep editin
 });
 
 it('saves directly from the page without a billing confirmation popup or declaration checkbox',async()=>{
- await start();core();fill('Parcel handed over in','27');save();
+ await start();core();save();
  await screen.findByRole('heading',{name:'Booking saved'});expect(screen.queryByRole('dialog')).toBeNull();
  expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts).toMatchObject({handover_state:'27',evidence_ref:'COUNTER_ENTRY'});
  expect(screen.queryByLabelText('I checked these billing and handover details with the customer.')).toBeNull();
 });
 
 it.each(['/api/v1/pricing/quote','/api/v1/tax/intents','/api/v1/tax/calculations'])('direct save retains the exact %s request after a lost acknowledgement',async path=>{
- await start();core();fill('Parcel handed over in','27');let first=true;
+ await start();core();let first=true;
  override=c=>c.path.startsWith(path)&&first?(first=false,Promise.reject(new TypeError('lost acknowledgement'))):undefined;
  save();await screen.findByRole('button',{name:'Retry booking request'});expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.queryByRole('dialog')).toBeNull();
  fireEvent.click(screen.getByRole('button',{name:'Retry booking request'}));await screen.findByRole('heading',{name:'Booking saved'});
  const attempts=posts(path);expect(attempts.length).toBeGreaterThanOrEqual(2);expect([attempts[0].options.body,key(attempts[0])]).toEqual([attempts[1].options.body,key(attempts[1])]);expect(posts('/api/v1/bookings?')).toHaveLength(1);
 });
-it('keeps required registered billing facts inline and does not save an invalid GSTIN',async()=>{
- await start();core();fill('GST registration','registered');fill('Billing state','27');fill('GSTIN','invalid');save();
- await waitFor(()=>expect(screen.getByLabelText('GSTIN')).toHaveAttribute('aria-invalid','true'));expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(posts('/api/v1/tax/intents')).toHaveLength(0);
+it('removes the entire additional-options section and every control inside it',async()=>{
+ await start();
+ expect(screen.queryByText('More booking options')).toBeNull();
+ for(const label of ['GST registration','Parcel handed over in','GSTIN','Customer address','Recipient name','Recipient phone','PIN code','City','State / region','Contents description','Contents type','Override reason','Customer name or phone','Bill-to account'])expect(screen.queryByLabelText(label,{exact:true})).toBeNull();
+ for(const name of ['Calculate total','Save customer changes','Refresh customer','Use latest customer details','Add a service and its rates'])expect(screen.queryByRole('button',{name})).toBeNull();
+ core();save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
 });
 
 it('uses the saved demo GST setting for a live summary and saves without billing steps',async()=>{
  override=c=>c.path.includes('/tax/settings')?Promise.resolve(f.json({id:f.id(82),mode:'courier18',supplier_state:'27',version:2})):undefined;
- await start();core();await waitFor(()=>expect(screen.getByLabelText('Parcel handed over in')).toHaveValue('27'));
+ await start();core();
  await waitFor(()=>expect(summary().getByText('CGST 9%')).toBeVisible());expect(summary().getByText('SGST 9%')).toBeVisible();
- expect(screen.getByRole('button',{name:'Calculate total'})).not.toBeVisible();expect(screen.getByLabelText('GST registration')).not.toBeVisible();
+ expect(screen.queryByRole('button',{name:'Calculate total'})).toBeNull();expect(screen.queryByLabelText('GST registration')).toBeNull();
  save();await screen.findByRole('heading',{name:'Booking saved'});
  expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts.handover_state).toBe('27');
 });

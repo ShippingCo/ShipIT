@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
-      "apps/web/src/test/counter.test.tsx": "b4c696e67ce9dbcae597b1a0ca4af33bbe973b2f395d0a2a26375f957f1bb54f",
+      "apps/web/src/test/counter.test.tsx": "c82c8d970153edf350e3ec554c2afe2b6a7c28cefd07f30f786b1780b5e07c3e",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1641,7 +1641,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "creates a new customer as part of save and does not duplicate it after returning to the form",
+        "name": "creates a new customer once when save is retried after a rejected booking",
         "cases": null
       },
       {
@@ -1677,11 +1677,6 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "invalidates the total and shows a missing handover fact inline",
         "cases": null
       },
       {
@@ -1791,17 +1786,12 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "shows source credit, retains an uncertain request identity and saves the exact approved debtor",
+        "name": "retains an uncertain credit request identity and saves the exact approved debtor",
         "cases": null
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
-        "cases": null
-      },
-      {
-        "file": "apps/web/src/test/counter.test.tsx",
-        "name": "can save a booking immediately after creating and using a service in its dialog",
+        "name": "invalidates credit approval after shipment edits and preserves held-account denial",
         "cases": null
       },
       {
@@ -1846,7 +1836,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "keeps required registered billing facts inline and does not save an invalid GSTIN",
+        "name": "removes the entire additional-options section and every control inside it",
         "cases": null
       },
       {
@@ -5465,7 +5455,7 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "creates a new customer as part of save and does not duplicate it after returning to the form",
+      "name": "creates a new customer once when save is retried after a rejected booking",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
@@ -5522,14 +5512,6 @@
     {
       "file": "apps/web/src/test/counter.test.tsx",
       "name": "converts packing and freight to exact paise and rejects invalid non-empty amounts",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "booking",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "invalidates the total and shows a missing handover fact inline",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
@@ -5705,27 +5687,19 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "shows source credit, retains an uncertain request identity and saves the exact approved debtor",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "seam",
-      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "invalidates approval after any shipment edit and gives a clear held-account denial",
-      "cases": null,
-      "disposition": "preserve",
-      "group": "seam",
-      "reason": "Issue #141 explicit debtor/contact attestation, exact-intent recovery, current private account scope and authoritative credit/pricing integration; no local financial writes."
-    },
-    {
-      "file": "apps/web/src/test/counter.test.tsx",
-      "name": "can save a booking immediately after creating and using a service in its dialog",
+      "name": "retains an uncertain credit request identity and saves the exact approved debtor",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
-      "reason": "Release the completed service-publication lock, use the confirmed named service and submit exactly one booking."
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "invalidates credit approval after shipment edits and preserves held-account denial",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -5793,7 +5767,7 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "keeps required registered billing facts inline and does not save an invalid GSTIN",
+      "name": "removes the entire additional-options section and every control inside it",
       "cases": null,
       "disposition": "preserve",
       "group": "booking",
