@@ -7,7 +7,7 @@ import {createScopeController} from '../operator/scope';
 import type {OperatorDataSource} from '../operator/data-source';
 import * as f from './counter-fixture';
 const entry={id:f.id(300),state:'confirmed',organization_id:f.org,franchise_id:f.A,confirmed_at:f.now,data:{fields:{name:'Synthetic customer',docket:'SYN-LOT-1',destination:'MUMBAI',weight:'800',packing:'3900',override:'2000'},additional_parcels:[]}};
-const lot={id:f.id(301),code:'LOT-0000000000000000001',name:'Mumbai batch',destination_key:'MUMBAI',state:'active',version:1,created_at:f.now,updated_at:f.now,archived_at:null,active_member_count:0,note:'Keep upright',planning_entry_ids:[entry.id]};
+const lot={id:f.id(301),code:'LOT-0000000000000000001',name:'Mumbai batch',destination_key:'MUMBAI',state:'active' as const,version:1,created_at:f.now,updated_at:f.now,archived_at:null,active_member_count:0,note:'Keep upright',planning_entry_ids:[entry.id]};
 const page=(items:unknown[])=>({items,page:{has_more:false,next_cursor:null}});
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 async function start(existing=false,post?:(path:string,init:RequestInit)=>Promise<Response>){
