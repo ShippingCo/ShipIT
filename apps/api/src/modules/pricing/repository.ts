@@ -93,7 +93,7 @@ export async function quote(scope:TenantAccess,id:string) {
 }
 export async function receipt(scope:TenantAccess,operation:PricingOperation,key:string) {
   const c=assertTenantAccess(scope,['pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve']);
-  return (await scopedQuery<{fingerprint:string;version_id:string;quote_id:string|null;result:PricingVersionDto|PricingQuoteDto}>(scope,
+  return (await scopedQuery<{fingerprint:string;version_id:string|null;quote_id:string|null;result:PricingVersionDto|PricingQuoteDto}>(scope,
     ['pricing.draft','pricing.publish','pricing.quote','pricing.override','pricing.override.approve'],`SELECT fingerprint,version_id,quote_id,result FROM shipit.pricing_commands
     WHERE {{franchise:organization_id:franchise_id}} AND actor_id=$1 AND operation_id=$2 AND key_digest=$3`,[c.actor.id,operation,key])).rows[0];
 }

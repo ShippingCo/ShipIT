@@ -3,7 +3,7 @@ import type { PricingQuoteInput, TaxIntentInput, TaxCalculationDto } from '@ship
 import { object, uuid, text, integer, instant, choice, nullable, array, optional } from './dto';
 import type { ScopedApi } from './scoped-api';
 export const service = choice('standard', 'express', 'same_city');
-export const quoteDto = object({ id: uuid, proposal: choice(true), rate_version_id: uuid, rate_version_number: integer(1), rule_id: nullable(uuid),service_option:optional(object({id:uuid,name:text})),account:accountPricingDto,
+export const quoteDto = object({ id: uuid, proposal: choice(true), rate_version_id: nullable(uuid), rate_version_number: integer(), rule_id: nullable(uuid),service_option:optional(object({id:uuid,name:text})),account:accountPricingDto,
   freight_suggestion_paise: integer(), freight_paise: integer(), packing_paise: integer(), variance_paise: integer(),
   subtotal_paise: integer(), override_status: choice('none', 'within_tolerance', 'privileged'), expires_at: instant });
 export type Quote = ReturnType<typeof quoteDto>;

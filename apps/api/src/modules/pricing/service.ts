@@ -12,7 +12,7 @@ import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { versionDto, replayDto, type PricingAction, type PricingOperation } from './types.ts';
 import * as validate from './validation.ts';
 import * as repository from './repository.ts';
-import { assertRules } from './calculation.ts';
+import { assertRules, calculateEntered } from './calculation.ts';
 import { digest, fingerprint, keyDigest } from './idempotency.ts';
 import {listServices,createService} from './service-options.ts';
 async function active(scope:TenantAccess) {
@@ -30,7 +30,7 @@ async function current(scope:TenantAccess,now:Date) {
   return versionDto(row,await repository.rules(scope,row.id));
 }
 function reauthorizeQuote(scope:TenantAccess,result:PricingQuoteDto) {
-  if(result.inputs.override && scope.context.action!=='pricing.override'&&scope.context.action!=='pricing.override.approve'&&scope.context.action!=='pricing.validate')throw new HttpError('ACTION_FORBIDDEN');
+  if((result.inputs.override||result.inputs.charges) && scope.context.action!=='pricing.override'&&scope.context.action!=='pricing.override.approve'&&scope.context.action!=='pricing.validate')throw new HttpError('ACTION_FORBIDDEN');
   if(result.override_status==='privileged'&&scope.context.action!=='pricing.override.approve')throw new HttpError('ACTION_FORBIDDEN');
 }
 /** #22 must call inside the live staff transaction and keep its locks until snapshot commit.
@@ -44,6 +44,11 @@ export async function validatePricingSnapshot(scope:TenantAccess,quoteId:string,
   if(!stored)throw new HttpError('RESOURCE_NOT_FOUND');
   reauthorizeQuote(scope,stored);
   if(now.getTime()<Date.parse(stored.created_at)||now.getTime()>=Date.parse(stored.expires_at)||digest(input)!==digest(stored.inputs))throw new HttpError('QUOTE_STALE');
+  if(input.charges){
+    const recalculated=calculateEntered(input,new Date(stored.created_at),stored.id);
+    if(digest(recalculated)!==digest(stored))throw new HttpError('QUOTE_STALE');
+    return structuredClone(recalculated);
+  }
   let version:PricingVersionDto;
   try {version=await current(scope,now);}catch(error) {if(error instanceof HttpError&&error.code==='NO_RATE')throw new HttpError('QUOTE_STALE');throw error;}
   if(version.id!==stored.rate_version_id)throw new HttpError('QUOTE_STALE');
@@ -88,7 +93,7 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
     const key=keyDigest(validate.idempotencyKey(keyInput)),intent=fingerprint(operation,id,body);
     const previous=await repository.receipt(scope,operation,key);
     if(previous) {
-      await load(scope,previous.version_id);
+      if(previous.version_id)await load(scope,previous.version_id);
       if(previous.quote_id) {
         const original=await repository.quote(scope,previous.quote_id);
         if(!original)throw new HttpError('RESOURCE_NOT_FOUND');
@@ -142,11 +147,13 @@ export function createPricingService(database:DatabasePool,clock:()=>Date=()=>ne
     },
     quote(session:string,organization:unknown,franchise:unknown,key:unknown,input:unknown,correlationId:string) {
       const body=validate.quote(input);
-      return scoped(session,organization,franchise,body.override?'pricing.override':'pricing.quote',correlationId,false,scope=>
+      return scoped(session,organization,franchise,body.override||body.charges?'pricing.override':'pricing.quote',correlationId,false,scope=>
         command(scope,'api.v1.pricing.quote',key,null,body,async()=>{
           if(body.customer_account_id&&!customerAccountsEnabled)throw new HttpError('CUSTOMER_ACCOUNTS_DISABLED');
           await validateSettingSuggestion(scope,'booking_defaults',body.settings_version_id,{service:body.service});
-          const now=clock(),version=await current(scope,now);
+          const now=clock();
+          if(body.charges){const result=calculateEntered(body,now,randomUUID());await repository.saveQuote(scope,result);return result;}
+          const version=await current(scope,now);
           const result=await calculateAccountQuote(scope,version,body,now,randomUUID(),scope.context.actor.id,scope.context.action==='pricing.override.approve');
           await repository.saveQuote(scope,result);
           if(body.override)await appendPricing(scope,version.id,version.version,result.id,

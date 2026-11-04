@@ -33,6 +33,7 @@ export function createBookingWorkflow(controller: ScopeController) {
   const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking;
   function validation(section: Parameters<typeof validate>[1]) {
     const errors = validate(state.draft, section);
+    if(section!=='customer'&&!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='')errors.override='Enter the freight amount.';
     const extra = section === 'customer' ? [] : additionalParcelErrors(state.draft,state.additionalParcels);
     if(section !== 'customer' && !totalWeight(state.draft,state.additionalParcels)) errors.weight = 'Enter valid package weights with a safe combined total.';
     const invalid = Object.keys(errors).length > 0 || extra.some(e => Object.keys(e).length > 0);
@@ -94,7 +95,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     },
     changeParcel(index:number,field:keyof ParcelDraft,value:string) {if(locked()||!state.additionalParcels[index])return;set({additionalParcels:state.additionalParcels.map((p,i)=>i===index?{...p,[field]:value}:p),parcelErrors:[]});invalidateCommercial();},
     removeParcel(index:number) {if(locked())return;set({additionalParcels:state.additionalParcels.filter((_,i)=>i!==index),parcelErrors:[]});invalidateCommercial();},
-    selectAccount(id:string,name?:string) {if(locked())return;set({accountId:id||undefined,accountName:id?name:undefined,...(id?{draft:{...state.draft,serviceOptionId:''}}:{})});invalidateCommercial();},
+    selectAccount(id:string,name?:string) {if(locked())return;set({accountId:id||undefined,accountName:id?name:undefined,...(id?{draft:{...state.draft,serviceOptionId:'',override:'',packing:''}}:{})});invalidateCommercial();},
     snapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     activate() { live = true; unsubscribe = controller.runtime.onInvalidate(purge); },
@@ -150,10 +151,10 @@ export function createBookingWorkflow(controller: ScopeController) {
       set({ busy: true, message: 'Requesting server price and tax…' });
       let phase: 'pricingPhase' | 'taxPhase' = 'pricingPhase';
       try {
-        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote({...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)}),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})});
+        if (!state.quote) { set({ pricingPhase: 'loading' }); quoteIntent ??= commercialApi.quote({...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)},!!state.accountId),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})});
           const quote = await commercialApi.executeQuote(quoteIntent); if (!current()) return; set({ quote, pricingPhase: 'ready' }); }
         phase = 'taxPhase'; set({ taxPhase: 'loading' });
-        taxInput ??= { quote_id: state.quote!.id, pricing_input: {...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)}),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})}, facts: taxFacts(state.draft) };
+        taxInput ??= { quote_id: state.quote!.id, pricing_input: {...pricingInput({...state.draft,weight:totalWeight(state.draft,state.additionalParcels)},!!state.accountId),...(state.accountId?{customer_account_id:state.accountId}:{}),...(state.settingsVersion?{settings_version_id:state.settingsVersion}:{})}, facts: taxFacts(state.draft) };
         if (!calculateIntent) {
           prepareIntent ??= commercialApi.prepare(taxInput);
           const preparation = await commercialApi.executePrepare(prepareIntent); if (!current()) return;
@@ -169,6 +170,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     },
     validateEntry() {
       const errors=validate(state.draft,'booking');
+      if(!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='')errors.override='Enter the freight amount.';
       for(const key of ['recipientRef','evidenceRef','handoverState','recipientState','gstin','specialCase','method'] as const)delete errors[key];
       const extra=additionalParcelErrors(state.draft,state.additionalParcels);
       const invalid=Object.values(errors).some(Boolean)||extra.some(e=>Object.values(e).some(Boolean));
@@ -179,10 +181,11 @@ export function createBookingWorkflow(controller: ScopeController) {
       if(!current()||state.busy||state.recoveryBlocked||state.booking||bookingIntent||state.customerPhase==='uncertain'||state.taxPhase==='uncertain'||state.quote)return;
       const d={...state.draft,weight:totalWeight(state.draft,state.additionalParcels)};
       const errors=validate(d,'commercial');
+      if(d.override===''&&!d.serviceOptionId&&!state.accountId)return;
       if(['destination','service','weight','override','packing'].some(k=>errors[k as Field]))return;
       set({busy:true,pricingPhase:'loading'});
       try {
-        quoteIntent??=commercialApi.quote({...pricingInput(d),...(state.accountId?{customer_account_id:state.accountId}:{})});
+        quoteIntent??=commercialApi.quote({...pricingInput(d,!!state.accountId),...(state.accountId?{customer_account_id:state.accountId}:{})});
         const quote=await commercialApi.executeQuote(quoteIntent);
         if(current())set({quote,pricingPhase:'ready',message:''});
       }catch(error){if(!failed(error,'pricingPhase'))quoteIntent=undefined;}

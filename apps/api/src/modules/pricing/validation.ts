@@ -57,14 +57,21 @@ export function draft(value:unknown,replace=false):PricingDraftInput & {expected
 }
 export function publish(value:unknown) { const b=object(value,['expected_version']);return {expected_version:integer(b.expected_version,'expected_version',1,2147483646)}; }
 export function quote(value:unknown):PricingQuoteInput {
-  const b=object(value,['destination_key','service','weight_grams','override','settings_version_id','customer_account_id','service_option_id']);
+  const b=object(value,['destination_key','service','weight_grams','override','settings_version_id','customer_account_id','service_option_id','charges']);
+  let charges:PricingQuoteInput['charges'];
+  if(b.charges!==undefined){
+    if(b.override!==undefined||b.customer_account_id!==undefined||b.service_option_id!==undefined)fail('$','INVALID_FORMAT');
+    const c=object(b.charges,['freight_paise','packing_paise']);
+    charges={freight_paise:integer(c.freight_paise,'freight_paise'),packing_paise:integer(c.packing_paise,'packing_paise')};
+    if(BigInt(charges.freight_paise)+BigInt(charges.packing_paise)>BigInt(Number.MAX_SAFE_INTEGER))fail('freight_paise','OUT_OF_RANGE');
+  }
   let override:PricingQuoteInput['override'];
   if(b.override!==undefined) {
     const o=object(b.override,['freight_paise','packing_paise','reason_code']);
     if(!['customer_agreement','service_recovery','commercial_exception'].includes(o.reason_code as string))fail('reason_code','REQUIRED');
     override={freight_paise:integer(o.freight_paise,'freight_paise'),...(o.packing_paise===undefined?{}:{packing_paise:integer(o.packing_paise,'packing_paise')}),reason_code:o.reason_code as PricingOverrideReason};
   }
-  return {...(b.service_option_id===undefined?{}:{service_option_id:uuid(b.service_option_id,'version_id')}),...(b.customer_account_id===undefined?{}:{customer_account_id:uuid(b.customer_account_id,'account_id')}),...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),destination_key:key(b.destination_key,'destination_key'),service:service(b.service),weight_grams:integer(b.weight_grams,'weight_grams',1),...(override?{override}:{})};
+  return {...(charges?{charges}:{}),...(b.service_option_id===undefined?{}:{service_option_id:uuid(b.service_option_id,'version_id')}),...(b.customer_account_id===undefined?{}:{customer_account_id:uuid(b.customer_account_id,'account_id')}),...(b.settings_version_id===undefined?{}:{settings_version_id:uuid(b.settings_version_id,'version_id')}),destination_key:key(b.destination_key,'destination_key'),service:service(b.service),weight_grams:integer(b.weight_grams,'weight_grams',1),...(override?{override}:{})};
 }
 export function selection(value:unknown) {
   const b=object(value,['organization_id','franchise_id']);

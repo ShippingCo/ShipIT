@@ -39,7 +39,7 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
-function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
+function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
 async function calculate(){options();fireEvent.click(screen.getByRole('button',{name:'Calculate total'}));await waitFor(()=>expect(summary().getByText('₹134.00')).toBeVisible());}
 async function entered(paid=false){await start();core(paid);fill('Parcel handed over in','27');await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
@@ -78,10 +78,13 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('does not request an invalid customer link or substitute a customer when it fails',async()=>{
   window.location.hash='/business/new-booking?customer_id=invalid';render(<App/>);await screen.findByText(/selected customer could not be loaded/i);expect(calls.some(c=>c.path.includes('/customers/invalid'))).toBe(false);expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
- it('shows published destinations with a recoverable failure and no invented fallback choices',async()=>{
-  let fail=true;override=c=>c.path.includes('/pricing/versions')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
-  render(<App/>);await screen.findByRole('button',{name:'Retry destinations'});expect(document.querySelector('#booking-cities option')).toBeNull();
-  fill('Customer name','Keep this draft');fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry destinations'}));await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());expect(screen.getByLabelText('Customer name')).toHaveValue('Keep this draft');
+ it('allows any destination and service when no rate card exists',async()=>{
+  override=c=>c.path.includes('/pricing/versions')?Promise.resolve(f.json({error:{code:'NO_RATE'}},422)):c.path.startsWith('/api/v1/pricing/quote')?Promise.resolve(f.json({...f.quote,rate_version_id:null,rate_version_number:0,rule_id:null})):c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({...f.booking,parcels:[{...f.booking.parcels[0],weight_grams:6500}]},201)):undefined;
+  render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});core();
+  fill('Destination city','New City');fill('Service','express');fill('Weight (kg)','6.5');fill('Parcel handed over in','27');save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({destination_key:'NEW_CITY',service:'express',weight_grams:6500,charges:{freight_paise:12551,packing_paise:249}});
+  expect(document.body.textContent).not.toMatch(/Set up booking rates|No configured rate|publish.*before you can book/);
  });
  it('saves from the single booking page with exact kg conversion and a reviewed quote',async()=>{
   await entered();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({weight_grams:999});save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
@@ -93,7 +96,7 @@ describe('production counter API composition',{timeout:20000},()=>{
  });
  it('converts packing and freight to exact paise and rejects invalid non-empty amounts',async()=>{
   await entered();fill('Freight ₹','12.345');save();await waitFor(()=>expect(screen.getByLabelText('Freight ₹')).toHaveAttribute('aria-invalid','true'));expect(posts('/api/v1/bookings?')).toHaveLength(0);
-  fill('Freight ₹','125.51');fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({override:{freight_paise:12551,packing_paise:301,reason_code:'customer_agreement'}});
+  fill('Freight ₹','125.51');fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
  });
  it('invalidates the total and shows a missing handover fact inline',async()=>{
   await entered();options();fill('Parcel handed over in','');expect(summary().queryByText('₹134.00')).toBeNull();save();await waitFor(()=>expect(screen.getByLabelText('Parcel handed over in')).toHaveFocus());expect(screen.queryByRole('dialog')).toBeNull();expect(posts('/api/v1/bookings?')).toHaveLength(0);

@@ -122,3 +122,22 @@ No backfill or browser import; no rate exists until deliberate approved publicat
 Rollback disables/reverts compatible API code, retaining immutable schema/evidence; repairs
 require another forward migration. Existing fictional demo suggestFreight remains untouched
 and unreachable from production. No browser/keyboard change is introduced by #20.
+
+
+## Counter-entered booking charges
+
+Migration `1793725200000-counter-entered-charges.cjs` adds an explicit `charges`
+input to the existing quote endpoint. Ordinary counter bookings submit freight
+and packing as whole paise, independently of any rate card, destination rule,
+weight slab or override tolerance. This path uses the existing `pricing.override`
+role permission; it does not require privileged override approval. A charges
+input cannot also select a named service, monthly account or legacy override.
+
+The server checks nonnegative safe integers and their sum, stores an actor- and
+franchise-bound quote with null card/version/rule references, and recalculates
+that evidence when tax and booking are saved. Manual quotes expire after ten
+minutes; idempotent replay retains the original evidence. GST, booking snapshots,
+payment obligations and receipt issuance still use server-owned amounts. SQL
+constraints distinguish entered charges from rate-backed quotes and reconcile
+the entered components and subtotal. Existing rate-backed quotes keep their
+original rules and authorization. Historical bookings are unchanged.

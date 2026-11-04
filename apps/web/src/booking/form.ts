@@ -45,7 +45,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
   }
   if (section !== 'customer') {
     if(!['standard','express','same_city'].includes(d.service))e.service='Choose a delivery service.';
-    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Choose a destination from the published rates. If none are available, ask your branch administrator to set up rates.';
+    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Enter a destination city using letters, numbers or spaces.';
     if (!/^[1-9][0-9]*$/.test(d.weight) || !Number.isSafeInteger(Number(d.weight))) e.weight = 'Enter a positive whole number of grams.';
     if (d.packing && (!/^(0|[1-9][0-9]*)$/.test(d.packing) || !Number.isSafeInteger(Number(d.packing)))) e.packing = 'Enter zero or a positive packing amount.';
     if(d.packing!==''&&d.override==='')e.override='Enter the freight amount as well as packing.';
@@ -58,9 +58,9 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
   }
   return e;
 }
-export function pricingInput(d: Draft): PricingQuoteInput {
+export function pricingInput(d: Draft, account=false): PricingQuoteInput {
   return { ...(d.serviceOptionId?{service_option_id:d.serviceOptionId}:{}),destination_key: d.destination, service: d.service as PricingQuoteInput['service'], weight_grams: Number(d.weight),
-    ...(d.override ? { override: { freight_paise: Number(d.override), ...(d.packing!==''?{packing_paise:Number(d.packing)}:{}), reason_code: d.reason as NonNullable<PricingQuoteInput['override']>['reason_code'] } } : {}) };
+    ...(d.override!==''&&!d.serviceOptionId&&!account?{charges:{freight_paise:Number(d.override),packing_paise:Number(d.packing||'0')}}:d.override ? { override: { freight_paise: Number(d.override), ...(d.packing!==''?{packing_paise:Number(d.packing)}:{}), reason_code: d.reason as NonNullable<PricingQuoteInput['override']>['reason_code'] } } : {}) };
 }
 export function taxFacts(d: Draft): TaxFacts {
   return { service_recipient_ref: d.recipientRef, registration: d.registration as TaxFacts['registration'], recipient_state: d.recipientState || null,

@@ -1413,7 +1413,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: does not replace an existing customer with a different name or treat lookup failure as a new customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
 | apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
-| apps/web/src/test/counter.test.tsx: shows published destinations with a recoverable failure and no invented fallback choices | preserve | seam |
 | apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves declared goods value without making up structured delivery or contents facts | preserve | booking |
 | apps/web/src/test/counter.test.tsx: converts packing and freight to exact paise and rejects invalid non-empty amounts | preserve | booking |
@@ -1453,3 +1452,4 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: keeps required registered billing facts inline and does not save an invalid GSTIN | preserve | booking |
 | apps/web/src/test/business-gst.test.tsx: saves the demo GST preference in one step and retries a lost response with the same key and body | preserve | booking |
 | apps/web/src/test/counter.test.tsx: uses the saved demo GST setting for a live summary and saves without billing steps | preserve | booking |
+| apps/web/src/test/counter.test.tsx: allows any destination and service when no rate card exists | preserve | booking |

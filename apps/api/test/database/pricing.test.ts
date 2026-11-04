@@ -250,3 +250,25 @@ await test('concurrent same-intent keys return one original authorized result an
   const fresh=await s.quote(body,s.local.token,key);assert.equal(fresh.statusCode,200);assert.notEqual(fresh.json().id,outcomes[0]!.json().id);
   assert.equal((await counts(s))!.quotes,2);
 });
+
+await test('entered charges work without any rate card and retain exact retries, scope, amounts and expiration',{timeout:30000},async t=>{
+ const s=await pricingSetup(t),key=randomUUID();
+ const entered={destination_key:'NEW_CITY',service:'express' as const,weight_grams:6500,charges:{freight_paise:15000,packing_paise:3000}};
+ const responses=await Promise.all([s.quote(entered,s.operator.token,key),s.quote(entered,s.operator.token,key)]);
+ for(const response of responses)assert.equal(response.statusCode,200,response.body);
+ const q=responses[0]!.json();assert.deepEqual(responses[1]!.json(),q);
+ assert.equal(q.rate_version_id,null);assert.equal(q.subtotal_paise,18000);assert.equal(q.override_status,'none');
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int n FROM shipit.pricing_versions')).rows[0]!.n,0);
+ assert.deepEqual(await s.pricing.validate(s.operator.token,org,A,q.id,entered,randomUUID()),q);
+ const other=await s.grant('operator',[A]);
+ await assert.rejects(s.pricing.validate(other.token,org,A,q.id,entered,randomUUID()),{code:'RESOURCE_NOT_FOUND'});
+ await assert.rejects(s.pricing.validate(s.operator.token,org,B,q.id,entered,randomUUID()));
+ assert.equal((await s.quote({...entered,charges:{...entered.charges,packing_paise:0}},s.operator.token,key)).json().error.code,'IDEMPOTENCY_CONFLICT');
+ await assert.rejects(s.pricing.validate(s.operator.token,org,A,q.id,{...entered,weight_grams:6501},randomUUID()),{code:'QUOTE_STALE'});
+ for(const charges of [{freight_paise:-1,packing_paise:0},{freight_paise:1.5,packing_paise:0},{freight_paise:Number.MAX_SAFE_INTEGER,packing_paise:1}])assert.equal((await s.quote({...entered,charges})).statusCode,422);
+ assert.equal((await s.quote({...entered,override:{freight_paise:1,reason_code:'customer_agreement'}})).statusCode,422);
+ const accountant=await s.grant('accountant',[A]);assert.equal((await s.quote(entered,accountant.token)).statusCode,403);
+ const zero=(await s.quote({...entered,charges:{freight_paise:0,packing_paise:0}})).json();assert.equal(zero.subtotal_paise,0);
+ s.setNow('2099-01-01T00:00:00Z');await assert.rejects(s.pricing.validate(s.operator.token,org,A,q.id,entered,randomUUID()),{code:'QUOTE_STALE'});
+ assert.deepEqual((await s.quote(entered,s.operator.token,key)).json(),q);
+});

@@ -34,3 +34,16 @@ export function calculate(version:PricingVersionDto,input:PricingQuoteInput,now:
     breakdown:{calculation:'flat_paise_v1',min_weight_grams:rule.min_weight_grams,max_weight_grams:rule.max_weight_grams,excluded:['tax','final_payable_rounding']}};
   return {...value,fingerprint:digest(value)};
 }
+
+/** Entered counter prices are validated and totalled on the server without a rate lookup. */
+export function calculateEntered(input:PricingQuoteInput,now:Date,id:string):PricingQuoteDto {
+  if(!input.charges)throw new FieldValidationError('freight_paise','REQUIRED');
+  const {freight_paise,packing_paise}=input.charges;
+  const expires=instant(new Date(now.getTime()+600000));
+  const value:Omit<PricingQuoteDto,'fingerprint'>={id,proposal:true,card_id:null,rate_version_id:null,rate_version_number:0,rule_id:null,
+    policy:{effective_from:instant(now),effective_to:expires,quote_validity_seconds:600,override_tolerance_paise:0,approval_ref:'NOT_REQUIRED',source_ref:'COUNTER_ENTERED'},
+    inputs:structuredClone(input),freight_suggestion_paise:freight_paise,freight_paise,packing_paise,variance_paise:0,override_status:'none',approval_actor_id:null,
+    subtotal_paise:checked(BigInt(freight_paise)+BigInt(packing_paise)),created_at:instant(now),expires_at:expires,
+    breakdown:{calculation:'flat_paise_v1',min_weight_grams:1,max_weight_grams:null,excluded:['tax','final_payable_rounding']}};
+  return {...value,fingerprint:digest(value)};
+}
