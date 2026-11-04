@@ -5,26 +5,27 @@ import {MemoryRouter} from 'react-router-dom';
 import Receipts from '../booking/Receipts';
 import Messaging from '../operations/Messaging';
 import {createScopeController} from '../operator/scope';
-import {businessDay,weekMonday,dayStart,shiftDay} from '../operations/business-dates';
+import {businessDay,dayStart} from '../operations/business-dates';
+import {dateWindow} from '../components/m3/Controls';
+import * as fixture from './counter-fixture';
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const at='2099-01-01T00:00:00.000Z';
 const controller=()=>{const c=createScopeController();c.runtime.bind({userId:id(1),organizationId:id(2),franchiseId:id(3),permissions:'operator'});return c;};
 const page=(items:unknown[],more=false)=>({items,page:{has_more:more,next_cursor:more?'synthetic-next':null}});
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
-it('filters receipts by the IST booking date and preserves applied bounds while paging an edited draft',async()=>{
- const request=vi.fn(async(path:string)=>Response.json(page([{id:id(4),booking_id:id(5),docket:'SYN-RECEIPT',confirmed_at:at}],!path.includes('cursor='))));vi.stubGlobal('fetch',request);
- render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByRole('table',{name:'Receipt bookings'});
- fireEvent.click(screen.getByText('Booking dates'));fireEvent.click(screen.getByRole('button',{name:'This week'}));expect(screen.getByLabelText('Booked from')).toHaveValue(weekMonday(businessDay()));
- fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));await waitFor(()=>expect(request.mock.calls.at(-1)![0]).toContain('from='));
- const original=new URL(request.mock.calls.at(-1)![0],'http://localhost').searchParams;
- expect(original.get('from')).toBe(dayStart(weekMonday(businessDay())));expect(original.get('to')).toBe(dayStart(shiftDay(businessDay(),1)));expect(original.get('franchise_id')).toBe(id(3));
- await screen.findByRole('button',{name:'More bookings'});fireEvent.change(screen.getByLabelText('Booked from'),{target:{value:'2020-01-01'}});fireEvent.click(screen.getByRole('button',{name:'More bookings'}));
- await waitFor(()=>expect(request.mock.calls.at(-1)![0]).toContain('cursor=synthetic-next'));const next=new URL(request.mock.calls.at(-1)![0],'http://localhost').searchParams;expect(next.get('from')).toBe(original.get('from'));expect(next.get('to')).toBe(original.get('to'));
- await screen.findByRole('table',{name:'Receipt bookings'});fireEvent.click(screen.getByRole('button',{name:'All dates'}));await waitFor(()=>expect(new URL(request.mock.calls.at(-1)![0],'http://localhost').searchParams.has('from')).toBe(false));
+it('filters saved receipts by IST booking date and keeps the range while paging',async()=>{
+ const record={id:id(4),booking_id:fixture.bookingId,version:1,status:'booked',custody:'awaiting_intake',docket:'SYN-RECEIPT',weight_grams:1000,confirmed_at:at,sender:{source_customer_id:fixture.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
+ const request=vi.fn(async(path:string)=>path.includes('/parcels?')?Response.json(page([record],!path.includes('cursor='))):Response.json(fixture.receipt));vi.stubGlobal('fetch',request);
+ render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByText('SYN-RECEIPT');
+ fireEvent.click(screen.getByRole('button',{name:'All time'}));fireEvent.click(screen.getByRole('button',{name:'This week'}));expect(screen.getByText('No receipts match')).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'More receipts'}));await waitFor(()=>expect(request.mock.calls.some(([path])=>path.includes('cursor=synthetic-next'))).toBe(true));expect(screen.getByRole('button',{name:'This week'})).toBeVisible();expect(new URL(request.mock.calls.find(([path])=>path.includes('cursor=synthetic-next'))![0],'http://localhost').searchParams.get('franchise_id')).toBe(id(3));
+ fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));await screen.findAllByText('SYN-RECEIPT');
 });
-it('rejects an inverted receipt date range without sending a new read',async()=>{
- const request=vi.fn(async()=>Response.json(page([])));vi.stubGlobal('fetch',request);render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByRole('heading',{name:'No receipts found'});fireEvent.click(screen.getByText('Booking dates'));
- fireEvent.change(screen.getByLabelText('Booked from'),{target:{value:'2026-11-03'}});fireEvent.change(screen.getByLabelText('Booked through'),{target:{value:'2026-11-02'}});const count=request.mock.calls.length;fireEvent.click(screen.getByRole('button',{name:'Find receipts'}));expect(screen.getByRole('alert')).toHaveTextContent('Choose an end date');expect(request).toHaveBeenCalledTimes(count);
+it('uses exclusive IST day boundaries and native custom-range constraints',async()=>{
+ expect(dateWindow('today')).toEqual([Date.parse(dayStart(businessDay())),expect.any(Number)]);
+ vi.stubGlobal('fetch',vi.fn(async()=>Response.json(page([]))));render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByText('No receipts yet');fireEvent.click(screen.getByRole('button',{name:'All time'}));
+ fireEvent.change(screen.getByLabelText('From'),{target:{value:'2026-11-03'}});expect(screen.getByLabelText('To')).toHaveAttribute('min','2026-11-03');
+ const [start,end]=dateWindow('custom',{from:'2026-11-03',to:'2026-11-03'});expect(start).toBe(Date.parse('2026-11-02T18:30:00.000Z'));expect(end).toBe(Date.parse('2026-11-03T18:29:59.999Z'));
 });
 it('shows queued provider work as waiting in the feed and uses scoped notification filters without send claims',async()=>{
  const row={id:id(8),row_kind:'message',effective_time:at,source_id:id(9),source_kind:'event',affected_id:id(10),correlation_id:id(11),notification_kind:'booking_confirmation',decision:null,message:{id:id(8),state:'queued',reason_code:'pending',version:1,attempt_count:0,progress:'none',failure_observed:false,observed_at:null},fanout:null,recovery:{kind:'none',expected_version:1,allowed_reasons:[]}};

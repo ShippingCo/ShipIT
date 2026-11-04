@@ -1,64 +1,60 @@
-import '../components/workspace/service-reference.css';
-import {DatePresets} from '../operations/DatePresets';
-import {dayStart,shiftDay} from '../operations/business-dates';
-import { useEffect, useRef, useState } from 'react';
-import type { ScopeController } from '../operator/scope';
-import { scopedApi } from '../data-access/scoped-api';
-import { receiptDiscovery, type ReceiptReference } from '../data-access/bookings';
-import { SearchField,DateField } from '../components/m3/Input';
-import { ReceiptPanel } from './ReceiptPanel';
-import { failureMessage } from './failures';
-import './counter.css';
-import {PageHeader,RecordTable} from '../components/workspace/Workspace';
-import {Empty} from '../operations/AsyncState';
-import {formatKolkata} from '../operations/format';
-export default function Receipts({ controller }: { controller: ScopeController }) {
-  const [api] = useState(() => scopedApi(controller));
-  const [docket, setDocket] = useState(''), [rows, setRows] = useState<ReceiptReference[]>([]), [cursor, setCursor] = useState<string | null>(null),
-    [selected, setSelected] = useState<{id:string;reveal:number}>(), [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'error'>('loading'), [message, setMessage] = useState('');
-  const pending = useRef<AbortController>();
-  const [from,setFrom]=useState(''),[to,setTo]=useState('');
-  const appliedDates=useRef<{from?:string;to?:string}>({});
-  const restoreReceiptFocus = useRef(false);
-  const receiptTrigger = useRef<HTMLButtonElement | null>(null);
-  useEffect(()=>{if(!selected&&restoreReceiptFocus.current){restoreReceiptFocus.current=false;receiptTrigger.current?.focus();}},[selected]);
-  async function load(next?: string,search=docket,clearDates=false) {
-    if(!next&&!clearDates&&from&&to&&from>to){setPhase('error');setMessage('Choose an end date on or after the start date.');return;}
-    if(!next)appliedDates.current=clearDates?{}:{...(from?{from:dayStart(from)}:{}),...(to?{to:dayStart(shiftDay(to,1))}:{})};
-    pending.current?.abort(); const abort = new AbortController(); pending.current = abort;
-    setPhase('loading'); setMessage('Loading receipt references…'); setSelected(undefined);
-    if (!next) setRows([]);
-    try {
-      const result = await receiptDiscovery(api)(search, next, abort.signal,appliedDates.current);
-      if (abort.signal.aborted || !controller.runtime.isCurrent(api.scope)) return;
-      setRows(prior => [...new Map([...(next ? prior : []), ...result.items].map(row => [row.booking_id, row])).values()]);
-      setCursor(result.page.next_cursor); setPhase('ready'); setMessage(result.items.length ? 'Choose a booking to retrieve its issued receipt.' : 'No bookings found in this workspace.');
-    } catch (error) { if (abort.signal.aborted || !controller.runtime.isCurrent(api.scope)) return; setPhase('error'); setMessage(failureMessage(error)); }
+import './receipts.css';
+import {useMemo,useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import type {OperatorRole,ReceiptDto} from '@shippingco/shared';
+import type {ScopeController} from '../operator/scope';
+import {scopedApi} from '../data-access/scoped-api';
+import {parcels} from '../data-access/parcels';
+import {bookingEntries} from '../data-access/booking-entries';
+import {receipts} from '../data-access/receipts';
+import {payments} from '../data-access/payments';
+import {usePagedResource,useResource} from '../operations/hooks';
+import {counterBookingRow} from '../operations/SavedBookings';
+import {Loading,Failure} from '../operations/AsyncState';
+import {Button} from '../components/m3/Button';
+import {Card,EmptyState} from '../components/m3/Surface';
+import {SearchBar,DateFilter,dateWindow,type DatePreset,type CustomRange} from '../components/m3/Controls';
+import {printReceipt,printReceiptView} from '../utils/receipt';
+import {counterReceiptView} from '../utils/counter-receipt';
+const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
+const booked=(value:number)=>new Date(value).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+export default function Receipts({controller,roles=[]}:{controller:ScopeController;roles?:readonly OperatorRole[]}){
+ const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),entrySource=useMemo(()=>bookingEntries(api),[api]);
+ const nav=useNavigate(),[q,setQ]=useState(''),[range,setRange]=useState<DatePreset>('all'),[custom,setCustom]=useState<CustomRange>({from:'',to:''}),[printing,setPrinting]=useState(''),[message,setMessage]=useState('');
+ const canEntries=roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)),canMoney=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
+ const page=usePagedResource(api.franchise+'receipt-parcels',(cursor,signal)=>source.list({limit:50,cursor},signal));
+ const entries=useResource(api.franchise+'receipt-entries',signal=>canEntries?entrySource.list(signal):Promise.resolve({items:[]}));
+ const ids=[...new Set(page.items.map(p=>p.booking_id))];
+ const issued=useResource(api.franchise+':receipts:'+ids.join(','),async signal=>Promise.all(ids.map(async id=>{
+  const dto=await receipts(api).booking(id,signal).catch(()=>null);
+  const balance=canMoney?await payments(api,id).read(signal).catch(()=>null):null;
+  return {id,dto,balance};
+ })));
+ const rows=useMemo(()=>{
+  const saved=(entries.value?.items??[]).map(entry=>({...counterBookingRow(entry),dto:null as ReceiptDto|null,bookingId:''}));
+  const records=new Map(issued.value?.map(r=>[r.id,r]));
+  for(const id of [...new Set(page.items.map(p=>p.booking_id))]){
+   const p=page.items.find(p=>p.booking_id===id)!,record=records.get(id),dto=record?.dto;
+   saved.push({id:'booking:'+id,docket:[...new Set(page.items.filter(p=>p.booking_id===id).map(p=>p.docket))].join(', '),name:dto?.booking.customer_name??p.sender.name,phone:p.sender.phone_display,city:p.details?.city||'',address:p.recipient.address,service:dto?.booking.service||'',weight:null,amount:dto?.kind==='booking_charge'?dto.charges.tax.final_payable_paise:null,payment:record?.balance?(record.balance.outstanding_paise===0?'paid':'topay'):'unknown',status:p.status,createdAt:Date.parse(p.confirmed_at),lotId:null,lotCode:'',dto:dto??null,bookingId:id});
   }
-  useEffect(() => {
-    const abort = new AbortController(); pending.current = abort;
-    void receiptDiscovery(api)('', undefined, abort.signal).then(result => {
-      if (abort.signal.aborted || !controller.runtime.isCurrent(api.scope)) return;
-      setRows([...new Map(result.items.map(row => [row.booking_id, row])).values()]); setCursor(result.page.next_cursor); setPhase('ready');
-      setMessage(result.items.length ? 'Choose a booking to retrieve its issued receipt.' : 'No bookings found in this workspace.');
-    }).catch(error => { if (!abort.signal.aborted && controller.runtime.isCurrent(api.scope)) { setPhase('error'); setMessage(failureMessage(error)); } });
-    const unsubscribe = controller.runtime.onInvalidate(() => { pending.current?.abort(); setRows([]); setSelected(undefined); setDocket(''); setCursor(null); setMessage(''); });
-    return () => { pending.current?.abort(); unsubscribe(); };
-  }, [api, controller]);
-  return <div className="counter-flow reference-service"><PageHeader title="Receipts" eyebrow="Counter" description="Find a booking, retrieve its issued receipt and print only when needed."/>
-    <section className="card counter-section receipt-index" hidden={!!selected} aria-busy={phase==='loading'}><form className="receipt-search" aria-label="Find a receipt" onSubmit={event => { event.preventDefault(); void load(); }}>
-      <SearchField id="receipt-docket-search" label="Find receipt by docket" maxLength={32} autoComplete="off" spellCheck={false} value={docket} onChange={v => { pending.current?.abort(); setDocket(v); setRows([]); setSelected(undefined); setCursor(null); setPhase('idle'); setMessage('Search to load matching bookings.'); }} helper="Use the tracking number, or leave blank for recent bookings." />
-      <button className="btn btn-outlined" disabled={phase === 'loading'} aria-busy={phase === 'loading'}>{phase === 'error' ? 'Retry receipts' : 'Find receipts'}</button>
-    <details className="receipt-date-disclosure"><summary>Booking dates{from||to?' · range selected':''}</summary><div className="reference-receipt-dates"><DatePresets change={(start,end)=>{setFrom(start);setTo(end);}}/><DateField label="Booked from" value={from} onChange={setFrom}/><DateField label="Booked through" value={to} onChange={setTo}/>{(from||to)&&<button type="button" className="btn btn-text" onClick={()=>{setFrom('');setTo('');void load(undefined,docket,true);}}>All dates</button>}<p className="ops-note">Booking confirmation date · Asia/Kolkata · Monday week start. Select Find receipts to apply.</p></div></details></form><p role={phase === 'error' ? 'alert' : 'status'} aria-live="polite">{message}</p>
-    {rows.length>0&&<RecordTable label="Receipt bookings" mobile="stack" rows={rows} rowKey={row=>row.booking_id} selectedKey={selected?.id} columns={[
-      {key:'docket',label:'Docket',cell:row=><strong className="ops-mono">{row.docket}</strong>},
-      {key:'confirmed',label:'Confirmed',cell:row=><time dateTime={row.confirmed_at} title={row.confirmed_at}>{formatKolkata(row.confirmed_at)}</time>},
-      {key:'actions',label:'Actions',cell:row=><button type="button" className="btn btn-text" aria-label={`Open receipt for ${row.docket} · ${row.confirmed_at}`} onClick={event=>{receiptTrigger.current=event.currentTarget;setSelected(previous=>({id:row.booking_id,reveal:(previous?.reveal??0)+1}));}}>Open receipt</button>},
-    ]}/>}
-    {phase==='ready'&&rows.length===0&&<Empty icon="receipt_long" title="No receipts found" body={docket||from||to?'Check the docket, or clear the search to see recent bookings in this franchise.':'Issued receipts will appear here after a booking is confirmed in this franchise.'} action={docket||from||to?<button type="button" className="btn btn-outlined" onClick={()=>{setDocket('');setFrom('');setTo('');void load(undefined,'',true);document.getElementById('receipt-docket-search')?.focus();}}>Clear search</button>:undefined}/>}
-    {rows.length>0&&<p className="ops-note">{rows.length} bookings loaded</p>}
-    {cursor && <button className="btn btn-outlined" disabled={phase === 'loading'} onClick={() => { void load(cursor); }}>More bookings</button>}
-    </section>
-    {selected && <ReceiptPanel key={selected.id} api={api} controller={controller} bookingId={selected.id} focusRequest={selected.reveal} onClose={()=>{restoreReceiptFocus.current=true;setSelected(undefined);}} />}
-  </div>;
+  const text=q.trim().toLowerCase(),[from,to]=dateWindow(range,custom);
+  return saved.filter(r=>r.createdAt>=from&&r.createdAt<=to&&(!text||(r.docket+' '+r.name+' '+r.phone+' '+r.city).toLowerCase().includes(text)));
+ },[entries.value,page.items,issued.value,q,range,custom]);
+ const total=rows.some(r=>r.amount===null)?null:rows.reduce((sum,r)=>sum+BigInt(r.amount!),0n);
+ async function reprint(row:typeof rows[number]){
+  if(printing)return;setPrinting(row.id);setMessage('');
+  try{if(row.entry)printReceiptView(counterReceiptView(row.entry,controller.snapshot().context?.franchises.find(f=>f.id===api.franchise)?.organization.display_name||'Booking acknowledgement'));else {const dto=row.dto??await receipts(api).booking(row.bookingId);if(controller.runtime.isCurrent(api.scope))printReceipt(dto);}}
+  catch{setMessage('The receipt could not be opened. Try Reprint again.');}finally{setPrinting('');}
+ }
+ return <div className="page" aria-label="Receipts"><h1 className="workspace-visually-hidden">Receipts</h1>
+  <div className="toolbar"><SearchBar value={q} onChange={setQ} placeholder="Search docket, name or phone" label="Search receipts"/><DateFilter preset={range} onPreset={setRange} custom={custom} onCustom={setCustom}/></div>
+  <p className="chips-total-line">{rows.length} receipt{rows.length===1?'':'s'} · {total===null||total>BigInt(Number.MAX_SAFE_INTEGER)?'—':money(Number(total))}</p>
+  {page.phase==='error'&&<Failure label="Receipts could not be loaded." retry={page.reload}/>}{entries.phase==='error'&&<Failure label="Saved booking receipts could not be loaded." retry={entries.reload}/>}
+  {message&&<p role="alert">{message}</p>}
+  <Card><div className="tbl-wrap"><table className="tbl receipts-table" aria-label="Receipts"><thead><tr><th>Docket</th><th>Customer</th><th className="ta-r">Total</th><th>Payment</th><th className="ta-r">Booked</th><th><span className="workspace-visually-hidden">Actions</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>
+   <td className="mono cell-main">{row.docket}</td><td>{row.name} <span className="muted t-body-sm">→ {row.city||'—'}</span></td><td className="ta-r">{money(row.amount)}</td><td><span className={'pill '+(row.payment==='paid'?'st-delivered':row.payment==='topay'?'pill-err':'receipt-payment-unknown')}>{row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'}</span></td><td className="ta-r muted t-body-sm">{booked(row.createdAt)}</td><td><Button size="sm" variant="text" icon="print" disabled={!!printing} aria-label={'Reprint '+row.docket} onClick={()=>void reprint(row)}>Reprint</Button></td>
+  </tr>)}</tbody></table>
+  {(page.phase==='loading'||entries.phase==='loading')&&!rows.length?<Loading label="Loading receipts…"/>:!rows.length&&<EmptyState icon={q||range!=='all'?'search_off':'receipt_long'} title={q||range!=='all'?'No receipts match':'No receipts yet'} sub={q||range!=='all'?'Try a different search or date range.':'Receipts appear automatically with each booking.'} action={q||range!=='all'?<Button variant="outlined" style={{marginTop:12}} onClick={()=>{setQ('');setRange('all');}}>Clear filters</Button>:<Button icon="add" style={{marginTop:12}} onClick={()=>nav('/business/new-booking')}>Create first booking</Button>}/>}
+  </div></Card>{page.page.has_more&&<Button variant="outlined" disabled={page.phase==='more'} onClick={page.loadMore}>More receipts</Button>}
+ </div>;
 }

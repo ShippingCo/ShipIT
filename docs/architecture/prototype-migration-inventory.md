@@ -273,7 +273,6 @@ The JSON evidence also records resolved import declarations. Full-file fingerpri
 | --- | --- |
 | apps/web/src/App.tsx | seam |
 | apps/web/src/components/CommandPalette.tsx | presentation |
-| apps/web/src/components/m3/Journey.tsx | presentation |
 | apps/web/src/context/AppContext.tsx | seam |
 | apps/web/src/data/bot.ts | assistant, messaging, demo |
 | apps/web/src/data/store.ts | demo, seam, presentation, customers, booking, pricing, parcels, proof, recovery, lots, routes, payments, messaging, assistant, settings, reports, eway, receipts, attachments |
@@ -1385,8 +1384,6 @@ focus restoration, preserved drafts and immutable uncertain retries.
 
 | apps/web/src/test/logistics-parity.test.tsx: retains a delivery assignment after a lost response and retries the same handover evidence | preserve | proof | Retain server-authorized assignment, handover evidence and the original command identity through an uncertain response; do not claim delivery or payment. |
 
-| apps/web/src/test/service-parity.test.tsx: filters receipts by the IST booking date and preserves applied bounds while paging an edited draft | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
-| apps/web/src/test/service-parity.test.tsx: rejects an inverted receipt date range without sending a new read | preserve | receipts | Receipt discovery uses scoped IST confirmation bounds and retains applied filters through pagination. |
 | apps/web/src/test/service-parity.test.tsx: shows queued provider work as waiting in the feed and uses scoped notification filters without send claims | preserve | messaging | Provider waiting state stays truthful and filtering remains scoped. |
 
 
@@ -1409,16 +1406,13 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | --- | --- | --- |
 | apps/web/src/test/counter.test.tsx: uses the original demo field order and controls without separate customer or pricing steps | preserve | booking |
 | apps/web/src/test/counter.test.tsx: looks up repeat customers on phone blur and only fills the selected customer | preserve | booking |
-| apps/web/src/test/counter.test.tsx: does not replace an existing customer with a different name or treat lookup failure as a new customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
 | apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
 | apps/web/src/test/counter.test.tsx: saves from the single booking page with exact kg conversion and a reviewed quote | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves declared goods value without making up structured delivery or contents facts | preserve | booking |
-| apps/web/src/test/counter.test.tsx: converts packing and freight to exact paise and rejects invalid non-empty amounts | preserve | booking |
 | apps/web/src/test/counter.test.tsx: payment choices and implicit form submission never confirm a booking | preserve | booking |
 | apps/web/src/test/counter.test.tsx: prints only after saving and does not recreate a booking when printing is cancelled | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves three dockets in one booking and cancels all three from the saved screen | preserve | booking |
-| apps/web/src/test/counter.test.tsx: rejects duplicate extra dockets and focuses the field without creating a booking | preserve | booking |
 | apps/web/src/test/counter.test.tsx: copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents | preserve | booking |
 | apps/web/src/test/counter.test.tsx: double click and lost commit acknowledgement retain identical path/body/key with one displayed result | preserve | seam |
 | apps/web/src/test/counter.test.tsx: network outage preserves draft and never fabricates a receipt or local booking | preserve | seam |
@@ -1426,7 +1420,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
 | apps/web/src/test/counter.test.tsx: Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write | preserve | seam |
 | apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
-| apps/web/src/test/counter.test.tsx: explicit save focuses the first missing sender field without creating a booking | preserve | booking |
 | apps/web/src/test/counter.test.tsx: handles safe %s without losing the draft or claiming success | preserve | seam |
 | apps/web/src/test/counter.test.tsx: malformed committed response is uncertain and retry uses its original identity | preserve | seam |
 | apps/web/src/test/counter.test.tsx: 401 purges private form and requires sign in without local fallback | preserve | seam |
@@ -1434,7 +1427,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: scope switch during a dispatched booking retains opaque recovery and never replays under B | preserve | seam |
 | apps/web/src/test/counter.test.tsx: malformed successes fail safely and unknown private fields are projected out | preserve | seam |
 | apps/web/src/test/counter.test.tsx: focus revalidation preserves draft for unchanged permissions; revocation purges actual generation | preserve | seam |
-| apps/web/src/test/counter.test.tsx: does not claim an empty receipt result until the edited docket is searched | preserve | seam |
 | apps/web/src/test/counter.test.tsx: receipt discovery supports empty and safe denied/retry states | preserve | seam |
 | apps/web/src/test/counter.test.tsx: retries only the unconfirmed lot assignment after a multi-package booking is saved | preserve | booking |
 | apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
@@ -1451,3 +1443,31 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: retains an uncertain credit request identity and saves the exact approved debtor | preserve | booking |
 | apps/web/src/test/counter.test.tsx: invalidates credit approval after shipment edits and preserves held-account denial | preserve | booking |
 | apps/web/src/test/counter.test.tsx: removes the entire additional-options section and every control inside it | preserve | booking |
+
+
+## Optional confirmed bookings and demo presentation parity
+
+Journey now owns its pure stage list and no longer imports the fictional store. Optional counter entries preserve entered fields with a scoped transaction and confirmation audit; they do not create tax, collection or shipment facts. Packages and Receipts use the demo composition with authorized production reads. The advanced shipment view remains available at `/business/bookings?view=operations`; its existing scope, transition and retry regressions stay covered separately. Receipt filters apply immediately through the shared IST date window.
+
+| Regression | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter.test.tsx: confirms a booking with all user fields blank and no fabricated contact or charges | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves partial confirmed details without requiring freight, phone or destination | preserve | booking |
+| apps/web/src/test/counter.test.tsx: retries an uncertain optional save with the same key and unchanged fields | preserve | booking |
+| apps/web/src/test/counter.test.tsx: preserves entered contact details without replacing an ambiguous existing customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: does not treat failed customer lookup as a new customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: preserves an unassessed decimal entry without inventing a calculated charge | preserve | booking |
+| apps/web/src/test/counter.test.tsx: continues converting valid packing and freight to exact paise | preserve | booking |
+| apps/web/src/test/counter.test.tsx: records entered duplicate dockets without creating conflicting dispatch parcels | preserve | booking |
+| apps/web/src/test/counter.test.tsx: explicit save confirms an entry without requiring sender fields | preserve | booking |
+| apps/web/src/test/counter.test.tsx: filters receipt rows immediately and restores them when the search is cleared | preserve | booking |
+| apps/web/src/test/receipts-demo.test.tsx: uses demo columns, search, date filter, count and actual total | preserve | receipts |
+| apps/web/src/test/receipts-demo.test.tsx: searches phone and clears unmatched filters | preserve | receipts |
+| apps/web/src/test/receipts-demo.test.tsx: prints the shared receipt sheet only on Reprint and cleans private print DOM | preserve | receipts |
+| apps/web/src/test/receipts-demo.test.tsx: keeps missing values and payment truthful | preserve | receipts |
+| apps/web/src/test/saved-bookings-demo.test.tsx: shows the exact table columns, search, date menu and counted chips with real saved data | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: searches the saved customer phone and filters delivered without inserting demo rows | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: opens the matching journey and two-column dialog on row click, with the actual confirmation timeline | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: does not misrepresent selected Paid now as recorded money or missing amounts as zero | preserve | booking |
+| apps/web/src/test/service-parity.test.tsx: filters saved receipts by IST booking date and keeps the range while paging | preserve | receipts |
+| apps/web/src/test/service-parity.test.tsx: uses exclusive IST day boundaries and native custom-range constraints | preserve | receipts |

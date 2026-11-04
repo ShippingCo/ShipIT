@@ -17,13 +17,12 @@ export function receiptView(dto:ReceiptDto):ReceiptView {
     ...dto.booking.parcels.map(p=>['Docket / Weight',`${p.docket} · ${p.weight_grams} g`] as [string,string])];
   if(dto.kind==='booking_charge'){
     const t=dto.charges.tax;
-    rows.push(['Freight',receiptMoney(dto.charges.freight_paise)],['Packing',receiptMoney(dto.charges.packing_paise)],
-      ['Pre-tax charges',receiptMoney(t.pre_tax_paise)],['Taxable basis',receiptMoney(t.taxable_basis_paise)],
-      ['Tax treatment',t.treatment],['Place of supply',t.place_of_supply],
-      ...t.components.map(c=>[`${c.kind} ${c.id} (rate ${c.numerator}/${c.denominator})`,receiptMoney(c.amount_paise)] as [string,string]),
-      ['CGST',receiptMoney(t.cgst_paise)],['SGST',receiptMoney(t.sgst_paise)],['IGST',receiptMoney(t.igst_paise)],
-      ['Tax total',receiptMoney(t.tax_total_paise)],['Unrounded payable',receiptMoney(t.unrounded_payable_paise)],
-      ['Rounding adjustment',receiptMoney(t.rounding_adjustment_paise)]);
+    rows.splice(0,rows.length,
+      ['Booking date',new Date(dto.booking.confirmed_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true})],
+      ['Service / Weight',`${dto.booking.service.replaceAll('_',' ').replace(/^./,c=>c.toUpperCase())} · ${dto.booking.parcels.reduce((n,p)=>n+p.weight_grams,0)/1000} kg`],
+      ['Packing charges',receiptMoney(dto.charges.packing_paise)],['Freight charges',receiptMoney(dto.charges.freight_paise)],
+      ['Taxable value',receiptMoney(t.taxable_basis_paise)],['CGST',receiptMoney(t.cgst_paise)],['SGST',receiptMoney(t.sgst_paise)],['IGST',receiptMoney(t.igst_paise)],
+      ...(t.rounding_adjustment_paise?[['Rounding adjustment',receiptMoney(t.rounding_adjustment_paise)] as [string,string]]:[]));
     return {heading:'Booking receipt',number:dto.number,issuer:dto.issuer.organization_name,customer:dto.booking.customer_name,rows,
       totalLabel:'Booked total',total:receiptMoney(t.final_payable_paise),note:'Documents booked charges. Collection is recorded separately.'};
   }

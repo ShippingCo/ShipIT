@@ -1,0 +1,5 @@
+/* Keep column labels and their values on the same axis despite global table rules. */
+.receipts-table :is(th, td):nth-child(3),
+.receipts-table :is(th, td):nth-child(4),
+.receipts-table :is(th, td):nth-child(5) { text-align: center; }
+.receipts-table .receipt-payment-unknown { color: #475467; background: #f2f4f7; border-color: #e4e7ec; }

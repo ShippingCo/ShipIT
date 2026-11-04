@@ -19,7 +19,7 @@ export function UnitField({value,onChange,places,...props}:Omit<Parameters<typeo
   return <TextField {...props} inputMode="decimal" value={displayed} onChange={text=>{
     // Keep invalid non-empty input invalid even when the field is optional (override).
     // An invalid price must never turn silently into an omitted override.
-    const integer=decimalUnits(text,places)??(text?'invalid-decimal':'');
+    const integer=decimalUnits(text,places)??(text?'invalid-decimal:'+text:'');
     setEditing({text,integer});onChange(integer);
   }}/>;
 }

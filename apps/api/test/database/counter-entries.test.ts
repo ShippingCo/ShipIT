@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {bookingSetup} from '../booking-support.ts';
+import {org,A,B} from '../audit-support.ts';
+await test('optional confirmed entries persist atomically, replay once and retain tenant and authentication boundaries',{timeout:30000},async t=>{
+ const s=await bookingSetup(t),key=randomUUID();
+ const path='/api/v1/bookings/entries?'+new URLSearchParams({organization_id:org,franchise_id:A});
+ const post=(data:unknown={},requestKey=key)=>s.app.inject({method:'POST',url:path,cookies:s.cookies(s.operator.token),headers:{...s.headers,'idempotency-key':requestKey},payload:data});
+ const first=await post();assert.equal(first.statusCode,201,first.body);assert.deepEqual(first.json().data,{fields:{},additional_parcels:[]});assert.equal(first.json().state,'confirmed');
+ const replay=await post();assert.equal(replay.statusCode,201,replay.body);assert.deepEqual(replay.json(),first.json());
+ const changed=await post({fields:{name:'Changed synthetic name'}});assert.equal(changed.statusCode,409,changed.body);assert.equal(changed.json().error.code,'IDEMPOTENCY_CONFLICT');
+ const partial=await post({fields:{name:'Synthetic sender',phone:'',packing:'3900',override:''},additional_parcels:[{}]},randomUUID());assert.equal(partial.statusCode,201,partial.body);assert.equal(partial.json().data.fields.packing,'3900');
+ const list=await s.app.inject({method:'GET',url:path,cookies:s.cookies(s.operator.token)});assert.equal(list.statusCode,200,list.body);assert.equal(list.json().items.length,2);
+ const audit=(await s.db.adminQuery('SELECT count(*)::int AS n FROM shipit.counter_booking_events')).rows[0];assert.equal(audit?.n,2);
+ const facts=await s.counts();assert.equal(facts?.bookings,0);assert.equal(facts?.parcels,0);assert.equal(facts?.obligations,0);
+ const foreign=await s.app.inject({method:'GET',url:path.replace(A,B),cookies:s.cookies(s.operator.token)});assert.equal(foreign.statusCode,404,foreign.body);
+ const unauth=await s.app.inject({method:'GET',url:path});assert.equal(unauth.statusCode,401,unauth.body);
+ const invalid=await post({fields:{organization_id:org}},randomUUID());assert.equal(invalid.statusCode,422,invalid.body);
+ assert.equal((await s.db.adminQuery('SELECT count(*)::int AS n FROM shipit.counter_bookings')).rows[0]?.n,2);
+});

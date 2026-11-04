@@ -2,7 +2,7 @@ import React from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
 import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
-import Packages from '../operations/Packages';
+import {OperationalPackages as Packages} from '../operations/Packages';
 import Lots from '../operations/Lots';
 import Routes from '../operations/Routes';
 import {createScopeController} from '../operator/scope';

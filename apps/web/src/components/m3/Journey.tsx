@@ -1,6 +1,6 @@
 import React from 'react';
 import { Msym, cx } from './Icon';
-import { STATUS_FLOW } from '../../data/store';
+const STATUS_FLOW = ['booked','checked_in','dispatched','in_transit','out_for_delivery','delivered'];
 import type { ParcelStatus, TimelineEntry } from '../../data/types';
 
 /*
