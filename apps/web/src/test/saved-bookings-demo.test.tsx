@@ -65,3 +65,14 @@ it('keeps the saved-booking popup open while an embedded shipment command is pen
  expect(screen.queryByRole('button',{name:'Close'})).toBeNull();fireEvent.keyDown(screen.getByRole('dialog'),{key:'Escape'});expect(screen.getByRole('dialog')).toBeVisible();expect(screen.getByLabelText('Move to lot')).toBeDisabled();
  fireEvent.click(screen.getByRole('button',{name:'Resolve synthetic shipment command'}));fireEvent.click(screen.getByRole('button',{name:'Close'}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
 });
+
+it('shows the server planning lot on an incomplete saved booking without fabricating a shipment membership',async()=>{
+ const lot={id:f.id(420),code:'LOT-0000000000000000001',name:'Synthetic planning lot',destination_key:'MUMBAI',state:'active',version:1,created_at:f.now,updated_at:f.now,archived_at:null,active_member_count:0,planning_entry_ids:[entry.id]};
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>{
+  if(path.startsWith('/api/v1/bookings/entries?'))return f.json({items:[entry]});
+  if(path.startsWith('/api/v1/lots?'))return f.json({items:[lot],page:{has_more:false,next_cursor:null}});
+  if(path.startsWith('/api/v1/parcels?'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  throw Error('Unexpected read');
+ }));
+ await start();expect(await screen.findByText(lot.code)).toBeVisible();
+});

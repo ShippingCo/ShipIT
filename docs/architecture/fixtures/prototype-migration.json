@@ -2876,6 +2876,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "shows the server planning lot on an incomplete saved booking without fabricating a shipment membership",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/segmented-payment.test.tsx",
         "name": "chooses a payment segment without submitting its surrounding booking form",
         "cases": null
@@ -7528,6 +7533,14 @@
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
       "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
       "cases": null
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "shows the server planning lot on an incomplete saved booking without fabricating a shipment membership",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Keep the saved booking lot display consistent with audited planning assignments."
     },
     {
       "file": "apps/web/src/test/segmented-payment.test.tsx",
