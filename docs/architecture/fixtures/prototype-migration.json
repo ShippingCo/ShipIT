@@ -2276,6 +2276,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/lots-demo.test.tsx",
+        "name": "reattaches an existing shipment route when only planning entries are added",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/messaging-effectiveness.test.tsx",
         "name": "keyboard capture reloads identity and drills through aggregates while separating unknown delivery, thanks and queue policy",
         "cases": null
@@ -6573,6 +6578,14 @@
       "disposition": "preserve",
       "group": "lots",
       "reason": "Match the demo lot composition with real scoped planning records, immutable retries and truthful messaging outcomes."
+    },
+    {
+      "file": "apps/web/src/test/lots-demo.test.tsx",
+      "name": "reattaches an existing shipment route when only planning entries are added",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "lots",
+      "reason": "Preserve the existing shipment route when adding only planning entries."
     },
     {
       "file": "apps/web/src/test/messaging-effectiveness.test.tsx",

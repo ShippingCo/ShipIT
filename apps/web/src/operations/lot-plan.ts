@@ -39,7 +39,7 @@ export function lotPlan(input:{lots:LotSource;routes:RouteSource;lot?:LotDto;att
    }
    const result=await send() as LotMembershipResult;lot=result.lots.find(l=>l.id===lot!.id)!;
   }
-  if(input.routeId&&input.parcels.length&&!attached){
+  if(input.routeId&&(input.parcels.length||lot!.active_member_count>0)&&!attached){
    if(!pending){const route=await input.routes.read(input.routeId);pending={source:'route',intent:input.routes.intent({kind:'attach_lot',routeId:route.id,body:{expected_version:route.version,lot_id:lot!.id}})};}
    await send();attached=true;
   }

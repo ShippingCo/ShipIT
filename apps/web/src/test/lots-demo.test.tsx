@@ -58,3 +58,12 @@ it('reads every cursor page and rejects a repeated cursor instead of presenting 
  expect(await allLotPages(load)).toEqual([1,2]);expect(load.mock.calls).toEqual([[null],['next']]);
  await expect(allLotPages(async()=>({items:[],page:{has_more:true,next_cursor:'loop'}}))).rejects.toThrow('Invalid pagination');
 });
+
+it('reattaches an existing shipment route when only planning entries are added',async()=>{
+ const {lotPlan}=await import('../operations/lot-plan');
+ const current={...lot,active_member_count:1},routeCommands:unknown[]=[];
+ const source={read:vi.fn(async()=>current),intent:vi.fn(command=>command),execute:vi.fn(async()=>({...current,version:2}))} as unknown as import('../data-access/lots').LotSource;
+ const routeSource={read:vi.fn(async()=>({id:f.id(360),version:1})),intent:vi.fn(command=>command),execute:vi.fn(async(command:unknown)=>{routeCommands.push(command);return {};})} as unknown as import('../data-access/routes').RouteSource;
+ const plan=lotPlan({lots:source,routes:routeSource,lot:current,attachedRouteId:f.id(360),name:current.name,destination:'MUMBAI',note:'Keep upright',entries:[entry.id],parcels:[],routeId:f.id(360)});
+ await plan.execute();expect(routeCommands).toEqual([expect.objectContaining({kind:'detach_lot',lotId:lot.id}),expect.objectContaining({kind:'attach_lot',body:expect.objectContaining({lot_id:lot.id})})]);
+});
