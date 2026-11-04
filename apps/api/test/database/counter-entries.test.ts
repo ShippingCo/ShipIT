@@ -6,7 +6,7 @@ import {org,A,B} from '../audit-support.ts';
 await test('optional confirmed entries persist atomically, replay once and retain tenant and authentication boundaries',{timeout:30000},async t=>{
  const s=await bookingSetup(t),key=randomUUID();
  const path='/api/v1/bookings/entries?'+new URLSearchParams({organization_id:org,franchise_id:A});
- const post=(data:unknown={},requestKey=key)=>s.app.inject({method:'POST',url:path,cookies:s.cookies(s.operator.token),headers:{...s.headers,'idempotency-key':requestKey},payload:data});
+ const post=(data:unknown={},requestKey=key)=>s.app.inject({method:'POST',url:path,cookies:s.cookies(s.operator.token),headers:{...s.headers,'idempotency-key':requestKey},payload:JSON.stringify(data)});
  const first=await post();assert.equal(first.statusCode,201,first.body);assert.deepEqual(first.json().data,{fields:{},additional_parcels:[]});assert.equal(first.json().state,'confirmed');
  const replay=await post();assert.equal(replay.statusCode,201,replay.body);assert.deepEqual(replay.json(),first.json());
  const changed=await post({fields:{name:'Changed synthetic name'}});assert.equal(changed.statusCode,409,changed.body);assert.equal(changed.json().error.code,'IDEMPOTENCY_CONFLICT');
