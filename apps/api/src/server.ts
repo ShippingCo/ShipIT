@@ -154,7 +154,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
-      registerRoutes(instance,createRouteService(database,auth.keys.browser),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
+      registerRoutes(instance,createRouteService(database,auth.keys.browser,whatsapp),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       registerCustody(instance,database,config.environment!=='developer',config.custodyWritesEnabled===true&&config.environment!=='demo');
       const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';
       registerCashbook(instance,database,config.environment!=='developer',cashbookWrites,config.agentMoneyWritesEnabled===true&&config.environment!=='demo',config.cashCloseWritesEnabled===true&&config.environment!=='demo');

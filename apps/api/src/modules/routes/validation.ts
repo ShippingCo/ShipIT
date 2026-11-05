@@ -10,7 +10,7 @@ function label(value:unknown,field:ValidationField) {
   return result;
 }
 export function command(operation:RouteOperation,value:unknown):RouteInput {
-  const metadata=['origin','destination','mode','carrier_code','scheduled_departure_at'];
+  const metadata=['origin','destination','mode','carrier_code','scheduled_departure_at','note','planning_entry_ids','planning_progress','planning_delay_minutes'];
   const fields=operation==='routes.create'?metadata:operation==='routes.update'?['expected_version',...metadata]:
     operation==='routes.lot.attach'?['expected_version','lot_id']:operation==='routes.parcel.attach'?['expected_version','parcel_id']:['expected_version'];
   const b=object(value,fields),version=operation==='routes.create'?{}:{expected_version:integer(b.expected_version,'expected_version',1,2147483646)};
@@ -18,7 +18,12 @@ export function command(operation:RouteOperation,value:unknown):RouteInput {
     if(!['road','rail','air','sea'].includes(b.mode as string))throw new FieldValidationError('mode','INVALID_FORMAT');
     const carrier=b.carrier_code===undefined||b.carrier_code===null?null:b.carrier_code;
     if(carrier!==null&&(typeof carrier!=='string'||carrier.length>64||!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(carrier)||carrier.includes('\n')))throw new FieldValidationError('carrier_code','INVALID_FORMAT');
-    return {...version,origin:label(b.origin,'origin'),destination:label(b.destination,'destination'),mode:b.mode as RouteInput['mode'],
+    const extra:Pick<RouteInput,'note'|'planning_entry_ids'|'planning_progress'|'planning_delay_minutes'>={};
+    if(b.note!==undefined){if(typeof b.note!=='string'||b.note.length>1000)throw new FieldValidationError('note','OUT_OF_RANGE');extra.note=b.note;}
+    if(b.planning_entry_ids!==undefined){if(!Array.isArray(b.planning_entry_ids)||b.planning_entry_ids.length>50)throw new FieldValidationError('planning_entry_ids','OUT_OF_RANGE');extra.planning_entry_ids=[...new Set(b.planning_entry_ids.map(id=>uuid(id,'planning_entry_ids')))].sort();}
+    if(b.planning_progress!==undefined){if(!['scheduled','departed','arrived'].includes(String(b.planning_progress)))throw new FieldValidationError('state','INVALID_FORMAT');extra.planning_progress=b.planning_progress as RouteInput['planning_progress'];}
+    if(b.planning_delay_minutes!==undefined)extra.planning_delay_minutes=integer(b.planning_delay_minutes,'total_delay_minutes',0,43200);
+    return {...version,...extra,origin:label(b.origin,'origin'),destination:label(b.destination,'destination'),mode:b.mode as RouteInput['mode'],
       carrier_code:carrier as string|null,scheduled_departure_at:timestamp(b.scheduled_departure_at,'scheduled_departure_at')};
   }
   return {...version,...(operation==='routes.lot.attach'?{lot_id:uuid(b.lot_id,'lot_id')}:

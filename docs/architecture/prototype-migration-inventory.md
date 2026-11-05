@@ -1483,3 +1483,8 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/lots-demo.test.tsx: reads every cursor page and rejects a repeated cursor instead of presenting partial totals | preserve | lots |
 | apps/web/src/test/saved-bookings-demo.test.tsx: shows the server planning lot on an incomplete saved booking without fabricating a shipment membership | preserve | lots |
 | apps/web/src/test/lots-demo.test.tsx: reattaches an existing shipment route when only planning entries are added | preserve | lots |
+
+| apps/web/src/test/routes-demo.test.tsx: matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history | preserve | routes |
+| apps/web/src/test/routes-demo.test.tsx: records planning departure with an exact retry after a lost response and never dispatches a parcel | preserve | routes |
+| apps/web/src/test/routes-demo.test.tsx: resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence | preserve | routes |
+

@@ -21,7 +21,7 @@ import { Msym } from '../components/m3/Icon';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const canWrite=(roles:readonly OperatorRole[])=>(canAdminister(roles,'routes.create')||roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role)));
 const modeOptions=['road','rail','air','sea'].map(value=>({value,label:value}));
-export default function Routes({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
+export function OperationalRoutes({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>routes(api),[api]),parcelSource=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const [state,setState]=useState<RouteDto['state']|'all'>('all'),[selected,setSelected]=useState<string|null>(null),[createOpen,setCreateOpen]=useState(false);
  const remember=useDetailReturn(selected);
@@ -81,3 +81,5 @@ function RouteEventForm({route,manifest,roles,source,command,confirmed}:{route:R
  return <section><h3>Record route event</h3><p className="ops-note">Enter the total delay, not an extra delay. Departure requires current movement authority.</p><form className="ops-form" onSubmit={event=>{void submit(event);}}><div className="ops-form-grid"><SelectField label="Event" value={kind} onChange={value=>setKind(value as RouteEventInput['kind'])} options={options}/><TextField label="Effective time (Asia/Kolkata)" type="datetime-local" step="0.001" value={effective} onChange={setEffective} required/><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label="Evidence reference (UUID)" value={evidence} onChange={setEvidence}/>{kind==='departure'&&<TextField label="Base route-leg ETA (Asia/Kolkata, optional)" type="datetime-local" step="0.001" value={eta} onChange={setEta}/>} {kind==='delay'&&<TextField label="Absolute total delay (minutes)" type="number" inputMode="numeric" step="1" min="0" max="43200" value={delay} onChange={setDelay}/>}</div><button className="btn btn-filled" disabled={(command.phase==='pending'||command.phase==='uncertain')||!effectiveAt||!uuid.test(evidence)||(kind==='departure'&&Boolean(eta)&&!etaAt)||(kind==='delay'&&(!Number.isSafeInteger(Number(delay))||Number(delay)<0||Number(delay)>43200))}>Record {kind}</button></form></section>;
 }
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>}
+
+export {default} from './RoutesWorkspace';

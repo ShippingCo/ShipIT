@@ -601,7 +601,7 @@ export async function withRouteScope<T>(database:DatabasePool,sessionToken:strin
       if(!reading&&parent.lifecycle!=='active')throw new HttpError('ORGANIZATION_DISABLED');
       const context={actor:{type:'user' as const,id:session.user_id},organizationId,permittedFranchiseIds:[franchiseId],
         organizationWide:false,correlationId,provenance:'membership' as const};
-      return await work({command:issueTenantAccess(tx,{...context,action}),audit:reading?null:issueTenantAccess(tx,{...context,action:'routes.audit'}),
+      return await work({command:issueTenantAccess(tx,{...context,action}),outbound:action==='routes.update'?issueTenantAccess(tx,{...context,action:'outbox.work',actor:{type:'service',id:'outbox-worker'},provenance:'trusted-event'}):null,audit:reading?null:issueTenantAccess(tx,{...context,action:'routes.audit'}),
         events:reading?null:issueTenantAccess(tx,{...context,action:'routes.events'}),
         transit:action==='routes.departure'&&parcelCommandScope('parcels.transit',memberships,all).includes(franchiseId)?issueTenantAccess(tx,{...context,action:'parcels.transit'}):null,
         parcelEvents:action==='routes.departure'?issueTenantAccess(tx,{...context,action:'parcels.events'}):null,

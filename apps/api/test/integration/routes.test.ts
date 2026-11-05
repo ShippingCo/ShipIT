@@ -15,7 +15,9 @@ describe('Route transport and capability contract',()=>{
     for(const field of ['origin','destination','mode','scheduled_departure_at']){const b:Record<string,unknown>={...routeMetadata};delete b[field];expect(()=>command('routes.create',b)).toThrow();}
     for(const origin of [null,23,'','a'.repeat(121),'bad\u0000','bad\ud800'])expect(()=>command('routes.create',{...routeMetadata,origin})).toThrow();
     for(const carrier_code of [23,'x','A\n',' A','A'.repeat(65),'https://example.com'])expect(()=>command('routes.create',{...routeMetadata,carrier_code})).toThrow();
-    for(const field of ['organization_id','franchise_id','actor','state','version','manifest_id','credential','provider','note'])expect(()=>command('routes.create',{...routeMetadata,[field]:id})).toThrow();
+    for(const field of ['organization_id','franchise_id','actor','state','version','manifest_id','credential','provider'])expect(()=>command('routes.create',{...routeMetadata,[field]:id})).toThrow();
+    expect(command('routes.create',{...routeMetadata,note:'Staff note',planning_entry_ids:[id,id],planning_progress:'scheduled',planning_delay_minutes:0})).toMatchObject({note:'Staff note',planning_entry_ids:[id],planning_progress:'scheduled',planning_delay_minutes:0});
+    for(const extra of [{note:'x'.repeat(1001)},{planning_entry_ids:[id+'x']},{planning_entry_ids:Array(51).fill(id)},{planning_progress:'delivered'},{planning_delay_minutes:-1}])expect(()=>command('routes.create',{...routeMetadata,...extra})).toThrow();
     for(const time of ['2099-01-01T09:00:00','2099-02-30T00:00:00Z','2099-01-01','now',23])expect(()=>command('routes.create',{...routeMetadata,scheduled_departure_at:time})).toThrow();
   });
   it('requires every mutation version and closed typed source identity',()=>{

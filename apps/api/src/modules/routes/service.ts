@@ -1,3 +1,6 @@
+import {createRouteMessages} from './messages.ts';
+import {createRouteHistory} from './history.ts';
+import type {WhatsappDependencies} from '../whatsapp/types.ts';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
 import { HttpError } from '../../plugins/errors.ts';
@@ -13,7 +16,7 @@ import type { RouteDto,RouteRow,ManifestRow,RouteOperation,Contribution,RouteSco
 import * as repository from './repository.ts';
 export function routeDto(r:RouteRow):RouteDto {
   return {id:r.id,origin:r.origin,destination:r.destination,mode:r.mode,carrier_code:r.carrier_code,scheduled_departure_at:instant(r.scheduled_departure_at),
-    state:r.state,version:r.version,current_manifest_id:r.current_manifest_id,created_at:instant(r.created_at),updated_at:instant(r.updated_at)};
+    state:r.state,version:r.version,current_manifest_id:r.current_manifest_id,created_at:instant(r.created_at),updated_at:instant(r.updated_at),...(r.planning_entry_ids==null?{}:{planning_entry_ids:r.planning_entry_ids}),...(r.planning_progress==null?{}:{planning_progress:r.planning_progress}),...(r.planning_delay_minutes==null?{}:{planning_delay_minutes:r.planning_delay_minutes})};
 }
 function manifestDto(m:ManifestRow) {return {id:m.id,route_id:m.route_id,version:m.version,finalized:m.finalized,parcel_count:m.parcel_count,created_at:instant(m.created_at)};}
 const events:Record<RouteOperation,string>={'routes.create':'route.created','routes.update':'route.updated','routes.archive':'route.archived',
@@ -36,7 +39,7 @@ async function resolve(scopes:RouteScopes,id:string,finalized:boolean) {
   if(finalized&&!rows.length)throw new HttpError('ROUTE_MANIFEST_CONFLICT');
   return rows.sort((a,b)=>a.parcel_id.localeCompare(b.parcel_id)||a.source_id.localeCompare(b.source_id));
 }
-export function createRouteService(database:DatabasePool,cursorKey:Buffer) {
+export function createRouteService(database:DatabasePool,cursorKey:Buffer,whatsapp?:WhatsappDependencies) {
   const codec=routeCursorCodec(cursorKey);
   async function execute(session:string,routeInput:unknown,resourceInput:unknown,query:unknown,keyInput:unknown,rawHeaders:readonly string[],bodyInput:unknown,operation:RouteOperation,correlation:string) {
     const id=operation==='routes.create'?null:uuid(routeInput,'route_id'),b=command(operation,bodyInput),selected=selection(query);
@@ -52,6 +55,8 @@ export function createRouteService(database:DatabasePool,cursorKey:Buffer) {
       const parcel=resource&&operation.startsWith('routes.parcel.')?await routeParcel(s.command,resource):null;
       if(before&&before.version!==b.expected_version)throw new HttpError('VERSION_CONFLICT');
       if(before&&before.state!=='planning')throw new HttpError('ROUTE_STATE_CONFLICT');
+      if(operation==='routes.create'||operation==='routes.update')await repository.validatePlanning(s.command,id,b,before);
+      if(before?.planning_progress&&before.planning_progress!=='scheduled'&&operation.endsWith('.attach'))throw new HttpError('ROUTE_STATE_CONFLICT');
       if(operation.endsWith('.attach')){
         if(lot&&lot.state!=='active')throw new HttpError('LOT_STATE_CONFLICT');
         if(parcel&&(parcel.booking_state!=='active'||!['booked','checked_in'].includes(parcel.status)))throw new HttpError('PARCEL_STATE_CONFLICT');
@@ -92,5 +97,5 @@ export function createRouteService(database:DatabasePool,cursorKey:Buffer) {
       return {manifest:manifestDto(m),items,page:{has_more:hasMore,next_cursor:hasMore&&last?codec.encode(binding,{value:m.id,id:last.parcel_id}):null}};
     });
   }
-  return {execute,read,list,manifest};
+  return {execute,read,list,manifest,history:createRouteHistory(database,cursorKey),message:createRouteMessages(database,whatsapp)};
 }

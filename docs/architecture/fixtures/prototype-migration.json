@@ -197,7 +197,7 @@
       "apps/web/src/pages/business/NewBookingPage.tsx": "8d725ca24750053333fa49dfc23ad3d8f32d6fca3e29d08f72c292b1ee9b0915",
       "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
-      "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
+      "apps/web/src/pages/business/RoutesPage.tsx": "2d6190353e57bbf98b59c799338a19f9747c2b7ff3c89eddca3f4219ec540e03",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "b09cfb1d6330ed547fd0ea9d7cd29add2430f2ed396f11bda5ef7c3ee23b1e8e",
       "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
@@ -745,6 +745,10 @@
       ],
       "apps/web/src/pages/business/RoutesPage.tsx": [
         {
+          "target": "apps/web/src/components/workspace/DispatchSelection.tsx",
+          "syntax": "import {DispatchSelection} from '../../components/workspace/DispatchSelection';"
+        },
+        {
           "target": "apps/web/src/components/workspace/DispatchCards.tsx",
           "syntax": "import {RouteCardView} from '../../components/workspace/DispatchCards';"
         },
@@ -758,7 +762,7 @@
         },
         {
           "target": "apps/web/src/components/m3/Button.tsx",
-          "syntax": "import { Button, Checkbox } from '../../components/m3/Button';"
+          "syntax": "import { Button } from '../../components/m3/Button';"
         },
         {
           "target": "apps/web/src/components/m3/Surface.tsx",
@@ -2838,6 +2842,21 @@
       {
         "file": "apps/web/src/test/reports.test.tsx",
         "name": "an uncertain capture retries the same immutable request after editing the draft",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "records planning departure with an exact retry after a lost response and never dispatches a parcel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence",
         "cases": null
       },
       {
@@ -7484,6 +7503,30 @@
       "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
     },
     {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "records planning departure with an exact retry after a lost response and never dispatches a parcel",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
       "file": "apps/web/src/test/sales.test.tsx",
       "name": "decodes refund corrections and opens a monthly statement with its frozen balance",
       "cases": null,
@@ -7540,12 +7583,12 @@
       "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
-      "disposition": "preserve",
-      "group": "booking",
-      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves.",
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
       "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
-      "cases": null
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves."
     },
     {
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
