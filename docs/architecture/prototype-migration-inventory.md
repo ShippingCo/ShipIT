@@ -1488,3 +1488,5 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/routes-demo.test.tsx: records planning departure with an exact retry after a lost response and never dispatches a parcel | preserve | routes |
 | apps/web/src/test/routes-demo.test.tsx: resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence | preserve | routes |
 
+
+| apps/web/src/test/routes-demo.test.tsx: uses physical journey evidence rather than an earlier planning delay for the current status | preserve | routes |

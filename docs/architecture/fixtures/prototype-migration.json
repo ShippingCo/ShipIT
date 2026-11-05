@@ -2860,6 +2860,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "uses physical journey evidence rather than an earlier planning delay for the current status",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/sales.test.tsx",
         "name": "decodes refund corrections and opens a monthly statement with its frozen balance",
         "cases": null
@@ -7521,6 +7526,14 @@
     {
       "file": "apps/web/src/test/routes-demo.test.tsx",
       "name": "resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "uses physical journey evidence rather than an earlier planning delay for the current status",
       "cases": null,
       "disposition": "preserve",
       "group": "routes",

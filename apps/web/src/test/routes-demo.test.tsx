@@ -2,7 +2,7 @@ import React from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
 import {fireEvent,render,screen,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
-import Routes from '../operations/RoutesWorkspace';
+import Routes,{routeStage} from '../operations/RoutesWorkspace';
 import {routeJourneyPlan} from '../operations/route-workflow';
 import {createScopeController} from '../operator/scope';
 import {routes} from '../data-access/routes';
@@ -43,4 +43,9 @@ it('resumes a physical departure after a lost dispatch response without repeatin
  }if(path.includes('/parcels?'))return json({...page(),manifest:{...manifest,finalized:true,parcel_count:1}});return reads(path,current);}));
  const api=scopedApi(controller()),workflow=routeJourneyPlan({source:routes(api),parcels:parcels(api),route:physical,manifest:{...manifest,parcel_count:1},rows:[dispatchable],kind:'departure',note:'Synthetic departure',effectiveAt:now,baseEta:null,delayMinutes:0});
  await expect(workflow.execute()).rejects.toThrow();failed=false;await workflow.execute();expect(effects.filter(e=>e.path.includes('/finalize?'))).toHaveLength(1);const attempts=effects.filter(e=>e.path.includes('/dispatch?'));expect(attempts).toHaveLength(2);expect(attempts[0]!.options.body).toBe(attempts[1]!.options.body);expect(attempts[0]!.options.headers).toEqual(attempts[1]!.options.headers);expect(effects.filter(e=>e.path.includes('/events?'))).toHaveLength(1);
+});
+
+it('uses physical journey evidence rather than an earlier planning delay for the current status',()=>{
+ const latest={event_id:id(22),route_id:route.id,version:3,manifest_id:manifest.id,manifest_version:1,kind:'departure' as const,effective_at:now,updated_count:1,skipped_count:0,eta:{state:'unavailable' as const,base_at:null,revised_at:null,total_delay_minutes:0}};
+ expect(routeStage({route:{...route,state:'finalized',planning_delay_minutes:240},manifest,rows:[],lotIds:[],entryIds:[],history:[],latest})).toBe('departed');
 });

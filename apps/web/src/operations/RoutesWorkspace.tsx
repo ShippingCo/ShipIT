@@ -32,7 +32,7 @@ interface Data{records:RouteRecord[];lots:LotDto[];parcels:ParcelRead[];entries:
 export function routeStage(record:RouteRecord){
  if(record.route.state==='archived')return 'archived';
  if(record.latest?.kind==='arrival'||record.route.planning_progress==='arrived')return 'arrived';
- if(record.latest?.kind==='delay'||(record.route.planning_delay_minutes??0)>0)return 'delayed';
+ if(record.latest?.kind==='delay'||!record.latest&&(record.route.planning_delay_minutes??0)>0)return 'delayed';
  if(record.latest?.kind==='departure'||record.route.planning_progress==='departed')return 'departed';
  return 'scheduled';
 }
@@ -96,7 +96,7 @@ function RouteSelectionDialog({source,lotSource,data,record,close,saved}:{source
   <form id={id} onSubmit={event=>{void submit(event);}}><fieldset className="dispatch-route-form" disabled={busy||started}>
    {!record&&<div className="grid2"><TextField label="From" value={origin} onChange={setOrigin} maxLength={120} required autoComplete="off"/><TextField label="Destination city" value={destination} onChange={setDestination} maxLength={120} required autoComplete="off"/><SelectField label="Mode" value={mode} onChange={v=>setMode(v as RouteDto['mode'])} options={modeOptions}/><TextField label="Carrier code" value={carrier} onChange={v=>setCarrier(v.toUpperCase())} maxLength={64} helper="AI-888 / GJ-04-TR-1234" autoCapitalize="characters" spellCheck={false}/><TextField className="route-departure" label="Departure" type="datetime-local" value={departure} onChange={setDeparture} required helper="India Standard Time (IST)."/></div>}
    <div className="t-label-md muted" style={{margin:'16px 0 8px'}}>{record?'LOTS':'ATTACH LOTS'}</div>
-   {!candidates.length&&<p className="t-body-sm muted">{record?'All available lots are already attached.':'No lots yet. You can attach them later.'}</p>}
+   {!candidates.length&&<p className="t-body-sm muted">{record&&data.lots.length?'All available lots are already attached.':'No lots yet. You can attach them later.'}</p>}
    {candidates.map(l=><DispatchSelection key={l.id} label={`Attach lot ${l.code}`} checked={selectedLots.has(l.id)} onChange={v=>toggle(setSelectedLots,l.id,v)} disabled={busy||started}><b className="mono t-body-sm">{l.code}</b><span>{l.name}</span></DispatchSelection>)}
    {record&&<><div className="u-between" style={{margin:'16px 0 8px',gap:12,flexWrap:'wrap'}}><span className="t-label-md muted">INDIVIDUAL PARCELS ({matchingParcels.length+matchingEntries.length} of {physical.length+entries.length})</span><TextField label="Search parcels" value={search} onChange={setSearch} trailing="search" style={{width:'min(100%, 220px)'}}/></div><div className="attach-scroll">
     {!matchingParcels.length&&!matchingEntries.length&&<p className="t-body-sm muted">No parcels match that search.</p>}
