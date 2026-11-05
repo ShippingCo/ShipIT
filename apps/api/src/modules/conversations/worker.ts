@@ -1,3 +1,4 @@
+import {assistantSettings} from '../settings/consumer.ts';
 import { pickupTurn } from '../pickups/customer.ts';
 import { draft as pickupDraft } from '../pickups/repository.ts';
 import type { DatabasePool } from '@shippingco/db';
@@ -56,7 +57,9 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
    await repository.record(scope,id,source.installation_id,contact,null,route.intent,'stale',[]);return 'stale';
   }
   const c=await repository.conversation(scope,source.installation_id,contact,source.now),live=c.expires_at>source.now;
+  const defaults=await assistantSettings(scope);
   const choice=languageChoice(text);
+  if(!c.locale_explicit)c.locale=defaults.locale;
   c.locale=selectLocale(text,c.locale,c.locale_explicit);
   if(choice)c.locale_explicit=true;
   let selected=live?c.selected_docket:null,pending=live?c.pending_intent:null,state=live?c.state:'active';
@@ -98,6 +101,7 @@ export function createConversationWorker(database:DatabasePool,dependencies:What
   else if(revoked) {selected=null;pending=null;state='active';outcome='consent';}
   else if(activeCase) {await support.touch(scope,activeCase.id,id);selected=null;pending=null;state='human_requested';outcome='paused';}
   else if(choice) {reply=languageAcknowledgment;}
+  else if(/^(hello|hey|namaste|नमस्ते)[!. ]*$/i.test(text.trim())) {reply=(defaults.name?(c.locale==='hi'?`नमस्ते, मैं ${defaults.name} हूँ। `:`Hello, I’m ${defaults.name}. `):'')+clarification;}
   else if(isThanks(text)&&!c.quote_draft&&!c.pickup_draft) {evidence={category:'thanks',reason:'none'};reply=c.locale==='hi'?'आपका स्वागत है।':'You are welcome.';}
   else if(fallback) {outcome='unavailable';evidence={category:'failure',reason:'dependency'};reply='Shipment information is temporarily unavailable. Please retry once or contact the franchise directly.';}
   else if(dependencies.configuration.support_enabled&&(route.intent==='human'||state==='human_requested')) {await handoffCase('human_requested');}

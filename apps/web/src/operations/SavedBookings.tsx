@@ -9,7 +9,7 @@ import {payments} from '../data-access/payments';
 import {lots} from '../data-access/lots';
 import {receipts} from '../data-access/receipts';
 import type {ScopedApi} from '../data-access/scoped-api';
-import {printReceipt} from '../utils/receipt';
+import {printReceiptFor,loadShopLogo} from '../utils/receipt';
 import {useCommand,usePagedResource,useResource} from './hooks';
 import {CommandNotice} from './AsyncState';
 import {Loading,Failure} from './AsyncState';
@@ -136,8 +136,8 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
  const flowStatus=(['booked','checked_in','dispatched','in_transit','out_for_delivery','delivered','failed_attempt','rto'].includes(row.status)?row.status:'booked') as JourneyStatus;
  const service=row.service+(row.weight===null?'':` · ${row.weight.toLocaleString('en-IN')} kg`);
  async function print(){if(printing)return;setPrinting(true);setPrintMessage('');try{
-  if(row.parcel)printReceipt(await receipts(api).booking(row.parcel.booking_id));
-  else printCounterRecord(row);
+  if(row.parcel)await printReceiptFor(api,await receipts(api).booking(row.parcel.booking_id));
+  else await printCounterRecord(row,api);
  }catch{setPrintMessage('The receipt could not be opened. Retry printing without creating another booking.');}finally{setPrinting(false);}}
  return <Dialog open onClose={()=>{if(!moving)close();}} hideClose={moving} size="lg" title={<span className="u-row mono" style={{fontSize:19}}>{row.docket} {statusPill(row)}</span>}>
   <div className="jrn-wrap"><Journey status={flowStatus} timeline={items.map(t=>({ts:Date.parse(t.occurred_at),status:t.status as JourneyStatus,title:t.label}))} format={ts=>new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}/></div>
@@ -159,9 +159,9 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
   {showActions&&row.parcel&&<div className="saved-booking-operation">{operationalDetail(row.parcel.id,()=>{if(!moving)setShowActions(false);},refresh,setOperationBusy)}</div>}
  </Dialog>;
 }
-function printCounterRecord(row:SavedBookingRow){
+async function printCounterRecord(row:SavedBookingRow,api:ReturnType<typeof scopedApi>){
  const win=window.open('','_blank','width=760,height=900');if(!win)throw new Error('PRINT_WINDOW_BLOCKED');
- const doc=win.document;doc.title='Booking '+row.docket;
+ const doc=win.document;doc.title='Booking '+row.docket;const logo=await loadShopLogo(api);if(api.scope.signal.aborted){win.close();throw Error('Receipt access changed.');}if(logo){const img=doc.createElement('img');img.src=logo;img.alt='Shop logo';img.width=56;img.height=56;doc.body.append(img);}
  const title=doc.createElement('h1');title.textContent='Booking acknowledgement';doc.body.append(title);
  const table=doc.createElement('table');
  for(const [label,value] of [['Docket',row.docket],['Customer',row.name],['Phone',row.phone||'Not recorded'],['Destination',row.city||'Not recorded'],['Address',row.address||'Not recorded'],['Entered charges',money(row.amount)],['Payment','Not recorded']]){const tr=doc.createElement('tr'),th=doc.createElement('th'),td=doc.createElement('td');th.textContent=label;td.textContent=value;tr.append(th,td);table.append(tr);}

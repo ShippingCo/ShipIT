@@ -184,7 +184,7 @@ describe('production operator flow',()=>{
     fireEvent.click(screen.getByText('Join another workspace'));
     fireEvent.change(screen.getByLabelText('Invitation code'),{target:{value:'synthetic-invitation-secret'}});
     fireEvent.click(screen.getByRole('button',{name:'Accept invitation'}));
-    await act(async()=>{window.location.hash='/business/settings';});
+    await act(async()=>{window.location.hash='/business/settings?view=advanced';});
     await screen.findByRole('heading',{name:'Set up your shop'});
     context=ready;await act(async()=>accepting.resolve(json({},201)));
     await screen.findByRole('heading',{name:'Business settings'});
@@ -277,7 +277,7 @@ describe('production operator flow',()=>{
     expect(document.title).toBe('Finish signing out · ShippingCo');
     expect(screen.queryByRole('button',{name:'Try again'})).not.toBeInTheDocument();
     const reads=calls.filter(call=>call.path.startsWith('/api/v1/operator-context')).length;
-    await act(async()=>{window.location.hash='/business/settings';window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
+    await act(async()=>{window.location.hash='/business/settings?view=advanced';window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
     expect(calls.filter(call=>call.path.startsWith('/api/v1/operator-context'))).toHaveLength(reads);
     expect(screen.queryByRole('combobox',{name:'Franchise'})).not.toBeInTheDocument();
     expect(screen.queryByText('Account and invitations')).not.toBeInTheDocument();

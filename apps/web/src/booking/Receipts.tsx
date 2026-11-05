@@ -14,7 +14,7 @@ import {Loading,Failure} from '../operations/AsyncState';
 import {Button} from '../components/m3/Button';
 import {Card,EmptyState} from '../components/m3/Surface';
 import {SearchBar,DateFilter,dateWindow,type DatePreset,type CustomRange} from '../components/m3/Controls';
-import {printReceipt,printReceiptView} from '../utils/receipt';
+import {printReceiptFor,printReceiptViewFor} from '../utils/receipt';
 import {counterReceiptView} from '../utils/counter-receipt';
 const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
 const booked=(value:number)=>new Date(value).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
@@ -43,7 +43,7 @@ export default function Receipts({controller,roles=[]}:{controller:ScopeControll
  const total=rows.some(r=>r.amount===null)?null:rows.reduce((sum,r)=>sum+BigInt(r.amount!),0n);
  async function reprint(row:typeof rows[number]){
   if(printing)return;setPrinting(row.id);setMessage('');
-  try{if(row.entry)printReceiptView(counterReceiptView(row.entry,controller.snapshot().context?.franchises.find(f=>f.id===api.franchise)?.organization.display_name||'Booking acknowledgement'));else {const dto=row.dto??await receipts(api).booking(row.bookingId);if(controller.runtime.isCurrent(api.scope))printReceipt(dto);}}
+  try{if(row.entry)await printReceiptViewFor(api,counterReceiptView(row.entry,controller.snapshot().context?.franchises.find(f=>f.id===api.franchise)?.organization.display_name||'Booking acknowledgement'));else {const dto=row.dto??await receipts(api).booking(row.bookingId);if(controller.runtime.isCurrent(api.scope))await printReceiptFor(api,dto);}}
   catch{setMessage('The receipt could not be opened. Try Reprint again.');}finally{setPrinting('');}
  }
  return <div className="page" aria-label="Receipts"><h1 className="workspace-visually-hidden">Receipts</h1>

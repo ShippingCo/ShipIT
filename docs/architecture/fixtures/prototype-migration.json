@@ -200,7 +200,7 @@
       "apps/web/src/pages/business/RoutesPage.tsx": "2d6190353e57bbf98b59c799338a19f9747c2b7ff3c89eddca3f4219ec540e03",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "b09cfb1d6330ed547fd0ea9d7cd29add2430f2ed396f11bda5ef7c3ee23b1e8e",
-      "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
+      "apps/web/src/test/operator.test.tsx": "67511ae4607c7e3f3db1f7f3ea3a41d30e93938abf60e833bb14801148d7c6c2",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -3000,6 +3000,36 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "matches the demo form sections and saves shop fields and language in one audited settings command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "retains the exact save request and locks fields until a lost response is reconciled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "keeps the shop draft when a newer version requires explicit rebase",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "publishes changed GST through its owning service before saving presentation, using the current tax revision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "rejects active logo formats and unsafe profile fields, and escapes printable branding",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/settings.test.tsx",
         "name": "keeps unavailable warnings and active draft validation visible when settings categories are collapsed",
         "cases": null
@@ -3724,6 +3754,14 @@
       {
         "file": "apps/web/src/operations/ShipmentCosts.tsx",
         "kind": "source.api.scope.signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ShopSettings.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/ShopSettings.tsx",
+        "kind": "window.addEventListener"
       },
       {
         "file": "apps/web/src/operations/reconciliation/Review.tsx",
@@ -7828,6 +7866,54 @@
       "disposition": "preserve",
       "group": "messaging",
       "reason": "Provider waiting state stays truthful and filtering remains scoped."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "matches the demo form sections and saves shop fields and language in one audited settings command",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "retains the exact save request and locks fields until a lost response is reconciled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "keeps the shop draft when a newer version requires explicit rebase",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "publishes changed GST through its owning service before saving presentation, using the current tax revision",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "rejects active logo formats and unsafe profile fields, and escapes printable branding",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",

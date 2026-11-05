@@ -565,6 +565,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_conversations,shipit.customer_conversation_turns TO ${identifier(resource.runtimeRole)}`);
+        await owner.query(`GRANT SELECT ON shipit.settings_versions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.conversation_inferences') AS table_name")).rows[0]?.table_name) {
           await owner.query(`GRANT UPDATE(locale,locale_explicit) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);

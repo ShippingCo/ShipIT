@@ -1507,3 +1507,10 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/automation-demo.test.tsx: does not take over another staff member’s case when ownership changes before handling | preserve | messaging |
 | apps/web/src/test/automation-demo.test.tsx: keeps support failures independent from message history and omits unauthorized support reads for dispatchers | preserve | messaging |
 | apps/web/src/test/automation-demo.test.tsx: opens safe notification evidence, traps focus and retains truthful categories for all known message kinds | preserve | messaging |
+
+| apps/web/src/test/settings-demo.test.tsx: matches the demo form sections and saves shop fields and language in one audited settings command | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: retains the exact save request and locks fields until a lost response is reconciled | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: keeps the shop draft when a newer version requires explicit rebase | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: publishes changed GST through its owning service before saving presentation, using the current tax revision | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: rejects active logo formats and unsafe profile fields, and escapes printable branding | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice | preserve | settings |

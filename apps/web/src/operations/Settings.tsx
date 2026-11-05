@@ -6,7 +6,8 @@ import BookingPolicySetup from './BookingPolicySetup';
 import {PageHeader,SectionHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import React,{useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
-import {Link} from 'react-router-dom';
+import {Link,useSearchParams} from 'react-router-dom';
+import ShopSettings from './ShopSettings';
 import {settingKeys,type OperatorRole,type SettingsOwner,type SettingsValues,type SettingKey} from '@shippingco/shared';
 import type {ScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
@@ -49,7 +50,7 @@ function summary(key:SettingKey,value:SettingsValues[SettingKey]|null,financial:
  default:return 'Managed in Customer accounts';
  }
 }
-export default function Settings({controller,roles,workspaceName}:{controller:ScopeController;roles:readonly OperatorRole[];workspaceName?:string}){
+export function AdvancedSettings({controller,roles,workspaceName}:{controller:ScopeController;roles:readonly OperatorRole[];workspaceName?:string}){
  const source=useMemo(()=>settings(scopedApi(controller)),[controller]),session=useMemo(()=>settingsSession(source),[source]),state=useSyncExternalStore(session.subscribe,session.snapshot),[owner,setOwner]=useState<SettingsOwner>(state.draft?.owner??state.result?.owner??(roles.includes('org_admin')?'organization':'franchise')),[revision,setRevision]=useState(0),[historyOpen,setHistoryOpen]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const allowed=roles.some(r=>r!=='delivery_agent'),admin=canAdminister(roles,'settings.franchise.update'),orgAdmin=roles.includes('org_admin'),locked=state.phase==='pending'||state.phase==='uncertain'||state.canRetry,heading=useRef<HTMLHeadingElement>(null),handled=useRef<string|null>(null);
  const data=useResource('settings-'+owner+'-'+revision,signal=>allowed?source.read(owner,signal):Promise.resolve(null)),history=usePagedResource('settings-history-'+owner+'-'+revision+'-'+historyOpen,async(cursor,signal)=>{if(!historyOpen||!(orgAdmin||admin))return {items:[],page:{has_more:false,next_cursor:null}};const h=await source.history(owner,cursor?Number(cursor):undefined,signal);return {items:h.items,page:{has_more:h.next_before!==null,next_cursor:h.next_before===null?null:String(h.next_before)}};});
@@ -77,3 +78,5 @@ export default function Settings({controller,roles,workspaceName}:{controller:Sc
  ]}/>}{history.page.has_more&&<button className="btn btn-outlined" onClick={history.loadMore}>Load older settings versions</button>}</>}</section>}
  <p>More administration: <Link to="/business/financials">Financial approvals</Link> · <Link to="/business/automation">Messaging administration</Link></p></div></div></section>;
 }
+
+export default function Settings(props:{controller:ScopeController;roles:readonly OperatorRole[];workspaceName?:string}){const [params]=useSearchParams();return params.get('view')==='advanced'||params.has('tab')||params.has('owner')?<AdvancedSettings {...props}/>:<ShopSettings {...props}/>;}
