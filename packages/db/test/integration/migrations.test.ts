@@ -19,7 +19,7 @@ await test('#190 populated policy upgrade preserves real grants and confines own
  await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin'),($4,$5,$3,'franchise_admin')",[ownerGrant,user,org,localGrant,local]);
  await owner.query('INSERT INTO shipit.membership_franchise_scopes(membership_id,organization_id,franchise_id) VALUES($1,$2,$3)',[localGrant,org,a]);
  const before=(await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows;
- assert.deepEqual(await db.migrate(),{applied:12});assert.deepEqual(await db.migrate(),{applied:0});
+ assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual((await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows,before);
  const rows=(await owner.query<{membership_id:string;franchise_id:string}>('SELECT membership_id,franchise_id FROM shipit.business_membership_scopes')).rows;
  assert.deepEqual(rows.filter(r=>r.membership_id===ownerGrant).map(r=>r.franchise_id).sort(),[a,b].sort());
@@ -81,9 +81,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 67 });
+  assert.deepEqual(await database.migrate(), { applied: 68 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 67);
+  assert.equal(initial.length, 68);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -108,7 +108,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 66 });
+  assert.deepEqual(await database.migrate(), { applied: 67 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -131,7 +131,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1792947600000-cash-closing',
     '1793034000000-shipment-costs',
     '1793120400000-versioned-settings',
-    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings','1793725200000-counter-entered-charges','1793811600000-optional-counter-bookings','1793818800000-lot-planning-entries','1793818801000-lot-message-sources','1793898000000-dispatch-route-demo-parity',
+    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings','1793725200000-counter-entered-charges','1793811600000-optional-counter-bookings','1793818800000-lot-planning-entries','1793818801000-lot-message-sources','1793898000000-dispatch-route-demo-parity','1793984400000-shop-presentation',
   ]);
 });
 
@@ -221,7 +221,7 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 67 });
+  assert.deepEqual(await database.migrate(), { applied: 68 });
   const installedOwner = database.ownerPool(), held = await installedOwner.connect();
   try {
     await held.query('SELECT pg_advisory_lock($1::bigint)', [migrationLockId]);

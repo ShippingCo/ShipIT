@@ -1514,3 +1514,4 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/settings-demo.test.tsx: publishes changed GST through its owning service before saving presentation, using the current tax revision | preserve | settings |
 | apps/web/src/test/settings-demo.test.tsx: rejects active logo formats and unsafe profile fields, and escapes printable branding | preserve | settings |
 | apps/web/src/test/settings-demo.test.tsx: retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice | preserve | settings |
+
