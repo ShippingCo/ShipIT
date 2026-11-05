@@ -1,7 +1,9 @@
 import { assertTenantAccess,scopedQuery,type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
 import type { RouteRow,ManifestRow,RouteOperation,RouteInput,RouteFilter,RouteBoundary,SourceRow,Contribution,RouteDto,RouteManifestItem } from './types.ts';
-const columns='r.id,r.origin,r.destination,r.mode,r.carrier_code,r.scheduled_departure_at,r.state,r.version,r.current_manifest_id,r.created_at,r.updated_at';
+const metadataFields=['planning_entry_ids','planning_progress','planning_delay_minutes'] as const;
+const metadataColumns=metadataFields.map(field=>`(SELECT c.input->'${field}' FROM shipit.route_commands c WHERE c.organization_id=r.organization_id AND c.franchise_id=r.franchise_id AND c.route_id=r.id AND c.input ? '${field}' ORDER BY COALESCE(c.expected_version,0) DESC LIMIT 1) AS ${field}`).join(',');
+const columns=metadataColumns+',r.id,r.origin,r.destination,r.mode,r.carrier_code,r.scheduled_departure_at,r.state,r.version,r.current_manifest_id,r.created_at,r.updated_at';
 function context(scope:TenantAccess) {return assertTenantAccess(scope,['routes.departure','routes.delay','routes.arrival','routes.delay.remind','routes.read','routes.list','routes.create','routes.update','routes.archive','routes.finalize','routes.lot.attach','routes.lot.detach','routes.parcel.attach','routes.parcel.detach']);}
 export async function active(scope:TenantAccess) {
   const c=context(scope),row=(await scopedQuery<{lifecycle:string;now:Date}>(scope,[c.action],`SELECT lifecycle,date_trunc('milliseconds',clock_timestamp()) AS now
@@ -116,4 +118,19 @@ export async function dispatchManifest(scope:TenantAccess,id:string,parcel:strin
     JOIN shipit.routes r ON r.organization_id=m.organization_id AND r.franchise_id=m.franchise_id AND r.id=m.route_id
     WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.id=$1`,[id,parcel])).rows[0];
   if(!m)throw new HttpError('RESOURCE_NOT_FOUND');if(!m.finalized||!m.contains||m.execution_state!=='pending')throw new HttpError('PARCEL_STATE_CONFLICT');
+}
+
+export async function validatePlanning(scope:TenantAccess,id:string|null,input:RouteInput,before:RouteRow|null){
+ const c=assertTenantAccess(scope,['routes.create','routes.update']);
+ if(input.planning_entry_ids?.length){
+  const found=await scopedQuery(scope,[c.action],`SELECT id FROM shipit.counter_bookings WHERE {{franchise:organization_id:franchise_id}} AND id=ANY($1::uuid[])`,[input.planning_entry_ids]);
+  if(found.rows.length!==input.planning_entry_ids.length)throw new HttpError('RESOURCE_NOT_FOUND');
+ }
+ if(input.planning_delay_minutes!==undefined&&before?.planning_progress==='arrived')throw new HttpError('ROUTE_STATE_CONFLICT');
+ if(input.planning_progress!==undefined){
+  const previous=before?.planning_progress??'scheduled',next=input.planning_progress;
+  if(next!==previous&&!((previous==='scheduled'&&next==='departed')||(previous==='departed'&&next==='arrived')))throw new HttpError('ROUTE_STATE_CONFLICT');
+  if(id){const m=await manifest(scope,id,before!.current_manifest_id);if(m.parcel_count)throw new HttpError('ROUTE_MANIFEST_CONFLICT');}
+ }
+ if(before?.planning_progress&&before.planning_progress!=='scheduled'&&(input.origin!==before.origin||input.destination!==before.destination||input.mode!==before.mode||input.carrier_code!==before.carrier_code||Date.parse(input.scheduled_departure_at??'')!==before.scheduled_departure_at.getTime()||input.planning_entry_ids!==undefined))throw new HttpError('ROUTE_STATE_CONFLICT');
 }

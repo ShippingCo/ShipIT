@@ -14,7 +14,7 @@ import {createBookingWorkflow} from './workflow';
 import {totalWeight,emptyDraft,parcelErrors,additionalParcelErrors,type Field} from './form';
 import {BookingPayment} from './BookingPayment';
 import {ReceiptPanel} from './ReceiptPanel';
-import {receiptMoney,printReceipt} from '../utils/receipt';
+import {receiptMoney,printReceiptFor} from '../utils/receipt';
 import {useResource} from '../operations/hooks';
 import {UnitField,displayUnits} from './UnitField';
 import {RateChoices} from './RateChoices';
@@ -131,7 +131,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     try{
       const dto=await receipts(workflow.api).booking(booking.id);
       if(!controller.runtime.isCurrent(workflow.api.scope))return;
-      printReceipt(dto);setPrintState('idle');setPrintMessage('The booking is saved. You can print another copy if needed.');
+      await printReceiptFor(workflow.api,dto);setPrintState('idle');setPrintMessage('The booking is saved. You can print another copy if needed.');
     }catch{
       if(!controller.runtime.isCurrent(workflow.api.scope))return;
       setPrintState('error');setPrintMessage('Booking saved. The receipt could not be printed. Retry printing without creating another booking.');

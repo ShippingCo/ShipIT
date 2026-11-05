@@ -1,8 +1,9 @@
+import {DispatchSelection} from '../../components/workspace/DispatchSelection';
 import {RouteCardView} from '../../components/workspace/DispatchCards';
 import React, { useState } from 'react';
 import { Msym } from '../../components/m3/Icon';
 import { TextField, SelectField } from '../../components/m3/Input';
-import { Button, Checkbox } from '../../components/m3/Button';
+import { Button } from '../../components/m3/Button';
 import { Card, EmptyState } from '../../components/m3/Surface';
 import { Dialog } from '../../components/m3/Dialog';
 import { useToast } from '../../components/m3/Snackbar';
@@ -87,7 +88,7 @@ function RouteCard({ r }) {
         {/* The reason to press any button on this card: how many people get told. */}
         <div className="rt-reach">
           <Msym name="group" />
-          <span><b>{active}</b> customer{active === 1 ? '' : 's'} get told when this changes</span>
+          <span><b>{active}</b> customer{active === 1 ? '' : 's'} receive{active === 1 ? 's' : ''} updates when this changes</span>
           <span className="rt-reach-sep" />
           <span><b>{pkgs.length}</b> parcel{pkgs.length === 1 ? '' : 's'} loaded</span>
         </div>
@@ -142,10 +143,10 @@ function RouteCard({ r }) {
         title={`Departure — ${r.code}`}
         label="Note shown to customers"
         initial={`Departed ${r.origin}. Will update on arrival.`}
-        cta={`Notify ${active} customer(s)`}
+        cta={`Notify ${active} customer${active === 1 ? '' : 's'}`}
         onSubmit={(note) => {
           postRouteEvent(r.id, { type: 'depart', title: `Departed ${r.origin}`, note });
-          toast(`Departure sent to ${active} customer(s).`);
+          toast(`Departure sent to ${active} customer${active === 1 ? '' : 's'}.`);
         }}
       />
       <NoteDialog
@@ -154,7 +155,7 @@ function RouteCard({ r }) {
         title={`Arrival — ${r.code}`}
         label="Note shown to customers"
         initial={`Reached ${r.destination}. Delivery scheduled shortly.`}
-        cta={`Notify ${active} customer(s)`}
+        cta={`Notify ${active} customer${active === 1 ? '' : 's'}`}
         onSubmit={(note) => {
           postRouteEvent(r.id, { type: 'arrive', title: `Arrived at ${r.destination}`, note });
           toast('Arrival broadcast sent.');
@@ -210,11 +211,11 @@ function DelayDialog({ open, onClose, r, count }) {
           onClick={() => {
             const note = extra.trim() ? `${reason}. ${extra.trim()}` : reason;
             postRouteEvent(r.id, { type: 'delay', title: reason, note, revisedEtaHours: Number(hours) || 0 });
-            toast(`Delay alert sent to ${count} customer(s).`);
+            toast(`Delay alert sent to ${count} customer${count === 1 ? '' : 's'}.`);
             onClose();
           }}
         >
-          Send delay alert to {count} customer(s)
+          Send delay alert to {count} customer{count === 1 ? '' : 's'}
         </button>
       </div>
     </Dialog>
@@ -253,10 +254,9 @@ function AttachDialog({ open, onClose, r }) {
       <div className="t-label-md muted" style={{ marginBottom: 8 }}>LOTS</div>
       {!data.lots.length && <p className="t-body-sm muted">No lots created yet.</p>}
       {data.lots.map((l) => (
-        <label key={l.id} className="u-between" style={{ border: '1px solid var(--md-outline-variant)', borderRadius: 10, padding: '9px 14px', marginBottom: 8, cursor: 'pointer' }}>
+        <DispatchSelection key={l.id} label={`Attach ${l.code}`} checked={!!lotsSel[l.id]} onChange={(v) => setLotsSel((s) => ({ ...s, [l.id]: v }))}>
           <span><b className="mono t-body-sm">{l.code}</b> <span>{l.name}</span></span>
-          <Checkbox checked={!!lotsSel[l.id]} onChange={(v) => setLotsSel((s) => ({ ...s, [l.id]: v }))} label="" right />
-        </label>
+        </DispatchSelection>
       ))}
       <div className="u-between" style={{ margin: '16px 0 8px', gap: 12, flexWrap: 'wrap' }}>
         <span className="t-label-md muted">INDIVIDUAL PARCELS ({singles.length} of {all.length})</span>
@@ -265,10 +265,9 @@ function AttachDialog({ open, onClose, r }) {
       <div className="attach-scroll">
       {!singles.length && <p className="t-body-sm muted">No parcels match that search.</p>}
       {singles.map((b) => (
-        <label key={b.id} className="u-between" style={{ border: '1px solid var(--md-outline-variant)', borderRadius: 10, padding: '9px 14px', marginBottom: 8, cursor: 'pointer' }}>
+        <DispatchSelection key={b.id} label={`Attach ${b.docket}`} checked={!!pkgSel[b.id]} onChange={(v) => setPkgSel((s) => ({ ...s, [b.id]: v }))}>
           <span><b className="mono t-body-sm">{b.docket}</b> <span>{b.name}</span> <span className="muted t-body-sm">→ {b.to}</span></span>
-          <Checkbox checked={!!pkgSel[b.id]} onChange={(v) => setPkgSel((s) => ({ ...s, [b.id]: v }))} label="" right />
-        </label>
+        </DispatchSelection>
       ))}
       </div>
     </Dialog>
@@ -285,7 +284,7 @@ function BroadcastDialog({ open, onClose, r }) {
       actions={<>
         <button className="btn btn-text" onClick={onClose}>Cancel</button>
         <button
-          className="btn btn-filled"
+          className="btn btn-filled" disabled={!text.trim()}
           onClick={() => {
             const t = text.trim(); if (!t) return;
             bookingsOfRoute(r).forEach((b) => { if (b.status !== 'delivered') queueMsg(b.phone, t); });
@@ -295,7 +294,7 @@ function BroadcastDialog({ open, onClose, r }) {
           }}
         >Send</button>
       </>}>
-      <p className="t-body-sm muted" style={{ marginBottom: 12 }}>{n} customer(s) will receive this message.</p>
+      <p className="t-body-sm muted" style={{ marginBottom: 12 }}>{n} customer{n === 1 ? '' : 's'} will receive this message.</p>
       <TextField label="Message" value={text} onChange={setText} />
     </Dialog>
   );
@@ -323,7 +322,7 @@ function PlanRouteDialog({ open, onClose }) {
         <button
           className="btn btn-filled"
           onClick={() => {
-            if (!form.destination.trim() || !form.carrierCode.trim()) { toast('Destination and carrier code are required.'); return; }
+            if (!form.destination.trim()) { toast('Destination city is required.'); return; }
             createRoute({
               origin: form.origin.trim() || biz.origin,
               destination: form.destination.trim(),
@@ -344,15 +343,14 @@ function PlanRouteDialog({ open, onClose }) {
         <SelectField label="Mode" value={form.mode} onChange={(v) => setForm((f) => ({ ...f, mode: v }))}
           options={['Flight', 'Train', 'Road', 'Ship'].map((m) => ({ value: m, label: m }))} />
         <TextField label="Carrier code" value={form.carrierCode} onChange={(v) => setForm((f) => ({ ...f, carrierCode: v }))} helper="AI-888 / GJ-04-TR-1234" />
-        <TextField label="Departure" type="datetime-local" value={form.departAt} onChange={(v) => setForm((f) => ({ ...f, departAt: v }))} style={{ gridColumn: 'span 2' }} />
+        <TextField label="Departure" type="datetime-local" value={form.departAt} onChange={(v) => setForm((f) => ({ ...f, departAt: v }))} style={{ gridColumn: '1 / -1' }} />
       </div>
       <div className="t-label-md muted" style={{ margin: '16px 0 8px' }}>ATTACH LOTS</div>
       {!data.lots.length && <p className="t-body-sm muted">No lots yet.</p>}
       {data.lots.map((l) => (
-        <label key={l.id} className="u-between" style={{ border: '1px solid var(--md-outline-variant)', borderRadius: 10, padding: '9px 14px', marginBottom: 8, cursor: 'pointer' }}>
+        <DispatchSelection key={l.id} label={`Attach ${l.code}`} checked={!!lotSel[l.id]} onChange={(v) => setLotSel((s) => ({ ...s, [l.id]: v }))}>
           <span><b className="mono t-body-sm">{l.code}</b> <span>{l.name}</span></span>
-          <Checkbox checked={!!lotSel[l.id]} onChange={(v) => setLotSel((s) => ({ ...s, [l.id]: v }))} label="" right />
-        </label>
+        </DispatchSelection>
       ))}
     </Dialog>
   );

@@ -11,8 +11,8 @@ import { eway } from '../data-access/eway';
 import { deliveries } from '../data-access/deliveries';
 import {OperationalPackages as Packages} from '../operations/Packages';
 import {OperationalLots as Lots} from '../operations/Lots';
-import Routes from '../operations/Routes';
-import Eway from '../operations/Eway';
+import {OperationalRoutes as Routes} from '../operations/Routes';
+import {OperationalEway as Eway} from '../operations/Eway';
 import Deliveries from '../operations/Deliveries';
 import { instantToKolkataInput,kolkataInputToInstant } from '../operations/format';
 

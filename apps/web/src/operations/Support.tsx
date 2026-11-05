@@ -33,12 +33,12 @@ export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:bo
   <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
    <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    {locked&&<p role="status" className="ops-note">Keep this request open until its result is confirmed.</p>}<Dialog.Title>Support case</Dialog.Title><Dialog.Description>Private staff workspace. Internal notes are never sent to the customer.</Dialog.Description>
-   {selected&&<Detail setLocked={setLocked} key={selected} id={selected} source={source} canWrite={canWrite} changed={page.reload}/>}
+   {selected&&<SupportCaseDetail setLocked={setLocked} key={selected} id={selected} source={source} canWrite={canWrite} changed={page.reload}/>}
 
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </section>;
 }
-function Detail({id,source,canWrite,changed,setLocked}:{setLocked:(locked:boolean)=>void;id:string;source:SupportSource;canWrite:boolean;changed:()=>void}) {
+export function SupportCaseDetail({id,source,canWrite,changed,setLocked}:{setLocked:(locked:boolean)=>void;id:string;source:SupportSource;canWrite:boolean;changed:()=>void}) {
  const current=useResource(id,signal=>source.detail(id,signal));
  if(current.phase==='loading')return <Loading/>;
  if(current.phase==='error'||!current.value)return <Failure label="The selected record is unavailable." retry={current.reload}/>;

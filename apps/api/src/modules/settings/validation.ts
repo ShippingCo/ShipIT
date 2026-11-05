@@ -1,4 +1,4 @@
-import {parseSettingsTimezone,settingKeys,type SettingKey,type SettingsPatch,type SettingsUpdateInput,type SettingsValues} from '@shippingco/shared';
+import {parseShopPresentation,parseSettingsTimezone,settingKeys,type SettingKey,type SettingsPatch,type SettingsUpdateInput,type SettingsValues} from '@shippingco/shared';
 import {FieldValidationError} from '../../plugins/errors.ts';
 import {object,integer,uuid} from '../pricing/validation.ts';
 export function fail():never {throw new FieldValidationError('$','INVALID_FORMAT');}
@@ -11,7 +11,7 @@ function franchiseIds(value:unknown){const ids=list(value,50).map(v=>uuid(v,'$')
 export function value<K extends SettingKey>(key:K,input:unknown):SettingsValues[K] {
  let result:unknown;
  switch(key){
-  case 'identity':{const b=object(input,['display_name']);result={display_name:text(b.display_name,120)};break;}
+  case 'identity':{const b=object(input,['display_name','shop']);const shop=b.shop===undefined?undefined:parseShopPresentation(b.shop);if(shop===null)fail();result={display_name:text(b.display_name,120),...(shop===undefined?{}:{shop})};break;}
   case 'language':{const b=object(input,['locale']);if(b.locale!=='en'&&b.locale!=='hi')fail();result={locale:b.locale};break;}
   case 'operating_hours':{const b=object(input,['timezone','days']),days=list(b.days,7).map(v=>{const d=object(v,['weekday','opens_minute','closes_minute']),open=integer(d.opens_minute,'$',0,1439),close=integer(d.closes_minute,'$',1,1440);if(close<=open)fail();return {weekday:integer(d.weekday,'$',0,6),opens_minute:open,closes_minute:close};});if(new Set(days.map(d=>d.weekday)).size!==days.length)fail();result={timezone:timezone(b.timezone),days:days.sort((a,b)=>a.weekday-b.weekday)};break;}
   case 'booking_defaults':{const b=object(input,['service']);if(!['standard','express','same_city'].includes(b.service as string))fail();result={service:b.service};break;}

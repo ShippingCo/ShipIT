@@ -9,7 +9,7 @@ import { commandInput,availability } from './rules.ts';
 import { enqueue } from './notifications.ts';
 import * as repository from './repository.ts';
 const selection=(value:unknown)=>{const b=object(value,['organization_id','franchise_id','after']);return {org:uuid(b.organization_id),franchise:uuid(b.franchise_id),after:b.after===undefined?null:uuid(b.after)};};
-export function createSupportService(database:DatabasePool,deps:WhatsappDependencies) {
+export function createSupportService(database:DatabasePool,deps?:WhatsappDependencies) {
  return {
   async list(token:string,query:unknown,correlation:string) {
    const q=selection(query);return withWhatsappScope(database,token,q.org,q.franchise,'support.read',correlation,async scope=>{
@@ -27,15 +27,15 @@ export function createSupportService(database:DatabasePool,deps:WhatsappDependen
     const staff=(await scopedQuery<{id:string}>(scope,['support.read'],`SELECT DISTINCT m.user_id AS id FROM shipit.memberships m JOIN shipit.business_membership_scopes s ON s.organization_id=m.organization_id AND s.membership_id=m.id
      WHERE {{franchise:s.organization_id:s.franchise_id}} AND m.lifecycle='active' AND m.role IN ('org_admin','franchise_admin','operator') ORDER BY m.user_id LIMIT 100`)).rows;
     return {...repository.summary(c),parcel_id:c.parcel_id,current_actor_id:scope.context.actor.id,staff,
-     availability:availability(deps.configuration.support_hours?.find(h=>h.franchise_id===q.franchise),new Date()),
-     history:events.map(e=>({id:e.id,action:e.event_type,reason:e.reason,actor_id:e.actor_id,actor_type:e.actor_type,occurred_at:e.occurred_at.toISOString(),text:repository.privateText(deps,e),message_state:e.message_state,message_reason:e.message_reason,attempts:e.attempts})),
+     availability:availability(deps?.configuration.support_hours?.find(h=>h.franchise_id===q.franchise),new Date()),
+     history:events.map(e=>({id:e.id,action:e.event_type,reason:e.reason,actor_id:e.actor_id,actor_type:e.actor_type,occurred_at:e.occurred_at.toISOString(),text:deps?repository.privateText(deps,e):null,message_state:e.message_state,message_reason:e.message_reason,attempts:e.attempts})),
      context:context.map(t=>({...t,recorded_at:t.recorded_at.toISOString()}))};
    });
   },
   async command(token:string,id:string,query:unknown,key:unknown,input:unknown,correlation:string) {
    uuid(id);const q=selection(query),b=commandInput(input),hash=keyDigest(idempotencyKey(key)),fingerprint=digest({id,...b});
    return withWhatsappScope(database,token,q.org,q.franchise,'support.write',correlation,async scope=>{
-    if(!deps.configuration.support_enabled||!deps.configuration.webhook)throw new HttpError('TEMPORARILY_UNAVAILABLE');
+    if(!deps?.configuration.support_enabled||!deps.configuration.webhook)throw new HttpError('TEMPORARILY_UNAVAILABLE');
     if(!(await scopedQuery(scope,['support.write'],`SELECT f.id FROM shipit.franchises f WHERE {{franchise:f.organization_id:f.id}} AND f.lifecycle='active'`)).rows.length)throw new HttpError('ACTION_FORBIDDEN');
     await scopedQuery(scope,['support.write'],`SELECT i.id FROM shipit.whatsapp_installations i WHERE {{franchise:i.organization_id:i.franchise_id}} ORDER BY i.id FOR UPDATE`);
     const c=await repository.get(scope,id,true);if(!c)throw new HttpError('RESOURCE_NOT_FOUND');

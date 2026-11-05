@@ -29,7 +29,7 @@ it('uses exclusive IST day boundaries and native custom-range constraints',async
 });
 it('shows queued provider work as waiting in the feed and uses scoped notification filters without send claims',async()=>{
  const row={id:id(8),row_kind:'message',effective_time:at,source_id:id(9),source_kind:'event',affected_id:id(10),correlation_id:id(11),notification_kind:'booking_confirmation',decision:null,message:{id:id(8),state:'queued',reason_code:'pending',version:1,attempt_count:0,progress:'none',failure_observed:false,observed_at:null},fanout:null,recovery:{kind:'none',expected_version:1,allowed_reasons:[]}};
- const request=vi.fn(async(_path:string)=>Response.json(page([row])));vi.stubGlobal('fetch',request);render(<MemoryRouter><Messaging controller={controller()} roles={['operator']}/></MemoryRouter>);
+ const request=vi.fn(async(_path:string)=>Response.json(page([row])));vi.stubGlobal('fetch',request);render(<MemoryRouter initialEntries={['/business/automation?view=advanced']}><Messaging controller={controller()} roles={['operator']}/></MemoryRouter>);
  expect(await screen.findByRole('list',{name:'Message history'})).toHaveTextContent('Waiting');expect(screen.getByRole('list',{name:'Message history'})).toHaveTextContent('0 recorded attempts');expect(screen.getByRole('list',{name:'Message history'})).not.toHaveTextContent('Sent');
  fireEvent.click(screen.getByRole('button',{name:'Bookings'}));await waitFor(()=>expect(request.mock.calls.length).toBe(2));
  const url=new URL(request.mock.calls[1]![0],'http://localhost');expect(url.searchParams.get('kind')).toBe('booking_confirmation');expect(url.searchParams.get('franchise_id')).toBe(id(3));

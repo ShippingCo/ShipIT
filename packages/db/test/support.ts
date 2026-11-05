@@ -386,6 +386,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.prepareLots();
       const owner=handle.ownerPool();
       try {
+        if((await owner.query("SELECT to_regclass('shipit.route_message_requests') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT,UPDATE ON shipit.route_message_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.routes,shipit.route_commands,shipit.route_lots,shipit.route_parcels,shipit.route_manifests,shipit.route_manifest_parcels,shipit.route_manifest_sources TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(origin,destination,mode,carrier_code,scheduled_departure_at,state,version,current_manifest_id,last_command_id,updated_at) ON shipit.routes TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.route_parcel_effects') AS present")).rows[0]?.present){
@@ -564,6 +565,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       const owner=handle.ownerPool();
       try {
         await owner.query(`GRANT SELECT,INSERT ON shipit.customer_conversations,shipit.customer_conversation_turns TO ${identifier(resource.runtimeRole)}`);
+        if((await owner.query("SELECT to_regclass('shipit.settings_versions') AS table_name")).rows[0]?.table_name)await owner.query(`GRANT SELECT ON shipit.settings_versions TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(selected_docket,pending_intent,state,expires_at,version) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.conversation_inferences') AS table_name")).rows[0]?.table_name) {
           await owner.query(`GRANT UPDATE(locale,locale_explicit) ON shipit.customer_conversations TO ${identifier(resource.runtimeRole)}`);
@@ -633,6 +635,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       await handle.prepareWhatsappConsent();await handle.prepareBookings();
       const owner=handle.ownerPool();
       try {
+        if((await owner.query("SELECT to_regclass('shipit.route_message_requests') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT,UPDATE ON shipit.route_message_requests TO ${identifier(resource.runtimeRole)}`);
         if((await owner.query("SELECT to_regclass('shipit.lot_message_requests') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT,UPDATE ON shipit.lot_message_requests TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.whatsapp_outbound,shipit.whatsapp_outbound_attempts,shipit.whatsapp_outbound_redrives TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT UPDATE(state,reason_code,version,attempts,cycle_attempts,attempt_id,lease_until,available_at,sealed_payload) ON shipit.whatsapp_outbound TO ${identifier(resource.runtimeRole)}`);

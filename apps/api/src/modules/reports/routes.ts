@@ -1,3 +1,4 @@
+import {createReportWorkspace} from './workspace.ts';
 import {createAccountantService} from './accountant-service.ts';
 import type {DatabasePool} from '@shippingco/db';
 import {createDailyService} from './daily-service.ts';
@@ -65,4 +66,12 @@ export function registerAccountant(app:FastifyInstance,database:DatabasePool,sec
  app.post('/api/v1/reports/accountant',(request,reply)=>{reply.header('Cache-Control','no-store');return service.create(session(request),request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id);});
  app.get<{Params:{id:string}}>('/api/v1/reports/accountant/:id',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id);});
  app.get<{Params:{id:string}}>('/api/v1/reports/accountant/:id/export',(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(session(request),request.params.id,request.query,request.id,true);});
+}
+
+export function registerReportWorkspace(app:FastifyInstance,database:DatabasePool,key:Buffer,secure:boolean){
+ const service=createReportWorkspace(database,key),session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+ for(const kind of ['finance','delivery'] as const){
+  app.get('/api/v1/reports/workspace/'+kind,(request,reply)=>{reply.header('Cache-Control','no-store');return service.read(kind,session(request),request.query,request.id);});
+  app.post('/api/v1/reports/workspace/'+kind+'/export',(request,reply)=>{reply.header('Cache-Control','no-store');return service.authorize(kind,session(request),request.query,request.body,request.id);});
+ }
 }

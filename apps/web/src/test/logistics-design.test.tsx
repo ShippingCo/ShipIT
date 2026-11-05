@@ -4,7 +4,7 @@ import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter,useLocation} from 'react-router-dom';
 import {OperationalPackages as Packages} from '../operations/Packages';
 import {OperationalLots as Lots} from '../operations/Lots';
-import Routes from '../operations/Routes';
+import {OperationalRoutes as Routes} from '../operations/Routes';
 import {createScopeController} from '../operator/scope';
 
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;

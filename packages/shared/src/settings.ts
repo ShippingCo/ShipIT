@@ -3,7 +3,7 @@ export const settingKeys = ['identity','language','operating_hours','booking_def
 export type SettingKey = typeof settingKeys[number];
 export type SettingsOwner = 'organization'|'franchise';
 export interface SettingsValues {
- identity: {display_name:string};
+ identity: {display_name:string;shop?:ShopPresentation};
  language: {locale:'en'|'hi'};
  operating_hours: {timezone:string;days:{weekday:number;opens_minute:number;closes_minute:number}[]};
  booking_defaults: {service:'standard'|'express'|'same_city'};
@@ -42,4 +42,15 @@ export function parseSettingsTimezone(value:unknown):string|null {
  if(!zone||(!zone.includes('/')&&zone.toUpperCase()!=='UTC'))return null;
  try {new Intl.DateTimeFormat('en',{timeZone:zone}).format();}catch{return null;}
  return zone;
+}
+
+/** Display and branding preferences; never a replacement for issued tax or receipt evidence. */
+export interface ShopPresentation {tagline:string;origin_city:string;support_phone:string;address:string;assistant_name:string;logo:string|null}
+export function parseShopPresentation(value:unknown):ShopPresentation|null{
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;const v=value as Record<string,unknown>,limits={tagline:160,origin_city:120,support_phone:40,address:500,assistant_name:120};
+ if(Object.keys(v).some(k=>!Object.hasOwn(limits,k)&&k!=='logo'))return null;
+ for(const [k,max] of Object.entries(limits))if(typeof v[k]!=='string'||(v[k] as string).length>max||Array.from(v[k] as string).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127))return null;
+ if(typeof v.support_phone==='string'&&v.support_phone&&!/^\+?[0-9 ()-]{7,40}$/.test(v.support_phone))return null;
+ if(v.logo!==null&&(typeof v.logo!=='string'||v.logo.length>30000||!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(v.logo)))return null;
+ return v as unknown as ShopPresentation;
 }

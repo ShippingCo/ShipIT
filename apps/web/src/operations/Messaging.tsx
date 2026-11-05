@@ -1,3 +1,5 @@
+import {useSearchParams} from 'react-router-dom';
+import AutomationWorkspace from './AutomationWorkspace';
 import {ServiceActivity} from './ServiceActivity';
 import {MessageFeedRow} from '../components/workspace/ServiceCards';
 import {FilterChips} from '../components/m3/Controls';
@@ -14,10 +16,10 @@ import { SelectField,TextField } from '../components/m3/Input';
 import { useCommand,usePagedResource,useResource } from './hooks';
 import { Loading,Failure,Empty,CommandNotice } from './AsyncState';
 
-export const statusLabel:Record<string,string>={queued:'Waiting',retry_wait:'Waiting to retry',dispatching:'Sending',accepted:'Accepted by provider',delivered:'Delivered',read:'Read',suppressed:'Suppressed',failed:'Failed',uncertain:'Uncertain',blocked:'Blocked',skipped:'Skipped',pending:'Pending',running:'Processing',completed:'Processing completed'};
-export const kindLabel:Record<string,string>={updates:'Shipment update',requested_assistance:'Requested assistance',consent_disclosure:'Consent information',delivery_otp:'Delivery verification message',booking_confirmation:'Booking confirmation',parcel_checked_in:'Parcel checked in',parcel_dispatched:'Parcel dispatched',route_departed:'Route departed',route_delayed:'Route delay update',route_arrived:'Route arrived',delivery_attempt_failed:'Delivery unsuccessful update',rto_approved:'Return initiated',delivery_completed:'Delivery completed',route_delay:'Route delay',route_delay_reminder:'Route delay reminder'};
+import {statusLabel,kindLabel} from './messaging-labels';
+export {statusLabel,kindLabel} from './messaging-labels';
 const allowed=['org_admin','franchise_admin','operator','dispatcher'];
-export default function Messaging({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
+function AdvancedMessaging({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const source=useMemo(()=>messaging(scopedApi(controller)),[controller]);
  const [view,setView]=useState<HistoryView>('messages'),[status,setStatus]=useState(''),[kind,setKind]=useState(''),[correlation,setCorrelation]=useState(''),[filterCorrelation,setFilterCorrelation]=useState('');
  if(!roles.some(role=>allowed.includes(role)))return <p role="alert">Messaging history is unavailable for this role.</p>;
@@ -48,12 +50,12 @@ function Feed({source,view,status,kind,correlation,roles,clearFilters}:{clearFil
   <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" aria-describedby="history-description" onCloseAutoFocus={event=>{event.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
    <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
    <Dialog.Title className="t-title-lg">Notification evidence</Dialog.Title><Dialog.Description id="history-description">Current server status and safe references. Message bodies and verification codes are never shown.</Dialog.Description>
-   {selected&&<Detail setLocked={setLocked} key={selected} source={source} view={view} id={selected} roles={roles} changed={page.reload}/>}
+   {selected&&<NotificationDetail setLocked={setLocked} key={selected} source={source} view={view} id={selected} roles={roles} changed={page.reload}/>}
 
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </>;
 }
-function Detail({source,view,id,roles,changed,setLocked}:{setLocked:(locked:boolean)=>void;source:MessagingSource;view:HistoryView;id:string;roles:readonly OperatorRole[];changed:()=>void}) {
+export function NotificationDetail({source,view,id,roles,changed,setLocked}:{setLocked:(locked:boolean)=>void;source:MessagingSource;view:HistoryView;id:string;roles:readonly OperatorRole[];changed:()=>void}) {
  const detail=useResource(id,signal=>source.detail(view,id,signal));
  const command=useCommand(source.execute),[confirm,setConfirm]=useState<HistoryDetail|null>(null),[preparing,setPreparing]=useState(false),[error,setError]=useState('');
  const confirmed=()=>{setConfirm(null);detail.reload();changed();};
@@ -94,3 +96,5 @@ function Evidence({row}:{row:HistoryRow}) {return <dl className="history-facts">
  {row.message&&<><dt>Message reference</dt><dd>{row.message.id}</dd><dt>Transport</dt><dd>{statusLabel[row.message.state]} · {row.message.reason_code.replaceAll('_',' ')}</dd><dt>Provider callback progress</dt><dd>{row.message.progress}{row.message.failure_observed?' · Failure also observed':''}</dd><dt>Attempt count</dt><dd>{row.message.attempt_count}</dd></>}
  {row.fanout&&<><dt>Route fanout</dt><dd>{row.fanout.id} · {statusLabel[row.fanout.state]}</dd><dt>Route reference</dt><dd>{row.fanout.route_id}</dd><dt>Business decisions</dt><dd>{row.fanout.completed_count} queued · {row.fanout.skipped_count} skipped/suppressed · {row.fanout.failed_count} blocked</dd></>}
  </dl>;}
+
+export default function Messaging(props:{controller:ScopeController;roles:readonly OperatorRole[]}){const [params]=useSearchParams();return params.get('view')==='advanced'?<AdvancedMessaging {...props}/>:<AutomationWorkspace {...props}/>;}

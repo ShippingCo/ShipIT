@@ -2,9 +2,11 @@ import { FieldValidationError } from '../../plugins/errors.ts';
 import { object, integer, uuid, timestamp } from '../pricing/validation.ts';
 import type { RouteEventInput } from './event-types.ts';
 export function eventCommand(value: unknown): RouteEventInput {
-  const b = object(value, ['kind','expected_version','manifest_id','manifest_version','effective_at','evidence_ref','base_eta_at','total_delay_minutes']);
+  const b = object(value, ['kind','expected_version','manifest_id','manifest_version','effective_at','evidence_ref','base_eta_at','total_delay_minutes','note']);
   if (!['departure','delay','arrival'].includes(b.kind as string)) throw new FieldValidationError('kind','INVALID_FORMAT');
+  if(b.note!==undefined&&(typeof b.note!=='string'||b.note.length>1000))throw new FieldValidationError('note','OUT_OF_RANGE');
   const common = {
+    ...(b.note===undefined?{}:{note:b.note as string}),
     kind: b.kind as RouteEventInput['kind'], expected_version: integer(b.expected_version,'expected_version',1,2147483646),
     manifest_id: uuid(b.manifest_id,'manifest_id'), manifest_version: integer(b.manifest_version,'manifest_version',1,2147483646),
     effective_at: timestamp(b.effective_at,'effective_at'), evidence_ref: uuid(b.evidence_ref,'evidence_ref'),

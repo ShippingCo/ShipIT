@@ -1,3 +1,4 @@
+import {ReportWorkspace} from './ReportWorkspace';
 import './report-page.css';
 import {ReportMeasures} from './ReportMeasures';
 import {Msym} from '../components/m3/Icon';
@@ -30,7 +31,7 @@ import { ageing } from '../data-access/ageing';
 import { AgeingView } from './Ageing';
 
 const amount=(m:ReportMoney)=>m.state==='unknown'?'Unknown':salesAmount(m.paise);
-export default function Reports({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
+export function OperationalReports({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
   const accountantSource=useMemo(()=>accountant(scopedApi(controller)),[controller]);
   const source=useMemo(()=>reports(scopedApi(controller)),[controller]);
   const salesSource=useMemo(()=>sales(scopedApi(controller)),[controller]);
@@ -126,4 +127,10 @@ export function ReportView({source,canExport}:{source:ReportSource;canExport:boo
       {result.next_offset!==null&&<button className="btn btn-outlined" disabled={pending} onClick={()=>void more()}>Load more bookings</button>}
     </>}
   </section>;
+}
+
+export default function Reports(props:{controller:ScopeController;roles:readonly OperatorRole[]}){
+ const [params]=useSearchParams();
+ const advanced=params.get('view')==='advanced'||[...params.keys()].some(key=>key.endsWith('_snapshot')||key==='snapshot'||key==='owner_report')||props.roles.includes('accountant')&&!props.roles.some(r=>['org_admin','franchise_admin'].includes(r));
+ return advanced?<OperationalReports {...props}/>:<ReportWorkspace {...props}/>;
 }

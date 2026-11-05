@@ -134,7 +134,7 @@ export interface LotMembershipResult { lots:LotDto[]; membership:LotMembershipDt
 export interface RouteDto {
   id:string; origin:string; destination:string; mode:'road'|'rail'|'air'|'sea'; carrier_code:string|null;
   scheduled_departure_at:string; state:'planning'|'finalized'|'archived'; version:number;
-  current_manifest_id:string; created_at:string; updated_at:string;
+  current_manifest_id:string; created_at:string; updated_at:string; planning_entry_ids?:string[]; planning_progress?:'scheduled'|'departed'|'arrived'; planning_delay_minutes?:number;
 }
 export interface RouteManifestDto {id:string;route_id:string;version:number;finalized:boolean;parcel_count:number;created_at:string}
 export interface RouteManifestItem {
@@ -146,7 +146,7 @@ export interface RouteManifestItem {
 export type RouteEventKind = 'departure' | 'delay' | 'arrival';
 export interface RouteEventInput {
   kind: RouteEventKind; expected_version: number; manifest_id: string; manifest_version: number;
-  effective_at: string; evidence_ref: string; base_eta_at?: string | null; total_delay_minutes?: number;
+  effective_at: string; evidence_ref: string; base_eta_at?: string | null; total_delay_minutes?: number; note?:string;
 }
 export interface RouteEventResult {
   event_id: string; route_id: string; version: number; manifest_id: string; manifest_version: number;

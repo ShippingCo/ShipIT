@@ -19,6 +19,8 @@ export function registerRoutes(app:FastifyInstance,service:ReturnType<typeof cre
   command('POST','/api/v1/routes/:route_id/archive','routes.archive');command('POST','/api/v1/routes/:route_id/finalize','routes.finalize');
   command('POST','/api/v1/routes/:route_id/lots','routes.lot.attach');command('POST','/api/v1/routes/:route_id/lots/:lot_id/remove','routes.lot.detach');
   command('POST','/api/v1/routes/:route_id/parcels','routes.parcel.attach');command('POST','/api/v1/routes/:route_id/parcels/:parcel_id/remove','routes.parcel.detach');
+  app.get<{Params:{route_id:string}}>('/api/v1/routes/:route_id/history',request=>service.history(session(request),request.params.route_id,request.query,request.id));
+  app.post<{Params:{route_id:string}}>('/api/v1/routes/:route_id/messages',request=>service.message(session(request),request.params.route_id,request.query,request.headers['idempotency-key'],request.raw.rawHeaders,request.body,request.id));
   app.get('/api/v1/routes',request=>service.list(session(request),request.query,request.id));
   app.get<{Params:{route_id:string}}>('/api/v1/routes/:route_id',request=>service.read(session(request),request.params.route_id,request.query,request.id));
   app.get<{Params:{route_id:string}}>('/api/v1/routes/:route_id/parcels',request=>service.manifest(session(request),request.params.route_id,undefined,request.query,request.id));

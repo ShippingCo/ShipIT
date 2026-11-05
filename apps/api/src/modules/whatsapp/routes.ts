@@ -7,10 +7,7 @@ import type { createOutboundService } from './outbound-service.ts';
 import type { createAutomationReadService } from '../automation/read-service.ts';
 export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof createWhatsappService>,secure:boolean,consent?:ReturnType<typeof createConsentService>,outbound?:ReturnType<typeof createOutboundService>,automation?:ReturnType<typeof createAutomationReadService>,history?:ReturnType<typeof createHistoryService>) {
   const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
-  if(history)for(const view of ['messages','automation'] as const) {
-    app.get(`/api/v1/whatsapp/history/${view}`,{exposeHeadRoute:false},request=>history.list(session(request),view,request.query,request.id));
-    app.get<{Params:{id:string}}>(`/api/v1/whatsapp/history/${view}/:id`,{exposeHeadRoute:false},request=>history.detail(session(request),view,request.params.id,request.query,request.id));
-  }
+  if(history)registerMessagingHistory(app,history,secure);
   if(automation) {
     app.get('/api/v1/whatsapp/automation/route-delay-fanouts',{exposeHeadRoute:false},request=>automation.fanouts(session(request),request.query,request.id));
     app.get<{Params:{id:string}}>('/api/v1/whatsapp/automation/route-delay-fanouts/:id',{exposeHeadRoute:false},request=>automation.fanout(session(request),request.params.id,request.query,request.id));
@@ -36,4 +33,12 @@ export function registerWhatsapp(app:FastifyInstance,service:ReturnType<typeof c
   for(const operation of ['rotate','disable','sync'] as const)app.post<{Params:{id:string}}>(`/api/v1/whatsapp/installations/:id/${operation}`,request=>
     service.execute(session(request),request.params.id,operation,request.query,idempotencyKey(request.headers['idempotency-key'],request.raw.rawHeaders),request.body,request.id));
   app.post<{Params:{id:string}}>('/api/v1/whatsapp/installations/:id/capability',request=>service.capability(session(request),request.params.id,request.query,request.body,request.id));
+}
+
+export function registerMessagingHistory(app:FastifyInstance,history:ReturnType<typeof createHistoryService>,secure:boolean){
+ const session=(r:FastifyRequest)=>r.cookies[secure?'__Host-shipit_session':'shipit_session']??'';
+  for(const view of ['messages','automation'] as const) {
+    app.get(`/api/v1/whatsapp/history/${view}`,{exposeHeadRoute:false},(request,reply)=>{reply.header('Cache-Control','no-store');return history.list(session(request),view,request.query,request.id);});
+    app.get<{Params:{id:string}}>(`/api/v1/whatsapp/history/${view}/:id`,{exposeHeadRoute:false},(request,reply)=>{reply.header('Cache-Control','no-store');return history.detail(session(request),view,request.params.id,request.query,request.id);});
+  }
 }

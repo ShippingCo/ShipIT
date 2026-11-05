@@ -1483,3 +1483,35 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/lots-demo.test.tsx: reads every cursor page and rejects a repeated cursor instead of presenting partial totals | preserve | lots |
 | apps/web/src/test/saved-bookings-demo.test.tsx: shows the server planning lot on an incomplete saved booking without fabricating a shipment membership | preserve | lots |
 | apps/web/src/test/lots-demo.test.tsx: reattaches an existing shipment route when only planning entries are added | preserve | lots |
+
+| apps/web/src/test/routes-demo.test.tsx: matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history | preserve | routes |
+| apps/web/src/test/routes-demo.test.tsx: records planning departure with an exact retry after a lost response and never dispatches a parcel | preserve | routes |
+| apps/web/src/test/routes-demo.test.tsx: resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence | preserve | routes |
+
+
+| apps/web/src/test/routes-demo.test.tsx: uses physical journey evidence rather than an earlier planning delay for the current status | preserve | routes |
+
+| apps/web/src/test/eway-demo.test.tsx: matches the demo checklist with exact booking totals, status colors, filters and date controls without reading incomplete entries | preserve | eway |
+| apps/web/src/test/eway-demo.test.tsx: saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate | preserve | eway |
+| apps/web/src/test/eway-demo.test.tsx: clears a saved bill through a versioned correction while preserving declaration and transport details | preserve | eway |
+| apps/web/src/test/eway-demo.test.tsx: keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry | preserve | eway |
+
+| apps/web/src/test/reports-demo.test.tsx: opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: exports only the filtered view after authorization and does not export all rows when filters match nothing | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: rejects a report response for another requested period | preserve | reports |
+
+| apps/web/src/test/automation-demo.test.tsx: matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: loads older messages without resetting the category and labels counts as loaded-page totals | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: does not take over another staff member’s case when ownership changes before handling | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: keeps support failures independent from message history and omits unauthorized support reads for dispatchers | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: opens safe notification evidence, traps focus and retains truthful categories for all known message kinds | preserve | messaging |
+
+| apps/web/src/test/settings-demo.test.tsx: matches the demo form sections and saves shop fields and language in one audited settings command | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: retains the exact save request and locks fields until a lost response is reconciled | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: keeps the shop draft when a newer version requires explicit rebase | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: publishes changed GST through its owning service before saving presentation, using the current tax revision | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: rejects active logo formats and unsafe profile fields, and escapes printable branding | preserve | settings |
+| apps/web/src/test/settings-demo.test.tsx: retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice | preserve | settings |
+

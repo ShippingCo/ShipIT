@@ -1,3 +1,5 @@
+import {settings} from '../data-access/settings';
+import type {ScopedApi} from '../data-access/scoped-api';
 import type { ReceiptDto } from '@shippingco/shared';
 import { receiptView,renderReceiptView,type ReceiptView } from './receipt-view';
 export {receiptHTML,receiptMoney,receiptView,renderReceiptView,type ReceiptView} from './receipt-view';
@@ -10,3 +12,7 @@ export function printReceiptView(view:ReceiptView):void {
   try {window.print();} finally {document.body.classList.remove('printing');root.remove();}
 }
 export const printReceipt=(dto:ReceiptDto):void=>printReceiptView(receiptView(dto));
+
+export async function loadShopLogo(api:ScopedApi){try{const profile=await settings(api).read('franchise');return profile.values.identity.value?.shop?.logo??undefined;}catch{return undefined;}}
+export async function printReceiptViewFor(api:ScopedApi,view:ReceiptView){const logo=await loadShopLogo(api);if(api.scope.signal.aborted)throw Error('Receipt access changed.');printReceiptView({...view,...(logo?{logo}:{})});}
+export const printReceiptFor=(api:ScopedApi,dto:ReceiptDto)=>printReceiptViewFor(api,receiptView(dto));

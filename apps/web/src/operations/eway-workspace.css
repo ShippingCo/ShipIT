@@ -1,0 +1,16 @@
+.eway-period {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.live-eway .stat3 {margin-top:20px;}
+.live-eway .stat-value {overflow-wrap:anywhere;}
+.live-eway .section-label {margin-top:28px;}
+.live-eway .tbl th,.live-eway .tbl td {vertical-align:middle;}
+.live-eway .tbl .mono {overflow-wrap:anywhere;}
+.eway-state {display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.eway-edit-fields {border:0;margin:0;padding:0;min-width:0;display:grid;gap:14px;}
+.eway-source-details {margin-top:4px;}
+.eway-source-details summary {cursor:pointer;color:var(--md-primary);font-weight:500;margin-bottom:12px;}
+.eway-other {margin-top:24px;}
+.eway-other>summary {cursor:pointer;font-weight:600;margin-bottom:12px;}
+.eway-other>p {margin-bottom:12px;}
+.eway-detail-link {margin-top:20px;font-size:14px;}
+.eway-error {color:var(--md-error);margin-top:12px;}
+@media(max-width:640px){.live-eway .stat3{grid-template-columns:1fr;}.live-eway .stat-value{font-size:28px;}.live-eway .rep-note{align-items:flex-start;}.eway-period .chips-row{flex-wrap:wrap;}.eway-period{align-items:flex-start;}}

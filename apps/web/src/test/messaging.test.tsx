@@ -13,7 +13,7 @@ const message={id:id(80),row_kind:'message',effective_time:now,source_id:id(81),
 const detail={...message,attempts:[{attempt:1,outcome:'accepted',reason_code:'provider_accepted',recorded_at:now}],history_truncated:false,fanout_items:[],reminder:{eligible:false}};
 const page=(items:unknown[])=>({items,page:{has_more:false,next_cursor:null}});
 function controller(roles:OperatorRole[]=['operator']){const c=createScopeController();c.runtime.bind({userId:id(6),organizationId:org,franchiseId:A,permissions:JSON.stringify(roles)});return c;}
-function mount(roles:OperatorRole[]=['operator']){return render(<MemoryRouter><Messaging controller={controller(roles)} roles={roles}/></MemoryRouter>);}
+function mount(roles:OperatorRole[]=['operator']){return render(<MemoryRouter initialEntries={['/business/automation?view=advanced']}><Messaging controller={controller(roles)} roles={roles}/></MemoryRouter>);}
 afterEach(()=>{vi.unstubAllGlobals();localStorage.clear();sessionStorage.clear();});
 function serve(row:unknown=message,read:unknown=detail){vi.stubGlobal('fetch',vi.fn(async(path:string)=>path==='/auth/bootstrap'?json({csrf_token:'synthetic'}):path.includes('/'+id(80)+'?')?json(read):json(page([row]))));}
 describe('production messaging history',()=>{

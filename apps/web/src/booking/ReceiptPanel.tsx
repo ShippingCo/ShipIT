@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReceiptDto } from '@shippingco/shared';
-import { receiptView, printReceipt } from '../utils/receipt';
+import { receiptView, printReceiptFor } from '../utils/receipt';
 import { receipts } from '../data-access/receipts';
 import type { ScopedApi } from '../data-access/scoped-api';
 import type { ScopeController } from '../operator/scope';
@@ -25,6 +25,6 @@ export function ReceiptPanel({ api, controller, bookingId, paymentId, focusReque
     <p role={phase === 'error' ? 'alert' : 'status'} aria-live="polite">{message || 'View the saved receipt. Print it only when you need a copy.'}</p>
     <button type="button" className="btn btn-outlined" disabled={phase === 'loading'} aria-busy={phase === 'loading'} onClick={() => { void load(); }}>{phase === 'error' ? 'Retry receipt' : dto ? 'Reload receipt' : 'Load receipt'}</button>
     {view && <><div className="receipt-facts"><div><p className="ops-note">Issued receipt</p><p>{view.number} · {view.customer}</p><p>{view.issuer}</p></div><p className="t-title-lg">{view.totalLabel}: {view.total}</p></div>
-      <button type="button" className="btn btn-filled" onClick={() => { try { printReceipt(dto!); } catch { setMessage('Print dialog unavailable. The saved receipt is unchanged.'); } }}>Print receipt</button></>}
+      <button type="button" className="btn btn-filled" onClick={() => { void printReceiptFor(api,dto!).catch(()=>setMessage('Print dialog unavailable. The saved receipt is unchanged.')); }}>Print receipt</button></>}
   </section>;
 }

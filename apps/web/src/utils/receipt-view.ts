@@ -2,7 +2,7 @@ import type { ReceiptDto } from '@shippingco/shared';
 
 /** Pure presentation only: values come from the authorized issued DTO. */
 export interface ReceiptView {
-  heading: string; number: string; issuer: string; customer: string;
+  logo?: string; heading: string; number: string; issuer: string; customer: string;
   rows: readonly (readonly [string,string])[]; totalLabel: string; total: string; note: string;
 }
 const escape = (value: string) => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -46,7 +46,7 @@ export function receiptView(dto:ReceiptDto):ReceiptView {
 export function renderReceiptView(view:ReceiptView):string {
   return `<div class="receipt-sheet" style="font-family:Roboto,sans-serif;font-variant-numeric:tabular-nums;max-width:660px;margin:0 auto;color:#17212b">
     <header style="display:flex;justify-content:space-between;gap:18px;border-bottom:2px solid #17212b;padding-bottom:14px;margin-bottom:16px;overflow-wrap:anywhere">
-      <div style="font-size:19px;font-weight:700">${escape(view.issuer)}</div>
+      <div style="font-size:19px;font-weight:700">${view.logo?.startsWith('data:image/png;base64,iVBORw0KGgo')&&view.logo.length<=30000?`<img src="${escape(view.logo)}" alt="Shop logo" style="width:56px;height:56px;object-fit:contain;margin-right:12px;vertical-align:middle">`: ''}${escape(view.issuer)}</div>
       <div style="text-align:right"><div>${escape(view.heading)}</div><b>${escape(view.number)}</b></div>
     </header>
     <div style="background:#f5f8fd;border:1px solid #dde5ef;border-radius:10px;padding:12px 14px;margin-bottom:14px;overflow-wrap:anywhere">Customer: ${escape(view.customer)}</div>

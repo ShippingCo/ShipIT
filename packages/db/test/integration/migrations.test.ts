@@ -19,7 +19,7 @@ await test('#190 populated policy upgrade preserves real grants and confines own
  await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin'),($4,$5,$3,'franchise_admin')",[ownerGrant,user,org,localGrant,local]);
  await owner.query('INSERT INTO shipit.membership_franchise_scopes(membership_id,organization_id,franchise_id) VALUES($1,$2,$3)',[localGrant,org,a]);
  const before=(await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows;
- assert.deepEqual(await db.migrate(),{applied:11});assert.deepEqual(await db.migrate(),{applied:0});
+ assert.deepEqual(await db.migrate(),{applied:13});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual((await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows,before);
  const rows=(await owner.query<{membership_id:string;franchise_id:string}>('SELECT membership_id,franchise_id FROM shipit.business_membership_scopes')).rows;
  assert.deepEqual(rows.filter(r=>r.membership_id===ownerGrant).map(r=>r.franchise_id).sort(),[a,b].sort());
@@ -81,9 +81,9 @@ function migrationProcess(database: DisposableDatabase, directory: string) {
 
 await test('fresh migrations persist a ledger, repeat as no-op and create tenancy, authentication and membership tables', { timeout: 20000 }, async (t) => {
   const database = await provisionDatabase(t);
-  assert.deepEqual(await database.migrate(), { applied: 66 });
+  assert.deepEqual(await database.migrate(), { applied: 68 });
   const initial = await migrationNames(database);
-  assert.equal(initial.length, 66);
+  assert.equal(initial.length, 68);
   assert.deepEqual(await database.migrate(), { applied: 0 });
   assert.deepEqual(await migrationNames(database), initial);
   const owner = database.ownerPool();
@@ -98,7 +98,7 @@ await test('fresh migrations persist a ledger, repeat as no-op and create tenanc
     ...['outbox_attempts','outbox_jobs','outbox_receipts','outbox_redrives','outbox_schedule','outbox_streams'].map(name=>({schema:'shipit',name})),
     ...['owner_report_access_events','owner_report_alerts','owner_report_commands','owner_report_consents','owner_report_deliveries','owner_report_delivery_history','owner_report_franchises','owner_report_recipients','owner_report_runs','owner_report_schedules'].map(name=>({schema:'shipit',name})),
     ...['parcel_bulk_requests','parcel_commands','parcel_dispatch_manifests','parcel_failed_attempts','parcel_rto_approvals','parcel_transitions','parcels'].map(name=>({schema:'shipit',name})),
-    ...['payment_audit_events','payment_commands','payment_entries','pickup_commands','pickup_events','pickup_requests','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','receiving_account_audit_events','receiving_account_revisions','receiving_accounts','reconciliation_access_events','reconciliation_batches','reconciliation_classifications','reconciliation_commands','reconciliation_config_versions','reconciliation_imports','reconciliation_mapping_versions','reconciliation_match_sources','reconciliation_match_transactions','reconciliation_matches','reconciliation_review_revisions','reconciliation_row_outcomes','reconciliation_transactions','reconciliation_unmatches','report_access_events','report_snapshots','route_audit_events','route_commands','route_delay_fanout_items','route_delay_fanouts','route_delay_reminder_commands','route_delay_reminder_events','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_parcel_effects','route_parcels','routes','settings_commands','settings_events','settings_versions','shipment_cost_aliases','shipment_cost_allocations','shipment_cost_commands','shipment_cost_revisions','shipment_cost_sources','support_cases','support_commands','support_events','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_consent_disclosures','whatsapp_consent_receipts','whatsapp_consent_state','whatsapp_delivery_observations','whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_installations','whatsapp_outbound','whatsapp_outbound_attempts','whatsapp_outbound_redrives','whatsapp_templates','whatsapp_webhook_quarantine'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
+    ...['payment_audit_events','payment_commands','payment_entries','pickup_commands','pickup_events','pickup_requests','pricing_audit_events','pricing_cards','pricing_commands','pricing_quotes','pricing_rules','pricing_versions','receipt_audit_events','receiving_account_audit_events','receiving_account_revisions','receiving_accounts','reconciliation_access_events','reconciliation_batches','reconciliation_classifications','reconciliation_commands','reconciliation_config_versions','reconciliation_imports','reconciliation_mapping_versions','reconciliation_match_sources','reconciliation_match_transactions','reconciliation_matches','reconciliation_review_revisions','reconciliation_row_outcomes','reconciliation_transactions','reconciliation_unmatches','report_access_events','report_snapshots','route_audit_events','route_commands','route_delay_fanout_items','route_delay_fanouts','route_delay_reminder_commands','route_delay_reminder_events','route_lots','route_manifest_parcels','route_manifest_sources','route_manifests','route_message_requests','route_parcel_effects','route_parcels','routes','settings_commands','settings_events','settings_versions','shipment_cost_aliases','shipment_cost_allocations','shipment_cost_commands','shipment_cost_revisions','shipment_cost_sources','support_cases','support_commands','support_events','tax_audit_events','tax_calculations','tax_cards','tax_commands','tax_intents','tax_resolutions','tax_versions','whatsapp_commands','whatsapp_consent_disclosures','whatsapp_consent_receipts','whatsapp_consent_state','whatsapp_delivery_observations','whatsapp_inbox','whatsapp_inbox_attempts','whatsapp_installations','whatsapp_outbound','whatsapp_outbound_attempts','whatsapp_outbound_redrives','whatsapp_templates','whatsapp_webhook_quarantine'].map(name=>({schema:'shipit',name})), { schema: 'shipit_migrations', name: 'pgmigrations' }]);
 });
 
 await test('released Issue 10 infrastructure upgrades to tenancy and repeated migration preserves roots', { timeout: 20000 }, async (t) => {
@@ -108,7 +108,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
   const owner = database.ownerPool();
   assert.equal((await owner.query<{ relation: string | null }>(
     "SELECT to_regclass('shipit.organizations')::text AS relation")).rows[0]?.relation, null);
-  assert.deepEqual(await database.migrate(), { applied: 65 });
+  assert.deepEqual(await database.migrate(), { applied: 67 });
   await owner.query('INSERT INTO shipit.organizations (id, display_name) VALUES ($1, $2)',
     ['00000000-0000-4000-8000-000000000001', 'Organization Alpha']);
   assert.deepEqual(await database.migrate(), { applied: 0 });
@@ -131,7 +131,7 @@ await test('released Issue 10 infrastructure upgrades to tenancy and repeated mi
     '1792947600000-cash-closing',
     '1793034000000-shipment-costs',
     '1793120400000-versioned-settings',
-    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings','1793725200000-counter-entered-charges','1793811600000-optional-counter-bookings','1793818800000-lot-planning-entries','1793818801000-lot-message-sources',
+    '1793206800000-customer-accounts','1793293200000-manual-reconciliation','1793379600000-monthly-account-statements','1793466000000-owner-report-schedules','1793552400000-owner-business-authority','1793638800000-booking-parcel-details','1793638801000-booking-service-catalog','1793638802000-pdf-booking-attachments','1793638803000-operational-booking-cancellations','1793638804000-optional-recipient-phone','1793638805000-business-gst-settings','1793725200000-counter-entered-charges','1793811600000-optional-counter-bookings','1793818800000-lot-planning-entries','1793818801000-lot-message-sources','1793898000000-dispatch-route-demo-parity','1793984400000-shop-presentation',
   ]);
 });
 
@@ -221,7 +221,7 @@ await test('lock owner disconnect releases advisory lock and a new migrator succ
     error instanceof DatabaseError && error.code === 'DB_MIGRATION_LOCKED');
   client.release();
   await owner.close();
-  assert.deepEqual(await database.migrate(), { applied: 66 });
+  assert.deepEqual(await database.migrate(), { applied: 68 });
   const installedOwner = database.ownerPool(), held = await installedOwner.connect();
   try {
     await held.query('SELECT pg_advisory_lock($1::bigint)', [migrationLockId]);

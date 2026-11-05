@@ -33,6 +33,8 @@ export interface Column<R extends DataRow = DataRow> {
   render?: (row: R) => React.ReactNode;
   /** Sums the column into a footer row. */
   total?: boolean;
+  /** Exact totals for money adapters that retain integer paise. */
+  aggregate?: (rows: R[]) => React.ReactNode;
   /** Formats that footer total, e.g. as rupees. Defaults to a rounded number. */
   fmt?: (n: number) => React.ReactNode;
 }
@@ -133,7 +135,7 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
           Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
         </button>
         <span className="dt-count" aria-live="polite">
-          {view.length === rows.length ? `${rows.length} rows` : `${view.length} of ${rows.length} rows`}
+          {view.length === rows.length ? `${rows.length} row${rows.length===1?'':'s'}` : `${view.length} of ${rows.length} rows`}
         </span>
         {activeFilters > 0 && (
           <button type="button" className="dt-clear" onClick={() => setFilters({})}>Clear filters</button>
@@ -195,7 +197,7 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
               <tr>
                 {columns.map((c, i) => (
                   <td key={c.key} className={c.type === 'num' || c.type === 'money' ? 'ta-r' : undefined}>
-                    {i === 0 ? 'Total' : totals[i] != null ? (c.fmt ? c.fmt(totals[i]!) : Math.round(totals[i]!)) : ''}
+                    {i === 0 ? 'Total' : c.aggregate && c.total ? c.aggregate(view) : totals[i] != null ? (c.fmt ? c.fmt(totals[i]!) : Math.round(totals[i]!)) : ''}
                   </td>
                 ))}
               </tr>

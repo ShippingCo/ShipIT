@@ -197,10 +197,10 @@
       "apps/web/src/pages/business/NewBookingPage.tsx": "8d725ca24750053333fa49dfc23ad3d8f32d6fca3e29d08f72c292b1ee9b0915",
       "apps/web/src/pages/business/PackagesPage.tsx": "43f3c1f54ad10997337182ea7cba1bb2833568fa43c47a60609e959ed99e69b1",
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
-      "apps/web/src/pages/business/RoutesPage.tsx": "11a413b9223e9064f4e5f80d58f9571377ed630416743232fc9be99b2c1dada1",
+      "apps/web/src/pages/business/RoutesPage.tsx": "2d6190353e57bbf98b59c799338a19f9747c2b7ff3c89eddca3f4219ec540e03",
       "apps/web/src/test/app.test.tsx": "6a8456566f8883b6b849646e25138ae32d3e42047c0c6997aa0fa12b72e431ff",
       "apps/web/src/test/counter.test.tsx": "b09cfb1d6330ed547fd0ea9d7cd29add2430f2ed396f11bda5ef7c3ee23b1e8e",
-      "apps/web/src/test/operator.test.tsx": "017ca8082b591a21709d435941ddd2686bd0e6e5fb927312521762f3623404b3",
+      "apps/web/src/test/operator.test.tsx": "67511ae4607c7e3f3db1f7f3ea3a41d30e93938abf60e833bb14801148d7c6c2",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -745,6 +745,10 @@
       ],
       "apps/web/src/pages/business/RoutesPage.tsx": [
         {
+          "target": "apps/web/src/components/workspace/DispatchSelection.tsx",
+          "syntax": "import {DispatchSelection} from '../../components/workspace/DispatchSelection';"
+        },
+        {
           "target": "apps/web/src/components/workspace/DispatchCards.tsx",
           "syntax": "import {RouteCardView} from '../../components/workspace/DispatchCards';"
         },
@@ -758,7 +762,7 @@
         },
         {
           "target": "apps/web/src/components/m3/Button.tsx",
-          "syntax": "import { Button, Checkbox } from '../../components/m3/Button';"
+          "syntax": "import { Button } from '../../components/m3/Button';"
         },
         {
           "target": "apps/web/src/components/m3/Surface.tsx",
@@ -1268,6 +1272,36 @@
       {
         "file": "apps/web/src/test/attachments.test.tsx",
         "name": "a booking attachment client cannot rebind to a newly selected franchise",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "loads older messages without resetting the category and labels counts as loaded-page totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "does not take over another staff member’s case when ownership changes before handling",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "keeps support failures independent from message history and omits unauthorized support reads for dispatchers",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "opens safe notification evidence, traps focus and retains truthful categories for all known message kinds",
         "cases": null
       },
       {
@@ -2066,6 +2100,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "matches the demo checklist with exact booking totals, status colors, filters and date controls without reading incomplete entries",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "clears a saved bill through a versioned correction while preserving declaration and transport details",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/expense-attachments.test.tsx",
         "name": "rejects booking evidence and parent fields while projecting only expense metadata",
         "cases": null
@@ -2826,6 +2880,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "exports only the filtered view after authorization and does not export all rows when filters match nothing",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "rejects a report response for another requested period",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/reports.test.tsx",
         "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
         "cases": null
@@ -2838,6 +2912,26 @@
       {
         "file": "apps/web/src/test/reports.test.tsx",
         "name": "an uncertain capture retries the same immutable request after editing the draft",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "records planning departure with an exact retry after a lost response and never dispatches a parcel",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/routes-demo.test.tsx",
+        "name": "uses physical journey evidence rather than an earlier planning delay for the current status",
         "cases": null
       },
       {
@@ -2903,6 +2997,36 @@
       {
         "file": "apps/web/src/test/service-parity.test.tsx",
         "name": "shows queued provider work as waiting in the feed and uses scoped notification filters without send claims",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "matches the demo form sections and saves shop fields and language in one audited settings command",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "retains the exact save request and locks fields until a lost response is reconciled",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "keeps the shop draft when a newer version requires explicit rebase",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "publishes changed GST through its owning service before saving presentation, using the current tax revision",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "rejects active logo formats and unsafe profile fields, and escapes printable branding",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/settings-demo.test.tsx",
+        "name": "retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice",
         "cases": null
       },
       {
@@ -3588,6 +3712,10 @@
         "kind": "document.addEventListener"
       },
       {
+        "file": "apps/web/src/operations/ReportWorkspace.tsx",
+        "kind": "setTimeout"
+      },
+      {
         "file": "apps/web/src/operations/Reports.tsx",
         "kind": "setTimeout"
       },
@@ -3626,6 +3754,14 @@
       {
         "file": "apps/web/src/operations/ShipmentCosts.tsx",
         "kind": "source.api.scope.signal.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ShopSettings.tsx",
+        "kind": "useSyncExternalStore"
+      },
+      {
+        "file": "apps/web/src/operations/ShopSettings.tsx",
+        "kind": "window.addEventListener"
       },
       {
         "file": "apps/web/src/operations/reconciliation/Review.tsx",
@@ -4972,6 +5108,54 @@
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
     },
     {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "loads older messages without resetting the category and labels counts as loaded-page totals",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "does not take over another staff member’s case when ownership changes before handling",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "keeps support failures independent from message history and omits unauthorized support reads for dispatchers",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "opens safe notification evidence, traps focus and retains truthful categories for all known message kinds",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
       "file": "apps/web/src/test/booking-attachments.test.tsx",
       "name": "keeps selected files local until booking exists, then uses actual upload/finalize and drops private bytes",
       "cases": null,
@@ -6244,6 +6428,38 @@
       "reason": "Preserve one explicit confirmed action and modal closure."
     },
     {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "matches the demo checklist with exact booking totals, status colors, filters and date controls without reading incomplete entries",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "clears a saved bill through a versioned correction while preserving declaration and transport details",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
       "name": "rejects booking evidence and parent fields while projecting only expense metadata",
       "cases": null,
@@ -7460,6 +7676,38 @@
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
     },
     {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "exports only the filtered view after authorization and does not export all rows when filters match nothing",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "rejects a report response for another requested period",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
       "file": "apps/web/src/test/reports.test.tsx",
       "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
       "cases": null,
@@ -7482,6 +7730,38 @@
       "disposition": "preserve",
       "group": "reports",
       "reason": "Issue #61: real snapshot boundary, exact retry identity and scoped export UI; no browser financial authority."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "records planning departure with an exact retry after a lost response and never dispatches a parcel",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
+    },
+    {
+      "file": "apps/web/src/test/routes-demo.test.tsx",
+      "name": "uses physical journey evidence rather than an earlier planning delay for the current status",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "routes",
+      "reason": "Preserve demo route layout, scoped planning progress and exact retries while retaining physical dispatch checks."
     },
     {
       "file": "apps/web/src/test/sales.test.tsx",
@@ -7540,12 +7820,12 @@
       "reason": "Reviewed optional confirmed booking and demo presentation parity; server scope, immutable retries and financial truth remain authoritative."
     },
     {
-      "disposition": "preserve",
-      "group": "booking",
-      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves.",
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
       "name": "keeps the saved-booking popup open while an embedded shipment command is pending or uncertain",
-      "cases": null
+      "cases": null,
+      "disposition": "preserve",
+      "group": "booking",
+      "reason": "The matching detail popup retains uncertain shipment commands until the same request resolves."
     },
     {
       "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
@@ -7586,6 +7866,54 @@
       "disposition": "preserve",
       "group": "messaging",
       "reason": "Provider waiting state stays truthful and filtering remains scoped."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "matches the demo form sections and saves shop fields and language in one audited settings command",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "retains the exact save request and locks fields until a lost response is reconciled",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "keeps the shop draft when a newer version requires explicit rebase",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "publishes changed GST through its owning service before saving presentation, using the current tax revision",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "rejects active logo formats and unsafe profile fields, and escapes printable branding",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
+    },
+    {
+      "file": "apps/web/src/test/settings-demo.test.tsx",
+      "name": "retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "settings",
+      "reason": "Preserve shop settings layout, versioned save recovery, branding safety, role authority and assistant language preferences."
     },
     {
       "file": "apps/web/src/test/settings.test.tsx",
