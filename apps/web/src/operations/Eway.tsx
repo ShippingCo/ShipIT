@@ -1,3 +1,5 @@
+import EwayWorkspace from './EwayWorkspace';
+import {useSearchParams} from 'react-router-dom';
 import '../components/workspace/service-reference.css';
 import {ParcelLookup} from './ParcelLookup';
 import {parcels} from '../data-access/parcels';
@@ -17,7 +19,7 @@ import { Msym } from '../components/m3/Icon';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const writable=(roles:readonly OperatorRole[])=>(canAdminister(roles,'eway.write')||roles.includes('operator'));
-export default function Eway({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
+export function OperationalEway({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>eway(api),[api]),parcelSource=useMemo(()=>parcels(api),[api]);const reminders=usePagedResource('eway',(cursor,signal)=>source.reminders({limit:50,cursor},signal));const [booking,setBooking]=useState(''),[selected,setSelected]=useState<string|null>(null);
  const remember=useDetailReturn(selected);
  return <div className="ops-page logistics-workspace reference-service"><PageHeader title="External e-way records" eyebrow="Shipment compliance" description="Find a booking by its tracking number to record or check its e-way bill details." actions={<button className="btn btn-outlined" onClick={reminders.reload}><Msym name="refresh"/>Refresh reminders</button>}/>
@@ -75,3 +77,9 @@ function CaptureFields({fields,only}:{fields:CaptureState;only?:'declaration'|'e
  </div>}
 
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>}
+
+export default function Eway(props:{controller:ScopeController;roles:readonly OperatorRole[]}){
+ const [params]=useSearchParams();
+ const canReadParcels=canAdminister(props.roles,'parcels.read')||props.roles.some(role=>['operator','dispatcher','read_only'].includes(role));
+ return params.get('view')==='records'||!canReadParcels?<OperationalEway {...props}/>:<EwayWorkspace {...props}/>;
+}

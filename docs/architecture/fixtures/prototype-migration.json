@@ -2070,6 +2070,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "matches the demo checklist with exact booking totals, status colors, filters and date controls without reading incomplete entries",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "clears a saved bill through a versioned correction while preserving declaration and transport details",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/eway-demo.test.tsx",
+        "name": "keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/expense-attachments.test.tsx",
         "name": "rejects booking evidence and parent fields while projecting only expense metadata",
         "cases": null
@@ -6266,6 +6286,38 @@
       "disposition": "preserve",
       "group": "presentation",
       "reason": "Preserve one explicit confirmed action and modal closure."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "matches the demo checklist with exact booking totals, status colors, filters and date controls without reading incomplete entries",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "clears a saved bill through a versioned correction while preserving declaration and transport details",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
+    },
+    {
+      "file": "apps/web/src/test/eway-demo.test.tsx",
+      "name": "keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "eway",
+      "reason": "Preserve demo e-way checklist layout, exact booking totals, scoped external records and uncertain retry identity without inventing official validity."
     },
     {
       "file": "apps/web/src/test/expense-attachments.test.tsx",
