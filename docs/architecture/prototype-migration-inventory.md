@@ -1500,3 +1500,10 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/reports-demo.test.tsx: exports only the filtered view after authorization and does not export all rows when filters match nothing | preserve | reports |
 | apps/web/src/test/reports-demo.test.tsx: keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping | preserve | reports |
 | apps/web/src/test/reports-demo.test.tsx: rejects a report response for another requested period | preserve | reports |
+
+| apps/web/src/test/automation-demo.test.tsx: matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: loads older messages without resetting the category and labels counts as loaded-page totals | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: does not take over another staff member’s case when ownership changes before handling | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: keeps support failures independent from message history and omits unauthorized support reads for dispatchers | preserve | messaging |
+| apps/web/src/test/automation-demo.test.tsx: opens safe notification evidence, traps focus and retains truthful categories for all known message kinds | preserve | messaging |

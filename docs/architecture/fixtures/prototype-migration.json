@@ -1275,6 +1275,36 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "loads older messages without resetting the category and labels counts as loaded-page totals",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "does not take over another staff member’s case when ownership changes before handling",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "keeps support failures independent from message history and omits unauthorized support reads for dispatchers",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/automation-demo.test.tsx",
+        "name": "opens safe notification evidence, traps focus and retains truthful categories for all known message kinds",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/booking-attachments.test.tsx",
         "name": "keeps selected files local until booking exists, then uses actual upload/finalize and drops private bytes",
         "cases": null
@@ -5038,6 +5068,54 @@
       "disposition": "preserve",
       "group": "attachments",
       "reason": "Issue #33 production API composition: authoritative snapshots, explicit retries, private scope lifetime and accessible counter outcomes; fictional demo remains isolated."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "matches demo sections and category counts while preserving real delivery states and redacting bodies and OTP values",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "loads older messages without resetting the category and labels counts as loaded-page totals",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "opens the real support workspace and resolves an unassigned case with exact claim retry before a versioned resolution",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "does not take over another staff member’s case when ownership changes before handling",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "keeps support failures independent from message history and omits unauthorized support reads for dispatchers",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
+    },
+    {
+      "file": "apps/web/src/test/automation-demo.test.tsx",
+      "name": "opens safe notification evidence, traps focus and retains truthful categories for all known message kinds",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "messaging",
+      "reason": "Preserve live automation feed categories, truthful provider statuses, private content, scoped support ownership and exact recovery requests."
     },
     {
       "file": "apps/web/src/test/booking-attachments.test.tsx",

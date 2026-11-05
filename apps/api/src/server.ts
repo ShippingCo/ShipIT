@@ -27,7 +27,7 @@ import { createOutboundService } from './modules/whatsapp/outbound-service.ts';
 import { createAutomationReadService } from './modules/automation/read-service.ts';
 import { createRouteDelayReminderService } from './modules/automation/reminder-service.ts';
 import { registerBusinessWebhook } from './modules/whatsapp/webhook.ts';
-import { registerWhatsapp } from './modules/whatsapp/routes.ts';
+import { registerWhatsapp,registerMessagingHistory } from './modules/whatsapp/routes.ts';
 import type { WhatsappDependencies } from './modules/whatsapp/types.ts';
 import { createOutboxService } from './modules/outbox/service.ts';
 import { registerOutbox } from './modules/outbox/routes.ts';
@@ -146,7 +146,8 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerAuth(instance,createAuthService(database,auth.keys),auth.keys,config.allowedOrigins,config.environment!=='developer');
       registerOnboarding(instance,createMembershipService(database),config.environment!=='developer');
       registerPricing(instance,createPricingService(database,pricingClock,config.customerAccountWritesEnabled),config.environment!=='developer');
-      if(whatsapp)registerSupport(instance,createSupportService(database,whatsapp),config.environment!=='developer');
+      registerSupport(instance,createSupportService(database,whatsapp),config.environment!=='developer');
+      registerMessagingHistory(instance,createHistoryService(database,auth.keys.browser),config.environment!=='developer');
       if(whatsapp)registerAssistantMetrics(instance,createAssistantMetrics(database),config.environment!=='developer');
       if(whatsapp)registerPickups(instance,createPickupService(database,whatsapp),config.environment!=='developer');
       registerQuotePolicies(instance,createQuotePolicyService(database),config.environment!=='developer');
@@ -163,7 +164,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerCarriers(instance,createCarrierService(database,auth.keys.browser,pricingClock),config.environment!=='developer',createCarrierImportService(database,pricingClock),createCarrierReconciliationService(database,auth.keys.browser,pricingClock),createCarrierRateService(database,pricingClock));
       registerEway(instance,createEwayService(database,auth.keys.browser,pricingClock),config.environment!=='developer');
       if(whatsapp?.configuration.customer_access_enabled&&whatsapp.configuration.webhook)registerCustomerAccess(instance,createCustomerAccessService(database,whatsapp.configuration.webhook,auth.keys.browser),config.environment!=='developer');
-      if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp),createOutboundService(database,auth.keys.browser),createAutomationReadService(database,auth.keys.browser),createHistoryService(database,auth.keys.browser));
+      if(whatsapp)registerWhatsapp(instance,createWhatsappService(database,whatsapp),config.environment!=='developer',createConsentService(database,whatsapp),createOutboundService(database,auth.keys.browser),createAutomationReadService(database,auth.keys.browser),undefined);
       registerOutbox(instance,createOutboxService(database,auth.keys.browser),config.environment!=='developer');
       registerReceipts(instance,createReceiptService(database),config.environment!=='developer');
       registerPayments(instance,createPaymentService(database),config.environment!=='developer');
