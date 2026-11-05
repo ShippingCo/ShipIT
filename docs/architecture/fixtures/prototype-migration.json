@@ -2850,6 +2850,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "exports only the filtered view after authorization and does not export all rows when filters match nothing",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/reports-demo.test.tsx",
+        "name": "rejects a report response for another requested period",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/reports.test.tsx",
         "name": "keyboard form creates a snapshot and reloads its server totals with empty export",
         "cases": null
@@ -3630,6 +3650,10 @@
       {
         "file": "apps/web/src/operations/Reconciliation.tsx",
         "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/ReportWorkspace.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/operations/Reports.tsx",
@@ -7534,6 +7558,38 @@
       "disposition": "preserve",
       "group": "seam",
       "reason": "Issue #146 optional manual CSV reconciliation: explicit evidence review, private source projection, current grants and retained uncertain intent; no duplicate financial posting."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "exports only the filtered view after authorization and does not export all rows when filters match nothing",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
+    },
+    {
+      "file": "apps/web/src/test/reports-demo.test.tsx",
+      "name": "rejects a report response for another requested period",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve assessed-only reports, exact financial reconciliation, scoped exports, date boundaries and saved-report navigation."
     },
     {
       "file": "apps/web/src/test/reports.test.tsx",

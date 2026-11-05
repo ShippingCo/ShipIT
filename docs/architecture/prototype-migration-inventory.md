@@ -1495,3 +1495,8 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/eway-demo.test.tsx: saves a bill and transport details with one exact retry after a lost response without inventing official expiry or an estimate | preserve | eway |
 | apps/web/src/test/eway-demo.test.tsx: clears a saved bill through a versioned correction while preserving declaration and transport details | preserve | eway |
 | apps/web/src/test/eway-demo.test.tsx: keeps exact money, Kolkata financial-year boundaries, unknown values and estimate expiry separate from official expiry | preserve | eway |
+
+| apps/web/src/test/reports-demo.test.tsx: opens all five demo reports with exact assessed totals, aligned columns, payment colors and recorded delivery facts | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: exports only the filtered view after authorization and does not export all rows when filters match nothing | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: keeps exact paise, Kolkata fiscal boundaries and CSV formula escaping | preserve | reports |
+| apps/web/src/test/reports-demo.test.tsx: rejects a report response for another requested period | preserve | reports |

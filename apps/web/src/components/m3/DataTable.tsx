@@ -135,7 +135,7 @@ export default function DataTable<R extends DataRow = DataRow>({ columns, rows, 
           Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
         </button>
         <span className="dt-count" aria-live="polite">
-          {view.length === rows.length ? `${rows.length} rows` : `${view.length} of ${rows.length} rows`}
+          {view.length === rows.length ? `${rows.length} row${rows.length===1?'':'s'}` : `${view.length} of ${rows.length} rows`}
         </span>
         {activeFilters > 0 && (
           <button type="button" className="dt-clear" onClick={() => setFilters({})}>Clear filters</button>
