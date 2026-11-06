@@ -55,6 +55,7 @@ Requires Node **24.22.1**, [pnpm](https://pnpm.io) **10.34.5** and Python **3.12
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm db           # start the existing local PostgreSQL Docker container
 pnpm db:migrate   # apply database migrations
+pnpm db:doctor    # read-only local access, migration and feature-flag checks
 pnpm api          # API at http://localhost:3000 (leave running)
 # In another terminal:
 pnpm worker       # WhatsApp notification worker (leave running)
@@ -88,6 +89,34 @@ production entry stays the same when you later run against your own configuratio
 The worker requires the WhatsApp configuration described in `.env.example`.
 `pnpm db` starts the existing `LOCAL_DB_CONTAINER` (default `shipit-postgres-local`);
 it does not provision a new database. `pnpm db:local` remains the disposable test harness.
+
+When the doctor reports missing access, preview only the affected profiles, for
+example `pnpm db:access settings receiving_accounts`. After reviewing the listed
+requirements, `pnpm db:access --apply settings receiving_accounts` grants that
+explicit access in one transaction using `MIGRATION_DATABASE_URL`. These commands
+are guarded to the local developer target and never run on API/worker startup.
+They do not enable features or create business records. Re-run the doctor after
+repair; a current schema alone does not establish that the runtime role has access.
+
+The doctor uses the runtime credential to inspect declared access and, when
+provided, the matching migration credential to read migration history. It returns
+nonzero for blocked access, unsafe runtime roles, invalid flags, or unverified/
+mismatched migration history. An `off` flag is reported separately; it is not
+automatically enabled. Output contains safe object names and flags, not secrets or
+customer rows. It reflects newly loaded files, not an already-running process.
+
+Initial profiles are `settings`, `receiving_accounts`, `customer_accounts`,
+`cashbook`, `money_receipts`, `agent_money`, `pickups`, `support`, `whatsapp`,
+`bookings`, `lots_routes` and `reconciliation`. Only settings version/command
+inserts and column-limited receiving-account setup inserts are included as writes.
+Other profiles check reads only. Profile success is not proof of business setup,
+complete write permissions, tenant authorization, worker activity or provider
+delivery. Those remain the owning workflow's tests. The tool adds declared grants;
+it does not remove pre-existing broader privileges. Review those separately.
+
+For focused real PostgreSQL verification, run
+`pnpm db:local exec node scripts/test-runtime-access.mjs`. Full quality also
+discovers these integration tests automatically. No customer/provider sends occur.
 
 ```bash
 pnpm build        # single-file bundle into apps/web/dist/
