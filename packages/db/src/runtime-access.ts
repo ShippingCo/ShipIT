@@ -34,15 +34,15 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
   customer_accounts: { description: 'Customer account read dependencies only', requirements:
     tables('customer_accounts customer_account_revisions customer_account_rates customer_account_bookings customer_account_customer_links customer_account_audit_events customer_credit_approvals customer_credit_requests cod_receipt_positions') },
   cashbook: { description: 'Cashbook read dependencies only', requirements:
-    tables('cash_locations cash_location_revisions cashbook_requests cashbook_request_decisions cashbook_effects cashbook_effect_legs cashbook_source_versions cashbook_source_facts cash_handovers cash_handover_commands cash_handover_legs cash_handover_positions') },
+    tables('cash_locations cash_location_revisions cashbook_requests cashbook_request_decisions cashbook_effects cashbook_effect_legs cashbook_source_versions cashbook_source_facts cash_handovers cash_handover_commands cash_handover_legs cash_handover_positions receiving_account_revisions') },
   money_receipts: { description: 'Money receipt read dependencies only', requirements:
     tables('receiving_accounts receiving_account_revisions money_receipts money_receipt_commands money_receipt_allocations advance_refund_commands') },
   agent_money: { description: 'Settlement and agent-money read dependencies only', requirements:
     tables('agent_settlement_submissions agent_settlement_decisions agent_settlement_events agent_daily_cash_captures agent_money_commands cod_beneficiaries cod_beneficiary_revisions cod_obligations cod_obligation_revisions cod_receipt_allocations agent_fee_term_revisions agent_fee_earnings agent_fee_positions agent_advance_positions agent_fee_applied_requests cash_receipt_component_captures cash_receipt_components cash_handover_attributions') },
   pickups: { description: 'Pickup read dependencies only', requirements:
-    tables('pickup_requests pickup_events pickup_commands customer_quotes customer_quote_policies customer_conversations') },
+    tables('pickup_requests pickup_events pickup_commands customer_quotes customer_quote_policies customer_conversations whatsapp_inbox whatsapp_installations whatsapp_outbound') },
   support: { description: 'Support read dependencies only', requirements:
-    tables('support_cases support_events support_commands customer_conversations') },
+    tables('support_cases support_events support_commands customer_conversations customer_conversation_turns whatsapp_outbound') },
   whatsapp: { description: 'WhatsApp installation, history and policy reads only; no send grants', requirements:
     tables('whatsapp_installations whatsapp_templates whatsapp_commands whatsapp_inbox whatsapp_inbox_attempts whatsapp_delivery_observations whatsapp_outbound whatsapp_outbound_attempts whatsapp_outbound_redrives whatsapp_consent_state whatsapp_consent_receipts notification_policy_activations notification_automation_decisions') },
   bookings: { description: 'Core booking and counter-entry reads only', requirements:
@@ -50,7 +50,21 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
   lots_routes: { description: 'Lot and route planning reads only', requirements:
     tables('lots lot_memberships lot_commands routes route_lots route_parcels') },
   reconciliation: { description: 'Reconciliation read dependencies only', requirements:
-    tables('reconciliation_commands reconciliation_config_versions reconciliation_mapping_versions reconciliation_imports reconciliation_transactions reconciliation_row_outcomes reconciliation_batches reconciliation_matches reconciliation_match_transactions reconciliation_match_sources reconciliation_unmatches reconciliation_classifications reconciliation_review_revisions reconciliation_access_events reconciliation_recorded_sources') },
+    tables('reconciliation_commands reconciliation_config_versions reconciliation_mapping_versions reconciliation_imports reconciliation_transactions reconciliation_row_outcomes reconciliation_batches reconciliation_matches reconciliation_match_transactions reconciliation_match_sources reconciliation_unmatches reconciliation_classifications reconciliation_review_revisions reconciliation_access_events reconciliation_recorded_sources receiving_accounts receiving_account_revisions cashbook_source_facts') },
+  custody: { description: 'Custody reads and required read-access audit inserts; no custody commands', requirements: [
+    ...tables('custody_access_events custody_commands custody_assignment_instructions custody_manifests custody_manifest_items custody_receipts custody_discrepancies custody_transfer_grants custody_grant_revocations custody_releases custody_manifest_cancellations custody_events delivery_attempts delivery_proofs parcel_failed_attempts parcels'),
+    ...tables('custody_access_events', 'INSERT'),
+  ] },
+  deliveries: { description: 'Delivery worklist and evidence reads only; no proof or state-change grants', requirements:
+    tables('delivery_commands delivery_recipients delivery_attempts delivery_challenges delivery_challenge_sends delivery_exception_requests delivery_exception_approvals delivery_proofs delivery_audit_events parcels bookings attachments') },
+  eway: { description: 'E-way overview and detailed record reads only', requirements:
+    tables('eway_records eway_record_revisions eway_commands eway_policies bookings') },
+  financial: { description: 'Financial policy and request reads only', requirements:
+    tables('financial_changes financial_access_events financial_adjustment_requests financial_deletion_denials financial_document_links financial_policy_revisions financial_refund_evidence financial_request_decisions issued_receipts payment_entries receiving_account_revisions cash_locations cash_location_revisions') },
+  cash_close: { description: 'Saved cash-close evidence reads only; no closing commands', requirements:
+    tables('cash_close_sessions cash_close_dependencies cash_close_commands') },
+  shipment_costs: { description: 'Shipment cost evidence reads only', requirements:
+    tables('shipment_cost_sources shipment_cost_revisions shipment_cost_commands shipment_cost_allocations shipment_cost_aliases') },
 };
 for (const profile of Object.values(runtimeAccessProfiles)) {
   profile.requirements.forEach(Object.freeze);

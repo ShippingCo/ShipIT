@@ -107,9 +107,10 @@ customer rows. It reflects newly loaded files, not an already-running process.
 
 Initial profiles are `settings`, `receiving_accounts`, `customer_accounts`,
 `cashbook`, `money_receipts`, `agent_money`, `pickups`, `support`, `whatsapp`,
-`bookings`, `lots_routes` and `reconciliation`. Only settings version/command
-inserts and column-limited receiving-account setup inserts are included as writes.
-Other profiles check reads only. Profile success is not proof of business setup,
+`bookings`, `lots_routes`, `reconciliation`, `custody`, `deliveries`, `eway`,
+`financial`, `cash_close` and `shipment_costs`. Writes are limited to settings
+version/command inserts, column-limited receiving-account setup inserts and the
+custody read-access audit insert. Other profiles check reads only. Profile success is not proof of business setup,
 complete write permissions, tenant authorization, worker activity or provider
 delivery. Those remain the owning workflow's tests. The tool adds declared grants;
 it does not remove pre-existing broader privileges. Review those separately.

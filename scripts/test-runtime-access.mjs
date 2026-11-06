@@ -13,8 +13,9 @@ await writeFile(registry, '', { mode: 0o600 });
 try {
   const result = await executeDatabaseTests([
     fileURLToPath(new URL('../packages/db/test/integration/runtime-access.test.ts', import.meta.url)),
+    fileURLToPath(new URL('../packages/db/test/integration/runtime-read-access.test.ts', import.meta.url)),
   ], registry);
-  console.log(`Restricted-role access checks: ${result.passed} passed; no business records or external sends.`);
+  console.log(`Restricted-role access checks: ${result.passed} passed; disposable records only, no external sends.`);
 } finally {
   try { await cleanupRegisteredResources(registry); }
   finally { await rm(directory, { recursive: true }); }
