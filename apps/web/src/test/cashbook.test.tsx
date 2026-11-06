@@ -1,6 +1,6 @@
 import React from 'react';
 import {afterEach,describe,it,expect,vi} from 'vitest';
-import {act,cleanup,fireEvent,render,screen,within} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen,within,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import type {CashbookRequestDto,OperatorRole} from '@shippingco/shared';
 import Cashbook from '../operations/Cashbook';
@@ -44,6 +44,127 @@ function fixture(actor=user,initial:CashbookRequestDto=original,attribution?:unk
 function controller(){const c=createScopeController();c.runtime.bind({userId:user,organizationId:org,franchiseId:franchise,permissions:'operator'});return c;}
 function view(roles:OperatorRole[],strict=false){const c=controller();const content=<MemoryRouter><a href="/business">Workspace link</a><select aria-label="Franchise"><option value={franchise}>First</option><option value={id(50)}>Second</option></select><Cashbook controller={c} roles={roles}/></MemoryRouter>;render(strict?<React.StrictMode>{content}</React.StrictMode>:content);return c;}
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
+describe('cashbook dependency states',()=>{
+ it('explains disabled cashbook writes without clearing the entered draft or pretending it was saved',async()=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;
+  f.fetcher.mockImplementation(async(path,options)=>{
+   if(new URL(path,'https://fictional.example.test').pathname==='/api/v1/cashbook/requests'&&options?.method==='POST')return json({error:{code:'CASHBOOK_DISABLED'}},409);
+   return base(path,options);
+  });
+  view(['franchise_admin']);await screen.findByRole('option',{name:'Synthetic till'});
+  fireEvent.change(screen.getByLabelText('Source cash location'),{target:{value:location.id}});
+  fireEvent.change(screen.getByLabelText('Responsible employee'),{target:{value:user}});
+  fireEvent.change(screen.getByLabelText('Amount (₹)'),{target:{value:'250.00'}});
+  fireEvent.change(screen.getByLabelText('Private payee'),{target:{value:'Synthetic supplier'}});
+  fireEvent.change(screen.getByLabelText('Occurred at (Kolkata)'),{target:{value:'2026-10-01T17:30'}});
+  fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Synthetic counter supplies'}});
+  fireEvent.submit(screen.getByRole('form',{name:'Cashbook request'}));
+  await screen.findByText(/New expenses and cash movements are not enabled for this workspace/);
+  expect(screen.getByLabelText('Amount (₹)')).toHaveValue('250.00');
+  expect(screen.queryByText('Server update confirmed.')).not.toBeInTheDocument();
+  expect(f.writes).toHaveLength(0);
+ });
+ it.each(['loading','failed'] as const)('shows the agent-money tab when request evidence is %s and recovers in place',async state=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;
+  let healthy=false,resolve!:(response:Response)=>void;
+  const pending=new Promise<Response>(done=>{resolve=done;});
+  f.fetcher.mockImplementation(async(path,options)=>{
+   if(new URL(path,'https://fictional.example.test').pathname==='/api/v1/cashbook/requests'&&!healthy){
+    if(state==='loading')return pending;
+    throw new TypeError('Synthetic read failure');
+   }
+   return base(path,options);
+  });
+  view(['franchise_admin']);
+  fireEvent.click(screen.getByRole('button',{name:'Agent and seller money requests'}));
+  if(state==='loading'){
+   await screen.findByText('Loading current agent-money request evidence…');
+   healthy=true;
+   await act(async()=>resolve(json({as_of:now,items:[],next_cursor:null,current_source_version:9})));
+  }else{
+   const message=await screen.findByText(/Agent and seller request evidence could not be loaded/);
+   healthy=true;
+   fireEvent.click(within(message.closest('section')!).getByRole('button',{name:'Retry'}));
+  }
+  await screen.findByRole('heading',{name:'Request an agent or seller money action'});
+ });
+
+ it('keeps an expense draft and blocks submission until current request evidence is restored',async()=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;let healthy=false;
+  f.fetcher.mockImplementation(async(path,options)=>{
+   if(new URL(path,'https://fictional.example.test').pathname==='/api/v1/cashbook/requests'&&options?.method!=='POST'&&!healthy)throw new TypeError('Synthetic read failure');
+   return base(path,options);
+  });
+  view(['franchise_admin']);
+  const failure=await screen.findByText(/Current server data is unavailable/);
+  const open=screen.getByRole('button',{name:'Add expense or cash movement'});
+  expect(open).toBeEnabled();fireEvent.click(open);
+  const form=screen.getByRole('form',{name:'Cashbook request'});
+  expect(form.closest('section')).toHaveFocus();
+  await screen.findByRole('option',{name:'Synthetic till'});
+  fireEvent.change(screen.getByLabelText('Source cash location'),{target:{value:location.id}});
+  fireEvent.change(screen.getByLabelText('Responsible employee'),{target:{value:user}});
+  fireEvent.change(screen.getByLabelText('Amount (₹)'),{target:{value:'250.00'}});
+  fireEvent.change(screen.getByLabelText('Private payee'),{target:{value:'Synthetic supplier'}});
+  fireEvent.change(screen.getByLabelText('Occurred at (Kolkata)'),{target:{value:'2026-10-01T17:30'}});
+  fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'Synthetic counter supplies'}});
+  expect(screen.getByRole('button',{name:'Submit for different-admin review'})).toBeDisabled();
+  await act(async()=>{fireEvent.submit(form);});expect(f.writes).toHaveLength(0);
+  healthy=true;fireEvent.click(within(failure.closest('section')!).getByRole('button',{name:'Retry'}));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Submit for different-admin review'})).toBeEnabled());
+  expect(screen.getByLabelText('Amount (₹)')).toHaveValue('250.00');
+  expect(screen.getByLabelText('Private payee')).toHaveValue('Synthetic supplier');
+  fireEvent.submit(form);await waitFor(()=>expect(f.writes).toHaveLength(1));
+  expect(f.writes[0]!.body.expected_source_version).toBe(9);
+  expect(f.writes[0]!.body.amount_paise).toBe(25000);
+ });
+
+ it('does not present failed location or account reads as empty and keeps the location draft on retry',async()=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;let accountReady=false;
+  f.fetcher.mockImplementation(async(path,options)=>{
+   const url=new URL(path,'https://fictional.example.test');
+   if(url.pathname==='/api/v1/cashbook/locations')throw new TypeError('Synthetic location failure');
+   if(url.pathname==='/api/v1/receiving-accounts'){
+    if(!accountReady)throw new TypeError('Synthetic account failure');
+    return json({items:[{id:location.account_id,revision_id:id(70),version:5,name:'Actual synthetic cash account',methods:['cash'],other_method_name:null,active:true,recorded_at:now}],next_cursor:null});
+   }
+   return base(path,options);
+  });
+  view(['franchise_admin']);
+  await screen.findByText(/Cash locations could not be loaded/);
+  expect(screen.queryByRole('heading',{name:'No permitted cash locations'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Configure cash locations'}));
+  const failure=await screen.findByText(/Receiving accounts unavailable/);
+  expect(screen.queryByRole('heading',{name:'No receiving accounts'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading',{name:'No cash locations'})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'New cash location'})).toBeEnabled();
+  fireEvent.change(screen.getByLabelText('Cash location name'),{target:{value:'Synthetic counter till'}});
+  expect(screen.getByRole('button',{name:'Save location revision'})).toBeDisabled();
+  accountReady=true;fireEvent.click(within(failure.closest('section')!).getByRole('button',{name:'Retry'}));
+  await screen.findByRole('option',{name:'Actual synthetic cash account'});
+  expect(screen.getByLabelText('Cash location name')).toHaveValue('Synthetic counter till');
+  fireEvent.change(screen.getByLabelText('Location receiving account'),{target:{value:location.account_id}});
+  await screen.findByLabelText('Named cash custodian');
+  fireEvent.change(screen.getByLabelText('Named cash custodian'),{target:{value:user}});
+  expect(screen.getByRole('button',{name:'Save location revision'})).toBeEnabled();
+  expect(f.writes).toHaveLength(0);
+ });
+
+ it('shows genuine empty setup states only after successful empty responses',async()=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;
+  f.fetcher.mockImplementation(async(path,options)=>{
+   const url=new URL(path,'https://fictional.example.test');
+   if(['/api/v1/cashbook/locations','/api/v1/receiving-accounts'].includes(url.pathname))return json({items:[],next_cursor:null});
+   return base(path,options);
+  });
+  view(['franchise_admin']);
+  fireEvent.click(screen.getByRole('button',{name:'Configure cash locations'}));
+  await screen.findByRole('heading',{name:'No receiving accounts'});
+  expect(screen.getByRole('heading',{name:'No cash locations'})).toBeInTheDocument();
+  expect(screen.getByLabelText('Cash location name')).toBeEnabled();
+  expect(screen.getByRole('button',{name:'Save location revision'})).toBeDisabled();
+ });
+});
 describe('cashbook protocol integrity',()=>{
  it('rejects mismatched approvals, self approval and application linked to rejected evidence',()=>{expect(cashbookDetail({request:original,decision:review,effect,version:3})).toMatchObject({version:3});for(const decision of [{...review,request_id:id(99)},{...review,actor_id:user},{...review,decision:'rejected'}])expect(()=>cashbookDetail({request:original,decision,effect,version:3})).toThrow();expect(()=>cashbookDetail({request:original,decision:review,effect:{...effect,decision_id:id(99)},version:3})).toThrow();});
  it('checks integer position conservation, reservations and uncertainty without converting totals to floats',()=>{expect(cashbookPosition(position)).toEqual(position);expect(()=>cashbookPosition({...position,locations:[{...position.locations[0],available_paise:'440001'}]})).toThrow();expect(()=>cashbookPosition({...position,locations:[{...position.locations[0],known_recorded_paise:'449999'}]})).toThrow();expect(cashbookPosition({...position,locations:[{...position.locations[0],known_inflows_paise:'0',known_outflows_paise:'100',known_recorded_paise:'-100',pending_reserved_paise:'0',shortfall_paise:'100',available_paise:'0',state:'exception'}]})).toBeDefined();});

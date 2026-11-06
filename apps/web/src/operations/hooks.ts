@@ -3,6 +3,8 @@ import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure,recoveryFor } from '../data-access/errors';
 
 export type ResourceState<T>={phase:'loading'|'ready'|'empty'|'error';value:T|null;error:ApiFailure|null};
+export interface ResourceLoadState {phase:ResourceState<unknown>['phase']|'more';reload:()=>void}
+export function resourceLoaded(resource:Pick<ResourceLoadState,'phase'>){return resource.phase==='ready'||resource.phase==='empty'||resource.phase==='more';}
 export function useResource<T>(key:string,load:(signal:AbortSignal)=>Promise<T>,empty:(value:T)=>boolean=()=>false){
  const loader=useRef(load),emptyCheck=useRef(empty);loader.current=load;emptyCheck.current=empty;const [revision,setRevision]=useState(0);
  const [state,setState]=useState<ResourceState<T>>({phase:'loading',value:null,error:null});

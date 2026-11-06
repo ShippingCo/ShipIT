@@ -51,6 +51,30 @@ function view(roles:OperatorRole[],path='/business/money-receipts'){const contro
 async function chooseCustomer(){fireEvent.change(screen.getByLabelText(/^Customer name prefix/),{target:{value:'Syn'}});fireEvent.submit(screen.getByRole('form',{name:'Find receipt customer'}));fireEvent.click(await screen.findByRole('button',{name:'Synthetic customer · •••0101'}));await screen.findByRole('heading',{name:'Customer bills'});await within(await screen.findByRole('table',{name:'Customer bills'})).findByText('Booking '+booking1);}
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 describe('production money receipt workflows',()=>{
+ it('keeps account setup drafts available during failed reads without claiming accounts are missing',async()=>{
+  const f=fixture(),base=f.fetcher.getMockImplementation()!;let healthy=false;
+  f.fetcher.mockImplementation(async(path,options)=>{
+   if(new URL(path,'https://fictional.example.test').pathname==='/api/v1/receiving-accounts'&&options?.method!=='POST'&&!healthy)throw new TypeError('Synthetic account read failure');
+   return base(path,options);
+  });
+  view(['franchise_admin']);
+  const failure=await screen.findByText(/Receiving accounts unavailable/);
+  const open=screen.getByRole('button',{name:'New receiving account'});
+  expect(open).toBeEnabled();fireEvent.click(open);
+  expect(screen.getByRole('heading',{name:'New receiving account details'})).toHaveFocus();
+  fireEvent.change(screen.getByLabelText('Account / drawer name'),{target:{value:'Synthetic new counter drawer'}});
+  const save=screen.getByRole('button',{name:'Save receiving account'});
+  expect(save).toBeDisabled();fireEvent.submit(save.closest('form')!);
+  expect(f.writes).toHaveLength(0);
+  await chooseCustomer();
+  await screen.findByText('Receiving account details need to load before recording a payment.');
+  expect(screen.queryByText('An administrator must configure a receiving account or cash drawer first.')).not.toBeInTheDocument();
+  healthy=true;fireEvent.click(within(failure.closest('section')!).getByRole('button',{name:'Retry'}));
+  await screen.findByRole('table',{name:'Receiving accounts'});
+  expect(screen.getByLabelText('Account / drawer name')).toHaveValue('Synthetic new counter drawer');
+  expect(screen.getByRole('button',{name:'Save receiving account'})).toBeEnabled();
+  expect(f.writes).toHaveLength(0);
+ });
  it('retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation',async()=>{
   const f=fixture();f.uncertain();view(['operator']);await chooseCustomer();expect(screen.getByRole('combobox',{name:'Receipt method'})).toBeDisabled();expect(screen.getByRole('option',{name:'Select a receiving account first'})).toBeVisible();
   fireEvent.change(screen.getByLabelText('Amount received (₹)'),{target:{value:'-1'}});expect(screen.getByLabelText(/^Amount received/)).toHaveAttribute('aria-invalid','true');expect(screen.getByRole('button',{name:'Review payment'})).toBeDisabled();expect(f.writes).toHaveLength(0);

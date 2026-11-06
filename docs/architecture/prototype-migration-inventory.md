@@ -698,6 +698,7 @@ use controlled transport fixtures; separate native tests prove financial persist
 
 | Test | Disposition | Group |
 | --- | --- | --- |
+| apps/web/src/test/money-receipts.test.tsx: keeps account setup drafts available during failed reads without claiming accounts are missing | preserve | receipts |
 | apps/web/src/test/money-receipts.test.tsx: retains the exact advance intent after a lost response and blocks replacement/navigation until same-key reconciliation | preserve | receipts |
 | apps/web/src/test/money-receipts.test.tsx: records one receipt across two current bill versions and displays the residual advance | preserve | receipts |
 | apps/web/src/test/money-receipts.test.tsx: applies an existing advance without recording another inflow | preserve | receipts |
@@ -739,6 +740,11 @@ Existing callers, routes, exports, storage operations and fingerprints are uncha
 
 | Test | Disposition | Group |
 | --- | --- | --- |
+| apps/web/src/test/cashbook.test.tsx: explains disabled cashbook writes without clearing the entered draft or pretending it was saved | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: shows the agent-money tab when request evidence is %s and recovers in place | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: keeps an expense draft and blocks submission until current request evidence is restored | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: does not present failed location or account reads as empty and keeps the location draft on retry | preserve | reports |
+| apps/web/src/test/cashbook.test.tsx: shows genuine empty setup states only after successful empty responses | preserve | reports |
 | apps/web/src/test/cashbook.test.tsx: rejects mismatched approvals, self approval and application linked to rejected evidence | preserve | reports |
 | apps/web/src/test/cashbook.test.tsx: checks integer position conservation, reservations and uncertainty without converting totals to floats | preserve | reports |
 | apps/web/src/test/cashbook.test.tsx: requires paired acceptance legs and conserves the whole handover even when history is paged | preserve | reports |

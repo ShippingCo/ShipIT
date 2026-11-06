@@ -1486,6 +1486,31 @@
       },
       {
         "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "explains disabled cashbook writes without clearing the entered draft or pretending it was saved",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "shows the agent-money tab when request evidence is %s and recovers in place",
+        "cases": "['loading','failed'] as const"
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "keeps an expense draft and blocks submission until current request evidence is restored",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "does not present failed location or account reads as empty and keeps the location draft on retry",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
+        "name": "shows genuine empty setup states only after successful empty responses",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/cashbook.test.tsx",
         "name": "rejects mismatched approvals, self approval and application linked to rejected evidence",
         "cases": null
       },
@@ -2412,6 +2437,11 @@
       {
         "file": "apps/web/src/test/messaging.test.tsx",
         "name": "rejects malformed successful status DTOs",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/money-receipts.test.tsx",
+        "name": "keeps account setup drafts available during failed reads without claiming accounts are missing",
         "cases": null
       },
       {
@@ -5445,6 +5475,46 @@
     },
     {
       "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "explains disabled cashbook writes without clearing the entered draft or pretending it was saved",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "shows the agent-money tab when request evidence is %s and recovers in place",
+      "cases": "['loading','failed'] as const",
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "keeps an expense draft and blocks submission until current request evidence is restored",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "does not present failed location or account reads as empty and keeps the location draft on retry",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
+      "name": "shows genuine empty setup states only after successful empty responses",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "reports",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
+    },
+    {
+      "file": "apps/web/src/test/cashbook.test.tsx",
       "name": "rejects mismatched approvals, self approval and application linked to rejected evidence",
       "cases": null,
       "disposition": "preserve",
@@ -6930,6 +7000,14 @@
       "disposition": "preserve",
       "group": "messaging",
       "reason": "Issue #44: provider-backed production history, role/scope isolation, safe statuses, content redaction, authorized recovery and accessible controls."
+    },
+    {
+      "file": "apps/web/src/test/money-receipts.test.tsx",
+      "name": "keeps account setup drafts available during failed reads without claiming accounts are missing",
+      "cases": null,
+      "disposition": "preserve",
+      "group": "receipts",
+      "reason": "Preserve honest loading/error/empty/setup states, frontend draft entry and retry continuity while requiring current scoped server evidence before financial submission."
     },
     {
       "file": "apps/web/src/test/money-receipts.test.tsx",
