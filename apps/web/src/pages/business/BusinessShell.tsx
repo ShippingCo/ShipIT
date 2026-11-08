@@ -41,34 +41,44 @@ export default function BusinessShell({context,select,controller,profile}:{contr
  const [searchOpen,setSearchOpen]=useCommandPalette();
  const location=useLocation(),current=context.franchises.find(franchise=>franchise.id===context.active_franchise_id);if(!current)return null;
  const rawSegment=location.pathname.split('/').filter(Boolean)[1]??'';const segment=rawSegment==='feed'?'automation':rawSegment==='bookings'?'packages':rawSegment;const area:Area=segment==='delivery'||segment==='money'||segment==='customers'||segment==='reconciliation'||segment==='customer-accounts'||segment==='agent-settlements'||segment==='custody'||segment==='cashbook'||segment==='financials'||segment==='money-receipts'||segment==='reports'||segment==='support'||segment==='pickups'||segment==='automation'||segment==='packages'||segment==='deliveries'||segment==='lots'||segment==='routes'||segment==='eway'||segment==='receipts'||segment==='settings'?segment:segment==='new-booking'||segment==='booking'?'booking':'workspace';
- const roles=current.roles,baseLinks=[
-  {area:'reconciliation' as const,to:'/business/reconciliation',icon:'fact_check',label:'Reconciliation',show:can(roles,['org_admin','franchise_admin','accountant'])},
-  {area:'customer-accounts' as const,to:'/business/customer-accounts',icon:'account_balance',label:'Customer accounts',show:can(roles,['org_admin','franchise_admin','accountant'])},
-  {area:'agent-settlements' as const,to:'/business/agent-settlements',icon:'receipt_long',label:'Agent settlements',show:can(roles,['org_admin','franchise_admin','operator','accountant','delivery_agent'])},
-  {area:'custody' as const,to:'/business/custody',icon:'inventory_2',label:'Parcel custody',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','delivery_agent','read_only'])},
-  {area:'cashbook' as const,to:'/business/cashbook',icon:'account_balance_wallet',label:'Expenses and cashbook',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
-  {area:'financials' as const,to:'/business/financials',icon:'fact_check',label:'Financial approvals',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
-  {area:'money-receipts' as const,to:'/business/money-receipts',icon:'payments',label:'Money receipts',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
-  {area:'reports' as const,to:'/business/reports',icon:'query_stats',label:'Reports',show:can(roles,['org_admin','franchise_admin','accountant','operator','dispatcher','read_only','delivery_agent'])},
-  {area:'support' as const,to:'/business/support',icon:'support_agent',label:'Human support',show:can(roles,['org_admin','franchise_admin','operator'])},
-  {area:'pickups' as const,to:'/business/pickups',icon:'local_shipping',label:'Pickups',show:can(roles,['org_admin','franchise_admin','operator'])},
-  {area:'customers' as const,to:'/business/customers',icon:'group',label:'Customers',show:canAdminister(roles,'customer.list')||roles.includes('operator')},
-  {area:'workspace' as const,to:'/business',icon:'space_dashboard',label:'Workspace',show:true},
-  {area:'packages' as const,to:'/business/bookings',icon:'inventory_2',label:'Packages',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
-  {area:'deliveries' as const,to:'/business/deliveries',icon:'local_shipping',label:'Deliveries',show:canAdminister(roles,'deliveries.list')||can(roles,['delivery_agent','dispatcher'])},
-  {area:'lots' as const,to:'/business/lots',icon:'layers',label:'Lots',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
-  {area:'routes' as const,to:'/business/routes',icon:'alt_route',label:'Routes',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
-  {area:'eway' as const,to:'/business/eway',icon:'fact_check',label:'E-way',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','accountant'])},
-  {area:'booking' as const,to:'/business/new-booking',icon:'add_box',label:'New Booking',show:canAdminister(roles,'bookings.create')||can(roles,['operator'])},
-  {area:'receipts' as const,to:'/business/receipts',icon:'receipt_long',label:'Receipts',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
-  {area:'automation' as const,to:'/business/automation',icon:'forum',label:'Automation & Messages',show:can(roles,['org_admin','franchise_admin','operator','dispatcher'])},
-  {area:'settings' as const,to:'/business/settings',icon:'settings',label:'Settings',show:true},
+ const roles=current.roles;
+ // Authorization only: which destinations this role may reach, and at what address.
+ // Icon, label and order are shared presentation in console-navigation.
+ const baseLinks=[
+  {area:'workspace',to:'/business',show:true},
+  {area:'booking',to:'/business/new-booking',show:canAdminister(roles,'bookings.create')||can(roles,['operator'])},
+  {area:'packages',to:'/business/bookings',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
+  {area:'receipts',to:'/business/receipts',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
+  {area:'customers',to:'/business/customers',show:canAdminister(roles,'customer.list')||roles.includes('operator')},
+  {area:'lots',to:'/business/lots',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
+  {area:'routes',to:'/business/routes',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','read_only'])},
+  {area:'eway',to:'/business/eway',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','accountant'])},
+  {area:'pickups',to:'/business/pickups',show:can(roles,['org_admin','franchise_admin','operator'])},
+  {area:'deliveries',to:'/business/deliveries',show:canAdminister(roles,'deliveries.list')||can(roles,['delivery_agent','dispatcher'])},
+  {area:'custody',to:'/business/custody',show:can(roles,['org_admin','franchise_admin','operator','dispatcher','delivery_agent','read_only'])},
+  {area:'money-receipts',to:'/business/money-receipts',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
+  {area:'cashbook',to:'/business/cashbook',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
+  {area:'customer-accounts',to:'/business/customer-accounts',show:can(roles,['org_admin','franchise_admin','accountant'])},
+  {area:'agent-settlements',to:'/business/agent-settlements',show:can(roles,['org_admin','franchise_admin','operator','accountant','delivery_agent'])},
+  {area:'financials',to:'/business/financials',show:can(roles,['org_admin','franchise_admin','operator','accountant'])},
+  {area:'reconciliation',to:'/business/reconciliation',show:can(roles,['org_admin','franchise_admin','accountant'])},
+  {area:'reports',to:'/business/reports',show:can(roles,['org_admin','franchise_admin','accountant','operator','dispatcher','read_only','delivery_agent'])},
+  {area:'automation',to:'/business/automation',show:can(roles,['org_admin','franchise_admin','operator','dispatcher'])},
+  {area:'support',to:'/business/support',show:can(roles,['org_admin','franchise_admin','operator'])},
+  {area:'settings',to:'/business/settings',show:true},
  ].filter(link=>link.show);
- const links=consoleLinks([...baseLinks,...(['delivery','money'] as const).flatMap(id=>workspaceSections.find(group=>group.id===id)!.areas.some(child=>baseLinks.some(link=>link.area===child))?[{area:id,to:'/business/'+id,icon:id==='delivery'?'local_shipping':'account_balance_wallet',label:id==='delivery'?'Delivery':'Money'}]:[])]);
- const permitted=area==='workspace'||links.some(link=>link.area===area);
+ const links=consoleLinks(baseLinks);
+ // The hub screens stay reachable by address for a saved link, but are not listed: the
+ // sidebar now offers their children directly.
+ const hubs=(['delivery','money'] as const).filter(id=>
+   workspaceSections.find(group=>group.id===id)!.areas.some(child=>baseLinks.some(link=>link.area===child)));
+ const permitted=area==='workspace'||links.some(link=>link.area===area)||(hubs as readonly string[]).includes(area);
  let content:React.ReactNode;
  if(!permitted)content=<section role="alert"><h1>Access unavailable</h1><p>This feature is unavailable for this role in the selected workspace.</p><Link to="/business">Return to workspace</Link></section>;else if(area==='delivery'||area==='money')content=<WorkArea area={area} links={links}/>;else if(area==='customers')content=<Customers controller={controller} canBook={links.some(link=>link.area==='booking')} canReadAccounts={can(roles,['org_admin','franchise_admin','accountant'])}/>;else if(area==='reconciliation')content=<Reconciliation controller={controller} roles={roles}/>;else if(area==='customer-accounts')content=<CustomerAccounts controller={controller} roles={roles}/>;else if(area==='agent-settlements')content=<AgentSettlements controller={controller} roles={roles}/>;else if(area==='custody')content=<Custody controller={controller} roles={roles}/>;else if(area==='cashbook')content=<Cashbook controller={controller} roles={roles}/>;else if(area==='financials')content=<Financials controller={controller} roles={roles}/>;else if(area==='money-receipts')content=<MoneyReceipts controller={controller} roles={roles}/>;else if(area==='reports')content=<Reports controller={controller} roles={roles}/>;else if(area==='support')content=<Support controller={controller} roles={roles}/>;else if(area==='pickups')content=<Pickups controller={controller} roles={roles}/>;else if(area==='automation')content=<Messaging controller={controller} roles={roles}/>;else if(area==='packages')content=<Packages controller={controller} roles={roles}/>;else if(area==='deliveries')content=<Deliveries controller={controller} roles={roles}/>;else if(area==='lots')content=<Lots controller={controller} roles={roles}/>;else if(area==='routes')content=<Routes controller={controller} roles={roles}/>;else if(area==='eway')content=<Eway controller={controller} roles={roles}/>;else if(area==='booking')content=<NewBooking controller={controller}/>;else if(area==='receipts')content=<Receipts controller={controller} roles={roles}/>;else if(area==='settings')content=<Settings controller={controller} roles={roles} workspaceName={current.display_name}/>;else content=<><OperationsDashboard controller={controller} roles={roles} workspaceName={current.display_name}/>{can(roles,['org_admin','franchise_admin','accountant'])&&<DailyDashboard controller={controller} canExport={canAdminister(roles,'financial.export')||can(roles,['accountant'])}/>}</>;
- return <ConsoleFrame className="operator-shell" links={links} area={area} businessName={current.organization.display_name} subtitle={current.display_name+' · '+roles.map(role=>operatorRoleLabels[role]).join(' · ')} footer={profile} onSearch={()=>setSearchOpen(true)} scopeSelector={<SelectField label="Franchise" aria-label="Franchise" value={current.id} onChange={select} options={context.franchises.map(franchise=>({value:franchise.id,label:`${franchise.organization.display_name} · ${franchise.display_name}`}))}/> }>
+ return <ConsoleFrame className="operator-shell" links={links} area={area} businessName={current.organization.display_name} subtitle={roles.map(role=>operatorRoleLabels[role]).join(' · ')} footer={profile} onSearch={()=>setSearchOpen(true)}
+   scopeSelector={context.franchises.length>1
+     ? <SelectField label="Franchise" aria-label="Franchise" value={current.id} onChange={select} options={context.franchises.map(franchise=>({value:franchise.id,label:`${franchise.organization.display_name} · ${franchise.display_name}`}))}/>
+     : <p className="console-scope-single">{current.display_name}</p>}>
    <main id="workspace-content" tabIndex={-1} className="operator-workspace ops-workspace" style={['packages','receipts','lots','routes','eway','reports','automation','settings'].includes(area)?{padding:0,maxWidth:'none'}:undefined} key={current.id}>
      <OperatorDisplayPreference controller={controller} roles={roles}/>{content}
    </main>

@@ -11,7 +11,7 @@ import {retainAccountNavigation} from '../data-access/account-navigation';
 import {receipts} from '../data-access/receipts';
 import type {ScopeController} from '../operator/scope';
 import {createBookingWorkflow} from './workflow';
-import {totalWeight,emptyDraft,parcelErrors,additionalParcelErrors,type Field} from './form';
+import {totalWeight,emptyDraft,parcelErrors,additionalParcelErrors,draftCode,type Field} from './form';
 import {BookingPayment} from './BookingPayment';
 import {ReceiptPanel} from './ReceiptPanel';
 import {receiptMoney,printReceiptFor} from '../utils/receipt';
@@ -38,6 +38,10 @@ export default function NewBooking({controller}:{controller:ScopeController}) {
 function BookingForm({controller,startAnother}:{controller:ScopeController;startAnother:()=>void}) {
   const [workflow]=useState(()=>{const w=createBookingWorkflow(controller);w.change('weight','1000');w.change('paymentMode','paid_counter');w.change('method','cash');return w;});
   const [repeat,setRepeat]=useState<CustomerDto[]>([]);
+  // A phone that already belongs to a saved customer used to end the booking silently as a
+  // draft. Only the operator can say whether it is the same person, so ask them.
+  const [customerChoice,setCustomerChoice]=useState<CustomerDto[]|null>(null);
+  const keepTypedCustomer=useRef(false);
   const [lookupError,setLookupError]=useState('');
   const lookup=useRef<AbortController>();
   const [preparing,setPreparing]=useState(false);
@@ -48,6 +52,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const navigate=useNavigate();
   const [params]=useSearchParams();
   const requestedCustomer=params.get('customer_id');
+  const requestedDraft=params.get('draft');
   const [exitPrompt,setExitPrompt]=useState(false);
   const exitDestination=useRef('/business/bookings');
   const [closeBlocked,setCloseBlocked]=useState(false);
@@ -68,8 +73,20 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     return workflow.customerApi.read(requestedCustomer,signal);
   });
   useEffect(()=>{if(linkedCustomer.phase==='ready'&&linkedCustomer.value)workflow.select(linkedCustomer.value);},[linkedCustomer.phase,linkedCustomer.value,workflow]);
+  // Opening a draft from the Drafts list restores exactly what was typed, once.
+  const restoredDraft=useRef('');
+  const savedDraft=useResource(requestedDraft??'',signal=>{
+    if(!requestedDraft)return Promise.resolve(null);
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(requestedDraft))return Promise.reject(new ApiFailure('VALIDATION_FAILED'));
+    return workflow.entryApi.list(signal).then(page=>page.items.find(item=>item.id===requestedDraft)??Promise.reject(new ApiFailure('RESOURCE_NOT_FOUND')));
+  });
+  useEffect(()=>{
+    if(savedDraft.phase!=='ready'||!savedDraft.value||restoredDraft.current===savedDraft.value.id)return;
+    restoredDraft.current=savedDraft.value.id;
+    workflow.restoreDraft(savedDraft.value.data.fields,savedDraft.value.data.additional_parcels);
+  },[savedDraft.phase,savedDraft.value,workflow]);
   useEffect(()=>{workflow.activate();return()=>workflow.dispose();},[workflow]);
-  const disabled=preparing||workflow.locked()||!!requestedCustomer&&linkedCustomer.phase==='loading';
+  const disabled=preparing||workflow.locked()||!!requestedCustomer&&linkedCustomer.phase==='loading'||!!requestedDraft&&savedDraft.phase==='loading';
   const lot=useBookingLotAssignment(workflow.api,state.booking,d.destination,disabled);
   const attachmentClient=useMemo(()=>state.booking?createAttachmentClient(controller.runtime,state.booking.id,{
     async request<T>(path:string,options?:Parameters<ReturnType<typeof createApiClient>['request']>[1]):Promise<T>{
@@ -160,12 +177,14 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     setPreparing(true);
     try{
       if(workflow.snapshot().pricingPhase==='uncertain'){await workflow.price();if(workflow.snapshot().pricingPhase!=='ready')return;}
-      if(!workflow.snapshot().customer){
+      if(!workflow.snapshot().customer&&!keepTypedCustomer.current){
         const current=workflow.snapshot().draft;
         const result=await workflow.customerApi.search('phone',current.phone,workflow.api.scope.signal);
         if(result.items.length){
           const match=result.items.length===1&&result.items[0].name.trim()===current.name.trim()?result.items[0]:undefined;
-          if(!match){await workflow.saveEntry();return;}
+          // Never decide this quietly: a saved name that differs by one letter is not evidence
+          // that the booking should stop being a booking.
+          if(!match){setCustomerChoice(result.items);return;}
           workflow.select(match);
         }
       }
@@ -195,14 +214,27 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const parcelReady=!!serviceName&&!!packedWeight&&[parcelErrors(d),...additionalParcelErrors(d,state.additionalParcels)].every(errors=>Object.keys(errors).length===0);
   const sectionReady=[!!d.name&&!!d.phone&&!!d.destination,parcelReady,!!state.quote];
   const formHasError=Object.values(state.errors).some(Boolean)||state.parcelErrors.some(errors=>Object.values(errors).some(Boolean));
+  // The counter has two different saves. Which one the button will do must be visible before
+  // it is pressed, never discovered afterwards from the wording of a confirmation.
+  const needs=state.booking||state.entry?[]:workflow.needs();
+  const savedNeeds=state.entry?workflow.needs():[];
+  const retrying=uncertain||state.bookingPhase==='uncertain';
+  const draftOnly=needs.length>0;
   const statusError=formHasError||['error','uncertain','stale'].some(phase=>[state.customerPhase,state.pricingPhase,state.taxPhase,state.bookingPhase].some(value=>value===phase));
   if(state.recoveryBlocked)return <section className="counter-section"><h1>Booking recovery required</h1><p role="alert">An earlier request may have saved. Check Bookings and Receipts before creating a replacement.</p><Link to="/business/bookings">Open Bookings</Link><Link to="/business/receipts">Open Receipts</Link></section>;
-  if(state.entry)return <section className="counter-section counter-confirmation">
-    <h1 ref={heading} tabIndex={-1}>Booking saved</h1><p role="status">Confirmed. All entered details have been saved.</p>
-    <p>Booking reference <span className="ops-mono">{state.entry.id}</span></p>
-    <p>{d.docket?`Docket ${d.docket}. `:''}Missing details are marked as not recorded. Tax, payment and shipment processing have not been confirmed for this record.</p>
+  if(state.entry)return <section className="counter-section counter-confirmation counter-draft-saved">
+    <span className="counter-draft-mark" aria-hidden="true"><Msym name="draft"/></span>
+    <h1 ref={heading} tabIndex={-1}>Draft saved</h1>
+    <p role="status" className="t-title-md">This is <strong>not a booking yet</strong>. No docket was created and the parcel cannot be dispatched.</p>
+    <p>Draft number <span className="ops-mono counter-draft-code">{draftCode(state.entry.id)}</span></p>
+    {savedNeeds.length>0&&<p>Still needed: <strong>{savedNeeds.join(', ')}</strong>.</p>}
+    {d.docket&&<p>You typed docket {d.docket}. It is only written on the draft; no parcel carries it yet.</p>}
     {attachments.count>0&&<p role="alert">Your selected files are still on this device and have not been attached.</p>}
-    <div className="counter-actions"><Link className="btn btn-filled" to="/business/bookings">View saved bookings</Link><button type="button" className="btn btn-outlined" onClick={()=>{attachments.clear();startAnother();}}>Start another booking</button></div>
+    <div className="counter-actions">
+      <button type="button" className="btn btn-filled" onClick={()=>workflow.reopenDraft()}>Finish this booking</button>
+      <Link className="btn btn-outlined" to="/business/bookings?filter=drafts">View drafts</Link>
+      <button type="button" className="btn btn-text" onClick={()=>{attachments.clear();startAnother();}}>Start another booking</button>
+    </div>
   </section>;
   return <div className="booking-counter-page booking-original">
     {!state.booking&&<h1 className="workspace-visually-hidden">New booking</h1>}
@@ -211,7 +243,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       {state.booking&&<p>{cancelled?'All packages in this booking are cancelled.':'Your dockets are ready.'}</p>}</div>
       <button type="button" className="btn btn-text" onClick={close}>{state.booking?'Back to bookings':'Discard draft'}</button>
     </header>
-    {!state.booking&&<p className="counter-help" id="booking-optional-fields">All fields are optional. Save with the details you have; blank fields stay unrecorded.</p>}
+    {!state.booking&&<p className="counter-help" id="booking-optional-fields">A booking needs a docket number, a weight, a destination and a price. Without them you can still save a draft and finish it later.</p>}
     {closeBlocked&&<p role="alert" className="booking-inline-note">Finish or retry the current request before closing this booking.</p>}
     {state.booking?<div className="booking-saved-content">
       <section className="counter-confirmation">
@@ -242,7 +274,7 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           <div className="jrn-wrap"><StepTrack steps={['Customer','Parcel','Charges'].map((label,index)=>({key:label,label,icon:['person','inventory_2','currency_rupee'][index],done:sectionReady[index]}))}/></div>
           <h2 className="form-sec-title">Customer</h2>
           <div className="form-grid">
-            <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} error={state.errors.phone} onBlur={()=>void lookupCustomer()} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');}}/>
+            <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} error={state.errors.phone} onBlur={()=>void lookupCustomer()} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');keepTypedCustomer.current=false;}}/>
             <TextField id="counter-name" label="Customer name" value={d.name} disabled={disabled} error={state.errors.name} autoComplete="name" onChange={value=>workflow.change('name',value)}/>
             <TextField id="counter-recipientAddress" label="Delivery address" value={d.recipientAddress} disabled={disabled} error={state.errors.recipientAddress} autoComplete="street-address" className="span2" onChange={value=>workflow.change('recipientAddress',value)}/>
           </div>
@@ -282,7 +314,10 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           </dl>
           <div className="sum-total"><span>Total</span><strong>{displayTax?receiptMoney(displayTax.final_payable_paise):'—'}</strong></div>
           <span className={'pill '+(d.paymentMode==='to_pay'?'pill-warn':'st-delivered')+' sum-pay'}>{d.paymentMode==='to_pay'?'Collect on delivery':'Paid now'}</span>
-          <Button type="button" icon="check" size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':'Save booking'}</Button>
+          <Button type="button" icon={retrying?'check':draftOnly?'draft':'check'} size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':draftOnly?'Save as draft':'Save booking'}</Button>
+          {draftOnly&&!retrying&&<p className="booking-needs" id="booking-needs">
+            <Msym name="info"/><span>This cannot be booked yet. <strong>Needs: {needs.join(', ')}.</strong> Saving keeps a draft you can finish later — no docket is created.</span>
+          </p>}
           <Button type="button" variant="text" icon="close" block disabled={busy||uncertain} onClick={close}>Cancel booking</Button>
 
           {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
@@ -290,6 +325,21 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       </div>
     </form></div>}
     {cancelling&&state.booking&&<CancelBooking api={workflow.api} bookingId={state.booking.id} docket={state.booking.parcels[0].docket} close={()=>setCancelling(false)} refresh={()=>{}} onConfirmed={()=>setCancelled(true)} canReviewCharges={roles.includes('operator')||roles.includes('accountant')||canAdminister(roles,'bookings.cancel')}/>}
+    <Dialog open={!!customerChoice} title="Is this the same customer?" onClose={()=>setCustomerChoice(null)}>
+      <p>This phone number is already saved{customerChoice&&customerChoice.length>1?' for more than one customer':' under a different name'}. Choose the right one so the booking is linked to it.</p>
+      <div className="counter-customer-choice">
+        {customerChoice?.map(customer=><button key={customer.id} type="button" className="recall" onClick={()=>{
+          workflow.select(customer);setCustomerChoice(null);void save();
+        }}><Msym name="history"/><span className="u-grow"><b>{customer.name}</b> · {customer.phone_display}{customer.address?' — '+customer.address:''}</span><Msym name="arrow_forward"/></button>)}
+        <button type="button" className="recall" onClick={()=>{
+          keepTypedCustomer.current=true;workflow.newCustomer();setCustomerChoice(null);void save();
+        }}><Msym name="person_add"/><span className="u-grow">A different person — save <b>{d.name}</b> as a new customer</span><Msym name="arrow_forward"/></button>
+      </div>
+      <div className="counter-actions">
+        <button type="button" className="btn btn-text" onClick={()=>{setCustomerChoice(null);void workflow.saveEntry();}}>Save as a draft instead</button>
+        <button type="button" className="btn btn-text" onClick={()=>setCustomerChoice(null)}>Keep editing</button>
+      </div>
+    </Dialog>
     <Dialog open={exitPrompt} title={state.booking?'Leave the saved booking?':'Discard this booking draft?'} onClose={()=>setExitPrompt(false)}>
       <p>{state.booking?'Some selected files are not attached. Leaving clears the remaining local files.':'The unsaved booking and selected files will be cleared. Any customer already created remains saved.'}</p>
       <div className="counter-actions"><button type="button" className="btn btn-filled" onClick={()=>setExitPrompt(false)}>Keep editing</button><button type="button" className="btn btn-outlined" onClick={()=>{attachments.clear();navigate(exitDestination.current);}}>{state.booking?'Leave saved booking':'Discard booking draft'}</button></div>

@@ -14,7 +14,15 @@ export function registerBusinessWebhook(app:FastifyInstance,database:DatabasePoo
   });
   app.get(BUSINESS_WEBHOOK_PATH,{exposeHeadRoute:false},async(request,reply)=>{
     const params=new URLSearchParams((request.raw.url??'').split('?')[1]??'');
-    if([...params.keys()].length!==3||params.getAll('hub.mode').length!==1||params.get('hub.mode')!=='subscribe'||
+    // Meta can include underscore aliases alongside its canonical dotted keys.
+    // Accept only matching single aliases; conflicting or repeated values fail closed.
+    const keys=['hub.mode','hub.verify_token','hub.challenge'];
+    const allowed=new Set(keys.flatMap(key=>[key,key.replace('.','_')]));
+    const invalidAlias=keys.some(key=>{
+      const alias=params.getAll(key.replace('.','_'));
+      return alias.length>1||alias.length===1&&alias[0]!==params.get(key);
+    });
+    if([...params.keys()].some(key=>!allowed.has(key))||invalidAlias||params.getAll('hub.mode').length!==1||params.get('hub.mode')!=='subscribe'||
       params.getAll('hub.verify_token').length!==1||!webhookTokenMatches(params.get('hub.verify_token'),config.verify_token)||
       params.getAll('hub.challenge').length!==1||!/^\d{1,64}$/.test(params.get('hub.challenge')??''))throw new HttpError('ACTION_FORBIDDEN');
     return reply.type('text/plain').send(params.get('hub.challenge'));

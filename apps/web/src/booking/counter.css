@@ -103,3 +103,24 @@
 .counter-customer-mode { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0; }
 .counter-customer-mode button[aria-pressed=true] { color:var(--md-primary); background:var(--md-primary-container); border-color:var(--md-primary); }
 @media(max-width:650px){.counter-workbench-layout .counter-rate-choices .counter-grid{grid-template-columns:1fr}.counter-review-row{gap:8px}.counter-step-nav button{font-size:12px}.counter-confirmation{padding-inline:0}}
+
+/* Two different saves, told apart on sight. A draft is never dressed as a confirmation. */
+.booking-needs {
+  display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 0; padding: 12px 14px;
+  background: #fff; border: 1px solid var(--md-outline-variant); border-radius: 10px;
+  font-size: 15px; line-height: 21px; color: var(--md-on-surface);
+}
+.booking-needs .msym { flex: none; color: #8a6d1f; }
+.counter-draft-saved { text-align: left; }
+.counter-draft-mark {
+  display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 12px;
+  border: 1px solid var(--md-outline-variant); border-radius: var(--shape-full);
+  background: #fff; color: #8a6d1f;
+}
+.counter-draft-mark .msym { font-size: 28px; }
+.counter-draft-code { font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+.counter-draft-saved .counter-actions { flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+/* Choosing between saved customers is a decision, so each option is a full-width target. */
+.counter-customer-choice { display: grid; gap: 8px; margin: 14px 0 4px; }
+.counter-customer-choice .recall { width: 100%; text-align: left; }

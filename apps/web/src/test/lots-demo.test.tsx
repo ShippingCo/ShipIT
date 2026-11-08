@@ -23,7 +23,7 @@ async function start(existing=false,post?:(path:string,init:RequestInit)=>Promis
  });vi.stubGlobal('fetch',fetcher);
  const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
  render(<MemoryRouter><Lots controller={controller} roles={['org_admin']}/></MemoryRouter>);
- await screen.findByRole('button',{name:'Create Lot'});return fetcher;
+ await screen.findByText(existing?'Mumbai batch':'No lots yet');return fetcher;
 }
 it('matches destination-first demo creation, preselects saved entries, totals charges and saves the staff note',async()=>{
  const fetcher=await start();fireEvent.click(screen.getByRole('button',{name:'Create Lot'}));

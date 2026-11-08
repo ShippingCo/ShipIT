@@ -22,9 +22,11 @@ export async function find(scope: TenantAccess, franchiseId: string, id: string)
 }
 export async function search(scope: TenantAccess, franchiseId: string, filter: CustomerFilter, boundary: CustomerBoundary | null) {
   // The only interpolation is a closed server-owned column choice. Search values are bound.
-  const column = filter.searchBy === 'phone' ? 'phone_normalized' : 'name';
+  // Names are matched case-insensitively against customers_name_folded_prefix_idx, so an
+  // operator typing "ravi" finds "Ravi" without being told to match the saved capitalisation.
+  const column = filter.searchBy === 'phone' ? 'phone_normalized LIKE $2' : 'lower(name) LIKE lower($2)';
   return (await scopedQuery<CustomerRow>(scope, ['customer.list'], `SELECT ${columns} FROM shipit.customers
-    WHERE {{franchise:organization_id:franchise_id}} AND franchise_id=$1 AND ${column} LIKE $2
+    WHERE {{franchise:organization_id:franchise_id}} AND franchise_id=$1 AND ${column}
       AND ($3::timestamptz IS NULL OR (created_at,id)>($3::timestamptz,$4::uuid))
     ORDER BY created_at ASC,id ASC LIMIT $5`,
   [franchiseId, literalPrefix(filter.prefix), boundary?.time ?? null, boundary?.id ?? null, filter.limit + 1])).rows;

@@ -17,3 +17,14 @@ pnpm-debug.log*
 
 # Local Codex configuration
 /.codex/
+
+# Generated output — PDFs, QA reports and screenshots are rebuilt from source.
+output/
+
+# Local scratch: toolchain downloads and caches (hundreds of MB, never shareable).
+tmp/
+
+# Regenerated guide screenshots. Nothing in the repo references these; they are produced
+# by the screenshot run and weigh ~26MB. Already-tracked images stay tracked; to add a
+# new one deliberately, use `git add -f`.
+docs/user-guides/images/

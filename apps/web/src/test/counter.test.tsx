@@ -46,35 +46,40 @@ async function calculate(){await waitFor(()=>expect(summary().getByText('₹151.
 async function entered(paid=false){await start();core(paid);await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
 const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+// A form that cannot become a booking names its button differently, before it is pressed.
+const saveDraft=()=>fireEvent.click(screen.getByRole('button',{name:'Save as draft'}));
 async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
- it('confirms a booking with all user fields blank and no fabricated contact or charges',async()=>{
-  await start();fill('Weight (kg)','');save();await screen.findByRole('heading',{name:'Booking saved'});
+ it('keeps a blank form as a named draft, never as a confirmed booking',async()=>{
+  await start();fill('Weight (kg)','');
+  expect(screen.getByRole('button',{name:'Save as draft'})).toBeVisible();
+  expect(screen.queryByRole('button',{name:'Save booking'})).toBeNull();
+  saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'',phone:'',docket:'',weight:'',override:'',packing:''});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
   expect(posts('/api/v1/pricing/quote')).toHaveLength(0);
-  expect(screen.getByRole('status')).toHaveTextContent('Confirmed. All entered details have been saved.');
+  expect(screen.getByRole('status')).toHaveTextContent('not a booking yet');
  });
  it('saves partial confirmed details without requiring freight, phone or destination',async()=>{
-  await start();fill('Customer name','Partial sender');fill('Delivery address','Partial address');fill('Packing ₹','39');save();
-  await screen.findByRole('heading',{name:'Booking saved'});
+  await start();fill('Customer name','Partial sender');fill('Delivery address','Partial address');fill('Packing ₹','39');saveDraft();
+  await screen.findByRole('heading',{name:'Draft saved'});
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'Partial sender',recipientAddress:'Partial address',phone:'',destination:'',packing:'3900',override:''});
  });
  it('retries an uncertain optional save with the same key and unchanged fields',async()=>{
   let fail=true;override=c=>c.path.startsWith('/api/v1/bookings/entries?')&&c.options.method==='POST'&&fail?Promise.reject(new TypeError('offline')):undefined;
-  await start();fill('Customer name','Retained entry');save();await screen.findByText(/Outcome uncertain/);
+  await start();fill('Customer name','Retained entry');saveDraft();await screen.findByText(/Outcome uncertain/);
   const first=posts('/api/v1/bookings/entries?')[0];expect(screen.getByLabelText('Customer name')).toBeDisabled();
-  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
+  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Draft saved'});
   const second=posts('/api/v1/bookings/entries?')[1];expect(key(second)).toBe(key(first));expect(body(second)).toEqual(body(first));expect(savedEntries).toHaveLength(1);
  });
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
   expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
   for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
-  for(const name of ['Photo','Video','Voice note','Add package','Save booking','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
+  for(const name of ['Photo','Video','Voice note','Add package','Save as draft','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Paid now'})).toHaveAttribute('aria-pressed','true');
  });
@@ -88,9 +93,35 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();save();await screen.findByRole('alert');expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
   reject=false;save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
  });
- it('preserves entered contact details without replacing an ambiguous existing customer',async()=>{
-  await start();core();fill('Customer name','Another sender');save();await screen.findByRole('heading',{name:'Booking saved'});
+ it('asks which customer a reused phone belongs to instead of silently keeping a draft',async()=>{
+  // A saved customer with this phone under a different name is not a reason to stop booking.
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
   expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
+  expect(screen.queryByRole('heading',{name:'Draft saved'})).toBeNull();
+  expect(dialog.getByText(f.customer.name)).toBeVisible();
+  expect(dialog.getByText('Another sender')).toBeVisible();
+  // Choosing the saved customer carries the same booking through to a real booking.
+  fireEvent.click(dialog.getByText(f.customer.name).closest('button')!);
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('can keep the typed name as a new customer instead',async()=>{
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  fireEvent.click(dialog.getByText(/A different person/).closest('button')!);
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)[0]).name).toBe('Another sender');
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+ it('keeps a draft only as a deliberate choice, never as an automatic one',async()=>{
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+  fireEvent.click(dialog.getByRole('button',{name:'Save as a draft instead'}));
+  await screen.findByRole('heading',{name:'Draft saved'});
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields.name).toBe('Another sender');
  });
  it('does not treat failed customer lookup as a new customer',async()=>{
@@ -121,7 +152,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();fill('Declared goods value ₹','1000.01');save();await screen.findByRole('heading',{name:'Booking saved'});expect(body(posts('/api/v1/bookings?')[0]).parcels[0].details).toEqual({declared_value_paise:100001});
  });
  it('preserves an unassessed decimal entry without inventing a calculated charge',async()=>{
-  await entered();fill('Freight ₹','12.345');save();await screen.findByRole('heading',{name:'Booking saved'});
+  await entered();fill('Freight ₹','12.345');saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields.override).toBe('invalid-decimal:12.345');expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('continues converting valid packing and freight to exact paise',async()=>{
@@ -141,7 +172,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fireEvent.click(screen.getByRole('button',{name:'Keep booking'}));expect(posts(cancelPath)).toHaveLength(0);fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fill('Reason for cancellation','Sender withdrew all packages');fireEvent.click(screen.getByRole('button',{name:'Confirm cancellation'}));await screen.findByText('Cancelled 3 parcels in this booking.');fireEvent.click(screen.getByRole('button',{name:'Done'}));expect(screen.getByRole('heading',{name:'Booking cancelled',level:1})).toBeVisible();expect(posts(cancelPath)).toHaveLength(1);
  });
  it('records entered duplicate dockets without creating conflicting dispatch parcels',async()=>{
-  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');save();await screen.findByRole('heading',{name:'Booking saved'});
+  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(body(posts('/api/v1/bookings/entries?')[0]).additional_parcels[0].docket).toBe('00123-a');
  });
  it('copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents',async()=>{
@@ -165,8 +196,29 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Retry receipt'});fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
- it('explicit save confirms an entry without requiring sender fields',async()=>{
-  await start();save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('explicit save keeps a draft without requiring sender fields',async()=>{
+  await start();saveDraft();await screen.findByRole('heading',{name:'Draft saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('names what is missing before the button is pressed, and stops naming it once supplied',async()=>{
+  await start();
+  const needs=()=>screen.getByText(/This cannot be booked yet/).textContent!;
+  expect(needs()).toContain('docket number');expect(needs()).toContain('customer name');expect(needs()).toContain('a price');
+  fill('Docket number','00123-A');expect(needs()).not.toContain('docket number');
+  // A complete form offers the booking, and the warning disappears with it.
+  core();await calculate();
+  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
+  expect(screen.queryByText(/This cannot be booked yet/)).toBeNull();
+ });
+ it('offers a readable draft number and a way back into the same form',async()=>{
+  await start();fill('Customer name','Unfinished sender');fill('Delivery address','9 Fictional Road');saveDraft();
+  await screen.findByRole('heading',{name:'Draft saved'});
+  // Not the 36-character identifier the operator cannot read out or write down.
+  const code=screen.getByText(/^D-[0-9A-HJ-NP-Z]{6}$/);expect(code).toBeVisible();
+  expect(document.body.textContent).not.toContain(savedEntries[0]!.id);
+  fireEvent.click(screen.getByRole('button',{name:'Finish this booking'}));
+  expect(screen.getByLabelText('Customer name')).toHaveValue('Unfinished sender');
+  expect(screen.getByLabelText('Delivery address')).toHaveValue('9 Fictional Road');
+  expect(screen.getByRole('button',{name:'Save as draft'})).toBeVisible();
  });
  it.each(['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND'])('handles safe %s without losing the draft or claiming success',async code=>{
   await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code,private_details:'SYN_PRIVATE'}},code==='ACTION_FORBIDDEN'?403:code==='RESOURCE_NOT_FOUND'?404:409)):undefined;save();await screen.findByRole('alert');expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(document.body.textContent).not.toContain('SYN_PRIVATE');
@@ -191,7 +243,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   const controller=createScopeController();await controller.load();const flow=createBookingWorkflow(controller);flow.activate();flow.change('name','Synthetic private draft');const generation=controller.runtime.ticket().generation;
   await controller.revalidate();expect(controller.runtime.ticket().generation).toBe(generation);expect(flow.snapshot().draft.name).toBe('Synthetic private draft');
   override=c=>c.path.startsWith('/api/v1/operator-context')?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
-  await controller.revalidate();expect(flow.snapshot().draft.name).toBe('Synthetic private draft');expect(controller.snapshot().notice).toContain('could not be refreshed');
+  await controller.revalidate();expect(flow.snapshot().draft.name).toBe('Synthetic private draft');expect(controller.snapshot().notice).toContain('could not reach the server');
   override=c=>c.path.startsWith('/api/v1/operator-context')?Promise.resolve(f.json({...f.context,franchises:f.context.franchises.map(x=>({...x,roles:['read_only']}))})):undefined;
   await controller.revalidate();expect(controller.runtime.ticket().generation).not.toBe(generation);expect(flow.snapshot().draft.name).toBe('');expect(()=>scopedApi(controller)).not.toThrow();flow.dispose();
  });

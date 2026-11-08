@@ -4,6 +4,7 @@ import type {OperatorRole,PaymentProjection,LotMembershipDto,LotDto,LotMembershi
 import type {ScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
 import {bookingEntries,type CounterEntry} from '../data-access/booking-entries';
+import {bookingNeeds,draftCode,emptyDraft,type Draft,type ParcelDraft} from '../booking/form';
 import {parcels,type ParcelRead} from '../data-access/parcels';
 import {payments} from '../data-access/payments';
 import {lots} from '../data-access/lots';
@@ -22,7 +23,7 @@ import {Dialog} from '../components/m3/Dialog';
 import {Journey} from '../components/m3/Journey';
 import type {ParcelStatus as JourneyStatus} from '../data/types';
 
-const filters=[{value:'all',label:'All'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
+const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
 const stageLabels:Record<string,string>={booked:'Booked',checked_in:'At hub',dispatched:'Dispatched',in_transit:'On the way',out_for_delivery:'Out for delivery'};
 export interface SavedBookingRow{
  id:string;docket:string;name:string;phone:string;city:string;address:string;service:string;weight:number|null;amount:number|null;payment:'paid'|'topay'|'unknown';status:string;createdAt:number;lotId:string|null;lotCode:string;entry?:CounterEntry;parcel?:ParcelRead;
@@ -33,10 +34,12 @@ export function counterBookingRow(entry:CounterEntry):SavedBookingRow{
  const f=entry.data.fields,freight=integer(f.override),packing=integer(f.packing),sum=BigInt(freight??0)+BigInt(packing??0);
  const amount=freight===null&&packing===null||sum>BigInt(Number.MAX_SAFE_INTEGER)?null:Number(sum);
  const grams=integer(f.weight);
- return {id:'entry:'+entry.id,docket:f.docket||entry.id.slice(0,8),name:f.name||'—',phone:f.phone||'',city:cityName(f.destination||f.recipientCity||''),address:f.recipientAddress||f.address||'',service:f.service==='express'?'Express':f.service==='same_city'?'Same-city':f.service==='standard'?'Standard':f.service||'—',weight:grams===null?null:grams/1000,amount,payment:'unknown',status:'booked',createdAt:Date.parse(entry.confirmed_at),lotId:null,lotCode:'',entry};
+ return {id:'entry:'+entry.id,docket:f.docket||draftCode(entry.id),name:f.name||'—',phone:f.phone||'',city:cityName(f.destination||f.recipientCity||''),address:f.recipientAddress||f.address||'',service:f.service==='express'?'Express':f.service==='same_city'?'Same-city':f.service==='standard'?'Standard':f.service||'—',weight:grams===null?null:grams/1000,amount,payment:'unknown',status:'draft',createdAt:Date.parse(entry.confirmed_at),lotId:null,lotCode:'',entry};
 }
 export function filterSavedBookings(rows:SavedBookingRow[],filter:string){
- if(filter==='active')return rows.filter(r=>!['delivered','rto','cancelled'].includes(r.status));
+ if(filter==='drafts')return rows.filter(r=>r.status==='draft');
+ // A draft is not work in motion: it has no parcel, so it cannot be active, delayed or paid.
+ if(filter==='active')return rows.filter(r=>!['delivered','rto','cancelled','draft'].includes(r.status));
  if(filter==='delayed')return rows.filter(r=>r.status==='failed_attempt');
  if(filter==='delivered')return rows.filter(r=>r.status==='delivered');
  if(filter==='topay')return rows.filter(r=>r.payment==='topay');
@@ -44,7 +47,7 @@ export function filterSavedBookings(rows:SavedBookingRow[],filter:string){
 }
 const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
 const time=(ts:number)=>new Date(ts).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
-const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':undefined}/>;
+const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':row.status==='draft'?'Draft — not booked':undefined}/>;
 const payChip=(row:SavedBookingRow)=><span className={'pill '+(row.payment==='paid'?'st-delivered':row.payment==='topay'?'pill-warn':'')}>{row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'}</span>;
 
 export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void)=>React.ReactNode}){
@@ -132,22 +135,33 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
   }catch{/* CommandNotice retains the immutable request. */}
  }
  const [msgText,setMsgText]=useState(''),[showActions,setShowActions]=useState(false),[printMessage,setPrintMessage]=useState(''),[printing,setPrinting]=useState(false);
- const items=row.entry?[{event_id:row.entry.id,sequence:1,occurred_at:row.entry.confirmed_at,code:'parcel.booked',status:'booked',label:'Booking created at counter'}]:timeline.value?.items??[];
+ const items=row.entry?[{event_id:row.entry.id,sequence:1,occurred_at:row.entry.confirmed_at,code:'booking.draft',status:'draft',label:'Draft saved at the counter'}]:timeline.value?.items??[];
  const flowStatus=(['booked','checked_in','dispatched','in_transit','out_for_delivery','delivered','failed_attempt','rto'].includes(row.status)?row.status:'booked') as JourneyStatus;
+ // A draft never entered the parcel journey, so showing one would state a movement that
+ // has not happened. Say plainly what it is and offer the way to finish it instead.
+ const isDraft=!!row.entry;
+ const draftNeeds=useMemo(()=>{
+   if(!row.entry)return [];
+   const fields=row.entry.data.fields,draft={...emptyDraft(),...fields} as Draft;
+   return bookingNeeds(draft,row.entry.data.additional_parcels as ParcelDraft[],!!draft.serviceOptionId||draft.override!=='');
+ },[row.entry]);
  const service=row.service+(row.weight===null?'':` · ${row.weight.toLocaleString('en-IN')} kg`);
  async function print(){if(printing)return;setPrinting(true);setPrintMessage('');try{
   if(row.parcel)await printReceiptFor(api,await receipts(api).booking(row.parcel.booking_id));
   else await printCounterRecord(row,api);
  }catch{setPrintMessage('The receipt could not be opened. Retry printing without creating another booking.');}finally{setPrinting(false);}}
  return <Dialog open onClose={()=>{if(!moving)close();}} hideClose={moving} size="lg" title={<span className="u-row mono" style={{fontSize:19}}>{row.docket} {statusPill(row)}</span>}>
-  <div className="jrn-wrap"><Journey status={flowStatus} timeline={items.map(t=>({ts:Date.parse(t.occurred_at),status:t.status as JourneyStatus,title:t.label}))} format={ts=>new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}/></div>
+  {isDraft
+    ? <p className="ops-alert saved-draft-note" role="status"><Msym name="draft"/><span>This is a draft, not a booking. No docket was created and it cannot be checked in or dispatched.{draftNeeds.length>0&&<> Still needed: <strong>{draftNeeds.join(', ')}</strong>.</>}</span></p>
+    : <div className="jrn-wrap"><Journey status={flowStatus} timeline={items.map(t=>({ts:Date.parse(t.occurred_at),status:t.status as JourneyStatus,title:t.label}))} format={ts=>new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}/></div>}
   <div className="grid2" style={{gap:20}}><div>
    <div className="ph-box u-center u-col" style={{height:130,borderRadius:'var(--shape-md)',gap:4}}><Msym name="image" style={{fontSize:30}}/><span className="t-body-sm">No parcel photo</span></div>
    <div className="t-body-sm" style={{display:'grid',gap:8,marginTop:14}}>{[['Customer',[row.name,row.phone].filter(Boolean).join(' · ')],['Address',row.address||'—'],['Service',service],['Amount',money(row.amount)],['Payment',row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'],['Lot',row.lotCode||'—']].map(([k,v])=><div key={k} className="u-between" style={{borderBottom:'1px solid var(--md-outline-variant)',paddingBottom:6}}><span className="muted">{k}</span><span style={{textAlign:'right'}}>{v}</span></div>)}</div>
    {!['delivered','rto','cancelled'].includes(row.status)&&<SelectField label="Move to lot" value={row.lotId||''} disabled={!row.parcel||moving||membership.phase==='loading'} onChange={id=>void assignLot(id)} options={[{value:'',label:'Not in a lot'},...lotList.filter(l=>l.state==='active'||l.id===row.lotId).map(l=>({value:l.id,label:`${l.code} · ${l.name}`}))]} trailing="layers" style={{marginTop:12}}/>}
    {['booked','checked_in','dispatched','in_transit','failed_attempt'].includes(row.status)&&<div className="u-row u-wrap" style={{marginTop:12}}><Button size="sm" icon={row.status==='booked'?'warehouse':row.status==='checked_in'?'local_shipping':'mark_email_read'} disabled={!row.parcel||moving} title={!row.parcel?'Shipment details are needed before intake or dispatch':undefined} onClick={()=>setShowActions(true)}>{row.status==='booked'?'Check In at Hub':row.status==='checked_in'?'Dispatch':row.status==='failed_attempt'?'Try Delivery Again':'Out for Delivery'}</Button></div>}
    <CommandNotice phase={lotCommand.phase} code={lotCommand.error?.code} retry={lotCommand.canRetry?()=>{void lotCommand.retry().then(()=>{membership.reload();refresh();}).catch(()=>{});}:undefined}/>
-   {row.entry&&<p className="counter-help" style={{marginTop:10}}>Entered charges are shown. Tax and payment are not recorded; shipment actions need a shipment record.</p>}
+   {row.entry&&<><p className="counter-help" style={{marginTop:10}}>Entered charges are shown. Tax and payment are not recorded; a draft cannot be checked in or dispatched.</p>
+   <Button icon="edit" style={{marginTop:10}} onClick={()=>{window.location.hash='#/business/new-booking?draft='+row.entry!.id;close();}}>Finish this booking</Button></>}
   </div><div>
    <div className="section-label" style={{margin:'0 0 10px'}}>Timeline<span className="rule"/></div>
    {timeline.phase==='error'?<Button variant="text" onClick={timeline.reload}>Retry timeline</Button>:<ul className="tline">{[...items].reverse().map((t,i)=><li key={t.event_id}><span className={'node '+(t.status==='booked'&&i===items.length-1?'':'done')}><Msym name={t.status==='booked'&&i===items.length-1?'':'check'}/></span><div className="t-head">{t.code==='parcel.booked'?'Booking created at counter':t.label} <span className="t-time">{time(Date.parse(t.occurred_at))}</span></div></li>)}</ul>}
@@ -162,8 +176,8 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
 async function printCounterRecord(row:SavedBookingRow,api:ReturnType<typeof scopedApi>){
  const win=window.open('','_blank','width=760,height=900');if(!win)throw new Error('PRINT_WINDOW_BLOCKED');
  const doc=win.document;doc.title='Booking '+row.docket;const logo=await loadShopLogo(api);if(api.scope.signal.aborted){win.close();throw Error('Receipt access changed.');}if(logo){const img=doc.createElement('img');img.src=logo;img.alt='Shop logo';img.width=56;img.height=56;doc.body.append(img);}
- const title=doc.createElement('h1');title.textContent='Booking acknowledgement';doc.body.append(title);
+ const title=doc.createElement('h1');title.textContent='Booking draft — not a booking';doc.body.append(title);
  const table=doc.createElement('table');
- for(const [label,value] of [['Docket',row.docket],['Customer',row.name],['Phone',row.phone||'Not recorded'],['Destination',row.city||'Not recorded'],['Address',row.address||'Not recorded'],['Entered charges',money(row.amount)],['Payment','Not recorded']]){const tr=doc.createElement('tr'),th=doc.createElement('th'),td=doc.createElement('td');th.textContent=label;td.textContent=value;tr.append(th,td);table.append(tr);}
- doc.body.append(table);const note=doc.createElement('p');note.textContent='Confirmed counter record. This acknowledgement is not a tax invoice or payment receipt.';doc.body.append(note);win.print();
+ for(const [label,value] of [['Draft number',row.docket],['Customer',row.name],['Phone',row.phone||'Not recorded'],['Destination',row.city||'Not recorded'],['Address',row.address||'Not recorded'],['Entered charges',money(row.amount)],['Payment','Not recorded']]){const tr=doc.createElement('tr'),th=doc.createElement('th'),td=doc.createElement('td');th.textContent=label;td.textContent=value;tr.append(th,td);table.append(tr);}
+ doc.body.append(table);const note=doc.createElement('p');note.textContent='This is an unfinished counter draft. No docket has been issued, the parcel cannot be dispatched, and this is not a tax invoice or payment receipt.';doc.body.append(note);win.print();
 }

@@ -60,11 +60,11 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
  const [notice,setNotice]=useState('');
  const archive=useCommand<import('@shippingco/shared').LotDto|import('@shippingco/shared').LotMembershipResult>(value=>source.execute(value)),busy=archive.phase==='pending'||archive.phase==='uncertain';
  async function deleted(){setRemove(null);data.reload();setNotice('Lot deleted. Its parcels are now ungrouped.');}
- if(data.phase==='loading')return <div className="page"><Loading label="Loading lots…"/></div>;
- if(data.phase==='error')return <div className="page"><Failure label="Lots could not be loaded." retry={data.reload}/></div>;
- const value=data.value!;
+ const value=data.value??{lots:[],rows:[],routes:[],routeByLot:new Map<string,RouteDto>()};
  return <div className="page live-lots">
   <div className="page-actions">{write&&<Button icon="add" onClick={()=>setCreate(true)}>Create Lot</Button>}</div>
+  {data.phase==='loading'&&<Loading label="Loading lots…"/>}
+  {data.phase==='error'&&<Failure label="Saved lots and booking selections could not be loaded. You can still create a lot and add bookings later." retry={data.reload}/>}
   {notice&&<p role="status">{notice}</p>}
   <div className="grid3">{value.lots.map(l=>{
    const members=value.rows.filter(r=>r.lotId===l.id),dests=[...new Set(members.map(r=>r.city).filter(Boolean))],route=value.routeByLot.get(l.id)||value.routes.find(r=>r.id===l.planning_route_id&&r.state!=='archived'),live=members.filter(r=>!terminal(r.status)).length,delivered=members.filter(r=>r.status==='delivered').length;
@@ -78,15 +78,15 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
     {l.note&&<p className="t-body-sm muted">{l.note}</p>}
    </LotCardView>;
   })}</div>
-  {!value.lots.length&&<Card variant="outlined"><EmptyState icon="layers" title="No lots yet" sub="Lots group many customers' parcels travelling together — e.g., everything on tonight's Mumbai flight. Create one to unlock batch updates." action={write?<Button icon="add" style={{marginTop:12}} onClick={()=>setCreate(true)}>Create your first lot</Button>:undefined}/></Card>}
-  {(create||add)&&<LotEditor source={source} routeSource={routeSource} data={value} lot={add??undefined} close={()=>{setCreate(false);setAdd(null);data.reload();}} saved={(lot,n)=>{setCreate(false);setAdd(null);data.reload();setNotice(`${lot.code} saved with ${n} selected parcel${n===1?'':'s'}.`);}}/>}
+  {data.phase==='ready'&&!value.lots.length&&<Card variant="outlined"><EmptyState icon="layers" title="No lots yet" sub="Create a lot for a destination now. Add bookings and assign a dispatch route when you are ready." action={write?<Button icon="add" style={{marginTop:12}} onClick={()=>setCreate(true)}>Create your first lot</Button>:undefined}/></Card>}
+  {(create||add)&&<LotEditor source={source} routeSource={routeSource} data={value} lot={add??undefined} selectionsUnavailable={data.phase==='error'} close={()=>{setCreate(false);setAdd(null);data.reload();}} saved={(lot,n)=>{setCreate(false);setAdd(null);data.reload();setNotice(`${lot.code} saved with ${n} selected parcel${n===1?'':'s'}.`);}}/>}
   <Dialog open={!!remove} onClose={()=>{if(!busy)setRemove(null);}} hideClose={busy} title={`Delete ${remove?.code}?`} actions={<><Button variant="text" disabled={busy} onClick={()=>setRemove(null)}>Cancel</Button><Button disabled={busy} onClick={()=>{if(remove)void archive.run(source.intent({kind:'archive',lotId:remove.id,body:{expected_version:remove.version}})).then(deleted).catch(()=>{});}}>Delete lot</Button></>}>
    <p>Parcels inside stay safe — they just become ungrouped. The lot’s history stays saved.</p><CommandNotice phase={archive.phase} code={archive.error?.code} retry={archive.canRetry?()=>{void archive.retry().then(deleted).catch(()=>{});}:undefined}/>
   </Dialog>
   {message&&<LotMessage source={source} lot={message} count={value.rows.filter(r=>r.lotId===message.id&&!terminal(r.status)).length} close={()=>setMessage(null)}/>}
  </div>;
 }
-function LotEditor({source,routeSource,data,lot,close,saved}:{source:LotSource;routeSource:RouteSource;data:LotData;lot?:LotDto;close:()=>void;saved:(lot:LotDto,count:number)=>void}){
+function LotEditor({source,routeSource,data,lot,selectionsUnavailable,close,saved}:{source:LotSource;routeSource:RouteSource;data:LotData;lot?:LotDto;selectionsUnavailable?:boolean;close:()=>void;saved:(lot:LotDto,count:number)=>void}){
  const loose=data.rows.filter(r=>!terminal(r.status)&&(lot?r.lotId!==lot.id:!r.lotId)),destinations=[...new Set(loose.map(r=>r.city).filter(Boolean))];
  const [city,setCity]=useState(destinations[0]??''),[name,setName]=useState(()=>destinations[0]?`${destinations[0]} · ${formatKolkata(new Date().toISOString(),{day:'numeric',month:'short'})}`:''),[touched,setTouched]=useState(false),[note,setNote]=useState(lot?.note??''),[routeId,setRouteId]=useState(lot?(data.routeByLot.get(lot.id)?.id??lot.planning_route_id??''):'');
  const [picked,setPicked]=useState<Set<string>>(()=>new Set(lot?[]:loose.filter(r=>r.city===destinations[0]).map(r=>r.id)));
@@ -101,11 +101,12 @@ function LotEditor({source,routeSource,data,lot,close,saved}:{source:LotSource;r
   try{const result=await command.run(source.intent({kind:'create',body:{name:name.trim()||`${city} lot`,destination_key:cityKey(city)}}));saved(result,selected.length);}catch{/* confirmed progress stays in the plan for an exact retry */}
  }
  const rows=(items:SavedBookingRow[],elsewhere=false)=><ul className="lotpick-list">{items.map(r=><li key={r.id}><Checkbox checked={picked.has(r.id)} onChange={v=>toggle(r.id,v)} ariaLabel={`Include ${r.docket}`} label=""/><span className="mono lotpick-dk">{r.docket}</span><span className="u-grow u-truncate">{r.name}</span>{elsewhere?<span className="lotpick-to">→ {r.city||'Destination not recorded'}</span>:<><span className="lotpick-w">{r.weight===null?'—':r.weight} kg</span><StatusPill status={r.status as ParcelStatus}/></>}</li>)}</ul>;
- return <Dialog open size="lg" title={lot?`Add parcels to ${lot.code}`:'New lot'} hideClose={busy} onClose={()=>{if(!busy)close();}} actions={<><Button variant="text" disabled={busy} onClick={close}>{started&&command.phase==='error'?'Finish later':'Cancel'}</Button><Button disabled={busy||!selected.length||!lot&&!city} onClick={()=>{void submit();}}>{started?'Retry remaining steps':lot?'Save':`Create with ${selected.length} parcel${selected.length===1?'':'s'}`}</Button></>}>
-  {!loose.length?<EmptyState icon="inbox" title="No loose parcels" sub="Every moving parcel is already in a lot. Book a parcel first, or add one to an existing lot."/>:<>
+ return <Dialog open size="lg" title={lot?`Add parcels to ${lot.code}`:'New lot'} hideClose={busy} onClose={()=>{if(!busy)close();}} actions={<><Button variant="text" disabled={busy} onClick={close}>{started&&command.phase==='error'?'Finish later':'Cancel'}</Button><Button disabled={busy||(lot?!selected.length:!city.trim()||!name.trim()||!/^[A-Z][A-Z0-9_]{0,31}$/.test(cityKey(city)))} onClick={()=>{void submit();}}>{started?'Retry remaining steps':lot?'Save':selected.length?`Create with ${selected.length} parcel${selected.length===1?'':'s'}`:'Create lot'}</Button></>}>
+  <>
    <fieldset disabled={busy||started} className="lot-editor-fields">
     {!lot&&<><span className="field-legend">Where is this lot going?</span><div className="chips-row" style={{marginTop:8}}>{destinations.map(d=><button key={d} type="button" className={`fchip${city===d?' on':''}`} aria-pressed={city===d} onClick={()=>choose(d)}>{d}<span className="fchip-n">{loose.filter(r=>r.city===d).length}</span></button>)}</div>
-    <div className="form-grid" style={{marginTop:4}}><TextField label="Lot name" value={name} onChange={v=>{setName(v);setTouched(true);}} maxLength={120}/><SelectField label="Put on a route" value={routeId} onChange={setRouteId} options={[{value:'',label:'Decide later'},...data.routes.filter(r=>r.state==='planning').sort((a,b)=>Number(cityKey(b.destination)===cityKey(city))-Number(cityKey(a.destination)===cityKey(city))).map(r=>({value:r.id,label:`${r.carrier_code||r.mode.toUpperCase()} · ${r.origin} → ${r.destination} · ${date(r.scheduled_departure_at)}`}))]}/><TextField label="Note for your staff" className="span2" value={note} onChange={setNote} maxLength={1000}/></div></>}
+    <div className="form-grid" style={{marginTop:4}}><TextField label="Destination city" value={city} onChange={choose} maxLength={32} required helper="Enter a city or choose one above. You can add bookings later."/><TextField label="Lot name" value={name} onChange={v=>{setName(v);setTouched(true);}} maxLength={120} required/><SelectField label="Put on a route" value={routeId} onChange={setRouteId} options={[{value:'',label:'Decide later'},...data.routes.filter(r=>r.state==='planning').sort((a,b)=>Number(cityKey(b.destination)===cityKey(city))-Number(cityKey(a.destination)===cityKey(city))).map(r=>({value:r.id,label:`${r.carrier_code||r.mode.toUpperCase()} · ${r.origin} → ${r.destination} · ${date(r.scheduled_departure_at)}`}))]}/><TextField label="Note for your staff" className="span2" value={note} onChange={setNote} maxLength={1000}/></div></>}
+    {!loose.length&&<p role="status" className="t-body-sm muted">{selectionsUnavailable?'Booking and route selections are unavailable. Create this lot now and add bookings later.':'No ungrouped bookings yet. You can create this lot now and add bookings later.'}</p>}
     <div className="lotpick"><div className="lotpick-head"><span className="field-legend">Parcels in this lot</span><button type="button" className="lotpick-all" onClick={()=>setPicked(new Set((lot?loose:loose.filter(r=>r.city===city)).map(r=>r.id)))}>Select all{lot?'':` ${city}`}</button></div>
      {rows(lot?loose:loose.filter(r=>r.city===city))}
      {!lot&&loose.some(r=>r.city!==city)&&<details className="lotpick-more"><summary>Add parcels going elsewhere ({loose.filter(r=>r.city!==city).length})</summary>{rows(loose.filter(r=>r.city!==city),true)}</details>}
@@ -114,7 +115,7 @@ function LotEditor({source,routeSource,data,lot,close,saved}:{source:LotSource;r
    <div className="lotsum"><span><b>{selected.length}</b> parcels</span><span><b>{knownWeight?weight.toFixed(1):'—'}</b> kg</span><span><b>{knownAmount?money(amount):'—'}</b> value</span></div>
    {command.phase==='error'&&plan.current?.hasChanges&&<p role="status">{plan.current.currentLot?`Lot ${plan.current.currentLot.code} is saved.`:'Some parcel or route changes were saved.'} Remaining selections or route assignment have not completed. Finish later or retry the remaining steps.</p>}
    <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(result=>{if(result)saved(result,selected.length);}).catch(()=>{});}:undefined}/>
-  </>}
+  </>
  </Dialog>;
 }
 function LotMessage({source,lot,count,close}:{source:LotSource;lot:LotDto;count:number;close:()=>void}){

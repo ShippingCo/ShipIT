@@ -28,21 +28,24 @@ import { prettyPhone } from '../data/store';
 */
 
 const NAV_ACTIONS = [
-  { icon: 'add_circle', label: 'New Booking', to: '/business/booking', keywords: 'create docket parcel add' },
-  { icon: 'space_dashboard', label: 'Dashboard', to: '/business', keywords: 'home overview' },
-  { icon: 'inventory_2', label: 'Packages', to: '/business/packages', keywords: 'parcels dockets' },
-  { icon: 'layers', label: 'Lots', to: '/business/lots', keywords: 'group bags' },
-  { icon: 'alt_route', label: 'Dispatch Routes', to: '/business/routes', keywords: 'trips vehicles' },
-  { icon: 'forward_to_inbox', label: 'Automation Feed', to: '/business/feed', keywords: 'whatsapp messages assistant' },
-  { icon: 'receipt_long', label: 'Receipts', to: '/business/receipts', keywords: 'bills print' },
-  { icon: 'query_stats', label: 'Reports', to: '/business/reports', keywords: 'analytics numbers' },
-  { icon: 'local_shipping', label: 'E-way Bills', to: '/business/eway', keywords: 'gst compliance' },
-  { icon: 'settings', label: 'Settings', to: '/business/settings', keywords: 'business profile' },
-];
+  ['booking','/business/booking','create docket parcel add'],
+  ['workspace','/business','home overview dashboard'],
+  ['packages','/business/packages','parcels dockets'],
+  ['lots','/business/lots','group bags'],
+  ['routes','/business/routes','trips vehicles dispatch'],
+  ['automation','/business/feed','whatsapp messages assistant automation feed'],
+  ['receipts','/business/receipts','bills print'],
+  ['reports','/business/reports','analytics numbers'],
+  ['eway','/business/eway','gst compliance e-way'],
+  ['settings','/business/settings','business profile'],
+].map(([area, to, keywords]) => ({ ...consoleAreas[area], to, keywords }));
+
 
 /* How many parcels are handed to the filter. Enough to cover a working set without
    mounting an unbounded list on every keystroke. */
 const SEARCH_POOL = 400;
+
+import {consoleAreas} from './workspace/console-navigation';
 
 export {useCommandPalette} from './workspace/use-command-palette';
 

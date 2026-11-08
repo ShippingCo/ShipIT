@@ -41,12 +41,12 @@ const PAGE_TITLE = {
   '/business/booking': 'New Booking',
   '/business/packages': 'Packages',
   '/business/lots': 'Lots',
-  '/business/routes': 'Dispatch Routes',
-  '/business/feed': 'Automation Feed',
+  '/business/routes': 'Routes',
+  '/business/feed': 'Messages',
   '/business/receipts': 'Receipts',
   '/business/reports': 'Reports',
   '/business/reports/gst': 'Reports',
-  '/business/eway': 'E-way Bills',
+  '/business/eway': 'E-way bills',
   '/business/settings': 'Settings',
 };
 

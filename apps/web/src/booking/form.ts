@@ -71,6 +71,61 @@ export function taxFacts(d: Draft): TaxFacts {
 export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'recipientCountry' | 'recipientPin' | 'recipientCity' | 'recipientRegion' | 'weight' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity' | 'declaredValue'>;
 export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',weight:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:''});
 export const receiverFields = ['recipientName','recipientPhone','recipientAddress','recipientCountry','recipientPin','recipientCity','recipientRegion'] as const;
+/**
+ * A draft's own number, short enough to read out on the phone or write in a paper book,
+ * instead of showing the operator a 36-character identifier they cannot use.
+ *
+ * Derived from the record's identifier, so it is stable and needs no storage, but it is a
+ * one-way shortening, not a replacement: the full identifier stays authoritative for support
+ * and for every request. Letters that are misread when spoken or handwritten (I, O) are
+ * excluded. Two drafts in one franchise's list of at most 100 colliding is ~3 in a million.
+ */
+export function draftCode(id: string): string {
+  const source = id.replace(/-/g, '').toUpperCase();
+  const alphabet = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I, O
+  let value = 0n;
+  for (const character of source.slice(0, 12)) value = value * 16n + BigInt(parseInt(character, 16) || 0);
+  let code = '';
+  for (let i = 0; i < 6; i++) { code = alphabet[Number(value % 34n)] + code; value /= 34n; }
+  return 'D-' + code;
+}
+
+/**
+ * Fields a real booking needs but a draft does not. They are excluded from the "can this be
+ * booked" question so a missing tax detail does not read to the operator as a missing parcel.
+ */
+const optionalForBooking = ['recipientRef', 'evidenceRef', 'handoverState', 'recipientState', 'gstin', 'specialCase', 'method'] as const;
+
+/** Short, concrete words for what is still missing. Shown to the operator, so no field names. */
+const needLabels: Partial<Record<Field, string>> = {
+  name: 'customer name', phone: 'phone number', address: 'customer address',
+  recipientName: 'receiver name', recipientPhone: 'receiver phone', recipientAddress: 'delivery address',
+  recipientCountry: 'delivery country', recipientPin: 'PIN code', recipientCity: 'receiver city',
+  recipientRegion: 'receiver state', contentsType: 'what is inside', contentsDescription: 'what is inside',
+  liquidQuantity: 'liquid quantity', declaredValue: 'declared value',
+  docket: 'docket number', service: 'delivery service', destination: 'destination',
+  weight: 'weight', packing: 'packing amount', override: 'freight amount',
+};
+
+/**
+ * What stops this form from becoming a real booking with dockets, in the operator's words.
+ * An empty list means "Save booking" will produce parcels; anything else means the counter can
+ * only keep a draft, and the operator is told exactly that before pressing the button.
+ */
+export function bookingNeeds(draft: Draft, additional: ParcelDraft[], priced: boolean): string[] {
+  const errors = validate(draft, 'booking');
+  for (const key of optionalForBooking) delete errors[key];
+  const needs: string[] = [];
+  for (const [field, label] of Object.entries(needLabels)) {
+    if (errors[field as Field] && !needs.includes(label)) needs.push(label);
+  }
+  additionalParcelErrors(draft, additional).forEach((parcel, index) => {
+    if (Object.values(parcel).some(Boolean)) needs.push(`details for parcel ${index + 2}`);
+  });
+  if (!priced) needs.push('a price');
+  return needs;
+}
+
 export function parcelErrors(parcel: ParcelDraft): Errors {
   const errors = validate({...emptyDraft(), ...parcel}, 'booking');
   const fields=emptyParcel();

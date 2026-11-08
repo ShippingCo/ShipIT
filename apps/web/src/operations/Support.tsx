@@ -20,7 +20,7 @@ export default function Support({controller,roles}:{controller:ScopeController;r
 }
 export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:boolean}) {
  const page=usePagedResource('support',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),[locked,setLocked]=useState(false),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Human support" eyebrow="Customer service" description="Review customer requests and follow up." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
+ return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Support" eyebrow="Customer service" description="Review customer requests and follow up." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
   {page.phase==='loading'?<Loading label="Loading support cases…"/>:page.phase==='error'?<Failure label="Support cases are unavailable." retry={page.reload}/>:page.phase==='empty'?<Empty title="No support cases" body="When a customer asks for help, their case appears here. Open it to see the reason and choose who will follow up."/>:
    <RecordTable mobile="stack" label="Support cases" caption="Cases in this branch · open a case for customer details" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
     {key:'reference',label:'Case',cell:c=><div className="record-identity"><strong>{caseReason(c.reason)}</strong><span>Case {c.id.slice(0,8)}</span></div>},

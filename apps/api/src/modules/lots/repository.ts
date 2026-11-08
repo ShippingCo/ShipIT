@@ -40,11 +40,6 @@ export async function locked(scope:TenantAccess,id:string) {
     JOIN shipit.parcels p ON p.organization_id=m.organization_id AND p.franchise_id=m.franchise_id AND p.booking_id=m.booking_id AND p.id=m.parcel_id
     WHERE {{franchise:m.organization_id:m.franchise_id}} AND m.lot_id=$1 AND p.status NOT IN ('booked','checked_in')) AS locked`,[id])).rows[0]!.locked;
 }
-export async function knownDestination(scope:TenantAccess,key:string) {
-  return (await scopedQuery<{known:boolean}>(scope,['lots.create'],`SELECT EXISTS(SELECT 1 FROM shipit.pricing_rules r
-    JOIN shipit.pricing_versions v ON v.organization_id=r.organization_id AND v.franchise_id=r.franchise_id AND v.id=r.version_id
-    WHERE {{franchise:r.organization_id:r.franchise_id}} AND r.destination_key=$1 AND v.state='published') AS known`,[key])).rows[0]!.known;
-}
 export async function currentMembership(scope:TenantAccess,parcelId:string) {
   const c=lotContext(scope);
   return (await scopedQuery<MembershipRow>(scope,[c.action],`SELECT ${memberColumns} FROM shipit.lot_memberships m

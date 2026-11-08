@@ -2,7 +2,7 @@ import {createLotMessages} from './messages.ts';
 import type {WhatsappDependencies} from '../whatsapp/types.ts';
 import { randomUUID } from 'node:crypto';
 import type { DatabasePool } from '@shippingco/db';
-import { HttpError,FieldValidationError } from '../../plugins/errors.ts';
+import { HttpError } from '../../plugins/errors.ts';
 import { withLotScope } from '../memberships/service.ts';
 import { instant } from '../pricing/types.ts';
 import { command,selection,idempotencyKey,uuid,filter,stateGuard } from './validation.ts';
@@ -42,7 +42,8 @@ export function createLotService(database:DatabasePool,cursorKey:Buffer,whatsapp
       const current=parcel?await repository.currentMembership(s.command,parcel.id):null;
       if(body.planning_route_id)await repository.validatePlanningRoute(s.command,body.planning_route_id);
       if(body.planning_entry_ids)await repository.validatePlanningEntries(s.command,body.planning_entry_ids,id);
-      if(operation==='lots.create'&&!body.planning_entry_ids?.length&&!await repository.knownDestination(s.command,body.destination_key!))throw new FieldValidationError('destination_key','INVALID_FORMAT');
+      // A destination is validated by the command boundary. Planning a new lot
+      // does not depend on having an existing rate card or booked parcel.
       if(body.target_lot_id===id)throw new HttpError('LOT_MEMBERSHIP_CONFLICT');
       for(const lot of lots){
         if(lot.state!=='active')throw new HttpError('LOT_STATE_CONFLICT');

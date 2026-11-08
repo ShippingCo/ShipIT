@@ -145,14 +145,32 @@ describe('security and HTTP boundary', () => {
   });
   it('rate limits unknown routes as well as registered commands', async () => {
     const { app } = setup();
-    for (let i = 0; i < 120; i++) expect((await app.inject('/missing')).statusCode).toBe(404);
+    for (let i = 0; i < 1200; i++) expect((await app.inject('/missing')).statusCode).toBe(404);
     expect((await app.inject('/missing')).statusCode).toBe(429);
   });
-  it('limits the 121st command without limiting health endpoints', async () => {
+  it('limits the 241st command without limiting health endpoints', async () => {
     const { app, handler } = setup();
-    for (let i = 0; i < 120; i++) expect((await app.inject(command('{"name":"ok"}'))).statusCode).toBe(200);
+    for (let i = 0; i < 240; i++) expect((await app.inject(command('{"name":"ok"}'))).statusCode).toBe(200);
     const limited = await app.inject(command('{"name":"ok"}')); expect(limited.statusCode).toBe(429); expect(limited.json().error.code).toBe('RATE_LIMITED');
-    expect(limited.headers['retry-after']).toBeDefined(); expect(handler).toHaveBeenCalledTimes(120);
-    for (let i = 0; i < 125; i++) { expect((await app.inject('/health/live')).statusCode).toBe(200); expect((await app.inject('/health/ready')).statusCode).toBe(200); }
+    expect(limited.headers['retry-after']).toBeDefined(); expect(handler).toHaveBeenCalledTimes(240);
+    for (let i = 0; i < 245; i++) { expect((await app.inject('/health/live')).statusCode).toBe(200); expect((await app.inject('/health/ready')).statusCode).toBe(200); }
+  });
+  it('spends a read burst without spending the write budget for the same actor', async () => {
+    const { app, handler } = setup();
+    // A shop loads many screens per booking. Reads must never exhaust the write budget.
+    for (let i = 0; i < 1200; i++) expect((await app.inject('/missing')).statusCode).toBe(404);
+    expect((await app.inject('/missing')).statusCode).toBe(429);
+    expect((await app.inject(command('{"name":"ok"}'))).statusCode).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+  it('counts each session separately so one shop address is not one shared budget', async () => {
+    const { app } = setup();
+    const as = (session: string) => ({ ...command('{"name":"ok"}'), headers: { 'content-type': 'application/json', cookie: `shipit_session=${session}` } });
+    for (let i = 0; i < 240; i++) expect((await app.inject(as('SYN_SESSION_ONE'))).statusCode).toBe(200);
+    expect((await app.inject(as('SYN_SESSION_ONE'))).statusCode).toBe(429);
+    // Same address, different counter staff: still allowed.
+    expect((await app.inject(as('SYN_SESSION_TWO'))).statusCode).toBe(200);
+    // And an unauthenticated caller from that address keeps its own budget too.
+    expect((await app.inject(command('{"name":"ok"}'))).statusCode).toBe(200);
   });
 });

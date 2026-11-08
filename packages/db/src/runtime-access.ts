@@ -15,6 +15,8 @@ const tables = (names: string, privilege: Privilege = 'SELECT'): AccessRequireme
   names.split(' ').map(name => ({ kind: 'table', object: `shipit.${name}`, privilege }));
 const insertColumns = (table: string, columns: string): AccessRequirement[] => columns.split(',').map(column_name =>
   ({ kind: 'table', object: `shipit.${table}`, privilege: 'INSERT', column_name }));
+const updateColumns = (table: string, columns: string): AccessRequirement[] => columns.split(',').map(column_name =>
+  ({ kind: 'table', object: `shipit.${table}`, privilege: 'UPDATE', column_name }));
 
 // Explicit coverage, not a promise that a whole workflow is ready. Most profiles
 // check reads only; subsequent domain changes must review their own write access.
@@ -48,7 +50,15 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
   bookings: { description: 'Core booking and counter-entry reads only', requirements:
     tables('bookings parcels counter_bookings counter_booking_events customers booking_obligations') },
   lots_routes: { description: 'Lot and route planning reads only', requirements:
-    tables('lots lot_memberships lot_commands routes route_lots route_parcels') },
+    tables('lots lot_memberships lot_commands routes route_commands route_lots route_parcels route_manifests route_manifest_parcels route_manifest_sources domain_events') },
+  dispatch_creation: { description: 'Empty lot and route creation; no parcel, journey, membership or provider mutations', requirements: [
+    ...tables('lots lot_memberships lot_commands routes route_commands route_lots route_parcels route_manifests route_manifest_parcels route_manifest_sources domain_events counter_bookings'),
+    ...tables('lots lot_commands routes route_commands route_manifests route_manifest_parcels route_manifest_sources domain_events', 'INSERT'),
+    ...updateColumns('lot_commands', 'state,http_status,result,committed_at,retain_until'),
+    ...updateColumns('route_commands', 'state,http_status,result,committed_at,retain_until'),
+    { kind: 'function', object: 'shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
+    { kind: 'function', object: 'shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
+  ] },
   reconciliation: { description: 'Reconciliation read dependencies only', requirements:
     tables('reconciliation_commands reconciliation_config_versions reconciliation_mapping_versions reconciliation_imports reconciliation_transactions reconciliation_row_outcomes reconciliation_batches reconciliation_matches reconciliation_match_transactions reconciliation_match_sources reconciliation_unmatches reconciliation_classifications reconciliation_review_revisions reconciliation_access_events reconciliation_recorded_sources receiving_accounts receiving_account_revisions cashbook_source_facts') },
   custody: { description: 'Custody reads and required read-access audit inserts; no custody commands', requirements: [
@@ -111,8 +121,11 @@ async function inspect(db: QueryExecutor, role: string, names: readonly string[]
         SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname||'.'||c.relname=object AND c.relkind IN ('r','p','v','m','f')
       ) ELSE (
-        SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-        WHERE n.nspname||'.'||p.proname||'('||oidvectortypes(p.proargtypes)||')'=object
+        -- oidvectortypes separates arguments with ', ' while declared requirements use ','.
+        -- Comparing the raw strings matched only single-argument functions, so every
+        -- multi-argument requirement reported missing_object and db:doctor failed on
+        -- functions that exist and are already granted. Compare resolved identities instead.
+        SELECT to_regprocedure(object)::oid
       ) END AS oid FROM requested
     ) SELECT kind,object,privilege,column_name,
       CASE WHEN oid IS NULL OR (column_name IS NOT NULL AND NOT EXISTS(

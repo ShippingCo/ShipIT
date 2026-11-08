@@ -89,3 +89,8 @@
 .reconciliation-workspace input[type="file"] { max-width: 100%; }
 .reconciliation-pick { padding-block: 12px; border-bottom: 1px solid var(--md-sys-color-outline-variant); }
 .reconciliation-column { display: block; padding-block: 4px; }
+
+/* Drafts sit beside booked parcels, so they have to be told apart at a glance. */
+.draft-needs { font-size: 15px; line-height: 20px; color: #8a6d1f; }
+.saved-draft-note { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 21px; }
+.saved-draft-note .msym { flex: none; color: #8a6d1f; }

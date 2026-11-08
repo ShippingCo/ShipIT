@@ -7,7 +7,7 @@ import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
-import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
+import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, bookingNeeds, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
 import {bookingEntries,type CounterEntry} from '../data-access/booking-entries';
@@ -81,13 +81,22 @@ export function createBookingWorkflow(controller: ScopeController) {
     state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false,validationAttempt:0 };
     listeners.forEach(l => l());
   };
+  /** What the operator still has to supply before this can become a booking with dockets. */
+  const needs = () => bookingNeeds(state.draft, state.additionalParcels,
+    !!state.accountId || !!state.draft.serviceOptionId || state.draft.override !== '');
   return {
-    api, customerApi, accountApi,
+    api, customerApi, accountApi, entryApi,
     entryPending:()=>!!entryIntent,
-    requiresEntry() {
-      const errors=validate(state.draft,'booking');
-      for(const key of ['recipientRef','evidenceRef','handoverState','recipientState','gstin','specialCase','method'] as const)delete errors[key];
-      return Object.values(errors).some(Boolean)||additionalParcelErrors(state.draft,state.additionalParcels).some(e=>Object.values(e).some(Boolean))||!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='';
+    needs,
+    requiresEntry:()=>needs().length>0,
+    /**
+     * Return to the form with everything the operator typed still in place, so finishing a
+     * draft never means typing it a second time. The saved draft row is left as it is; the
+     * counter API has no update, so completing it creates the booking alongside the draft.
+     */
+    reopenDraft() {
+      if(!state.entry||state.busy)return;
+      set({entry:undefined,bookingPhase:'editing',message:'',errors:{},parcelErrors:[]});
     },
     async saveEntry() {
       if(!current()||state.busy||state.recoveryBlocked||state.booking||state.entry||bookingIntent)return;
@@ -97,7 +106,7 @@ export function createBookingWorkflow(controller: ScopeController) {
         retainRecovery(entryIntent);
         const entry=await entryApi.execute(entryIntent);if(!current())return;
         clearRecovery(api.scope);entryIntent=undefined;
-        set({entry,bookingPhase:'ready',message:'Booking saved and confirmed. Missing details are not recorded.'});
+        set({entry,bookingPhase:'ready',message:'Draft saved. It is not a booking yet.'});
       }catch(error){if(!current())return;if(!failed(error,'bookingPhase')){clearRecovery(api.scope);entryIntent=undefined;}}
       finally{set({busy:false});}
     },
@@ -128,6 +137,22 @@ export function createBookingWorkflow(controller: ScopeController) {
       invalidateCommercial();
     },
     recordTaxEntry() {if(locked()||!state.customer||state.draft.evidenceRef)return;invalidateCommercial();set({draft:{...state.draft,recipientRef:state.customer.id,evidenceRef:'COUNTER_ENTRY'}});},
+    /**
+     * Put a saved draft back into the form so finishing it never means typing it again.
+     * Only values the operator themself entered are restored; nothing is confirmed by this,
+     * and the usual validation still decides whether a booking or another draft can be saved.
+     */
+    restoreDraft(fields: Partial<Draft>, parcels: Partial<ParcelDraft>[]) {
+      if (locked()) return;
+      customerIntent = undefined; invalidateCommercial();
+      set({
+        draft: { ...emptyDraft(), ...fields },
+        additionalParcels: parcels.map(parcel => ({ ...emptyParcel(), ...parcel, localKey: ++nextParcelKey })),
+        customer: undefined, accountId: undefined, customerPhase: 'editing',
+        errors: {}, parcelErrors: [],
+        message: 'Draft opened. Add what is still missing, then save the booking.',
+      });
+    },
     change(field: Field, value: string) {
       if (locked()) return;
       creditIntent=undefined;set({creditRequestId:undefined,creditApprovalId:undefined,creditReason:undefined});

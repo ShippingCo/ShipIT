@@ -107,7 +107,7 @@
 .workspace-franchise .tf-label { font-size: 10px; line-height: 14px; color: var(--workspace-muted); }
 .workspace-franchise select { height: 34px; font-size: 11.5px; padding-block: 5px; }
 .workspace-nav-toggle { display: none; border: 1px solid var(--workspace-border); border-radius: 7px; width: 40px; height: 40px; align-items: center; justify-content: center; flex: none; }
-.operator-shell .main-area { width: calc(100% - var(--drawer-w)); min-height: 100dvh; background: white; border-top-left-radius: 24px; }
+.operator-shell .main-area { width: calc(100% - var(--drawer-w)); min-height: 100dvh; background: white; }
 .operator-workspace.ops-workspace { padding: 28px 32px 40px; max-width: 1600px; width: 100%; margin-inline: auto; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 .operator-workspace > * { min-width: 0; }
 .operator-workspace:focus { outline: none; }

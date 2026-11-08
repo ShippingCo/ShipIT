@@ -13,7 +13,7 @@ import { createParcelCustodyService } from '../../../../apps/api/src/modules/cus
 await test('declared read profiles repair actual SELECT access without granting domain mutations', { timeout: 60000 }, async t => {
   const db = await provisionDatabase(t); await db.migrate();
   const runtime = db.runtimePool(), owner = db.ownerPool();
-  const names = Object.keys(runtimeAccessProfiles).filter(name => !['settings', 'receiving_accounts'].includes(name));
+  const names = Object.keys(runtimeAccessProfiles).filter(name => !['settings', 'receiving_accounts', 'dispatch_creation'].includes(name));
   const target = { role: db.runtimeRole, database: db.database };
   assert.ok(Object.values((await checkRuntimeAccess(runtime, names)).profiles).every(profile => profile.status === 'blocked'));
   await repairRuntimeAccess(owner, target, names);

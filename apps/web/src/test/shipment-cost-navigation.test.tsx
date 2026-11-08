@@ -6,6 +6,7 @@ import {useNavigate,useLocation} from 'react-router-dom';
 import {contributionColumns,type ContributionPage,type OperatorContext} from '@shippingco/shared';
 import OperatorApp from '../operator/OperatorApp';
 import {createScopeController} from '../operator/scope';
+import {ApiFailure} from '../data-access/errors';
 import {shipmentCosts} from '../data-access/shipment-cost';
 import {shipmentCostCommand} from '../data-access/shipment-cost-command';
 import {scopedApi} from '../data-access/scoped-api';
@@ -37,7 +38,11 @@ it('preserves navigation scope only for identical complete context and discards 
  const controller=createScopeController();let current=structuredClone(context);vi.spyOn(controller.source,'loadContext').mockImplementation(async()=>current);await controller.load(id(2),'/business/reports');const first=controller.runtime.ticket();await controller.navigate(id(2),'/business/settings?view=advanced');expect(controller.runtime.ticket()).toBe(first);
  for(const next of [{...context,franchises:[{...context.franchises[0]!,roles:['org_admin' as const]}]},{...context,user_id:id(7)},{...context,franchises:[...context.franchises,{...context.franchises[0]!,id:id(8)}]}]){const before=controller.runtime.ticket();current=next;await controller.navigate(id(2),'/business/reports');expect(before.signal.aborted).toBe(true);}expect(first.signal.aborted).toBe(true);current=context;const changed=controller.runtime.ticket();await controller.load(id(2),'/business/reports');expect(changed.signal.aborted).toBe(true);
  let finish!:(c:OperatorContext)=>void;vi.spyOn(controller.source,'loadContext').mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));const old=controller.navigate(id(2),'/business/settings?view=advanced');await controller.load(id(2),'/business/reports');finish({...context,user_id:id(8)});await old;expect(controller.snapshot().path).toBe('/business/reports');expect(controller.runtime.ticket().authority?.userId).toBe(id(1));
- const beforeFailure=controller.runtime.ticket();vi.spyOn(controller.source,'loadContext').mockRejectedValueOnce(new Error('Context unavailable'));await controller.navigate(id(2),'/business/settings?view=advanced');expect(beforeFailure.signal.aborted).toBe(true);expect(controller.snapshot()).toMatchObject({status:'error',context:null});
+ // An unreachable server proves nothing about authority, so the last authorized context and
+ // its in-flight ticket survive and the operator is told only that the server did not answer.
+ const beforeUnreachable=controller.runtime.ticket();vi.spyOn(controller.source,'loadContext').mockRejectedValueOnce(new Error('Context unavailable'));await controller.navigate(id(2),'/business/settings?view=advanced');expect(beforeUnreachable.signal.aborted).toBe(false);expect(controller.snapshot()).toMatchObject({status:'loaded',context});expect(controller.snapshot().notice).toContain('could not reach the server');
+ // A real authorization answer still discards the cached context and its authority.
+ const beforeFailure=controller.runtime.ticket();vi.spyOn(controller.source,'loadContext').mockRejectedValueOnce(new ApiFailure('ACTION_FORBIDDEN',{status:403}));await controller.navigate(id(2),'/business/settings?view=advanced');expect(beforeFailure.signal.aborted).toBe(true);expect(controller.snapshot()).toMatchObject({status:'error',context:null,reason:'access'});
 });
 it('recovers the identical private import preview after actual OperatorApp Back and Forward without retaining a replacement file',async()=>{
  const writes:{key:string;body:string;path:string}[]=[];const owner={...context,franchises:[{...context.franchises[0]!,roles:['franchise_admin']}]};

@@ -112,6 +112,8 @@
 }
 .st-booked, .st-checked_in, .st-dispatched, .st-in_transit { border-color: var(--md-outline-variant); }
 .st-booked { background: var(--status-booked-bg); color: var(--status-booked-fg); }
+/* A draft has no parcel behind it, so it must not look like one of the booked states. */
+.st-draft { background: #fff; border-color: #d9c48a; color: #8a6d1f; }
 .st-checked_in { background: var(--status-checked_in-bg); color: var(--status-checked_in-fg); }
 .st-dispatched { background: var(--status-dispatched-bg); color: var(--status-dispatched-fg); }
 .st-in_transit { background: var(--status-in_transit-bg); color: var(--status-in_transit-fg); }

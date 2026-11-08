@@ -46,7 +46,7 @@ function FinancialWorkspace({controller,roles}:{controller:ScopeController;roles
  const run:Run=async(intent,id)=>{target.current=id;try{const value=await command.run(intent);if(controller.runtime.isCurrent(api.scope))saved(value.id);}catch{/* CommandNotice retains the safe outcome and original intent. */}};
  const retry=()=>{void command.retry().then(value=>{if(value&&controller.runtime.isCurrent(api.scope))saved(value.id);}).catch(()=>{});};
  const open=(id:string)=>{if(!locked){command.reset();setTask('requests');setSelected(id);setAmending(null);setRevision(value=>value+1);}};
- return <div className="ops-page finance-workflow-page"><section className="finance-workspace-intro"><PageHeader title="Approvals & refunds" description="Request a change to a booking’s charges or check a saved request." eyebrow="Money"/>
+ return <div className="ops-page finance-workflow-page"><section className="finance-workspace-intro"><PageHeader title="Approvals and refunds" description="Request a change to a booking’s charges or check a saved request." eyebrow="Money"/>
  <WorkflowTabs label="Financial tasks" value={task} onChange={setTask} items={[
    ...(canRequest?[{value:'compose',label:'New request',disabled:locked}]:[]),
    {value:'requests',label:'Saved requests',disabled:locked},

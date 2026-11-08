@@ -1,59 +1,109 @@
-/* The selected mockup's chrome is shared by both data compositions. */
+/* The console chrome is shared by the demo and the authenticated workspace.
+   Surfaces are white; separation is a single 1px hairline and space, never a grey fill.
+   No text sits below 15px, and nothing tappable below 44px. */
 .shell.console-frame {
-  --drawer-w: 264px;
-  background: var(--md-surface);
+  --drawer-w: 268px;
+  --console-hairline: #e3e6ea;
+  --console-ink-muted: #5b6672;
+  background: #fff;
   align-items: stretch;
 }
-.shell.console-frame .drawer-pane { display:flex; background:var(--md-surface); height:100dvh; }
-.shell.console-frame .main-area { width:auto; border-radius:0; }
-.console-brand-text { min-width:0; }
-.console-navigation { overflow-y:auto; flex:1; min-height:0; }
-.console-frame .drawer-item { min-height:56px; height:auto; padding:16px; border-radius:var(--shape-full); font-size:14px; }
-.console-frame .drawer-item.active { background:var(--md-primary-container); color:var(--md-on-primary-container); }
-.console-frame .appbar { min-height:var(--topbar-h); background:var(--md-surface); }
-.console-frame .appbar .btn { border-radius:var(--shape-full); height:40px; padding:0 24px; background:var(--md-primary); }
-.console-scope { padding:12px 20px 0; }
-.console-scope .tf { margin:0; }
-.console-more { margin-top:12px; border-top:1px solid var(--md-outline-variant); padding-top:12px; }
-.console-more summary { padding:12px 16px; cursor:pointer; font-size:14px; font-weight:600; }
-.console-booking-fab { position:fixed; right:24px; bottom:24px; z-index:20; text-decoration:none; }
-.console-scrim { display:none; }
-.console-search-form { display:grid; gap:16px; margin-bottom:16px; }
-.console-search-results { max-height:45vh; overflow-y:auto; margin-block:16px; }
-.console-search-results .drawer-item { height:auto; min-height:48px; }
-.console-search-detail { display:block; }
-@media(max-width:1020px) {
-  .shell.console-frame .drawer-pane { display:flex; visibility:hidden; }
-  .console-frame .drawer-pane.open { visibility:visible; }
-  .shell.console-frame .main-area { margin-left:0; }
-  .console-scrim { display:block; position:fixed; inset:0; background:var(--md-scrim); z-index:25; }
-  .console-frame .workspace-skip-link { left:12px; }
+.shell.console-frame .drawer-pane {
+  display: flex; flex-direction: column; height: 100dvh;
+  background: #fff; border-right: 1px solid var(--console-hairline);
 }
-@media(prefers-reduced-motion:reduce) { .shell.console-frame .drawer-pane { transition:none; } }
-@media print { .console-frame .drawer-pane,.console-frame .appbar,.console-booking-fab,.console-scrim { display:none; } }
-/* Workspaces use the same blue ink as the parcel label at sign-in. */
-.console-frame .console-create { display:flex; align-items:center; justify-content:center; gap:.5rem; margin:10px 8px 18px; padding:11px 14px; min-height:42px; color:white; background:var(--md-primary); border-radius:9px; text-decoration:none; font-size:.875rem; font-weight:600; }
-.console-frame .console-create:hover { background:var(--md-primary-hover); }
-.console-group-label { margin:16px 12px 5px; color:#586372; font-size:.725rem; font-weight:650; letter-spacing:.075em; text-transform:uppercase; }
-.console-frame .console-task-group .drawer-item, .console-frame .console-more .drawer-item { min-height:40px; padding:9px 12px; height:auto; border-radius:8px; }
-.console-frame .console-task-group .drawer-item > .msym { color:#647283; }
-.console-frame .console-task-group .drawer-item.active { box-shadow:inset 3px 0 var(--md-primary); }
-.console-frame .console-task-group .drawer-item.active > .msym { color:var(--md-primary); }
-.shell.console-frame .drawer-pane { background:#f0f0f0; }
-.console-frame .console-scope { padding:10px 18px 0; }
-.console-frame .console-scope .tf-box { background:#fff; }
-@media(min-width:1021px) {
-  .shell.console-frame { background:#f0f0f0; }
-  .shell.console-frame .main-area { border-radius:20px 0 0 0; background:white; }
-  .console-frame .main-area > .appbar { border-radius:20px 0 0 0; }
+.shell.console-frame .main-area { width: auto; border-radius: 0; background: #fff; }
+.console-brand-text { min-width: 0; }
+
+/* The nav is the only scrolling region, so every destination stays reachable at any height. */
+.console-navigation { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 10px 16px; }
+.console-frame .drawer-head { border-bottom: 1px solid var(--console-hairline); }
+.console-frame .drawer-foot { flex: none; border-top: 1px solid var(--console-hairline); }
+.console-scope { flex: none; padding: 12px 18px 4px; }
+.console-scope .tf { margin: 0; }
+.console-frame .console-scope .tf-box { background: #fff; }
+
+/* One destination per row: icon, then label. No fill, at rest or active. */
+.console-frame .drawer-item {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; height: auto; padding: 10px 12px;
+  border-radius: 10px; font-size: 15px; line-height: 20px; font-weight: 500;
+  color: var(--md-on-surface); background: none; text-decoration: none;
 }
-.console-tool-branch { margin-inline-start:10px; padding-inline-start:9px; border-inline-start:1px solid #bdc8d3; }
-.console-tool-branch .drawer-item { position:relative; }
-.console-tool-branch .drawer-item::before { content:""; position:absolute; width:8px; height:8px; left:-10px; top:calc(50% - 8px); border:solid #bdc8d3; border-width:0 0 1px 1px; border-bottom-left-radius:5px; }
-.console-tool-branch .drawer-item.active::before { border-color:#245caa; border-width:0 0 2px 2px; }
-.console-search-results .drawer-item { display:flex; gap:10px; padding:8px 10px; border-radius:8px; min-height:44px; }
-.console-result-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; background:#eef3f8; color:#405f81; flex:none; }
-.console-result-next { margin-inline-start:auto; color:#647283; }
-.console-search-results .drawer-item:is(:hover,:focus-visible) { background:#edf4fb; }
-@media(min-width:1021px){.console-frame .appbar .appbar-cta { display:none; }}
-@media(pointer:coarse){.console-frame .console-task-group .drawer-item,.console-frame .console-more .drawer-item { min-height:44px; }}
+.console-frame .drawer-item > .msym { flex: none; color: var(--console-ink-muted); }
+.console-frame .drawer-item > span { min-width: 0; overflow-wrap: anywhere; }
+.console-frame .drawer-item:is(:hover, :focus-visible) { background: none; box-shadow: inset 0 0 0 1px var(--console-hairline); }
+.console-frame .drawer-item.active {
+  background: none; color: var(--md-primary); font-weight: 650;
+  box-shadow: inset 3px 0 var(--md-primary);
+}
+.console-frame .drawer-item.active > .msym { color: var(--md-primary); }
+.console-frame .drawer-item .count {
+  /* An outlined count, not a filled dot: the number is the point, so it must be readable. */
+  margin-inline-start: auto; flex: none; display: flex; align-items: center; justify-content: center;
+  min-width: 26px; height: auto; min-height: 24px; padding: 1px 8px;
+  background: #fff; border: 1px solid var(--console-hairline); border-radius: var(--shape-full);
+  font-size: 15px; line-height: 20px; font-weight: 600; color: var(--console-ink-muted);
+}
+.console-frame .drawer-item .count,
+.console-frame .drawer-item.active .count { background: #fff; }
+.console-frame .drawer-item.active .count { border-color: var(--md-primary); color: var(--md-primary); }
+
+/* Groups are separated by space and one hairline, and are never collapsed out of sight. */
+.console-task-group + .console-task-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--console-hairline); }
+.console-group-label {
+  margin: 6px 12px 6px; color: var(--console-ink-muted);
+  font-size: 15px; line-height: 20px; font-weight: 600; letter-spacing: 0;
+}
+
+/* New Booking is the counter's one standing action, so it reads as a button, not a row. */
+.console-frame .console-create {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 12px 10px 14px; padding: 12px 16px; min-height: 48px;
+  color: #fff; background: var(--md-primary); border-radius: 10px;
+  text-decoration: none; font-size: 15px; line-height: 20px; font-weight: 600;
+}
+.console-frame .console-create:hover { background: var(--md-primary-hover); }
+
+.console-frame .appbar { min-height: var(--topbar-h); background: #fff; border-bottom: 1px solid var(--console-hairline); }
+.console-frame .appbar .btn { border-radius: var(--shape-full); height: 44px; padding: 0 24px; background: var(--md-primary); }
+.console-booking-fab { position: fixed; right: 24px; bottom: 24px; z-index: 20; text-decoration: none; }
+.console-scrim { display: none; }
+
+/* Search results reuse the same row, so a result and a destination look alike on purpose. */
+.console-search-form { display: grid; gap: 16px; margin-bottom: 16px; }
+.console-search-results { max-height: 45vh; overflow-y: auto; margin-block: 16px; }
+.console-search-results .drawer-item { display: flex; gap: 12px; padding: 10px 12px; border-radius: 10px; min-height: 44px; height: auto; }
+.console-search-detail { display: block; }
+.console-result-icon {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+  border: 1px solid var(--console-hairline); border-radius: 8px; background: #fff; color: var(--console-ink-muted);
+}
+.console-result-next { margin-inline-start: auto; color: var(--console-ink-muted); }
+.console-search-results .drawer-item:is(:hover, :focus-visible) { background: none; box-shadow: inset 0 0 0 1px var(--console-hairline); }
+
+@media (max-width: 1020px) {
+  .shell.console-frame .drawer-pane { display: flex; visibility: hidden; }
+  .console-frame .drawer-pane.open { visibility: visible; }
+  .shell.console-frame .main-area { margin-left: 0; }
+  .console-scrim { display: block; position: fixed; inset: 0; background: var(--md-scrim); z-index: 25; }
+  .console-frame .workspace-skip-link { left: 12px; }
+}
+@media (min-width: 1021px) { .console-frame .appbar .appbar-cta { display: none; } }
+@media (prefers-reduced-motion: reduce) { .shell.console-frame .drawer-pane { transition: none; } }
+@media print { .console-frame .drawer-pane, .console-frame .appbar, .console-booking-fab, .console-scrim { display: none; } }
+
+/* The shop's identity, not a second copy of the franchise picker below it. */
+.console-frame .drawer-head { padding: 16px 18px 14px; gap: 12px; }
+.console-frame .console-brand-text .t-title-md {
+  font-size: 16px; line-height: 22px; font-weight: 650; overflow-wrap: anywhere;
+  /* The shop's own name is the one string that must never be cut to an ellipsis. */
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
+.console-frame .console-brand-text .t-body-sm {
+  font-size: 15px; line-height: 20px; color: var(--console-ink-muted);
+  white-space: normal; text-overflow: clip;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+/* One shop needs no picker: name the counter instead of offering a list of one. */
+.console-scope-single { margin: 0; font-size: 15px; line-height: 20px; color: var(--console-ink-muted); }

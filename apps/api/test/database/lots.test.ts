@@ -144,7 +144,11 @@ await test('R08/W04 exact roles, current replay revocation, disabled roots and m
   assert.equal((await s.request('POST','lots',body,actor,key)).statusCode,201);
   await s.memberships.revokeMembership(s.admin.token,actor.member.id,{expected_version:1});
   assert.equal((await s.request('POST','lots',body,actor,key)).statusCode,404);
-  for(const bad of [{name:'bad',destination_key:'SYN_DEST',organization_id:org},{name:'bad',destination_key:'unknown'},{name:'bad',destination_key:'UNKNOWN'}])assert.equal((await s.request('POST','lots',bad)).statusCode,422);
+  for(const bad of [{name:'bad',destination_key:'SYN_DEST',organization_id:org},{name:'bad',destination_key:'unknown'}])assert.equal((await s.request('POST','lots',bad)).statusCode,422);
+  const newDestination=await s.request('POST','lots',{name:'New destination lot',destination_key:'NEW_DESTINATION'});
+  assert.equal(newDestination.statusCode,201,newDestination.body);
+  assert.equal(newDestination.json().destination_key,'NEW_DESTINATION');
+  assert.equal(newDestination.json().active_member_count,0);
   const before=await s.effects();await s.db.adminQuery("UPDATE shipit.franchises SET lifecycle='disabled',version=version+1 WHERE id=$1",[A]);
   assert.equal((await s.request('POST','lots',body)).json().error.code,'FRANCHISE_DISABLED');
   await s.db.adminQuery("UPDATE shipit.organizations SET lifecycle='disabled',version=version+1 WHERE id=$1",[org]);
@@ -289,7 +293,7 @@ await test('upgrade preserves existing booking and dispatch events/audit byte-fo
   const legacy=await legacyDispatch(s.pool,s.operator.token,parcelId,legacyKey,legacyBody);
   const beforeEvents=(await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows;
   const beforeAudit=(await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows;assert.ok(beforeEvents.length>=4);assert.ok(beforeAudit.length>0);
-  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:54});await db.prepareRoutes();
+  db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:55});await db.prepareRoutes();
   assert.deepEqual((await db.adminQuery('SELECT event_id,envelope FROM shipit.domain_events ORDER BY event_id')).rows,beforeEvents);
   assert.deepEqual((await db.adminQuery('SELECT * FROM shipit.audit_history ORDER BY id')).rows,beforeAudit);
   const {createParcelService}=await import('../../src/modules/parcels/service.ts');
