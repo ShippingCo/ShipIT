@@ -1,9 +1,9 @@
 .reference-service .workspace-page-heading h1 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .reference-service .workspace-page-description { margin:0; }
 .reference-service .btn { border-radius:var(--shape-full); }
-.reference-service .card { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); box-shadow:none; }
+.reference-service .card { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); box-shadow:var(--shadow-rest); }
 .reference-service .repgrid { margin-block:20px 28px; }
-.reference-service .repcard { border:1px solid var(--md-outline-variant); box-shadow:none; background:var(--md-surface); }
+.reference-service .repcard { border:1px solid var(--md-outline-variant); border-radius:var(--shape-card); box-shadow:var(--shadow-rest); background:var(--md-surface); }
 .reference-service .repcard[aria-pressed="true"] { border-color:var(--md-primary); }
 .reference-service .repcard:disabled { opacity:.55; cursor:default; }
 .reference-message-feed { list-style:none; padding:6px; margin:0; border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); }
@@ -24,3 +24,17 @@
 .reference-service .reference-receipt-dates { flex:1 0 100%; width:100%; min-width:0; }
 .reference-service .reference-receipt-dates .tf { flex:1 1 180px; max-width:none; }
 .reference-receipt-dates>p { flex-basis:100%; margin:0; }
+
+/* The e-way boundary.
+   ---------------------------------------------------------------------------
+   Provenance: "08 E-way Bills/PRD.md" R-1. First on the list and repeated once
+   where a number is typed in, because everything on this screen is a record of
+   another system's state and an operator who learns that after reading the
+   table has already assumed otherwise. */
+.eway-boundary {
+  display: flex; align-items: flex-start; gap: 10px; margin: 0 0 16px;
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--md-outline-variant); background: var(--md-surface-container-low, var(--grey-100));
+  font-size: 15px; line-height: 21px; color: var(--md-on-surface);
+}
+.eway-boundary .msym { flex: none; font-size: 21px; color: var(--md-on-surface-variant); }

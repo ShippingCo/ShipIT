@@ -12,7 +12,7 @@ import {receipts} from '../data-access/receipts';
 import type {ScopedApi} from '../data-access/scoped-api';
 import {printReceiptFor,loadShopLogo} from '../utils/receipt';
 import {useCommand,usePagedResource,useResource} from './hooks';
-import {CommandNotice} from './AsyncState';
+import {DataRefresh,CommandNotice} from './AsyncState';
 import {Loading,Failure} from './AsyncState';
 import {Msym} from '../components/m3/Icon';
 import {Button,Checkbox} from '../components/m3/Button';
@@ -21,6 +21,7 @@ import {SearchBar,FilterChips,DateFilter,dateWindow,type DatePreset,type CustomR
 import {TextArea,SelectField} from '../components/m3/Input';
 import {Dialog} from '../components/m3/Dialog';
 import {Journey} from '../components/m3/Journey';
+import {PageHeader} from '../components/workspace/Workspace';
 import type {ParcelStatus as JourneyStatus} from '../data/types';
 
 const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
@@ -93,10 +94,16 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
  const open=allRows.find(r=>r.id===openId),refresh=()=>{page.reload();entries.reload();metadata.reload();lotPage.reload();};
  const close=()=>{setOpenId(null);if(selected){const next=new URLSearchParams(params);next.delete('open');next.delete('parcel');setParams(next,{replace:true});}};
  return <div className="page saved-bookings-demo" aria-label="Saved bookings">
-  <h1 className="workspace-visually-hidden">Packages</h1>
+  <PageHeader title="Packages"
+   actions={<DataRefresh resource={{phase:[page,entries,metadata,lotPage].some(r=>r.phase==='loading')?'loading':'ready',reload:refresh}}/>}/>
   <div className="toolbar"><SearchBar value={q} onChange={setQ} autoFocus placeholder="Search docket, name, phone or city" label="Search packages"/><DateFilter preset={range} onPreset={setRange} custom={custom} onCustom={setCustom}/></div>
   <FilterChips options={chipOptions} value={filter} onChange={setFilter} counts={counts}/>
-  {pickedIds.length>0&&<div className="bulkbar"><span className="bulkbar-n">{pickedIds.length} selected</span><Button size="sm" variant="outlined" icon="warehouse" disabled={!canBulk||bulkBusy||selectedParcels.some(p=>p.status!=='booked')} onClick={()=>setBulkAction('check_in')}>Check in at hub</Button><Button size="sm" variant="outlined" icon="local_shipping" disabled={!canBulk||bulkBusy||selectedParcels.some(p=>p.status!=='checked_in')} onClick={()=>setBulkAction('dispatch')}>Dispatch</Button><Button size="sm" variant="outlined" icon="layers" disabled title="Open a booking to assign its lot">Move to lot</Button><button type="button" className="bulkbar-clear" disabled={bulkBusy} onClick={()=>setPicked({})}>Clear</button></div>}
+  {pickedIds.length>0&&<BulkBar chosen={pickedIds.length} drafts={pickedIds.length-selectedParcels.length}
+   hidden={pickedIds.filter(id=>!list.some(row=>row.id===id)).length}
+   notBooked={selectedParcels.filter(p=>p.status!=='booked').length}
+   notAtHub={selectedParcels.filter(p=>p.status!=='checked_in').length}
+   enabled={canBulk&&!bulkBusy} busy={bulkBusy}
+   act={action=>setBulkAction(action)} clear={()=>setPicked({})}/>}
   {page.phase==='error'&&<Failure retry={page.reload} label="Shipment bookings could not be loaded."/>}
   {entries.phase==='error'&&<Failure retry={entries.reload} label="Saved bookings could not be loaded."/>}
   <Card><div className="tbl-wrap"><table className="tbl" aria-label="Packages"><thead><tr>
@@ -110,8 +117,53 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
   {(page.phase==='loading'||entries.phase==='loading')&&!list.length?<Loading label="Loading bookings…"/>:!list.length&&<EmptyState icon={q?'search_off':'inventory_2'} title={q?'Nothing matches that search':'No packages here'} sub={q?'Try a docket number, name or phone.':'Parcels appear here as soon as they are booked.'} action={q?<Button variant="outlined" style={{marginTop:12}} onClick={()=>setQ('')}>Clear search</Button>:undefined}/>}
   </div></Card>
   {page.page.has_more&&<Button variant="outlined" onClick={page.loadMore} disabled={page.phase==='more'}>Load more bookings</Button>}
-  {bulkAction&&operationalBulk&&<Dialog open size="lg" title={bulkAction==='check_in'?'Check in selected parcels':'Dispatch selected parcels'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulkAction(null);}}>{operationalBulk(selectedParcels,bulkAction,setBulkBusy,refresh)}</Dialog>}
+  {bulkAction&&operationalBulk&&<Dialog open size="lg" title={bulkAction==='check_in'?'Check in at the hub':'Send out for delivery'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulkAction(null);}}>{operationalBulk(selectedParcels,bulkAction,setBulkBusy,refresh)}</Dialog>}
   {open&&<SavedBookingDialog key={open.id} row={open} api={api} lots={lotPage.value?.items??[]} close={close} refresh={refresh} operationalDetail={operationalDetail}/>}
+ </div>;
+}
+
+
+/**
+ * The bar that appears when parcels are ticked.
+ *
+ * Three things it has to get right, and did not:
+ *
+ *  - It said "2 selected". An operator about to move other people's parcels reads
+ *    a count of parcels, not a count of selections.
+ *  - A disabled action gave no reason, or hid one in a `title` attribute nobody
+ *    hovers. An action the operator can see but cannot press, with no explanation,
+ *    reads as a broken button.
+ *  - Ticking a parcel and then changing the filter hid it while keeping it chosen,
+ *    so the count disagreed with the table and nothing said why.
+ */
+export function BulkBar({chosen,drafts,hidden,notBooked,notAtHub,enabled,busy,act,clear}:{
+ chosen:number;drafts:number;hidden:number;notBooked:number;notAtHub:number;
+ enabled:boolean;busy:boolean;act:(action:'check_in'|'dispatch')=>void;clear:()=>void;
+}){
+ const parcels=chosen===1?'parcel':'parcels';
+ const blocked=(n:number,state:string)=>{
+  if(n===0)return null;
+  if(drafts===chosen)return `${drafts===1?'That is a draft':'Those are drafts'}, not booked parcels yet.`;
+  // When everything chosen is blocked, saying "3 of the 3" makes the operator do
+  // arithmetic to reach "all of them".
+  if(n>=chosen)return chosen===1?`It is ${state}.`:`None of them is ${state.replace(/^not /,'')}.`;
+  return `${n} of the ${chosen} ${n===1?'is':'are'} ${state}.`;
+ };
+ const checkInWhy=blocked(notBooked+drafts,'not waiting to be checked in');
+ const dispatchWhy=blocked(notAtHub+drafts,'not at a hub yet');
+ return <div className="bulkbar" role="group" aria-label="Chosen parcels">
+  <div className="bulkbar-head">
+   <span className="bulkbar-n">{chosen} {parcels} chosen</span>
+   {hidden>0&&<span className="bulkbar-hidden">{hidden} not shown by this filter</span>}
+  </div>
+  <div className="bulkbar-actions">
+   <Button size="sm" variant="filled" icon="warehouse" disabled={!enabled||!!checkInWhy} onClick={()=>act('check_in')}>Check in at hub</Button>
+   <Button size="sm" variant="outlined" icon="local_shipping" disabled={!enabled||!!dispatchWhy} onClick={()=>act('dispatch')}>Send out for delivery</Button>
+   <button type="button" className="bulkbar-clear" disabled={busy} onClick={clear}>Clear</button>
+  </div>
+  {(checkInWhy||dispatchWhy)&&<p className="bulkbar-why">{checkInWhy&&dispatchWhy&&checkInWhy===dispatchWhy?checkInWhy
+   :[checkInWhy&&`Cannot check in — ${checkInWhy.charAt(0).toLowerCase()+checkInWhy.slice(1)}`,
+     dispatchWhy&&`Cannot send out — ${dispatchWhy.charAt(0).toLowerCase()+dispatchWhy.slice(1)}`].filter(Boolean).join(' ')}</p>}
  </div>;
 }
 

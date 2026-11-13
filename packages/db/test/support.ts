@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { appendFile, readFile } from 'node:fs/promises';
+import { appendFile, readdir, readFile } from 'node:fs/promises';
 import type { TestContext } from 'node:test';
 import pg, { type QueryResultRow } from 'pg';
 import { validateTestDatabaseConfig, type TestDatabasePolicy } from '@shippingco/testkit';
 import { createDatabaseConfig, createPool, pgOptions, runMigrations, type DatabasePool } from '../src/index.ts';
 import { closeClient } from '../src/shutdown.ts';
+
+/**
+ * The name for a synthetic forward-repair migration in a copied migrations directory.
+ *
+ * node-pg-migrate rejects a run whose pending file sorts before an already-applied one, so a
+ * hard-coded timestamp stops working the moment a newer migration is added — which is exactly
+ * how these tests broke. Deriving the name from the directory keeps them honest instead.
+ */
+export async function forwardRepairMigration(directory: string, suffix: string): Promise<string> {
+  const installed = (await readdir(directory)).filter(name => name.endsWith('.cjs')).sort();
+  const latest = Number(installed.at(-1)!.split('-')[0]);
+  assert.ok(Number.isSafeInteger(latest), 'Migration files must start with a timestamp');
+  return `${latest + 1000}-synthetic-forward-${suffix}.cjs`;
+}
 
 /** Compare pre-138 event facts while independently rejecting fabricated receipt provenance. */
 export function preReceiptEvent(row:Record<string,unknown>):Record<string,unknown> {

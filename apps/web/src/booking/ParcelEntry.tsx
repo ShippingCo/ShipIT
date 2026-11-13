@@ -4,6 +4,7 @@ import {Msym} from '../components/m3/Icon';
 import {ConfirmDialog} from '../components/m3/Dialog';
 import {PhoneField} from './PhoneField';
 import {UnitField,displayUnits} from './UnitField';
+import {WeightField,ParcelSize} from './WeightField';
 import {parcelErrors,receiverFields,type Errors,type ParcelDraft} from './form';
 
 const contentsTypes = [
@@ -42,11 +43,14 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
     {primaryFields}
     <div className="counter-grid">
       {!primaryFields&&<><TextField {...props('docket')} label={label('Docket number','docket number')} maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
-      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/></>}
+      <WeightField id={id('weight')} label={first?'Weight':'Package '+number+' · Weight'} value={parcel.weight} unit={parcel.weightUnit} disabled={disabled}
+        error={errors.weight?'Enter a positive weight, greater than zero.':undefined}
+        onChange={value=>onChange('weight',value)} onUnit={value=>onChange('weightUnit',value)}/></>}
       <SelectField {...props('contentsType')} label={label('Contents type','contents type')} options={contentsTypes}/>
       <TextField {...props('contentsDescription')} label={label('Contents description','contents description')} maxLength={200} placeholder="e.g. Cotton shirts"/>
       {['liquid','semi_liquid'].includes(parcel.contentsType)&&
         <UnitField {...props('liquidQuantity')} places={3} label={label('Liquid quantity (litres)','liquid quantity (litres)')}/>}
+      {!primaryFields&&<ParcelSize parcel={parcel} disabled={disabled} errors={errors} idFor={id} labelFor={side=>label(side,side.toLowerCase())} onChange={onChange}/>}
       {!primaryFields&&<UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} helper="Optional"/>}
     </div>
     {!hideReceiver&&<>

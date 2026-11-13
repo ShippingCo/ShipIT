@@ -17,9 +17,9 @@
 }
 
 .service-reports .report-choice {
-  background:#e8f1fb;
-  color:#183b65;
-  border:1px solid #c9dded;
+  background:var(--accent-subtle);
+  color:var(--accent-on-subtle);
+  border:1px solid var(--border-strong);
   padding:16px 20px;
   border-radius:12px;
   align-items:center;
@@ -32,15 +32,15 @@
   width:40px;
   border-radius:10px;
   background:#fff;
-  color:#245caa;
+  color:var(--accent);
 }
 .report-choice>.tf { width:min(100%,320px); }
-.service-reports .report-choice>p { max-width:34ch; padding-top:14px; margin:0; font-size:13px; color:#34546f; }
-.report-measure-band { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:18px 0 14px; background:#f5f8fc; border:1px solid #d5e0ec; border-radius:12px; overflow:hidden; }
+.service-reports .report-choice>p { max-width:34ch; padding-top:14px; margin:0; font-size:13px; color:var(--text); }
+.report-measure-band { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:18px 0 14px; background:var(--grey-200); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
 .report-measure-band>div { padding:16px 18px; min-width:0; }
-.report-measure-band>div+div { border-inline-start:1px solid #d5e0ec; }
-.report-measure-band dt { font-size:12px; color:#3e566c; }
-.report-measure-band dd { margin:8px 0 0; font-size:clamp(19px,2vw,31px); line-height:1.2; letter-spacing:-.025em; color:#183b65; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.report-measure-band>div+div { border-inline-start:1px solid var(--border); }
+.report-measure-band dt { font-size: var(--text-xs); color:var(--text); }
+.report-measure-band dd { margin:8px 0 0; font-size:clamp(19px,2vw,31px); line-height:1.2; letter-spacing:-.025em; color:var(--accent-on-subtle); font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .report-calculation { margin:12px 0; }
 .report-breakdown { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr)); gap:8px 20px; margin:12px 0; }
 .report-breakdown>div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--workspace-border); padding:8px 0; }
@@ -52,8 +52,8 @@
 .report-outcomes dl>div { display:grid; grid-template-columns:minmax(100px,1fr) minmax(0,2fr); gap:12px; align-items:center; padding:7px 0; }
 .report-outcomes dd { display:flex; align-items:center; gap:10px; margin:0; }
 .report-outcomes dd strong { min-width:3ch; text-align:end; font-variant-numeric:tabular-nums; }
-.report-outcome-track { flex:1; height:9px; background:#e8f1fb; border-radius:5px; overflow:hidden; }
-.report-outcome-track i { display:block; height:100%; background:#245caa; border-radius:inherit; }
+.report-outcome-track { flex:1; height:9px; background:var(--accent-subtle); border-radius:5px; overflow:hidden; }
+.report-outcome-track i { display:block; height:100%; background:var(--accent); border-radius:inherit; }
 @media(max-width:680px) {
   .service-reports .report-choice { display:grid; grid-template-columns:32px minmax(0,1fr); gap:5px 12px; padding:12px 14px; }
   .report-choice .report-choice-icon { width:32px;height:32px; align-self:end; margin-bottom:4px; }
@@ -61,7 +61,7 @@
   .report-measure-band { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .report-measure-band>div { padding:14px 12px; }
   .report-measure-band>div:nth-child(3){ border-inline-start:0; }
-  .report-measure-band>div:nth-child(n+3){ border-top:1px solid #d5e0ec; }
+  .report-measure-band>div:nth-child(n+3){ border-top:1px solid var(--border); }
 }
 
 .report-coverage { padding:14px 0; border-block-end:1px solid var(--workspace-border); }
@@ -73,9 +73,37 @@
 @media(max-width:500px) {
  .report-measure-band:has(>div:nth-child(3):last-child) { grid-template-columns:repeat(3,minmax(0,1fr)); }
  .report-measure-band:has(>div:nth-child(3):last-child)>div { padding:10px; border-block-start:0; }
- .report-measure-band:has(>div:nth-child(3):last-child)>div+div { border-inline-start:1px solid #d5e0ec; }
+ .report-measure-band:has(>div:nth-child(3):last-child)>div+div { border-inline-start:1px solid var(--border); }
 }
 
 .balance-age-chart dl { display:grid; grid-template-columns:minmax(72px,1fr) minmax(28px,1.6fr) fit-content(42%); align-items:center; gap:12px 10px; }
 .balance-age-chart dl>div,.balance-age-chart dd { display:contents; }
 .balance-age-chart dd strong { overflow-wrap:anywhere; }
+
+/* The reports shelf.
+   ---------------------------------------------------------------------------
+   Provenance: "18 Reports/PRD.md" R-1 to R-4. Cards grouped by who asks for
+   them, because a select shows one report and tells an owner nothing about
+   what exists. Each card carries the question it answers: a report's name
+   never says what it is for, which is why supporting text is required here
+   and nowhere else in the product. */
+
+.report-group { margin-bottom: 20px; }
+.report-group .t-title-sec { margin: 0 0 10px; }
+.report-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.report-card {
+  display: flex; flex-direction: column; gap: 4px; width: 100%; height: 100%;
+  min-height: var(--touch-min, 44px); padding: 14px 16px; text-align: left; cursor: pointer;
+  border: 1px solid var(--md-outline-variant); border-radius: 12px; background: var(--md-surface);
+  color: inherit; font: inherit;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.report-card:hover:not(:disabled) { border-color: var(--md-primary); background: var(--state-hover); }
+.report-card:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.report-card.on { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.rc-title { font-size: 17px; line-height: 23px; font-weight: 650; }
+.rc-why { font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
+.report-card.on .rc-why { color: inherit; }
+.report-open { margin: 22px 0 10px; }
+
+@media (max-width: 600px) { .report-cards { grid-template-columns: 1fr; } }

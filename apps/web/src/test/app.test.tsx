@@ -40,8 +40,11 @@ const PAGE_TITLE = {
   '/business': 'Dashboard',
   '/business/booking': 'New Booking',
   '/business/packages': 'Packages',
-  '/business/lots': 'Lots',
-  '/business/routes': 'Routes',
+  // The app bar is shared with the live console, which calls these Bags and Trips. The demo
+  // pages behind them are the older parity fixture and still say "lot" and "route" in their
+  // own copy; that surface is not the one the PRD folder governs.
+  '/business/lots': 'Bags',
+  '/business/routes': 'Trips',
   '/business/feed': 'Messages',
   '/business/receipts': 'Receipts',
   '/business/reports': 'Reports',
@@ -71,7 +74,7 @@ async function goto(hash) {
 
 async function goBusiness() {
   await goto('/business');
-  return screen.findByText('Parcels moving');
+  return screen.findByText('Where every parcel is right now');
 }
 
 describe('Launcher', () => {
@@ -90,22 +93,29 @@ describe('Dashboard', () => {
     await navigateHash('/business');
     expect(document.querySelector('.appbar-title')).toHaveTextContent('Dashboard');
     await navigateHash('/business');
-    expect(screen.getByText('Parcels moving')).toBeInTheDocument();
+    expect(screen.getByText('Booked today')).toBeInTheDocument();
     await navigateHash('/business/receipts');
     expect(document.querySelector('.appbar-title')).toHaveTextContent('Receipts');
     await navigateHash('/');
     expect(screen.getByText('Business Console')).toBeInTheDocument();
   });
 
-  it('renders the three headline numbers, dispatch board and ledger', async () => {
+  it('renders the four figures, the journey and what the assistant did', async () => {
     render(<App />);
     await goBusiness();
-    expect(screen.getByText('Parcels moving')).toBeInTheDocument();
-    expect(screen.getByText('Money to collect')).toBeInTheDocument();
-    expect(screen.getByText('Booked today')).toBeInTheDocument();
-    expect(screen.getByText("Today's dispatch")).toBeInTheDocument();
-    expect(screen.getAllByText(/RT-201/).length).toBeGreaterThan(0);
-    expect(screen.getByText('Recent bookings')).toBeInTheDocument();
+    // The order is fixed and not configurable: how busy am I, what am I owed, is the
+    // software earning its keep, and what is on fire.
+    // The icon font renders its own glyph name as text, so read the label's own text node.
+    const labelText = (node: Element) => [...node.childNodes]
+      .filter((child) => child.nodeType === 3).map((child) => child.textContent).join('').trim();
+    expect([...document.querySelectorAll('.kpi .label')].map(labelText))
+      .toEqual(['Booked today', 'Still to collect', 'Answered by ShipIT', 'Needs you']);
+    expect(document.querySelectorAll('.journey-stage').length).toBe(7);
+    // The panel that has to justify the subscription sits above the fold on one scroll.
+    expect(screen.getByText('What ShipIT did for you this week')).toBeInTheDocument();
+    expect(screen.getByText('of phone calls you did not take')).toBeInTheDocument();
+    // Exactly one red figure anywhere on the screen.
+    expect(document.querySelectorAll('.kpi .value.danger').length).toBeLessThanOrEqual(1);
   });
 
   it.each([
@@ -186,7 +196,7 @@ describe('Lots', () => {
     await goto('/business/lots');
     await screen.findByText('Mumbai Metro Batch');
 
-    fireEvent.click(screen.getByRole('button', { name: /^Create Lot$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Create lot$/ }));
     // destination-first: a city is pre-picked and its loose parcels pre-selected
     fireEvent.change(await screen.findByLabelText(/Lot name/), { target: { value: 'UI Test Lot' } });
     const create = screen.getByRole('button', { name: /Create with \d+ parcel/i });

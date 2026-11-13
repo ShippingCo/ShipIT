@@ -16,6 +16,6 @@ it('saves the demo GST preference in one step and retries a lost response with t
  await waitFor(()=>expect(screen.getByLabelText('Business state')).toHaveValue('27'));
  expect(screen.getByLabelText('GST treatment')).toHaveValue('courier18');expect(screen.queryByRole('checkbox')).toBeNull();
  fireEvent.change(screen.getByLabelText('GST treatment'),{target:{value:'gta5'}});fireEvent.click(screen.getByRole('button',{name:'Save'}));
- fireEvent.click(await screen.findByRole('button',{name:'Retry same request'}));await screen.findByText('GST settings saved.');
+ fireEvent.click(await screen.findByRole('button',{name:'Check if it saved'}));await screen.findByText('GST settings saved.');
  expect(writes).toHaveLength(2);expect(writes[1]).toEqual(writes[0]);expect(JSON.parse(writes[0].body)).toEqual({mode:'gta5',supplier_state:'27',supplier_gstin:'',expected_version:2});
 });

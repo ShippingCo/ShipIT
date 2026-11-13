@@ -2,7 +2,7 @@ import {FilterChips,SearchBar} from '../components/m3/Controls';
 import {CancelBooking} from './CancelBooking';
 import {OperationDialog} from '../components/workspace/OperationDialog';
 import {PageHeader,RecordTable,SectionHeader,StatusBadge} from '../components/workspace/Workspace';
-import {canAdminister} from '@shippingco/shared';
+import {canAdminister,MAX_BULK_PARCELS} from '@shippingco/shared';
 import {useDetailReturn} from './detail-return';
 import {businessDay,dayStart,shiftDay} from './business-dates';
 import {useSearchParams,Link} from 'react-router-dom';
@@ -17,12 +17,14 @@ import { deliveries } from '../data-access/deliveries';
 import { createParcelBulkController } from '../data-access/parcel-bulk-controller';
 import { BulkParcelPanel } from '../parcels/BulkParcelPanel';
 import { useCommand,usePagedResource,useResource } from './hooks';
-import { CommandNotice,Empty,Failure,Loading } from './AsyncState';
+import { CommandNotice,DataRefresh,Empty,Failure,Loading } from './AsyncState';
 import { formatKolkata,formatMoney } from './format';
 import { TextField, DateField,SelectField } from '../components/m3/Input';
 import { Msym } from '../components/m3/Icon';
 import {DatePresets} from './DatePresets';
 import {SavedBookings} from './SavedBookings';
+import {HubPlacePicker} from './HubPlacePicker';
+import {mintEventRef,type HubPlace} from './hub-places';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const has=(roles:readonly OperatorRole[],...wanted:OperatorRole[])=>(wanted.some(role=>role!=='delivery_agent'&&role!=='org_admin')&&canAdminister(roles,'parcels.read'))||roles.some(role=>wanted.includes(role));
@@ -50,7 +52,7 @@ export function OperationalPackages({controller,roles}:{controller:ScopeControll
  const appliedFilters=[query.docket&&`Tracking ${query.docket}`,customer&&'Selected customer',query.status&&query.status.replaceAll('_',' '),query.destination,query.from&&`From ${query.from}`,query.to&&`Through ${query.to}`].filter(Boolean);
  const canBook=canAdminister(roles,'bookings.create')||roles.includes('operator');
  return <div className="ops-page logistics-workspace reference-logistics">
-  <PageHeader title="Packages" eyebrow="Parcel tracking" description="Find a parcel by docket number. Open a parcel for its movement history or review its booking." actions={canBook&&<Link className="btn btn-filled" to="/business/new-booking"><Msym name="add"/>New booking</Link>}/>
+  <PageHeader title="Packages" eyebrow="Parcel tracking" actions={canBook&&<Link className="btn btn-filled" to="/business/new-booking"><Msym name="add"/>New booking</Link>}/>
   <form className="logistics-search" noValidate onSubmit={event=>{event.preventDefault();if(from&&to&&from>to){setFilterError('Choose an end date on or after the start date.');if(filterPanel.current)filterPanel.current.open=true;document.getElementById('packages-booked-through')?.focus();return;}setFilterError('');setQuery({docket:docket.trim(),status,destination:destination.trim().toUpperCase(),from,to});setSelected(null);}} aria-label="Package filters">
    <div className="logistics-search-primary"><SearchBar label="Tracking number" placeholder="Full tracking number" value={docket} onChange={setDocket} shortcut="/"/><button className="btn btn-filled"><Msym name="search"/>Search</button></div>
    <details className="logistics-filter-disclosure" ref={filterPanel}><summary><Msym name="tune"/>Filters{appliedFilters.length>0&&<span className="logistics-filter-count">{appliedFilters.length} applied</span>}</summary><div className="logistics-package-filters">
@@ -63,8 +65,8 @@ export function OperationalPackages({controller,roles}:{controller:ScopeControll
    {filterError&&<p className="ops-alert" role="alert">{filterError}</p>}
   </form>
   <FilterChips options={[{value:'',label:'All'},{value:'booked',label:'Booked'},{value:'checked_in',label:'At hub'},{value:'out_for_delivery',label:'Out for delivery'},{value:'failed_attempt',label:'Needs follow-up'},{value:'delivered',label:'Delivered'},{value:'rto',label:'Returned'},{value:'cancelled',label:'Cancelled'},...(['dispatched','in_transit','held_at_office'].includes(query.status)?[{value:query.status,label:query.status.replaceAll('_',' ')}]:[])]} value={query.status} onChange={value=>{setStatus(value);setQuery(previous=>({...previous,status:value}));setSelected(null);}}/>
-  {page.phase==='loading'?<Loading label="Loading parcels…"/>:page.phase==='error'?<Failure retry={page.reload} label="Parcels could not be loaded."/>:page.phase==='empty'?<Empty icon="inventory_2" title={hasFilters?"No parcels match":"No parcels yet"} body={hasFilters?"Try another docket number or clear the filters to see all parcels in this branch.":(canAdminister(roles,'bookings.create')||roles.includes('operator'))?"Create your first booking to start tracking parcels here.":"Parcels appear here after your team creates a booking."} action={hasFilters?<button type="button" className="btn btn-outlined" onClick={clearFilters}>Clear filters</button>:(canAdminister(roles,'bookings.create')||roles.includes('operator'))?<Link className="btn btn-filled" to="/business/new-booking">Create a booking</Link>:undefined}/>:<>
-   <section className="card ops-card logistics-records reference-package-table"><SectionHeader title="Booked parcels" description={`${page.items.length} ${page.items.length===1?'package':'packages'} loaded${page.page.has_more?' · more available':''}`} actions={<><SelectField label="Sort packages" value={sort} onChange={value=>{setSort(value as typeof sort);setSelected(null);}} options={[{value:'created_at_desc',label:'Newest first'},{value:'created_at_asc',label:'Oldest first'},{value:'docket_asc',label:'Tracking A–Z'},{value:'docket_desc',label:'Tracking Z–A'}]}/><button className="btn btn-outlined" onClick={page.reload}><Msym name="refresh"/>Refresh</button></>}/>
+  {page.phase==='loading'&&!page.items.length?<Loading label="Loading parcels…"/>:page.phase==='error'?<Failure retry={page.reload} label="Parcels could not be loaded."/>:page.phase==='empty'?<Empty icon="inventory_2" title={hasFilters?"No parcels match":"No parcels yet"} body={hasFilters?"Try another docket number or clear the filters to see all parcels in this branch.":(canAdminister(roles,'bookings.create')||roles.includes('operator'))?"Create your first booking to start tracking parcels here.":"Parcels appear here after your team creates a booking."} action={hasFilters?<button type="button" className="btn btn-outlined" onClick={clearFilters}>Clear filters</button>:(canAdminister(roles,'bookings.create')||roles.includes('operator'))?<Link className="btn btn-filled" to="/business/new-booking">Create a booking</Link>:undefined}/>:<>
+   <section className="card ops-card logistics-records reference-package-table"><SectionHeader title="Booked parcels" description={`${page.items.length} ${page.items.length===1?'package':'packages'} loaded${page.page.has_more?' · more available':''}`} actions={<><SelectField label="Sort packages" value={sort} onChange={value=>{setSort(value as typeof sort);setSelected(null);}} options={[{value:'created_at_desc',label:'Newest first'},{value:'created_at_asc',label:'Oldest first'},{value:'docket_asc',label:'Tracking A–Z'},{value:'docket_desc',label:'Tracking Z–A'}]}/><DataRefresh resource={page}/></>}/>
     <RecordTable mobile="stack" label="Packages" rows={page.items} rowKey={item=>item.id} selectedKey={selected} columns={[
      {key:'docket',label:'Tracking number',cell:item=><strong className="ops-mono">{item.docket}</strong>},
      {key:'customer',label:'Customer',cell:item=><div className="record-identity"><strong>{item.sender.name}</strong><span>{item.sender.phone_display}</span></div>},
@@ -85,20 +87,72 @@ export function OperationalPackages({controller,roles}:{controller:ScopeControll
 }
 
 function PackageBulk({controller,source,rows,reload,initialAction='check_in',onBusyChange}:{controller:ScopeController;source:ReturnType<typeof parcels>;rows:ParcelRead[];reload:()=>void;initialAction?:BulkParcelAction;onBusyChange?:(busy:boolean)=>void}){
- const [action,setAction]=useState<BulkParcelAction>(initialAction),[evidence,setEvidence]=useState(''),[context,setContext]=useState('');
+ const [action]=useState<BulkParcelAction>(initialAction);
+ // Checking a parcel in needs a hub and a reference for the event. The hub is chosen
+ // by name (see hub-places.ts); the reference is minted here, because it identifies
+ // THIS check-in and there is nothing for the operator to look it up in. It is kept
+ // stable across re-renders so a retry carries the same reference as its first try.
+ const [place,setPlace]=useState<HubPlace|null>(null);
+ const [manifest,setManifest]=useState('');
+ const [evidence,setEvidence]=useState(()=>mintEventRef());
+ const context=action==='check_in'?(place?.id??''):manifest;
  const bulk=useMemo(()=>createParcelBulkController(controller),[controller]);useEffect(()=>()=>bulk.dispose(),[bulk]);
  const state=useSyncExternalStore(bulk.subscribe,bulk.snapshot),last=useRef(0);
  useEffect(()=>{onBusyChange?.(state.phase==='pending'||state.phase==='uncertain');},[state.phase,onBusyChange]);
  useEffect(()=>{if(state.phase==='confirmed'&&state.result&&state.result.summary.succeeded!==last.current){last.current=state.result.summary.succeeded;reload();}},[state.phase,state.result,reload]);
  const keys=useRef(new Map<string,string>()),valid=uuid.test(evidence)&&uuid.test(context);
+ const busyNow=state.phase==='pending'||state.phase==='uncertain';
  const candidates=useMemo(()=>rows.filter(row=>row.status===(action==='check_in'?'booked':'checked_in')).map(row=>{
   const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};
   const signature=JSON.stringify([action,row.id,command]);let key=keys.current.get(signature);if(!key){key=crypto.randomUUID();keys.current.set(signature,key);}
   return {label:`${row.docket} · version ${row.version}`,item:{parcel_id:row.id,idempotency_key:key,command} as BulkParcelItem};
  }),[rows,action,evidence,context]);
- useEffect(()=>{bulk.select([]);},[bulk,action,evidence,context]);
- return <section className="ops-detail logistics-bulk" aria-labelledby="bulk-title"><div className="card ops-card"><h2 id="bulk-title" className="t-title-lg">Update selected parcels</h2><p className="ops-note">Choose an update and review the selected parcels. Failed updates stay selected.</p><div className="ops-form-grid"><SelectField label="Bulk action" value={action} onChange={value=>setAction(value as BulkParcelAction)} options={[{value:'check_in',label:'Check in booked parcels'},{value:'dispatch',label:'Dispatch checked-in parcels'}]}/><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label="Evidence reference (UUID)" value={evidence} onChange={setEvidence}/><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label={action==='check_in'?'Location reference (UUID)':'Finalized manifest ID (UUID)'} value={context} onChange={setContext}/></div></div>
-  {valid?<BulkParcelPanel controller={bulk} action={action} candidates={candidates} refreshFailed={async(items,signal)=>{const refreshed=await Promise.all(items.map(async item=>{try{const row=await source.read(item.parcel_id,signal);const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};return {parcel_id:row.id,idempotency_key:item.idempotency_key,command} as BulkParcelItem;}catch{return null;}}));return refreshed.filter((item):item is BulkParcelItem=>item!==null);}}/>:<p className="card ops-card" role="status">Enter valid UUID evidence and {action==='check_in'?'location':'manifest'} references to enable selection.</p>}
+ // The operator already ticked these parcels in the list; asking them to tick the
+ // same rows again in the panel was the flow's worst dead end. Everything eligible
+ // starts selected, and the checkboxes are there to take one back out.
+ useEffect(()=>{bulk.select(candidates.slice(0,MAX_BULK_PARCELS).map(candidate=>candidate.item));},[bulk,candidates]);
+ // A new reference for a new kind of update: a dispatch must not be recorded under
+ // the reference a check-in already used.
+ useEffect(()=>{setEvidence(mintEventRef());},[action]);
+ const checkIn=action==='check_in';
+ const inDialog=Boolean(onBusyChange);
+ return <section className="ops-detail logistics-bulk"
+   {...(inDialog?{'aria-label':checkIn?'Check in at the hub':'Send out for delivery'}:{'aria-labelledby':'bulk-title'})}>
+  <div className="card ops-card hub-confirm">
+   {/* The dialog that opens this panel already carries the heading, so the panel
+       does not add a second one — hiding it visually would still leave a screen
+       reader hearing the same heading twice. Inside the disclosure on the
+       operations view there is no dialog, so the panel supplies it. */}
+   {!inDialog&&<h2 id="bulk-title" className="t-title-lg">{checkIn?'Check in at the hub':'Send out for delivery'}</h2>}
+   {/* What is being acted on, before anything else. An operator who pressed the
+       button on the wrong rows finds out here rather than afterwards. */}
+   {candidates.length>0
+     ? <p className="hub-confirm-count">{candidates.length} {candidates.length===1?'parcel':'parcels'} · {
+         // Enough dockets to recognise the batch, then a count. A van-load would
+         // otherwise put forty numbers above the thing the operator came to press.
+         candidates.slice(0,3).map(candidate=>candidate.label.split(' · ')[0]).join(', ')
+       }{candidates.length>3?` and ${candidates.length-3} more`:''}</p>
+     : <p role="status" className="hub-confirm-count">None of the chosen parcels {checkIn?'is waiting to be checked in':'has been checked in yet'}.</p>}
+   {checkIn
+     ? <HubPlacePicker value={place} onChange={setPlace} disabled={busyNow}/>
+     : /* A manifest is a real record created on the Routes screen, so unlike a hub it
+          cannot be invented here. The field says where to get it instead of naming its
+          format. */
+       <div className="hub-picker">
+         <p className="hub-picker-label">Which dispatch list are these parcels on?</p>
+         <TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36}
+           label="Dispatch list number" value={manifest} onChange={setManifest} disabled={busyNow}
+           error={manifest&&!uuid.test(manifest)?'That is not a dispatch list number.':undefined}/>
+         <p className="hub-confirm-ref">Copy it from the dispatch list on <Link to="/business/routes">Routes</Link>.</p>
+       </div>}
+   {/* Exactly one line of consequence. There is no definition of a hub, no
+       definition of checking in, and — deliberately — no record number: the
+       operator never needs it, and showing it only invited "what is that?". */}
+   {valid&&<p className="hub-confirm-ref">{checkIn
+     ? <>Records that {candidates.length===1?'this parcel':'these parcels'} reached <b>{place?.name}</b>.</>
+     : <>Records that {candidates.length===1?'this parcel':'these parcels'} left on this dispatch list.</>}</p>}
+  </div>
+  {valid?<BulkParcelPanel controller={bulk} action={action} candidates={candidates} refreshFailed={async(items,signal)=>{const refreshed=await Promise.all(items.map(async item=>{try{const row=await source.read(item.parcel_id,signal);const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};return {parcel_id:row.id,idempotency_key:item.idempotency_key,command} as BulkParcelItem;}catch{return null;}}));return refreshed.filter((item):item is BulkParcelItem=>item!==null);}}/>:<p className="card ops-card" role="status">{action==='check_in'?'Choose the hub these parcels are at.':'Enter the dispatch list number these parcels are on.'}</p>}
  </section>;
 }
 
@@ -159,7 +213,9 @@ function DeliveryStartForm({parcel,source,retry,confirmed,busy}:{parcel:ParcelRe
 function Fact({label,value}:{label:string;value:React.ReactNode}){return <div className="ops-fact"><span className="ops-note">{label}</span><b>{value}</b></div>;}
 
 function ParcelActionForm({parcel,roles,command,source,confirmed}:{parcel:ParcelRead;roles:readonly OperatorRole[];command:ReturnType<typeof useCommand<ParcelTransitionDto>>;source:ReturnType<typeof parcels>;confirmed:()=>void}){
- const [evidence,setEvidence]=useState(''),[reference,setReference]=useState(''),[extra,setExtra]=useState(''),[reason,setReason]=useState<'customer_unavailable'|'customer_requests_pickup'|'address_issue'|'recipient_refusal'|'payment_not_collected'|'operational_issue'>('customer_unavailable');
+ // Same reasoning as the bulk sheet: the event reference is minted, the hub is named.
+ const [evidence,setEvidence]=useState(()=>mintEventRef()),[reference,setReference]=useState(''),[extra,setExtra]=useState(''),[reason,setReason]=useState<'customer_unavailable'|'customer_requests_pickup'|'address_issue'|'recipient_refusal'|'payment_not_collected'|'operational_issue'>('customer_unavailable');
+ const [place,setPlace]=useState<HubPlace|null>(null);
  let kind:ParcelCommand['kind']|null=null;
  if(parcel.status==='booked'&&has(roles,'operator'))kind='check_in';
  else if(parcel.status==='checked_in'&&has(roles,'franchise_admin','operator','dispatcher'))kind='dispatch';
@@ -167,15 +223,31 @@ function ParcelActionForm({parcel,roles,command,source,confirmed}:{parcel:Parcel
  else if(parcel.status==='out_for_delivery'&&has(roles,'delivery_agent'))kind='failed_attempt';
  else if(parcel.status==='failed_attempt'&&has(roles,'franchise_admin'))kind='rto';
  if(!kind)return <section><h3>Next parcel action</h3><p className="ops-note">No update is available for this parcel status and your role. Use Delivery work to complete an assigned delivery with recipient proof.</p></section>;
- const referenceLabel=kind==='check_in'?'Location reference':kind==='dispatch'?'Finalized manifest ID':kind==='transit'?'Route ID':kind==='failed_attempt'?'Active attempt ID':'Approval reference';
+ // Check-in is the one of these an untrained clerk performs many times a day, so it
+ // gets the named-hub control. The rest are dispatcher and administrator actions that
+ // genuinely quote a reference from another record, and still ask for it.
+ const checkIn=kind==='check_in';
+ const locationRef=checkIn?(place?.id??''):reference;
+ const referenceLabel=kind==='dispatch'?'Dispatch list number':kind==='transit'?'Route number':kind==='failed_attempt'?'Delivery attempt number':'Approval reference';
  async function submit(event:React.FormEvent){event.preventDefault();let next:ParcelCommand;
-  if(kind==='check_in')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,location_ref:reference}};
+  if(kind==='check_in')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,location_ref:locationRef}};
   else if(kind==='dispatch')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,manifest_id:reference}};
   else if(kind==='transit')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,route_id:reference}};
   else if(kind==='failed_attempt')next={kind,parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,attempt_id:reference,reason_code:reason}};
   else next={kind:'rto',parcelId:parcel.id,body:{expected_version:parcel.version,evidence_ref:evidence,approval_ref:reference,return_plan_ref:extra}};
-  try{await command.run(source.intent(next));confirmed();setEvidence('');setReference('');setExtra('');}catch{/* safe notice */}}
- return <section><h3>Next parcel action</h3><form className="ops-form" onSubmit={event=>{void submit(event);}}><div className="ops-form-grid"><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label="Evidence reference (UUID)" value={evidence} onChange={setEvidence} required/><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label={`${referenceLabel} (UUID)`} value={reference} onChange={setReference} required/>{kind==='rto'&&<TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label="Return plan reference (UUID)" value={extra} onChange={setExtra} required/>}{kind==='failed_attempt'&&<SelectField label="Failure reason" value={reason} onChange={value=>setReason(value as typeof reason)} options={['customer_unavailable','customer_requests_pickup','address_issue','recipient_refusal','payment_not_collected','operational_issue'].map(value=>({value,label:value.replaceAll('_',' ')}))}/>}</div><button className="btn btn-filled" disabled={command.phase==='pending'||!uuid.test(evidence)||!uuid.test(reference)||(kind==='rto'&&!uuid.test(extra))}>{kind.replaceAll('_',' ')}</button></form><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/></section>;
+  try{await command.run(source.intent(next));confirmed();setEvidence(mintEventRef());setReference('');setExtra('');}catch{/* safe notice */}}
+ const actionLabel=checkIn?'Check in at hub':kind==='dispatch'?'Send out for delivery':kind==='transit'?'Record as on the way':kind==='failed_attempt'?'Record a failed attempt':'Return to origin';
+ return <section className="hub-confirm"><h3>{checkIn?'Check in at the hub':'Next parcel action'}</h3><form className="ops-form" onSubmit={event=>{void submit(event);}}>
+  {checkIn
+    ?<HubPlacePicker value={place} onChange={setPlace} disabled={command.phase==='pending'}/>
+    :<div className="ops-form-grid"><TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label={referenceLabel} value={reference} onChange={setReference} error={reference&&!uuid.test(reference)?`That is not a ${referenceLabel.toLowerCase()}.`:undefined} required/>{kind==='rto'&&<TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} label="Return plan reference" value={extra} onChange={setExtra} required/>}{kind==='failed_attempt'&&<SelectField label="Why did it fail?" value={reason} onChange={value=>setReason(value as typeof reason)} options={['customer_unavailable','customer_requests_pickup','address_issue','recipient_refusal','payment_not_collected','operational_issue'].map(value=>({value,label:value.replaceAll('_',' ')}))}/>}</div>}
+  {/* The button names what it will do and where, so the label is the confirmation.
+      The record number that used to sit under it is gone: it identifies the event,
+      the software mints it, and the operator has nothing to check it against. */}
+  <button className="btn btn-filled btn-lg" disabled={command.phase==='pending'||!uuid.test(evidence)||!uuid.test(locationRef)||(kind==='rto'&&!uuid.test(extra))}>
+   {command.phase==='pending'?'Saving…':checkIn&&place?`Check in at ${place.name}`:actionLabel}</button>
+  {checkIn&&place&&<p className="hub-confirm-ref">Records that this parcel reached <b>{place.name}</b>.</p>}
+ </form><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/></section>;
 }
 
 function PaymentPanel({roles,resource}:{roles:readonly OperatorRole[];resource:ReturnType<typeof useResource<PaymentProjection|null>>}){

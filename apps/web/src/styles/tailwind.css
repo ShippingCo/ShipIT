@@ -1,16 +1,16 @@
 /* ============================================================
    Tailwind layer — the bridge between the shadcn / 21st.dev
-   component vocabulary and ShippingCo's M3 tokens.
+   component vocabulary and ShippingCo's design tokens.
    ============================================================
 
    Read tokens.css first: it is the source of truth. Nothing here invents a colour.
    Every variable below is one of those tokens restated as the HSL triplet that
    shadcn components expect, so a component pulled straight from the 21st catalog
-   comes out wearing this app's palette — white surfaces, one hairline, muted blue —
+   comes out wearing this app's palette — white surfaces, one hairline, one blue —
    with no per-component overriding.
 
-   Loaded LAST in main.jsx so utilities can win, and harmless to the existing CSS
-   because preflight is disabled in tailwind.config.js.
+   Loaded LAST in main.tsx so utilities can win, and harmless to the existing CSS
+   because preflight is disabled in tailwind.config.ts.
 */
 
 @tailwind base;
@@ -28,7 +28,7 @@
   ::after {
     border-width: 0;
     border-style: solid;
-    border-color: hsl(var(--border));
+    border-color: hsl(var(--sc-border));
   }
 }
 
@@ -36,43 +36,43 @@
   /* ---- Surfaces ----
      White is the only background colour in this app, so every shadcn surface role —
      page, card, popover, muted, secondary — resolves to the same white. Separation
-     comes from --border and spacing, exactly as it does in the M3 layer. */
-  --background: 0 0% 100%;              /* --md-background  #ffffff */
-  --foreground: 221 39% 11%;            /* --md-on-surface  #111827 */
-  --card: 0 0% 100%;
-  --card-foreground: 221 39% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 221 39% 11%;
-  --secondary: 0 0% 100%;
-  --secondary-foreground: 217 13% 40%;  /* --md-on-surface-variant  #5a6474 */
-  --muted: 0 0% 100%;
-  --muted-foreground: 217 13% 40%;
+     comes from space, then --border, then shadow. */
+  --sc-background: 0 0% 100%;              /* --md-background           #ffffff */
+  --sc-foreground: 0 0% 13%;               /* --text                    #222222 */
+  --sc-card: 0 0% 100%;
+  --sc-card-foreground: 0 0% 13%;
+  --sc-popover: 0 0% 100%;
+  --sc-popover-foreground: 0 0% 13%;
+  --sc-secondary: 0 0% 100%;
+  --sc-secondary-foreground: 0 0% 42%;     /* --text-secondary          #6a6a6a */
+  --sc-muted: 0 0% 100%;
+  --sc-muted-foreground: 0 0% 42%;
 
   /* ---- Brand ---- */
-  --primary: 216 66.53% 46.86%;         /* --md-primary #2868c7 */
-  --primary-foreground: 0 0% 100%;
+  --sc-primary: 216 90% 44%;               /* --accent      #0b5ed7 */
+  --sc-primary-foreground: 0 0% 100%;
 
   /* ---- Interaction ----
      `accent` is what shadcn paints on hover and for the active row of a menu. It is
      the one non-white fill allowed here, and only because tokens.css already carves
      out transient feedback as an exception to the white-only rule. This is
-     --state-hover composited over white; it must never be used as a resting fill. */
-  --accent: 220 13% 96%;                /* rgba(16,24,40,.04) over white */
-  --accent-foreground: 221 39% 11%;
+     --surface-hover; it must never be used as a resting fill. */
+  --sc-accent: 0 0% 97%;                   /* --surface-hover           #f7f7f7 */
+  --sc-accent-foreground: 0 0% 13%;
 
   /* ---- Outcome colours ---- */
-  --destructive: 3 71% 41%;             /* --md-error    #b3261e */
-  --destructive-foreground: 0 0% 100%;
-  --success: 142 68% 25%;               /* --md-success  #146c2e */
-  --success-foreground: 0 0% 100%;
-  --warning: 33 100% 28%;               /* --md-warning  #8f5000 */
-  --warning-foreground: 0 0% 100%;
+  --sc-destructive: 353 78% 43%;           /* --danger      #c3182b */
+  --sc-destructive-foreground: 0 0% 100%;
+  --sc-success: 145 79% 27%;               /* --success     #0e7a3c */
+  --sc-success-foreground: 0 0% 100%;
+  --sc-warning: 36 100% 27%;               /* --warning     #8a5300 */
+  --sc-warning-foreground: 0 0% 100%;
 
   /* ---- Line and focus ---- */
-  --border: 218 17% 91%;                /* --md-outline-variant  #e3e6eb — THE hairline */
-  --input: 218 17% 91%;
-  --ring: 216 66.53% 46.86%;            /* focus ring matches primary */
+  --sc-border: 0 0% 87%;                   /* --border              #dddddd — THE hairline */
+  --sc-input: 0 0% 87%;
+  --sc-ring: 216 90% 44%;                  /* focus ring matches primary */
 
-  /* Matches --shape-md, so imported cards share the M3 shape scale. */
-  --radius: 12px;
+  /* Matches --radius-lg, so an imported card shares the console's shape scale. */
+  --sc-radius: 16px;
 }

@@ -9,7 +9,7 @@ import {useCommand,useResource} from './hooks';
 import {allLotPages} from './LotsWorkspace';
 import {businessDay,dayStart} from './business-dates';
 import {formatKolkata,instantToKolkataInput,kolkataInputToInstant,rupeesToPaise} from './format';
-import {Loading,Failure,CommandNotice} from './AsyncState';
+import {DataRefresh,Loading,Failure,CommandNotice} from './AsyncState';
 import {Msym} from '../components/m3/Icon';
 import {Button} from '../components/m3/Button';
 import {TextField} from '../components/m3/Input';
@@ -17,6 +17,7 @@ import {Card,EmptyState} from '../components/m3/Surface';
 import {Dialog} from '../components/m3/Dialog';
 import {FilterChips,IconTile} from '../components/m3/Controls';
 import DataTable,{type Column} from '../components/m3/DataTable';
+import {PageHeader} from '../components/workspace/Workspace';
 import './eway-workspace.css';
 export const reviewThreshold=5000000;
 const periods=[{value:'month',label:'This month'},{value:'lastmonth',label:'Last month'},{value:'fy',label:'Financial year'}];
@@ -28,7 +29,27 @@ export function ewayWindow(period:string,now=new Date()){
 }
 export const ewayMoney=(value:number|bigint)=>{const n=BigInt(value),fraction=n%100n;return '₹'+new Intl.NumberFormat('en-IN').format(n/100n)+(fraction?'.'+String(fraction).padStart(2,'0'):'');};
 export interface EwayRow{id:string;docket:string;customer:string;destination:string;booked:string;status:string;goodsPaise:number|null;valueSource:string|null;current:EwayCurrent}
-export function ewayBadge(current:EwayCurrent){return current.state.reference_state==='missing'?{label:'Not recorded',pill:'pill-warn'}:current.state.official_validity_state==='expired'?{label:'Expired',pill:'pill-err'}:{label:'Recorded',pill:'st-delivered'};}
+/**
+ * What a recorded bill's validity means today, as a word and a colour.
+ *
+ * Never a bare date. An operator reading "14 Nov" has to work out what that means against
+ * today, in a hurry, and the answer decides whether a vehicle can leave. Three states, because
+ * "expiring tomorrow" is a different job from "expired": one is a renewal to arrange and the
+ * other is a parcel that cannot move.
+ *
+ * ShipIT never renews, extends or hides any of this. It records what the portal said and shows
+ * what that means now.
+ */
+export function ewayBadge(current:EwayCurrent,now=Date.now()){
+ if(current.state.reference_state==='missing')return {label:'Not recorded',pill:'pill-warn'};
+ if(current.state.official_validity_state==='expired')return {label:'Expired',pill:'pill-err'};
+ const until=current.record?.external?.official_valid_until;
+ if(until){
+  const left=Date.parse(until)-now;
+  if(Number.isFinite(left)&&left<=24*60*60*1000)return {label:'Expires tomorrow',pill:'pill-warn'};
+ }
+ return {label:'Valid',pill:'st-delivered'};
+}
 export async function loadEwayRows(shipments:ParcelRead[],source:EwaySource,signal:AbortSignal):Promise<EwayRow[]>{
  const bookings=new Map<string,ParcelRead[]>();for(const p of shipments.filter(p=>p.status!=='cancelled')){const list=bookings.get(p.booking_id)??[];list.push(p);bookings.set(p.booking_id,list);}
  const groups=[...bookings.entries()],rows:EwayRow[]=[];
@@ -42,16 +63,45 @@ export async function loadEwayRows(shipments:ParcelRead[],source:EwaySource,sign
 }
 export default function EwayWorkspace({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>eway(api),[api]),[period,setPeriod]=useState('month'),[editing,setEditing]=useState<EwayRow|null>(null),[notice,setNotice]=useState('');
+ const [find,setFind]=useState('');
  const records=useResource(api.franchise+'eway-checklist',async(signal:AbortSignal)=>loadEwayRows(await allLotPages(cursor=>parcels(api).list({limit:100,cursor},signal)),source,signal));
  const win=ewayWindow(period),canWrite=canAdminister(roles,'eway.write')||roles.includes('operator');
  const all=(records.value??[]).filter(r=>Date.parse(r.booked)>=win.from&&Date.parse(r.booked)<win.to),rows=all.filter(r=>r.goodsPaise!==null&&r.goodsPaise>=reviewThreshold),other=all.filter(r=>r.goodsPaise===null||r.goodsPaise<reviewThreshold),pending=rows.filter(r=>ewayBadge(r.current).label!=='Recorded').length,value=rows.reduce((n,r)=>n+BigInt(r.goodsPaise!),0n);
+ // Searching what is already loaded keeps this instant and needs no second request. It
+ // deliberately ignores the period and the threshold: those filter attention, not rights.
+ const query=find.trim().toLowerCase();
+ const matches=query?(records.value??[]).filter(r=>r.docket.toLowerCase().includes(query)||r.customer.toLowerCase().includes(query)).slice(0,8):[];
+ const outsideWindow=(records.value??[]).length-all.length;
  const action=(r:EwayRow)=>r.current.record?.external?.reference?<button type="button" className="eway-no" aria-label={`${canWrite?'Edit':'View'} e-way bill for ${r.docket}`} onClick={()=>setEditing(r)}><span className="mono">{r.current.record.external.reference}</span><Msym name={canWrite?'edit':'visibility'}/></button>:<Button size="sm" variant="outlined" onClick={()=>setEditing(r)}>{canWrite?'Record':'View'}</Button>;
  const columns:Column<EwayRow>[]=[{key:'docket',label:'Docket',type:'text',render:r=><span className="mono">{r.docket}</span>},{key:'customer',label:'Customer',type:'text'},{key:'destination',label:'Destination',type:'enum'},{key:'value',label:'Goods value',type:'money',accessor:r=>r.goodsPaise===null?null:r.goodsPaise/100,render:r=>r.goodsPaise===null?'Not recorded':ewayMoney(r.goodsPaise),total:true,aggregate:visible=>ewayMoney(visible.reduce((n,r)=>n+BigInt(r.goodsPaise??0),0n))},{key:'booked',label:'Booked',type:'date',accessor:r=>r.booked,render:r=>formatKolkata(r.booked,{day:'numeric',month:'numeric',year:'numeric'})},{key:'status',label:'Status',type:'enum',accessor:r=>ewayBadge(r.current).label,render:r=>{const badge=ewayBadge(r.current);return <span className="eway-state"><span className={`pill ${badge.pill}`}>{badge.label}</span>{badge.label==='Expired'&&r.current.record?.external?.official_valid_until&&<span className="t-label-sm muted">until {formatKolkata(r.current.record.external.official_valid_until,{day:'numeric',month:'short'})}</span>}</span>;}},{key:'number',label:'Bill number',type:'text',accessor:r=>r.current.record?.external?.reference??'',render:action}];
- return <div className="page live-eway"><div className="eway-period"><FilterChips options={periods} value={period} onChange={setPeriod}/><Button variant="text" size="sm" icon="refresh" onClick={records.reload} disabled={records.phase==='loading'}>Refresh</Button></div>{notice&&<p role="status">{notice}</p>}
- {records.phase==='loading'?<Loading label="Loading e-way bills…"/>:records.phase==='error'?<Failure label="E-way bills could not be loaded." retry={records.reload}/>:<>
+ return <div className="page live-eway">
+  <PageHeader title="E-way bills"/>
+  <div className="eway-period"><FilterChips options={periods} value={period} onChange={setPeriod}/><DataRefresh resource={records}/></div>{notice&&<p role="status">{notice}</p>}
+ {records.phase==='loading'&&!records.value?<Loading label="Loading e-way bills…"/>:records.phase==='error'?<Failure label="E-way bills could not be loaded." retry={records.reload}/>:<>
  <div className="stat3"><Card pad className="stat"><span className="stat-label">Review for an e-way bill</span><span className="stat-value">{rows.length}</span><p className="stat-empty">{ewayMoney(reviewThreshold)} or more · {win.label}</p></Card><Card pad className="stat"><span className="stat-label">To record or renew</span><span className={`stat-value${pending?' is-alert':''}`}>{pending}</span><p className="stat-empty">{pending?'missing or expired':'no missing or expired references'}</p></Card><Card pad className="stat"><span className="stat-label">Goods value covered</span><span className="stat-value">{ewayMoney(value)}</span><p className="stat-empty">across {rows.length} consignment{rows.length===1?'':'s'}</p></Card></div>
- <div className="section-label"><IconTile name="local_shipping" size="sm" tone={pending?'warn':'ok'}/>Consignments worth {ewayMoney(reviewThreshold)} or more</div><Card>{rows.length?<DataTable caption="E-way bills" columns={columns} rows={rows}/>:<EmptyState icon="task_alt" title="Nothing over the threshold" sub={`No dispatchable booking in ${win.label} has a recorded goods value of ${ewayMoney(reviewThreshold)} or more.`}/>}<p className="rep-note"><Msym name="info"/><span>Create or renew bills on the government portal (ewaybillgst.gov.in), then record the details here. “Recorded” means the reference is saved; it does not verify legal applicability or official validity. Distance-based travel estimates are shown separately.</span></p></Card>
+ {/* R-1: the boundary first, before any figure or row. Everything below it is a record of
+     what somebody else's system said, and an operator who reads it after the table has
+     already assumed otherwise. */}
+ <p className="eway-boundary"><Msym name="info"/><span>ShipIT does not create, renew or extend e-way bills. Do that on the government portal (<b>ewaybillgst.gov.in</b>) and record the details here. &ldquo;Recorded&rdquo; means the reference is saved — it is not a check that a bill applies or is still valid.</span></p>
+ <div className="section-label"><IconTile name="local_shipping" size="sm" tone={pending?'warn':'ok'}/>Consignments worth {ewayMoney(reviewThreshold)} or more</div><Card>{rows.length?<DataTable caption="E-way bills" columns={columns} rows={rows}/>:<EmptyState icon="task_alt" title="Nothing over the threshold" sub={`No dispatchable booking in ${win.label} has a recorded goods value of ${ewayMoney(reviewThreshold)} or more.`}/>}<p className="rep-note"><Msym name="info"/><span>Distance-based travel estimates are shown separately and never set or extend an official expiry.</span></p></Card>
  {other.length>0&&<details className="eway-other" open={!rows.length}><summary>Other dispatchable bookings ({other.length})</summary><p className="t-body-sm muted">These bookings have a lower or unknown declared goods value. You can still record their bill details.</p><Card><DataTable caption="Other dispatchable bookings" columns={columns.map(c=>({...c,total:false}))} rows={other}/></Card></details>}
+ {/* The way in that the page used to lack: any booking, whatever its value or date. */}
+ <div className="section-label"><IconTile name="search" size="sm"/>Record a bill for any booking</div>
+ <Card pad className="eway-find">
+  <TextField label="Find by docket or customer" value={find} onChange={setFind} maxLength={64}
+    autoComplete="off" spellCheck={false}
+    helper={`Searches all ${(records.value??[]).length} booking${(records.value??[]).length===1?'':'s'} in this branch, whatever their value or date.`}/>
+  {query&&(matches.length?<ul className="eway-find-results">
+    {matches.map(r=><li key={r.id}>
+      <button type="button" onClick={()=>setEditing(r)}>
+        <span className="mono">{r.docket}</span>
+        <span>{r.customer} · {r.destination}</span>
+        <span className="eway-find-state">{ewayBadge(r.current).label}</span>
+      </button>
+    </li>)}
+  </ul>:<p role="status" className="t-body-sm muted">No booking matches “{find.trim()}”. Check the docket, or the branch selected above.</p>)}
+  {!query&&outsideWindow>0&&<p className="t-body-sm muted">{outsideWindow} booking{outsideWindow===1?' falls':'s fall'} outside {win.label}. Search above to record a bill for one of them.</p>}
+ </Card>
  <p className="eway-detail-link"><Link to="/business/eway?view=records">Detailed records, revision history and travel estimates</Link></p></>}
  {editing&&<EwayEditor key={editing.id} row={editing} source={source} writable={canWrite} close={()=>setEditing(null)} saved={()=>{setNotice(`E-way bill details saved for ${editing.docket}.`);setEditing(null);records.reload();}}/>}
  </div>;
@@ -87,6 +137,10 @@ function EwayEditor({row,source,writable,close,saved}:{row:EwayRow;source:EwaySo
  </fieldset></form>
  {preview&&<p className="ops-note">{preview.label}: {formatKolkata(preview.estimated_valid_until)}. This estimate does not replace official validity.</p>}
  {external&&<p className="ops-note">Official expiry: {external.official_valid_until?formatKolkata(external.official_valid_until):'Not recorded; check the source document.'}</p>}
+ {/* R-1: repeated once, here, where a number is about to be typed in. */}
+ <p className="eway-boundary"><Msym name="info"/><span>This saves what the portal told you. It does not create the bill, renew it, or check that it is valid.</span></p>
+ {/* R-8: optional, and the reason it is worth doing anyway. */}
+ <p className="ops-note">A photo or PDF of the bill is optional. It is useful if the vehicle is stopped and the driver needs to show it.</p>
  {record&&<p className="ops-note">Clearing details creates a new revision. Earlier records remain in history.</p>}
  {error&&<p className="eway-error" role="alert">{error}</p>}
  <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(saved).catch(()=>{});}:undefined}/>

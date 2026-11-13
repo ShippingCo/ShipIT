@@ -98,6 +98,16 @@ import { registerDeliveries } from './modules/deliveries/routes.ts';
 import type { DeliveryProofConfiguration } from './modules/deliveries/types.ts';
 
 export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies; whatsapp?:WhatsappDependencies;deliveryProof?:DeliveryProofConfiguration }
+/**
+ * Per-identity budgets for one minute. Reads are far larger than writes because a single
+ * screen load is many reads, and a burst of them must never spend a cashier's ability to
+ * save. Exported so tests assert the configured number rather than a copy of it.
+ */
+export const READ_BUDGET_PER_MINUTE = 1200;
+export const WRITE_BUDGET_PER_MINUTE = 240;
+/** Customer search is stricter than the general read budget: it reads other people's data. */
+export const CUSTOMER_SEARCH_BUDGET_PER_MINUTE = 30;
+
 export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments, whatsapp, deliveryProof }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
@@ -142,7 +152,7 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
     return identity + (request.method === 'GET' || request.method === 'HEAD' ? ':r' : ':w');
   };
   app.register(rateLimit, {
-    max: request => (request.method === 'GET' || request.method === 'HEAD' ? 1200 : 240),
+    max: request => (request.method === 'GET' || request.method === 'HEAD' ? READ_BUDGET_PER_MINUTE : WRITE_BUDGET_PER_MINUTE),
     timeWindow: 60_000, cache: 20_000, keyGenerator: rateLimitKey,
     errorResponseBuilder: () => new HttpError('RATE_LIMITED'),
   });

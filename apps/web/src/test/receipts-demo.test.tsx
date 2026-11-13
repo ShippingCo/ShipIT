@@ -14,18 +14,20 @@ beforeEach(()=>vi.stubGlobal('fetch',vi.fn(async(path:string)=>{
  throw Error('Unexpected read');
 })));
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
-async function start(){const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();render(<MemoryRouter><Receipts controller={controller} roles={['org_admin']}/></MemoryRouter>);await screen.findByText('REAL-RCT');}
+async function start(){const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();render(<MemoryRouter><Receipts controller={controller} roles={['org_admin']}/></MemoryRouter>);
+ // The list opens on today (R-1). This fixture books on the synthetic clock, so widen it first.
+ fireEvent.click(await screen.findByRole('radio',{name:'Any date'}));await screen.findByText('REAL-RCT');}
 it('uses demo columns, search, date filter, count and actual total',async()=>{
  await start();for(const name of ['Docket','Customer','Total','Payment','Booked'])expect(screen.getByRole('columnheader',{name})).toBeVisible();
- expect(screen.getByRole('textbox',{name:'Search receipts'})).toHaveAttribute('placeholder','Search docket, name or phone');expect(screen.getByRole('button',{name:'All time'})).toBeVisible();expect(screen.getByText('1 receipt · ₹40')).toBeVisible();expect(screen.getByText('Not recorded')).toBeVisible();expect(screen.getByRole('button',{name:'Reprint REAL-RCT'})).toBeVisible();
+ expect(screen.getByRole('textbox',{name:'Search receipts'})).toHaveAttribute('placeholder','Search docket, name or phone');expect(screen.getByRole('radio',{name:'Today'})).toBeVisible();expect(screen.getByText('1 receipt · ₹40')).toBeVisible();expect(screen.getByText('Not recorded')).toBeVisible();expect(screen.getByRole('button',{name:'Print receipt REAL-RCT'})).toBeVisible();
 });
 it('searches phone and clears unmatched filters',async()=>{
- await start();const search=screen.getByRole('textbox',{name:'Search receipts'});fireEvent.change(search,{target:{value:'987654'}});expect(screen.getByText('REAL-RCT')).toBeVisible();fireEvent.change(search,{target:{value:'unknown'}});expect(screen.getByText('No receipts match')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));expect(screen.getByText('REAL-RCT')).toBeVisible();
+ await start();const search=screen.getByRole('textbox',{name:'Search receipts'});fireEvent.change(search,{target:{value:'987654'}});expect(screen.getByText('REAL-RCT')).toBeVisible();fireEvent.change(search,{target:{value:'unknown'}});expect(screen.getByText('No receipts match')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:'Show every receipt'}));expect(screen.getByText('REAL-RCT')).toBeVisible();
 });
 it('prints the shared receipt sheet only on Reprint and cleans private print DOM',async()=>{
  const print=vi.spyOn(window,'print').mockImplementation(()=>{
- const root=document.getElementById('print-root')!;expect(root.querySelector('.receipt-sheet')).not.toBeNull();for(const value of ['REAL-RCT','Saved recipient','Standard · 1 kg','Packing charges₹20','Taxable value—','Entered total₹40'])expect(root.textContent).toContain(value);expect(root.textContent).not.toContain('Fictional demo');
- });await start();expect(print).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Reprint REAL-RCT'}));await waitFor(()=>expect(print).toHaveBeenCalledOnce());expect(document.getElementById('print-root')).toBeNull();expect(document.body).not.toHaveClass('printing');
+ const root=document.getElementById('print-root')!;expect(root.querySelector('.receipt-sheet')).not.toBeNull();for(const value of ['REAL-RCT','Saved recipient','Standard · 1 kg','Packing charges₹20','Taxable value—','Entered total₹40','DUPLICATE'])expect(root.textContent).toContain(value);expect(root.textContent).not.toContain('Fictional demo');
+ });await start();expect(print).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Print receipt REAL-RCT'}));await waitFor(()=>expect(print).toHaveBeenCalledOnce());expect(document.getElementById('print-root')).toBeNull();expect(document.body).not.toHaveClass('printing');
 });
 it('keeps missing values and payment truthful',()=>{
  const view=counterReceiptView({...entry,data:{fields:{},additional_parcels:[]}},'Saved business');expect(view.issuer).toBe('Saved business');expect(view.total).toBe('—');expect(view.rows.find(([label])=>label==='CGST')?.[1]).toBe('—');expect(view.note).toContain('payment are not recorded');

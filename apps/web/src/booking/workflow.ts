@@ -7,7 +7,7 @@ import { commercial, type Quote } from '../data-access/commercial';
 import { bookings, type BookingConfirmation } from '../data-access/bookings';
 import type { CommandIntent } from '../data-access/command-intent';
 import { ApiFailure } from '../data-access/errors';
-import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, bookingNeeds, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
+import { emptyDraft, emptyParcel, receiverFields, additionalParcelErrors, bookingNeedFields,bookingNeeds, totalWeight, type ParcelDraft, commercialFields, pricingInput, taxFacts, validate, type Draft, type Field, type Errors } from './form';
 import { clearRecovery, recoveryMarker, retainRecovery } from './recovery';
 import { failureMessage, uncertain } from './failures';
 import {bookingEntries,type CounterEntry} from '../data-access/booking-entries';
@@ -17,8 +17,13 @@ interface State {
   pricingPhase: Phase; taxPhase: Phase; booking?: BookingConfirmation; bookingPhase: Phase;
   accountId?:string;accountName?:string;creditRequestId?:string;creditApprovalId?:string;creditReason?:string;creditPhase?:Phase;
   settingsVersion?: string; message: string; recoveryBlocked: boolean; busy: boolean; validationAttempt:number;
-  entry?:CounterEntry; failureCode?:string;
+  entry?:CounterEntry; entryReason?:string; failureCode?:string;
 }
+/**
+ * Tax cannot be calculated until the shop's own GST treatment and state are configured, and
+ * nothing typed at the counter can supply them. Said plainly, with the place to fix it.
+ */
+export const TAX_SETUP_REASON = 'Your shop’s GST is not set up, so tax cannot be calculated. Open Settings and choose the GST treatment and business state.';
 export function createBookingWorkflow(controller: ScopeController) {
   const api = scopedApi(controller), customerApi = customers(api), commercialApi = commercial(api), bookingApi = bookings(api), accountApi=customerAccounts(api);
   const entryApi=bookingEntries(api);
@@ -37,7 +42,7 @@ export function createBookingWorkflow(controller: ScopeController) {
   const locked = () => state.busy || state.recoveryBlocked || !!bookingIntent || !!entryIntent || state.customerPhase === 'uncertain' || state.pricingPhase === 'uncertain' || state.taxPhase === 'uncertain' || state.creditPhase==='uncertain' || !!state.booking || !!state.entry;
   function validation(section: Parameters<typeof validate>[1]) {
     const errors = validate(state.draft, section);
-    if(section!=='customer'&&!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='')errors.override='Enter the freight amount.';
+    if(section!=='customer'&&needsTypedPrice())errors.override='No published price covers this destination, service and weight. Enter the freight amount.';
     const extra = section === 'customer' ? [] : additionalParcelErrors(state.draft,state.additionalParcels);
     if(section !== 'customer' && !totalWeight(state.draft,state.additionalParcels)) errors.weight = 'Enter valid package weights with a safe combined total.';
     const invalid = Object.keys(errors).length > 0 || extra.some(e => Object.keys(e).length > 0);
@@ -81,13 +86,35 @@ export function createBookingWorkflow(controller: ScopeController) {
     state = { draft: emptyDraft(), additionalParcels: [], parcelErrors: [], errors: {}, customerPhase: 'editing', pricingPhase: 'editing', taxPhase: 'editing', bookingPhase: 'editing', message: '', recoveryBlocked: false, busy: false,validationAttempt:0 };
     listeners.forEach(l => l());
   };
+  /**
+   * A published rate card is a price. The counter only has to type a freight amount when the
+   * server has actually told us there is no rate for this destination, service and weight —
+   * never pre-emptively, which made a priced shop unable to complete any booking at all.
+   */
+  const needsTypedPrice = () => !state.accountId && !state.draft.serviceOptionId
+    && state.draft.override === '' && !state.quote && state.failureCode === 'NO_RATE';
   /** What the operator still has to supply before this can become a booking with dockets. */
-  const needs = () => bookingNeeds(state.draft, state.additionalParcels,
-    !!state.accountId || !!state.draft.serviceOptionId || state.draft.override !== '');
+  const needs = () => bookingNeeds(state.draft, state.additionalParcels, !needsTypedPrice());
+  /** The same list, each item carrying the field it belongs to so the counter can link to it. */
+  const needFields = () => bookingNeedFields(state.draft, state.additionalParcels, !needsTypedPrice());
+  /**
+   * Why this form could not become a booking, in the words the operator should read. A draft
+   * is sometimes a deliberate choice and sometimes all that is left after a booking was
+   * refused; those are not the same event, so the reason has to survive onto the confirmation
+   * instead of being replaced by a cheerful "Draft saved".
+   */
+  const entryBlocker = (): string | undefined => {
+    if ([state.customerPhase, state.pricingPhase, state.taxPhase, state.bookingPhase].includes('error') && state.message) return state.message;
+    // The tax fields are not typed at the counter, so a complaint about them is really a
+    // complaint about the shop's GST setup. The remaining two are the operator's own choices.
+    if (state.errors.handoverState || state.errors.recipientState || state.errors.recipientRef || state.errors.evidenceRef) return TAX_SETUP_REASON;
+    return state.errors.gstin || state.errors.specialCase;
+  };
   return {
     api, customerApi, accountApi, entryApi,
     entryPending:()=>!!entryIntent,
     needs,
+    needFields,
     requiresEntry:()=>needs().length>0,
     /**
      * Return to the form with everything the operator typed still in place, so finishing a
@@ -96,17 +123,18 @@ export function createBookingWorkflow(controller: ScopeController) {
      */
     reopenDraft() {
       if(!state.entry||state.busy)return;
-      set({entry:undefined,bookingPhase:'editing',message:'',errors:{},parcelErrors:[]});
+      set({entry:undefined,entryReason:undefined,bookingPhase:'editing',message:'',errors:{},parcelErrors:[]});
     },
-    async saveEntry() {
+    async saveEntry(reason?:string) {
       if(!current()||state.busy||state.recoveryBlocked||state.booking||state.entry||bookingIntent)return;
+      const blocked=reason??entryBlocker();
       entryIntent??=entryApi.create({fields:{...state.draft},additional_parcels:state.additionalParcels.map(({localKey:_,...parcel})=>parcel)});
       set({busy:true,bookingPhase:'loading',errors:{},parcelErrors:[],message:'Saving booking…'});
       try {
         retainRecovery(entryIntent);
         const entry=await entryApi.execute(entryIntent);if(!current())return;
         clearRecovery(api.scope);entryIntent=undefined;
-        set({entry,bookingPhase:'ready',message:'Draft saved. It is not a booking yet.'});
+        set({entry,entryReason:blocked,bookingPhase:'ready',message:blocked?'Saved as a draft. '+blocked:'Draft saved. It is not a booking yet.'});
       }catch(error){if(!current())return;if(!failed(error,'bookingPhase')){clearRecovery(api.scope);entryIntent=undefined;}}
       finally{set({busy:false});}
     },
@@ -217,7 +245,7 @@ export function createBookingWorkflow(controller: ScopeController) {
     },
     validateEntry() {
       const errors=validate(state.draft,'booking');
-      if(!state.accountId&&!state.draft.serviceOptionId&&state.draft.override==='')errors.override='Enter the freight amount.';
+      if(needsTypedPrice())errors.override='No published price covers this destination, service and weight. Enter the freight amount.';
       for(const key of ['recipientRef','evidenceRef','handoverState','recipientState','gstin','specialCase','method'] as const)delete errors[key];
       const extra=additionalParcelErrors(state.draft,state.additionalParcels);
       const invalid=Object.values(errors).some(Boolean)||extra.some(e=>Object.values(e).some(Boolean));
@@ -228,7 +256,8 @@ export function createBookingWorkflow(controller: ScopeController) {
       if(!current()||state.busy||state.recoveryBlocked||state.booking||bookingIntent||state.customerPhase==='uncertain'||state.taxPhase==='uncertain'||state.quote)return;
       const d={...state.draft,weight:totalWeight(state.draft,state.additionalParcels)};
       const errors=validate(d,'commercial');
-      if(d.override===''&&!d.serviceOptionId&&!state.accountId)return;
+      // Ask the rate card. Previously the counter refused to even request a quote unless a
+      // freight amount had been typed, so published prices were never used.
       if(['destination','service','weight','override','packing'].some(k=>errors[k as Field]))return;
       set({busy:true,pricingPhase:'loading'});
       try {

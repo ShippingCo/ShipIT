@@ -1353,7 +1353,6 @@ Reviewed the extraction of presentation and keyboard listeners from the fictiona
 | apps/web/src/test/console-search.test.tsx: reports a failed API lookup without displaying sample records or success | preserve | seam |
 | apps/web/src/test/workspace-controls.test.tsx: exposes only permitted creation destinations as direct links | preserve | seam |
 | apps/web/src/test/workspace-navigation.test.tsx: keeps reference tasks directly accessible in the same order in both compositions | preserve | presentation |
-| apps/web/src/test/workspace-navigation.test.tsx: does not add unauthorized links and keeps additional operations reachable | preserve | presentation |
 
 
 ### Shared dashboard repair (#193)
@@ -1373,6 +1372,8 @@ tests retain scope checks with the restored Dashboard heading.
 | apps/web/src/test/operational-dashboard.test.tsx: uses the existing correction-aware accounting snapshot and retries an uncertain capture with the same intent | preserve | seam |
 | apps/web/src/test/operational-dashboard.test.tsx: discards a payment capture completed after the franchise scope changes | preserve | seam |
 | apps/web/src/test/operational-dashboard.test.tsx: counts provider acceptance from durable progress and never calls a queued message sent | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: gives a figure that is nothing yet a sentence and a next press, not a bare zero | preserve | seam |
+| apps/web/src/test/operational-dashboard.test.tsx: reports the assistant’s own week and says when a group is too small to show | preserve | assistant |
 
 
 ### Operational reference dialogs and cards (#193)
@@ -1457,15 +1458,12 @@ Journey now owns its pure stage list and no longer imports the fictional store. 
 
 | Regression | Disposition | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: confirms a booking with all user fields blank and no fabricated contact or charges | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves partial confirmed details without requiring freight, phone or destination | preserve | booking |
 | apps/web/src/test/counter.test.tsx: retries an uncertain optional save with the same key and unchanged fields | preserve | booking |
-| apps/web/src/test/counter.test.tsx: preserves entered contact details without replacing an ambiguous existing customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: does not treat failed customer lookup as a new customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: preserves an unassessed decimal entry without inventing a calculated charge | preserve | booking |
 | apps/web/src/test/counter.test.tsx: continues converting valid packing and freight to exact paise | preserve | booking |
 | apps/web/src/test/counter.test.tsx: records entered duplicate dockets without creating conflicting dispatch parcels | preserve | booking |
-| apps/web/src/test/counter.test.tsx: explicit save confirms an entry without requiring sender fields | preserve | booking |
 | apps/web/src/test/counter.test.tsx: filters receipt rows immediately and restores them when the search is cleared | preserve | booking |
 | apps/web/src/test/receipts-demo.test.tsx: uses demo columns, search, date filter, count and actual total | preserve | receipts |
 | apps/web/src/test/receipts-demo.test.tsx: searches phone and clears unmatched filters | preserve | receipts |
@@ -1521,3 +1519,157 @@ Lots parity preserves the operational command view while using the demo card and
 | apps/web/src/test/settings-demo.test.tsx: rejects active logo formats and unsafe profile fields, and escapes printable branding | preserve | settings |
 | apps/web/src/test/settings-demo.test.tsx: retains a confirmed GST save when the remaining shop command fails, so recovery does not publish GST twice | preserve | settings |
 
+## Reviewed counter draft-reason additions
+
+A booking refused for a reason the operator cannot see is the defect these rows close: the
+counter now names why a draft is a draft, and says so before the button is pressed when the
+shop's own GST is not configured. The remaining rows are the renamed and added declarations
+from the same branch's navigation, dispatch-creation and icon work.
+
+| Caller | Groups |
+| --- | --- |
+| apps/web/src/test/counter-draft-reason.test.tsx | seam |
+
+| Declaration | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/counter-draft-reason.test.tsx: names an unconfigured shop GST before the button is pressed, and does not promise a booking | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: names a docket the server has already used instead of a bare draft | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: names a refused tax calculation instead of a bare draft | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: still saves a deliberate draft with no alarm when the operator simply has less to type | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: a configured shop still completes the booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: keeps a blank form as a named draft, never as a confirmed booking | preserve | booking |
+| apps/web/src/test/counter.test.tsx: asks which customer a reused phone belongs to instead of silently keeping a draft | preserve | booking |
+| apps/web/src/test/counter.test.tsx: can keep the typed name as a new customer instead | preserve | booking |
+| apps/web/src/test/counter.test.tsx: never lets the customer question end in another draft | preserve | booking |
+| apps/web/src/test/counter.test.tsx: does not ask about a saved customer whose name differs only by case or spacing | preserve | booking |
+| apps/web/src/test/counter.test.tsx: explicit save keeps a draft without requiring sender fields | preserve | booking |
+| apps/web/src/test/counter.test.tsx: names what is missing before the button is pressed, and stops naming it once supplied | preserve | booking |
+| apps/web/src/test/counter.test.tsx: books from the published rate card without a typed freight amount | preserve | booking |
+| apps/web/src/test/counter.test.tsx: offers a readable draft number and a way back into the same form | preserve | booking |
+| apps/web/src/test/dispatch-creation.test.tsx: creates an empty lot when saved data is %s | preserve | lots |
+| apps/web/src/test/dispatch-creation.test.tsx: schedules a route without lots when saved data is %s | preserve | lots |
+| apps/web/src/test/dispatch-creation.test.tsx: opens the %s editor while initial data is still loading | preserve | lots |
+| apps/web/src/test/dispatch-creation.test.tsx: keeps %s creation unavailable to read-only users | preserve | lots |
+| apps/web/src/test/icon-names.test.tsx: only uses Material Symbols that are actually bundled | preserve | presentation |
+| apps/web/src/test/workspace-navigation.test.tsx: does not add unauthorized links and leaves every authorized destination visible | preserve | presentation |
+| apps/web/src/test/workspace-navigation.test.tsx: gives every listed destination its own icon | preserve | presentation |
+
+## Reviewed refresh-feedback addition
+
+Eight screens each grew their own refresh control and not one of them confirmed anything, so a
+press over unchanged records was indistinguishable from a broken button. The one shared control
+now says when the records on screen were fetched, and a reload keeps those records visible
+instead of blanking the screen to a skeleton — while a change of branch still clears them,
+because leaving one branch's parcels on screen under another branch's name is the worse error.
+
+The two overview rows below belong to the same review pass: a figure that is nothing yet
+carries its own sentence and its own next press rather than a bare zero, and the assistant band
+reports its own closed week and says when a group is too small to show.
+
+| Declaration | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/operational-dashboard.test.tsx: gives a figure that is nothing yet a sentence and a next press, not a bare zero | preserve | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: reports the assistant’s own week and says when a group is too small to show | preserve | presentation |
+| apps/web/src/test/support.test.tsx: confirms that a refresh actually fetched, so the press is never silent | preserve | assistant |
+
+## Reviewed design-system rebuild
+
+The console's surfaces, colours and shape scale were redefined in one pass: a single blue for
+every action, one hairline, a squircle shape scale, a resting shadow on cards, a grey navigation
+rail against a white work canvas, and the retirement of every decorative one-sided border — the
+3px stripes down the edge of a notice, a selected panel, a leading figure and the active
+navigation row, each of which read as a half-drawn border rather than as emphasis. Roughly 300
+ad-hoc colour values across the stylesheets were collapsed onto that ramp, and the page-header
+prose that restated each screen's own title was removed.
+
+Two new browser effects come with it, both deliberate:
+
+| Effect | File | Why it is here |
+| --- | --- | --- |
+| `window.setTimeout` | `apps/web/src/booking/BookingSaved.tsx` | Resets the docket Copy button's confirmation after a couple of seconds. It touches nothing but that label. |
+| `window.localStorage` | `apps/web/src/operations/hub-places.ts` | The named-hub register described below. |
+
+### The hub register, and its limits
+
+Checking a parcel in required the operator to type a 36-character UUID for `location_ref`, and
+another for `evidence_ref`, before the button would enable — the server validates both as UUIDs
+and nothing further, and there is no endpoint that lists hub locations. A counter clerk cannot do
+that, so the screen could not be used for its own purpose.
+
+`evidence_ref` identifies the check-in event itself and is now minted per press, which is what
+that field is for. `location_ref` must stay the same for the same physical hub or the custody
+history stops grouping, so the hub is named once by the operator and the name is paired with one
+generated UUID in `localStorage`.
+
+What this stores is shop configuration — a place name the operator typed — and never a customer,
+a parcel or an amount, so it does not touch what `safety.no_production_local_writes` protects.
+What it does not do is share those names between devices or branches: one physical hub named at
+two counters carries two references. A server-side register of locations is the proper fix and
+would replace this module without changing the screen.
+
+### Check-in regressions
+
+| Declaration | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/hub-places.test.tsx: gives one hub one reference, however the name is typed | preserve | parcels |
+| apps/web/src/test/hub-places.test.tsx: keeps the most recently used hub first, so the usual one is already chosen | preserve | parcels |
+| apps/web/src/test/hub-places.test.tsx: mints a fresh reference for every event, never a reused one | preserve | parcels |
+| apps/web/src/test/hub-places.test.tsx: reads as empty rather than throwing when storage is unavailable | preserve | parcels |
+| apps/web/src/test/hub-places.test.tsx: names a hub once and chooses it, without asking for a reference | preserve | parcels |
+| apps/web/src/test/hub-places.test.tsx: forgets a hub on request and leaves the rest alone | preserve | parcels |
+| apps/web/src/test/failure-copy.test.tsx: tells the operator the record may or may not have saved, in those words | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: never uses the system vocabulary the shop could not read | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: removes the fear of pressing the button, because that is why the screen gets abandoned | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: offers one action, and it is phrased as checking rather than repeating | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: shows no button at all when there is nothing safe to press | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: states what happened to the money when a screen passes that line | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: leaves the money line out on a screen where no money moves | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: says plainly that a rejected change was not saved | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: keeps the error code as a quiet support handle, not as the message | replace | recovery |
+| apps/web/src/test/failure-copy.test.tsx: reports saving and saved without naming the server, which the operator cannot see | replace | recovery |
+| apps/web/src/test/packages-bulk-bar.test.tsx: counts parcels, not selections | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: says "parcel" when there is one of them | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: discloses parcels the current filter is hiding, so the count never silently disagrees with the table | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: says nothing about hiding when nothing is hidden | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: names the reason an action cannot be pressed, on the screen rather than in a tooltip | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: calls drafts what they are, instead of listing them as the wrong state | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: keeps a blocked action visible and disabled rather than removing it | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: leaves a valid action pressable and reports which one was pressed | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: shows no reason line at all when every chosen parcel is eligible for everything | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: offers no action that can never be pressed | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: disables everything while an update is running, so a second press cannot start one | replace | parcels |
+| apps/web/src/test/app.test.tsx: renders the four figures, the journey and what the assistant did | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: shows labels before figures, keeps every request inside the scope, and asks for no money data it may not read | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: compares today against the same weekday last week, not yesterday | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: draws the journey in the order a parcel moves, with each count agreeing with the list it opens | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: moves only the chart when the range changes, and leaves the figures on today | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: says a figure is missing rather than zero, keeps the tile inert, and retries only what failed | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: rejects unsafe counts, incomplete weeks, broken series and inconsistent business dates | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: states what the assistant did in work the owner did not do, and says when a group is too small to show | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: says "Nothing" rather than zero when nothing needs a person, and renders no list at all | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: names the decision each waiting row will ask for, ranked money first | replace | presentation |
+| apps/web/src/test/operational-dashboard.test.tsx: says what the value panel will show rather than printing six dashes at a shop with no conversations yet | replace | presentation |
+| apps/web/src/test/counter.test.tsx: records how the money arrived rather than assuming cash | replace | presentation |
+| apps/web/src/test/counter.test.tsx: works out the change, and names a shortfall without refusing the booking | replace | presentation |
+| apps/web/src/test/counter.test.tsx: asks for cash given only where cash is what is being taken | replace | presentation |
+| apps/web/src/test/counter.test.tsx: never sends counter arithmetic to the server | replace | presentation |
+| apps/web/src/test/booking-units.test.tsx: accepts only published rate choices, keeping the prices it quotes from and nothing else | replace | presentation |
+| apps/web/src/test/dispatch-creation.test.tsx: starts an empty bag when saved data is %s | replace | presentation |
+| apps/web/src/test/lots-demo.test.tsx: starts a bag from its destination alone, pre-ticks that city and saves the staff note | replace | presentation |
+| apps/web/src/test/lots-demo.test.tsx: leads a bag card with its city and carries only the figures the PRD lists | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: shows the three states with counts, and an empty queue keeps them | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: agrees the customer’s own time in one press, repeating it in the button | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: offers three future windows instead, and agrees the one chosen | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: accepts a typed window in India time and refuses one already past | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: names a request worth a look and will not answer it until that is said | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: says what the customer was told when the decision fails | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: says the module is not set up rather than blaming the connection | replace | presentation |
+| apps/web/src/test/pickups.test.tsx: reads a window back the way someone would say it | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: sends the code on WhatsApp to the number as dialled and keeps it on refusal | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: names a mistyped number on blur without clearing it | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: says nothing could be reached when the network fails, and clears nothing | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: states a wait after three wrong codes and never locks the account | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: preserves leading zeroes and ignores a verification completed after unmount | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: reuses the challenge for another code and clears the countdown on change | replace | presentation |
+| apps/web/src/test/sign-in-fields.test.tsx: still offers an email address for a shop enrolled that way | replace | presentation |
+| apps/web/src/test/operations.test.tsx: asks for the hub by name, never for a reference the operator cannot know | preserve | parcels |

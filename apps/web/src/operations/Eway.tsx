@@ -12,17 +12,16 @@ import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { eway,type EwayCapture,type EwayCommand,type EwayCurrent,type EwayRecord } from '../data-access/eway';
 import { useCommand,usePagedResource,useResource } from './hooks';
-import { CommandNotice,Empty,Failure,Loading } from './AsyncState';
+import {DataRefresh,CommandNotice,Empty,Failure,Loading } from './AsyncState';
 import { formatKolkata,formatMoney,kolkataInputToInstant,rupeesToPaise } from './format';
 import { SelectField,TextField } from '../components/m3/Input';
-import { Msym } from '../components/m3/Icon';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const writable=(roles:readonly OperatorRole[])=>(canAdminister(roles,'eway.write')||roles.includes('operator'));
 export function OperationalEway({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>eway(api),[api]),parcelSource=useMemo(()=>parcels(api),[api]);const reminders=usePagedResource('eway',(cursor,signal)=>source.reminders({limit:50,cursor},signal));const [booking,setBooking]=useState(''),[selected,setSelected]=useState<string|null>(null);
  const remember=useDetailReturn(selected);
- return <div className="ops-page logistics-workspace reference-service"><PageHeader title="E-way bills" eyebrow="Shipment compliance" description="Find a booking by its tracking number to record or check its e-way bill details." actions={<button className="btn btn-outlined" onClick={reminders.reload}><Msym name="refresh"/>Refresh reminders</button>}/>
+ return <div className="ops-page logistics-workspace reference-service"><PageHeader title="E-way bills" eyebrow="Shipment compliance" actions={<DataRefresh resource={reminders}/>}/>
   <ParcelLookup source={parcelSource} label="Find booking by tracking number" select={parcel=>{remember();setSelected(parcel.booking_id);}}/>
   <details className="logistics-secondary"><summary>Open by saved booking reference</summary><form className="workspace-filterbar logistics-reference-lookup" onSubmit={event=>{event.preventDefault();if(uuid.test(booking)){remember();setSelected(booking);}}}><TextField label="Booking ID (UUID)" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36} value={booking} onChange={setBooking}/><button className="btn btn-filled" disabled={!uuid.test(booking)}>Open booking record</button></form></details>
   {reminders.phase==='loading'?<Loading label="Loading e-way checks…"/>:reminders.phase==='error'?<Failure label="E-way checks could not be loaded." retry={reminders.reload}/>:reminders.phase==='empty'?<Empty icon="fact_check" title="No bookings on this page" body="Find a booking by its parcel tracking number to add or review a record."/>:<section className="card ops-card logistics-records"><SectionHeader title="Booking checks" description="Check the source document for official validity. A ShippingCo estimate is shown separately."/><RecordTable mobile="stack" label="E-way checks" rows={reminders.items} rowKey={item=>item.booking_id} selectedKey={selected} columns={[

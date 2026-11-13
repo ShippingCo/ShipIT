@@ -23,34 +23,52 @@ async function start(existing=false,post?:(path:string,init:RequestInit)=>Promis
  });vi.stubGlobal('fetch',fetcher);
  const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
  render(<MemoryRouter><Lots controller={controller} roles={['org_admin']}/></MemoryRouter>);
- await screen.findByText(existing?'Mumbai batch':'No lots yet');return fetcher;
+ await screen.findByText(existing?'Mumbai':'No bags yet');return fetcher;
 }
-it('matches destination-first demo creation, preselects saved entries, totals charges and saves the staff note',async()=>{
- const fetcher=await start();fireEvent.click(screen.getByRole('button',{name:'Create Lot'}));
+// R-6: starting a bag asks one question — which city. The bag names itself, because an
+// operator made to invent a name for a sack will invent "aaa".
+it('starts a bag from its destination alone, pre-ticks that city and saves the staff note',async()=>{
+ const fetcher=await start();fireEvent.click(screen.getByRole('button',{name:'Start a bag'}));
  const dialog=within(await screen.findByRole('dialog'));
- expect(dialog.getByRole('heading',{name:'New lot'})).toBeVisible();expect(dialog.getByRole('button',{name:'Mumbai 1'})).toHaveAttribute('aria-pressed','true');
- expect(dialog.getByRole('checkbox',{name:'Include SYN-LOT-1'})).toBeChecked();expect(dialog.getByText('₹59')).toBeVisible();expect(dialog.getByText('0.8',{exact:true})).toBeVisible();
- expect(dialog.getByLabelText('Put on a route')).toHaveValue('');fireEvent.change(dialog.getByLabelText('Note for your staff'),{target:{value:'Handle carefully'}});
- fireEvent.click(dialog.getByRole('button',{name:'Create with 1 parcel'}));
+ expect(dialog.getByRole('heading',{name:'Start a bag'})).toBeVisible();
+ expect(dialog.getByRole('button',{name:'Mumbai 1'})).toHaveAttribute('aria-pressed','true');
+ expect(dialog.getByRole('checkbox',{name:'Put SYN-LOT-1 in this bag'})).toBeChecked();
+ expect(dialog.getByText('0.8',{exact:true})).toBeVisible();
+ expect(dialog.queryByLabelText('Put on a route')).toBeNull();
+ fireEvent.change(dialog.getByLabelText('Note for your staff'),{target:{value:'Handle carefully'}});
+ fireEvent.click(dialog.getByRole('button',{name:'Start it with 1 parcel'}));
  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
  const request=fetcher.mock.calls.find(([,init])=>init?.method==='POST')!;
  expect(JSON.parse(request[1]!.body as string)).toMatchObject({destination_key:'MUMBAI',note:'Handle carefully',planning_entry_ids:[entry.id]});
 });
-it('shows the demo card metrics, progress, city, staff note and counted actions from saved data',async()=>{
- await start(true);expect(screen.getByText('Mumbai batch')).toBeVisible();expect(screen.getByText(lot.code)).toBeVisible();
- for(const label of ['parcels','cities','moving','Not on a route yet','Keep upright'])expect(screen.getByText(label,{exact:true})).toBeVisible();
- expect(screen.getByTitle('0 of 1 delivered')).toBeVisible();expect(screen.getByRole('button',{name:'Add parcels'})).toBeVisible();expect(screen.getByRole('button',{name:'Message 1'})).toBeVisible();
+// R-1, R-2, R-3: the destination leads, the card carries only what the PRD lists, and the
+// words "lot", "membership", "candidate" and "archived" appear nowhere on the screen.
+it('leads a bag card with its city and carries only the figures the PRD lists',async()=>{
+ await start(true);
+ expect(screen.getByText('Mumbai')).toBeVisible();expect(screen.getByText(lot.code)).toBeVisible();
+ expect(screen.getByRole('heading',{name:'Open'})).toBeVisible();
+ for(const label of ['parcels','kg','open'])expect(screen.getByText(label,{exact:true})).toBeVisible();
+ expect(screen.getByText('Keep upright')).toBeVisible();
+ expect(screen.getByText('1 planned, not booked yet')).toBeVisible();
+ // Nothing has been put in this bag, so it says so rather than leaving the line blank.
+ expect(screen.getByText('Nothing has been put in this bag yet.')).toBeVisible();
+ for(const word of [/\blot\b/i,/membership/i,/candidate/i,/archived/i])expect(document.body.textContent).not.toMatch(word);
+ // R-10: sealing is the only filled button, and it is unavailable while the bag holds no parcel.
+ expect(screen.getByRole('button',{name:'Add parcels'})).toBeVisible();
+ expect(screen.getByRole('button',{name:'Seal and send this bag'})).toBeDisabled();
+ expect(screen.getByRole('button',{name:'Message 1'})).toBeVisible();
+ expect(screen.getByRole('button',{name:'Delete this bag'})).toBeVisible();
 });
 it('blocks closing an uncertain create and retries the identical idempotency key without a second lot',async()=>{
  const posts:RequestInit[]=[];await start(false,async(_path,init)=>{posts.push(init);if(posts.length===1)throw new TypeError('Synthetic lost response');return f.json(lot,201);});
- fireEvent.click(screen.getByRole('button',{name:'Create Lot'}));fireEvent.click(screen.getByRole('button',{name:'Create with 1 parcel'}));
- const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.getByRole('button',{name:'Cancel'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Close'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Start a bag'}));fireEvent.click(screen.getByRole('button',{name:'Start it with 1 parcel'}));
+ const retry=await screen.findByRole('button',{name:'Check if it saved'});expect(screen.getByRole('button',{name:'Cancel'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Close'})).toBeNull();
  fireEvent.click(retry);await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
  expect(posts).toHaveLength(2);expect(posts[1]!.body).toBe(posts[0]!.body);expect(posts[1]!.headers).toEqual(posts[0]!.headers);
 });
 it('reports queued, suppressed and unverified planning recipients separately without claiming delivery',async()=>{
  await start(true,async(path)=>{expect(path).toContain('/messages?');return f.json({id:f.id(350),queued:0,suppressed:0,failed:0,unavailable:1});});
- fireEvent.click(screen.getByRole('button',{name:'Message 1'}));fireEvent.change(screen.getByLabelText('Message'),{target:{value:'Synthetic update'}});fireEvent.click(screen.getByRole('button',{name:'Send to lot'}));
+ fireEvent.click(screen.getByRole('button',{name:'Message 1'}));fireEvent.change(screen.getByLabelText('Message'),{target:{value:'Synthetic update'}});fireEvent.click(screen.getByRole('button',{name:'Send to everyone in this bag'}));
  expect(await screen.findByText(/1 planning entries without verified customer records/)).toBeVisible();expect(screen.getByText(/Queued does not mean delivered/)).toBeVisible();
 });
 it('reads every cursor page and rejects a repeated cursor instead of presenting partial totals',async()=>{

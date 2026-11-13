@@ -16,14 +16,15 @@ afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('filters saved receipts by IST booking date and keeps the range while paging',async()=>{
  const record={id:id(4),booking_id:fixture.bookingId,version:1,status:'booked',custody:'awaiting_intake',docket:'SYN-RECEIPT',weight_grams:1000,confirmed_at:at,sender:{source_customer_id:fixture.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
  const request=vi.fn(async(path:string)=>path.includes('/parcels?')?Response.json(page([record],!path.includes('cursor='))):Response.json(fixture.receipt));vi.stubGlobal('fetch',request);
- render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByText('SYN-RECEIPT');
- fireEvent.click(screen.getByRole('button',{name:'All time'}));fireEvent.click(screen.getByRole('button',{name:'This week'}));expect(screen.getByText('No receipts match')).toBeVisible();
- fireEvent.click(screen.getByRole('button',{name:'More receipts'}));await waitFor(()=>expect(request.mock.calls.some(([path])=>path.includes('cursor=synthetic-next'))).toBe(true));expect(screen.getByRole('button',{name:'This week'})).toBeVisible();expect(new URL(request.mock.calls.find(([path])=>path.includes('cursor=synthetic-next'))![0],'http://localhost').searchParams.get('franchise_id')).toBe(id(3));
- fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));await screen.findAllByText('SYN-RECEIPT');
+ render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);
+ fireEvent.click(await screen.findByRole('radio',{name:'Any date'}));await screen.findByText('SYN-RECEIPT');
+ fireEvent.click(screen.getByRole('radio',{name:'This week'}));expect(screen.getByText('No receipts match')).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'More receipts'}));await waitFor(()=>expect(request.mock.calls.some(([path])=>path.includes('cursor=synthetic-next'))).toBe(true));expect(screen.getByRole('radio',{name:'This week'})).toHaveAttribute('aria-checked','true');expect(new URL(request.mock.calls.find(([path])=>path.includes('cursor=synthetic-next'))![0],'http://localhost').searchParams.get('franchise_id')).toBe(id(3));
+ fireEvent.click(screen.getByRole('radio',{name:'Any date'}));await screen.findAllByText('SYN-RECEIPT');
 });
 it('uses exclusive IST day boundaries and native custom-range constraints',async()=>{
  expect(dateWindow('today')).toEqual([Date.parse(dayStart(businessDay())),expect.any(Number)]);
- vi.stubGlobal('fetch',vi.fn(async()=>Response.json(page([]))));render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByText('No receipts yet');fireEvent.click(screen.getByRole('button',{name:'All time'}));
+ vi.stubGlobal('fetch',vi.fn(async()=>Response.json(page([]))));render(<MemoryRouter><Receipts controller={controller()}/></MemoryRouter>);await screen.findByText('No receipts today yet');fireEvent.click(screen.getByRole('radio',{name:'Any date'}));
  fireEvent.change(screen.getByLabelText('From'),{target:{value:'2026-11-03'}});expect(screen.getByLabelText('To')).toHaveAttribute('min','2026-11-03');
  const [start,end]=dateWindow('custom',{from:'2026-11-03',to:'2026-11-03'});expect(start).toBe(Date.parse('2026-11-02T18:30:00.000Z'));expect(end).toBe(Date.parse('2026-11-03T18:29:59.999Z'));
 });

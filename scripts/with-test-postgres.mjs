@@ -129,8 +129,11 @@ try {
   const args = process.argv.slice(2);
   console.log('Disposable PostgreSQL 18.6 is ready on loopback.');
   const child = await run(process.execPath, [pnpm, ...(args.length ? args : ['quality'])], {
-    // Gate verification includes two full quality runs plus installation/drills.
-    inherit: true, timeout: (args.includes('verify:gates') || (process.platform === 'win32' &&
+    // An interactive preview is driven by a person, not a runner, so it gets a working day
+    // instead of a test timeout. Gate verification includes two full quality runs plus
+    // installation/drills; everything else keeps the ordinary test budget.
+    inherit: true, timeout: (args.some(argument => String(argument).includes('workflow-preview')) ? 480
+      : args.includes('verify:gates') || (process.platform === 'win32' &&
       (args.length === 0 || args.includes('quality') || args.includes('test:db'))) ? 45 : 30) * 60_000,
     env: {
       ...process.env, NODE_ENV: 'test', TEST_DATABASE_IDENTITY: 'db_test',

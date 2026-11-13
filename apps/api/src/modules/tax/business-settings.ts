@@ -11,6 +11,27 @@ export function settingsInput(value: unknown): BusinessGstSettingsInput {
 export function settingsDto(row: PolicyRow|null): BusinessGstSettingsDto {
   return { id: row?.id??null,mode: row?.business_gst_mode??null,supplier_state: row?.policy.supplier_state??'',version: row?.version_number??0 };
 }
+/**
+ * The GSTIN the saved policy will carry.
+ *
+ * A blank value means "keep the one already saved", which is what the settings form offers.
+ * On a shop's first save there is nothing to keep, and the old code passed `undefined`
+ * straight into `policy()` — which rejected it as a malformed GSTIN and reported the failure
+ * against the field `tax`. The operator saw only "the server rejected the change", with no
+ * way to tell which of the three GST fields was at fault.
+ *
+ * The state prefix is checked here for the same reason: `policy()` enforces it, but reports it
+ * as a GSTIN format problem, when the operator may equally have chosen the wrong state.
+ */
+function supplierGstin(input: BusinessGstSettingsInput, existing: PolicyRow|null): string {
+  const kept = input.supplier_gstin || existing?.policy.supplier_gstin || '';
+  if (!kept) throw new FieldValidationError('supplier_gstin','REQUIRED');
+  if (input.supplier_state && !kept.startsWith(input.supplier_state)) {
+    throw new FieldValidationError('supplier_gstin','INVALID_FORMAT');
+  }
+  return kept;
+}
+
 /** A single business preference covers every ordinary counter combination. */
 export function settingsPolicy(input: BusinessGstSettingsInput, now: Date, existing: PolicyRow|null): TaxPolicyInput {
   const rate = input.mode === 'none' ? 0 : input.mode === 'gta5' ? 5 : 18;
@@ -22,6 +43,6 @@ export function settingsPolicy(input: BusinessGstSettingsInput, now: Date, exist
         [{ id: 'CGST',kind: 'CGST',numerator: rate,denominator: 200 },{ id: 'SGST',kind: 'SGST',numerator: rate,denominator: 200 }] });
   }
   return policy({ effective_from: now.toISOString(),effective_to: '9999-12-31T23:59:59.000Z',validity_seconds: 600,
-    supplier_state: input.supplier_state,supplier_gstin: input.supplier_gstin || existing?.policy.supplier_gstin,
+    supplier_state: input.supplier_state,supplier_gstin: supplierGstin(input, existing),
     approval_ref: 'SETTINGS_SAVE',source_ref: 'BUSINESS_GST_SETTING',time_rule: 'contemporaneous_v1',rules });
 }

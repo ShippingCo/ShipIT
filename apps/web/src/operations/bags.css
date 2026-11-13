@@ -1,0 +1,96 @@
+/* Bags
+   ---------------------------------------------------------------------------
+   One sack of parcels going to one city.
+
+   The destination leads every card, because that is what the operator is
+   looking for: they are holding a Nashik parcel and want the Nashik sack. The
+   bag's own code is below it, in the smaller mono face — it matters for a
+   dispute and never for finding the right bag. */
+
+.bags { display: flex; flex-direction: column; gap: 28px; }
+.bags section { display: flex; flex-direction: column; gap: 10px; }
+.bags .t-title-sec { margin: 0; }
+
+/* ---- waiting to be bagged ------------------------------------------- */
+/* Destinations to press, not a list to read. A day's Nashik parcels go in with
+   one press and one confirm; reading twelve rows and ticking twelve boxes was
+   the same job done the slow way. */
+.bag-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; }
+.bag-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: var(--touch-min, 44px);
+  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface); color: inherit; font: inherit; font-size: 15px; cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.bag-chip:hover:not(:disabled) { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.bag-chip:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.bag-chip:disabled { cursor: default; opacity: 0.6; }
+.bag-chip.on { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.bag-chip .msym { font-size: 19px; color: var(--md-on-surface-variant); }
+.bag-chip.on .msym { color: inherit; }
+.bag-chip b { font-variant-numeric: tabular-nums; }
+
+/* ---- a bag ----------------------------------------------------------- */
+.bag-card { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.bag-card > * { width: 100%; }
+.bag-head { display: flex; align-items: flex-start; gap: 12px; }
+.bag-icon { flex: none; color: var(--md-on-surface-variant); line-height: 1; }
+.bag-city { font-size: 19px; line-height: 25px; font-weight: 650; }
+.bag-code { font-size: 15px; color: var(--md-on-surface-variant); overflow-wrap: anywhere; }
+
+/* A bag left open overnight is a forgotten bag. Amber and a plain age, never a block. */
+.bag-stale {
+  flex: none; padding: 4px 10px; border-radius: 999px; font-size: 15px; font-weight: 600;
+  border: 1px solid #f2e0bf; background: var(--md-warning-container, #fdf4e3); color: var(--md-warning-on-subtle, #7a5300);
+}
+
+.bag-figs { display: flex; gap: 24px; flex-wrap: wrap; }
+.bag-figs > div { display: flex; flex-direction: column; min-width: 0; }
+.bag-fig { font-size: 24px; line-height: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.bag-fig-l { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+
+.bag-foot { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+.bag-trip { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
+.bag-trip .msym { flex: none; font-size: 19px; }
+
+.bag-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+/* Deleting a bag is a text link under the actions, never a button beside them. */
+.bag-delete {
+  background: none; border: 0; padding: 10px 0; font: inherit; font-size: 15px;
+  color: var(--md-on-surface-variant); text-decoration: underline; text-underline-offset: 3px;
+  cursor: pointer; min-height: var(--touch-min, 44px); text-align: left; width: auto;
+}
+.bag-delete:hover { color: var(--md-error); }
+.bag-delete:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; border-radius: 4px; }
+
+.bag-card.is-sent { background: var(--md-surface-container-low, var(--grey-100)); }
+
+/* ---- choosing parcels ------------------------------------------------ */
+.bagpick { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.bagpick-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bagpick-all {
+  background: none; border: 0; font: inherit; font-size: 15px; color: var(--md-primary);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: var(--touch-min, 44px);
+}
+.bagpick-all:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; border-radius: 4px; }
+.bagpick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bagpick-list li {
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: var(--touch-min, 44px);
+  border: 1px solid var(--md-outline-variant); border-radius: 10px; font-size: 15px;
+}
+.bagpick-dk { flex: none; font-weight: 600; }
+.bagpick-to { flex: none; color: var(--md-on-surface-variant); }
+.bagpick-w { flex: none; font-variant-numeric: tabular-nums; color: var(--md-on-surface-variant); }
+.bagpick-more { margin-top: 8px; }
+.bagpick-more summary { min-height: var(--touch-min, 44px); display: flex; align-items: center; cursor: pointer; font-size: 15px; }
+
+.bagsum { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; font-size: 15px; }
+.bagsum b { font-size: 19px; font-variant-numeric: tabular-nums; }
+
+.bag-seal-figures { margin: 0 0 10px; font-size: 17px; line-height: 24px; }
+.bag-seal-figures b { font-size: 24px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 600px) {
+  .bagpick-list li { flex-wrap: wrap; }
+  .bag-figs { gap: 18px; }
+}

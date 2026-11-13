@@ -41,11 +41,15 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
-function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
+function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');chooseService();fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
+// Nothing is priced until a service is chosen (R-19): a pre-selected tier is a tier sold by
+// accident, so the counter now makes the operator say which one — and so must the test.
+const chooseService=()=>{const card=screen.queryByRole('radio',{name:/Standard/});if(card)fireEvent.click(card);else fill('Service','standard');};
 async function calculate(){await waitFor(()=>expect(summary().getByText('₹151.04')).toBeVisible());}
 async function entered(paid=false){await start();core(paid);await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
-const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+const save=()=>fireEvent.click(screen.getByRole('button',{name:/^Save booking/}));
+const payBy=(label:string)=>fireEvent.click(screen.getByRole('button',{name:label}));
 // A form that cannot become a booking names its button differently, before it is pressed.
 const saveDraft=()=>fireEvent.click(screen.getByRole('button',{name:'Save as draft'}));
 async function recalculate(){await calculate();}
@@ -77,11 +81,11 @@ describe('production counter API composition',{timeout:20000},()=>{
  });
  it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
   await start();
-  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
+  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Length (cm)','Width (cm)','Height (cm)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
   for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
   for(const name of ['Photo','Video','Voice note','Add package','Save as draft','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
-  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Paid now'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','true');
  });
  it('looks up repeat customers on phone blur and only fills the selected customer',async()=>{
   await start();fill('WhatsApp number',f.customer.phone_display);fireEvent.blur(screen.getByLabelText('WhatsApp number'));
@@ -116,13 +120,24 @@ describe('production counter API composition',{timeout:20000},()=>{
   expect(body(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)[0]).name).toBe('Another sender');
   expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
- it('keeps a draft only as a deliberate choice, never as an automatic one',async()=>{
+ it('never lets the customer question end in another draft',async()=>{
+  // Reaching this dialog means Save booking was pressed on a complete form. A draft escape
+  // here let a reopened draft loop straight back into another draft, forever.
   await start();core();fill('Customer name','Another sender');save();
   const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  expect(dialog.queryByRole('button',{name:/draft/i})).toBeNull();
   expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
-  fireEvent.click(dialog.getByRole('button',{name:'Save as a draft instead'}));
-  await screen.findByRole('heading',{name:'Draft saved'});
-  expect(body(posts('/api/v1/bookings/entries?')[0]).fields.name).toBe('Another sender');
+  // Leaving the question unanswered returns to the form with everything still typed.
+  fireEvent.click(dialog.getByRole('button',{name:'Keep editing'}));
+  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.getByLabelText('Customer name')).toHaveValue('Another sender');
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('does not ask about a saved customer whose name differs only by case or spacing',async()=>{
+  await start();core();fill('Customer name','  '+f.customer.name.toUpperCase()+' ');save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(screen.queryByRole('dialog',{name:'Is this the same customer?'})).toBeNull();
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
  it('does not treat failed customer lookup as a new customer',async()=>{
   await entered();override=c=>c.path.includes('/customers?')?Promise.reject(new TypeError('offline')):undefined;
@@ -159,7 +174,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
-  await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Cash now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:/^Save booking/})).toHaveAttribute('type','button');
  });
  it('prints only after saving and does not recreate a booking when printing is cancelled',async()=>{
   const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();expect(print).not.toHaveBeenCalled();save();await screen.findByRole('heading',{name:'Booking saved'});fireEvent.click(screen.getByRole('button',{name:'Print booking receipt'}));await waitFor(()=>expect(print).toHaveBeenCalledTimes(1));fireEvent.click(screen.getByRole('button',{name:'Print booking receipt'}));await waitFor(()=>expect(print).toHaveBeenCalledTimes(2));expect(posts('/api/v1/bookings?')).toHaveLength(1);
@@ -201,13 +216,33 @@ describe('production counter API composition',{timeout:20000},()=>{
  });
  it('names what is missing before the button is pressed, and stops naming it once supplied',async()=>{
   await start();
-  const needs=()=>screen.getByText(/This cannot be booked yet/).textContent!;
-  expect(needs()).toContain('docket number');expect(needs()).toContain('customer name');expect(needs()).toContain('a price');
+  // The banner is now a sentence plus a list of presses, one per missing field, so read the
+ // whole block rather than the sentence that opens it.
+ const needs=()=>document.getElementById('booking-needs')!.textContent!;
+  expect(needs()).toContain('docket number');expect(needs()).toContain('customer name');
+  // A price is never demanded up front: the published rate card is asked first.
+  expect(needs()).not.toContain('a price');
   fill('Docket number','00123-A');expect(needs()).not.toContain('docket number');
   // A complete form offers the booking, and the warning disappears with it.
   core();await calculate();
   expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
   expect(screen.queryByText(/This cannot be booked yet/)).toBeNull();
+ });
+ it('books from the published rate card without a typed freight amount',async()=>{
+  // A shop that has published its prices must be able to complete a booking from them.
+  // Requiring a hand-typed freight every time made the rate card unusable.
+  await start();
+  fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);
+  fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');
+  fill('Docket number','00124-B');fill('Weight (kg)','0.999');chooseService();
+  await waitFor(()=>expect(posts('/api/v1/pricing/quote').length).toBeGreaterThan(0));
+  expect(body(posts('/api/v1/pricing/quote').at(-1)!)).not.toHaveProperty('charges');
+  await waitFor(()=>expect(screen.queryByText(/This cannot be booked yet/)).toBeNull());
+  // R-27: the button states the action and the amount it will take.
+  expect(screen.getByRole('button',{name:'Save booking and collect ₹151.04'})).toBeVisible();
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
  });
  it('offers a readable draft number and a way back into the same form',async()=>{
   await start();fill('Customer name','Unfinished sender');fill('Delivery address','9 Fictional Road');saveDraft();
@@ -248,15 +283,17 @@ describe('production counter API composition',{timeout:20000},()=>{
   await controller.revalidate();expect(controller.runtime.ticket().generation).not.toBe(generation);expect(flow.snapshot().draft.name).toBe('');expect(()=>scopedApi(controller)).not.toThrow();flow.dispose();
  });
  it('filters receipt rows immediately and restores them when the search is cleared',async()=>{
+  // The list opens on today (R-1); this fixture books on the synthetic clock, so widen it first.
   window.location.hash='/business/receipts';render(<App/>);
+  fireEvent.click(await screen.findByRole('radio',{name:'Any date'}));
   await screen.findByText('SYN-33');fill('Search receipts','UNKNOWN');
   expect(screen.getByText('No receipts match')).toBeVisible();
-  fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
+  fireEvent.click(screen.getByRole('button',{name:'Show every receipt'}));
   expect(screen.getByText('SYN-33')).toBeVisible();
  });
  it('receipt discovery supports empty and safe denied/retry states',async()=>{
   window.location.hash='/business/receipts';let denied=true;override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(denied?f.json({error:{code:'ACTION_FORBIDDEN'}},403):f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  render(<App/>);await screen.findByText(/Receipts could not be loaded/);denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No receipts yet');
+  render(<App/>);await screen.findByText(/Receipts could not be loaded/);denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No receipts today yet');
  });
 });
 
@@ -273,7 +310,7 @@ describe('monthly account booking',{timeout:20000},()=>{
  async function selected(){
   override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
   const controller=createScopeController();await controller.load();const flow=createBookingWorkflow(controller);flow.activate();flow.select(f.customer);
-  for(const [field,value] of Object.entries({recipientAddress:'21 Fictional Street',destination:'SYN_DEST',docket:'00123-A',weight:'999',handoverState:'27'}))flow.change(field as Parameters<typeof flow.change>[0],value);
+  for(const [field,value] of Object.entries({recipientAddress:'21 Fictional Street',destination:'SYN_DEST',service:'standard',docket:'00123-A',weight:'999',handoverState:'27'}))flow.change(field as Parameters<typeof flow.change>[0],value);
   flow.selectAccount(account);flow.recordTaxEntry();await flow.preview();return flow;
  }
  it('retains an uncertain credit request identity and saves the exact approved debtor',async()=>{
@@ -367,4 +404,58 @@ it('uses the saved demo GST setting for a live summary and saves without billing
  expect(screen.queryByRole('button',{name:'Calculate total'})).toBeNull();expect(screen.queryByLabelText('GST registration')).toBeNull();
  save();await screen.findByRole('heading',{name:'Booking saved'});
  expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts.handover_state).toBe('27');
+});
+
+describe('counter money controls',{timeout:20000},()=>{
+ it('records how the money arrived rather than assuming cash', async()=>{
+  // Every paid booking used to be recorded as cash, because the method was fixed when the
+  // screen loaded and never asked for. A UPI payment then entered the cashbook as notes in
+  // the drawer, and the day would not reconcile.
+  await entered(true);
+  expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','true');
+  payBy('UPI now');
+  expect(screen.getByRole('button',{name:'UPI now'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','false');
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  // The booking itself carries no payment method: what was received is a receipt, recorded
+  // against its own ledger. What changed is which receipt the counter offers to record.
+  expect(body(posts('/api/v1/bookings?')[0])).not.toHaveProperty('method');
+  expect(screen.getByRole('link',{name:'Open payments / apply advance'}))
+    .toHaveAttribute('href',expect.stringContaining('context=paid_counter'));
+ });
+
+ it('works out the change, and names a shortfall without refusing the booking', async()=>{
+  await entered(true);
+  const cash=()=>screen.getByLabelText('Cash given ₹',{exact:true});
+  fireEvent.change(cash(),{target:{value:'200'}});
+  expect(screen.getByText(/Change to give back/)).toHaveTextContent('₹48.96');
+  fireEvent.change(cash(),{target:{value:'151.04'}});
+  expect(screen.getByText(/Change to give back/)).toHaveTextContent('₹0.00');
+  // Part payment across a counter is legitimate. A screen that refuses it teaches the
+  // operator to lie to it, so the shortfall is named and saving stays available.
+  fireEvent.change(cash(),{target:{value:'100'}});
+  const short=screen.getByText(/Short by/);
+  expect(short).toHaveTextContent('₹51.04');
+  expect(short).toHaveTextContent('Saving is still allowed');
+  expect(screen.getByRole('button',{name:/^Save booking/})).toBeEnabled();
+ });
+
+ it('asks for cash given only where cash is what is being taken', async()=>{
+  await entered(true);
+  expect(screen.getByLabelText('Cash given ₹',{exact:true})).toBeVisible();
+  payBy('UPI now');
+  expect(screen.queryByLabelText('Cash given ₹',{exact:true})).toBeNull();
+  payBy('To Pay');
+  expect(screen.queryByLabelText('Cash given ₹',{exact:true})).toBeNull();
+  // Nothing is collected now, so the button does not promise to collect anything.
+  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
+ });
+
+ it('never sends counter arithmetic to the server', async()=>{
+  await entered(true);
+  fireEvent.change(screen.getByLabelText('Cash given ₹',{exact:true}),{target:{value:'200'}});
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('cashGiven');
+  expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('20000');
+ });
 });

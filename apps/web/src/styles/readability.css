@@ -1,0 +1,69 @@
+/*
+ * The readability floor, in one place and loaded last.
+ *
+ * ShippingCo's operators are Indian SME courier staff who may not read English fluently and
+ * who read this against a physical parcel, often on a phone in a shop. Two rules follow from
+ * that: no text they must read below 15px, and nothing they must tap below 44px.
+ *
+ * These were being broken by shared components rather than by individual screens — buttons at
+ * 13px, table headers at 11px, the tracking number itself at 11px — so the fixes belong here,
+ * after every other sheet, rather than scattered across screen stylesheets where load order
+ * decides the winner.
+ */
+
+/*
+ * Prose, lists and definition rows anywhere in the workspace.
+ *
+ * The floor raises text that is too small; it must never shrink type that is deliberately
+ * large. Because this sheet loads last at a higher specificity, a flat `font-size: 15px`
+ * also capped every big figure written as a paragraph — the dashboard's headline numbers
+ * were all rendering at 15px. Deliberate typography therefore opts out: the shared type
+ * scale above the floor, and `.t-figure` for a number meant to be read across a counter.
+ */
+.operator-shell main :is(p, li, dd, dt, label, legend, caption, figcaption):not(.t-figure):not([class*="t-display-"]):not([class*="t-headline-"]):not(.t-title-lg) { font-size: 15px; line-height: 21px; }
+.operator-shell main :is(select, option) { font-size: 15px; }
+.operator-shell main :is(h3, h4, h5, h6) { font-size: 16px; line-height: 22px; }
+
+/* Anything a thumb has to find. */
+.operator-shell main :is(button, select, textarea, summary),
+.operator-shell main a.btn,
+.operator-shell main input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
+.operator-shell main :is(button, a.btn, summary) { font-size: 15px; }
+.operator-shell main input[type="checkbox"],
+.operator-shell main input[type="radio"] { width: 20px; height: 20px; }
+.operator-shell main label:has(> input[type="checkbox"]),
+.operator-shell main label:has(> input[type="radio"]) { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+
+/* A search field keeps its own inner height inside a 44px shell. */
+.operator-shell main .searchbar { min-height: 44px; }
+.operator-shell main .searchbar input { min-height: 40px; }
+
+/* Visually hidden text is exempt: it is never read on screen. */
+.operator-shell main :is(.sr-only, .workspace-visually-hidden) { font-size: inherit; }
+
+/* Buttons sitting inside a card or page intro still need a thumb-sized target. */
+.operator-shell main .card .btn,
+.operator-shell main .finance-workspace-intro .btn,
+.operator-shell main .ops-card .btn { min-height: 44px; }
+.operator-shell main .ops-card :is(h2, h3, p) { font-size: 15px; line-height: 21px; }
+.operator-shell main .ops-card h2 { font-size: 17px; line-height: 23px; }
+
+/*
+ * The navigation rail, which this sheet never reached.
+ *
+ * Everything above is scoped to `main`, so the sidebar was exempt from the floor it
+ * exists to enforce: the nested workspace tree rendered its labels at 11.5px. A
+ * navigation label is something an operator has to read to get anywhere, so it is held
+ * to the same 15px as body text, and to the same 44px target as anything else they tap.
+ */
+.operator-shell .drawer-pane :is(a, button, summary, span, li) { font-size: 15px; }
+.operator-shell .drawer-pane .drawer-item { min-height: 44px; }
+.operator-shell .drawer-pane .msym { font-size: 20px; }
+/* The group heading above a set of links stays quieter than the links themselves. */
+.operator-shell .drawer-pane :is(.drawer-group-label, .workspace-nav-heading) { font-size: var(--text-xs); }
+
+/* The browser's own `small` is a proportion, not a size: nested inside a panel that has
+   already stepped down, it lands near 11px — well under the floor this product sets because
+   its operators read English as a second language at a counter with a customer waiting.
+   Anchor it to the scale instead of to whatever it happens to inherit. */
+.operator-shell main small, .operator-shell .drawer-pane small { font-size: var(--text-sm); }

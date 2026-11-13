@@ -18,7 +18,7 @@
 .daily-metric-button:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 4px; }
 .daily-metric-button .ops-kpi-number { font-size: 28px; line-height: 1.2; }
 .ops-kpi-label { display: block; font-weight: 700; }
-.ops-kpi-note, .ops-note { color: var(--md-on-surface-variant); font-size: 13px; }
+.ops-kpi-note, .ops-note { color: var(--md-on-surface-variant); font-size: 15px; line-height: 21px; }
 .ops-card { padding: 20px; min-width: 0; overflow-wrap: anywhere; }
 .ops-card h1,.ops-card h2,.ops-card h3 { margin-bottom: 12px; }
 .ops-list { list-style: none; padding: 0; display: grid; gap: 10px; }
@@ -91,6 +91,6 @@
 .reconciliation-column { display: block; padding-block: 4px; }
 
 /* Drafts sit beside booked parcels, so they have to be told apart at a glance. */
-.draft-needs { font-size: 15px; line-height: 20px; color: #8a6d1f; }
+.draft-needs { font-size: 15px; line-height: 20px; color: var(--warning); }
 .saved-draft-note { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 21px; }
-.saved-draft-note .msym { flex: none; color: #8a6d1f; }
+.saved-draft-note .msym { flex: none; color: var(--warning); }

@@ -55,9 +55,9 @@ describe('production messaging history',()=>{
    if(path.includes('/'+id(80)+'?')){reads++;return json({...detail,message:{...detail.message,state:'uncertain',version:reads===1?3:5},recovery:{kind:'investigate_uncertain',expected_version:reads===1?3:5,allowed_reasons:['retry_uncertain_confirmed']}});}
    return json(page([message]));
   }));mount(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation '+id(80)}));fireEvent.click(await screen.findByRole('button',{name:'Redrive original message'}));
-  await screen.findByText(/Retrying may deliver a duplicate/);expect(writes.length).toBe(0);fireEvent.click(screen.getByText('I investigated — retry despite duplicate risk'));
-  fireEvent.click(await screen.findByText('Retry same request'));await waitFor(()=>expect(writes.length).toBe(2));expect(writes[1].body).toBe(writes[0].body);expect(writes[1].headers).toEqual(writes[0].headers);expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:5,reason_code:'retry_uncertain_confirmed'});
-  await waitFor(()=>expect(screen.getByText('Server update confirmed.')).toBeVisible());
+  await screen.findByText(/may deliver a second copy to the customer/);expect(writes.length).toBe(0);fireEvent.click(screen.getByText('I checked — send it again'));
+  fireEvent.click(await screen.findByText('Check if it saved'));await waitFor(()=>expect(writes.length).toBe(2));expect(writes[1].body).toBe(writes[0].body);expect(writes[1].headers).toEqual(writes[0].headers);expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:5,reason_code:'retry_uncertain_confirmed'});
+  await waitFor(()=>expect(screen.getByText('Saved.')).toBeVisible());
   await screen.findByText('Accepted by provider',{selector:'span'});
   fireEvent.click(screen.getByRole('button',{name:'Close'}));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Inspect Booking confirmation '+id(80)})).toHaveFocus());

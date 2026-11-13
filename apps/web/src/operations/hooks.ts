@@ -5,11 +5,25 @@ import { ApiFailure,recoveryFor } from '../data-access/errors';
 export type ResourceState<T>={phase:'loading'|'ready'|'empty'|'error';value:T|null;error:ApiFailure|null};
 export interface ResourceLoadState {phase:ResourceState<unknown>['phase']|'more';reload:()=>void}
 export function resourceLoaded(resource:Pick<ResourceLoadState,'phase'>){return resource.phase==='ready'||resource.phase==='empty'||resource.phase==='more';}
+/**
+ * A read of the server, reloadable.
+ *
+ * A reload keeps the records already on screen; a change of key throws them away.
+ *
+ * That distinction is the whole point. Pressing refresh used to blank the screen to a skeleton
+ * and then redraw it — on the dashboard the operator lost every figure they were reading for
+ * the duration of a background fetch, which is a worse answer than no feedback at all. But the
+ * opposite mistake is far more serious here: when the key changes the franchise has usually
+ * changed with it, and one branch's parcels, customers or balances must never be left on
+ * screen under another branch's name. So stale is allowed only while the question is the same.
+ */
 export function useResource<T>(key:string,load:(signal:AbortSignal)=>Promise<T>,empty:(value:T)=>boolean=()=>false){
  const loader=useRef(load),emptyCheck=useRef(empty);loader.current=load;emptyCheck.current=empty;const [revision,setRevision]=useState(0);
  const [state,setState]=useState<ResourceState<T>>({phase:'loading',value:null,error:null});
  const reload=useCallback(()=>setRevision(value=>value+1),[]);
- useEffect(()=>{const abort=new AbortController();setState({phase:'loading',value:null,error:null});void loader.current(abort.signal).then(value=>{if(!abort.signal.aborted)setState({phase:emptyCheck.current(value)?'empty':'ready',value,error:null});}).catch(error=>{if(!abort.signal.aborted&&(!(error instanceof ApiFailure)||error.code!=='SCOPE_CHANGED'))setState({phase:'error',value:null,error:error instanceof ApiFailure?error:new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network'})});});return()=>abort.abort();},[key,revision]);
+ const asked=useRef(key);
+ useEffect(()=>{const abort=new AbortController();const same=asked.current===key;asked.current=key;
+ setState(previous=>({phase:'loading',value:same?previous.value:null,error:null}));void loader.current(abort.signal).then(value=>{if(!abort.signal.aborted)setState({phase:emptyCheck.current(value)?'empty':'ready',value,error:null});}).catch(error=>{if(!abort.signal.aborted&&(!(error instanceof ApiFailure)||error.code!=='SCOPE_CHANGED'))setState({phase:'error',value:null,error:error instanceof ApiFailure?error:new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network'})});});return()=>abort.abort();},[key,revision]);
  return {...state,reload};
 }
 export function useCommand<T>(execute:(intent:CommandIntent)=>Promise<T>){
@@ -26,8 +40,10 @@ export interface PagedValue<T>{items:T[];page:{has_more:boolean;next_cursor:stri
 export function usePagedResource<T>(key:string,load:(cursor:string|null,signal:AbortSignal)=>Promise<PagedValue<T>>){
  const loader=useRef(load);loader.current=load;const abort=useRef<AbortController|null>(null);const [revision,setRevision]=useState(0);
  const [state,setState]=useState<{phase:'loading'|'ready'|'empty'|'error'|'more';items:T[];page:PagedValue<T>['page'];error:ApiFailure|null}>({phase:'loading',items:[],page:{has_more:false,next_cursor:null},error:null});
- const fetchPage=useCallback((cursor:string|null,append:boolean)=>{abort.current?.abort();const request=new AbortController();abort.current=request;setState(previous=>({...previous,phase:append?'more':'loading',...(append?{}:{items:[]}),error:null}));void loader.current(cursor,request.signal).then(value=>{if(request.signal.aborted)return;setState(previous=>({phase:(append?previous.items.length+value.items.length:value.items.length)?'ready':'empty',items:append?[...previous.items,...value.items]:value.items,page:value.page,error:null}));}).catch(error=>{if(request.signal.aborted||error instanceof ApiFailure&&error.code==='SCOPE_CHANGED')return;setState(previous=>({...previous,phase:'error',error:error instanceof ApiFailure?error:new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network'})}));});},[]);
- useEffect(()=>{fetchPage(null,false);return()=>abort.current?.abort();},[key,revision,fetchPage]);
+ const asked=useRef(key);
+ const fetchPage=useCallback((cursor:string|null,append:boolean,keep=false)=>{abort.current?.abort();const request=new AbortController();abort.current=request;setState(previous=>({...previous,phase:append?'more':'loading',...(append||keep?{}:{items:[]}),error:null}));void loader.current(cursor,request.signal).then(value=>{if(request.signal.aborted)return;setState(previous=>({phase:(append?previous.items.length+value.items.length:value.items.length)?'ready':'empty',items:append?[...previous.items,...value.items]:value.items,page:value.page,error:null}));}).catch(error=>{if(request.signal.aborted||error instanceof ApiFailure&&error.code==='SCOPE_CHANGED')return;setState(previous=>({...previous,phase:'error',error:error instanceof ApiFailure?error:new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network'})}));});},[]);
+ // Same rule as useResource: a reload keeps the rows on screen, a new key clears them.
+ useEffect(()=>{const same=asked.current===key;asked.current=key;fetchPage(null,false,same);return()=>abort.current?.abort();},[key,revision,fetchPage]);
  const reload=useCallback(()=>setRevision(value=>value+1),[]);
  const loadMore=useCallback(()=>{if(state.page.next_cursor)fetchPage(state.page.next_cursor,true);},[fetchPage,state.page.next_cursor]);
  return {...state,reload,loadMore};

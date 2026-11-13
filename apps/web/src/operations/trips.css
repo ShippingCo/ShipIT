@@ -1,0 +1,74 @@
+/* Trips
+   ---------------------------------------------------------------------------
+   One vehicle leaving with a load.
+
+   The plate leads, at the largest size on the card, because the yard is
+   organised around vehicles: an operator stands in front of a truck and looks
+   for the card that matches it. Everything else on the card is a figure they
+   count against — bags, parcels, kilograms, and when it goes. */
+
+.trips { display: flex; flex-direction: column; gap: 24px; }
+.trip-grid { display: grid; gap: 14px; }
+
+.trip-card { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.trip-card > * { width: 100%; }
+
+.trip-head { display: flex; align-items: flex-start; gap: 12px; }
+.trip-icon { flex: none; color: var(--md-on-surface-variant); line-height: 1; }
+/* The plate. Mono, wide-tracked and large: it is matched character by character
+   against metal, not read as a word. */
+.trip-vehicle {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 21px; line-height: 27px; font-weight: 650; letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
+}
+.trip-where { font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
+
+/* Four figures, one row, no sentence between them. */
+.trip-figs { display: flex; gap: 26px; flex-wrap: wrap; }
+.trip-figs > div { display: flex; flex-direction: column; min-width: 0; }
+.trip-fig { font-size: 22px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.trip-fig-l { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+
+.trip-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+/* R-4: the reason a button cannot be pressed sits beside it, in words, not in a tooltip. */
+.trip-blocked { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); flex: 1 1 240px; min-width: 0; }
+
+.trip-reach { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
+.trip-reach .msym { flex: none; font-size: 19px; }
+
+.trip-seal-figures { margin: 0 0 10px; font-size: 17px; line-height: 24px; }
+.trip-seal-figures b { font-size: 24px; font-variant-numeric: tabular-nums; }
+
+/* ---- what happened on the road -------------------------------------- */
+/* Four chips, wrapping, each a full-height target: this gets pressed with a
+   phone against one ear. */
+.happening-chips { display: flex; flex-wrap: wrap; width: 100%; }
+.happening-chips .seg-btn { flex: 1 1 160px; min-height: var(--touch-min, 44px); font-size: 15px; }
+
+.happening-follow { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 21px; }
+
+/* Who is about to be told, and what. Stated above the button, in a block that
+   changes colour when the answer is "people will be messaged" — because that
+   is the one outcome on this screen that cannot be taken back. */
+.happening-reach {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 12px 14px;
+  border: 1px solid var(--md-outline-variant); border-radius: 10px;
+  background: var(--md-surface-container-low, var(--grey-100));
+  font-size: 15px; line-height: 21px; color: var(--md-on-surface);
+}
+.happening-reach .msym { flex: none; font-size: 21px; color: var(--md-on-surface-variant); }
+.happening-reach small { font-size: 15px; color: var(--md-on-surface-variant); }
+.happening-reach.is-telling { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.happening-reach.is-telling .msym, .happening-reach.is-telling small { color: inherit; }
+
+.happening-again, .happening-unsure {
+  margin: 14px 0 0; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #f6d7dc; background: var(--md-error-container, #fdecee);
+  font-size: 15px; line-height: 21px; color: var(--md-on-error-container, #410e0b);
+}
+
+@media (max-width: 600px) {
+  .trip-figs { gap: 18px; }
+  .happening-chips .seg-btn { flex-basis: 100%; }
+}

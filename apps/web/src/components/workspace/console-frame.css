@@ -1,42 +1,56 @@
 /* The console chrome is shared by the demo and the authenticated workspace.
-   Surfaces are white; separation is a single 1px hairline and space, never a grey fill.
+   Two planes, told apart by tone: a quiet grey rail you navigate from, and a white
+   canvas you work on. A white rail against a white canvas left a single hairline
+   carrying the whole distinction, so the two halves of the screen read as one sheet
+   and nothing told the eye where the work was.
    No text sits below 15px, and nothing tappable below 44px. */
 .shell.console-frame {
   --drawer-w: 268px;
-  --console-hairline: #e3e6ea;
-  --console-ink-muted: #5b6672;
-  background: #fff;
+  --console-hairline: var(--border);
+  --console-rail: var(--surface-rail);
+  --console-rail-hover: var(--grey-200);
+  --console-rail-active: var(--accent-subtle);
+  --console-ink-muted: var(--grey-700);
+  background: var(--console-rail);
   align-items: stretch;
 }
 .shell.console-frame .drawer-pane {
   display: flex; flex-direction: column; height: 100dvh;
-  background: #fff; border-right: 1px solid var(--console-hairline);
+  background: var(--console-rail); border-right: 1px solid var(--border);
 }
 .shell.console-frame .main-area { width: auto; border-radius: 0; background: #fff; }
+.console-frame .console-scope .tf input,
+.console-frame .console-scope .tf select { background: #fff; }
 .console-brand-text { min-width: 0; }
 
 /* The nav is the only scrolling region, so every destination stays reachable at any height. */
 .console-navigation { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 10px 16px; }
-.console-frame .drawer-head { border-bottom: 1px solid var(--console-hairline); }
-.console-frame .drawer-foot { flex: none; border-top: 1px solid var(--console-hairline); }
+.console-frame .drawer-head { border-bottom: 1px solid var(--border); }
+.console-frame .drawer-foot { flex: none; border-top: 1px solid var(--border); }
 .console-scope { flex: none; padding: 12px 18px 4px; }
 .console-scope .tf { margin: 0; }
 .console-frame .console-scope .tf-box { background: #fff; }
 
-/* One destination per row: icon, then label. No fill, at rest or active. */
+/* One destination per row: icon, then label. The row you are on is a filled squircle,
+   not a 3px bar down its left edge -- that bar was a one-sided border wearing a
+   box-shadow, it pointed at the gutter rather than at the row, and on a grey rail a
+   filled pill is both calmer and far easier to find at a glance. */
 .console-frame .drawer-item {
   display: flex; align-items: center; gap: 12px;
   min-height: 44px; height: auto; padding: 10px 12px;
-  border-radius: 10px; font-size: 15px; line-height: 20px; font-weight: 500;
+  border-radius: 12px; font-size: 15px; line-height: 20px; font-weight: 500;
   color: var(--md-on-surface); background: none; text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 .console-frame .drawer-item > .msym { flex: none; color: var(--console-ink-muted); }
 .console-frame .drawer-item > span { min-width: 0; overflow-wrap: anywhere; }
-.console-frame .drawer-item:is(:hover, :focus-visible) { background: none; box-shadow: inset 0 0 0 1px var(--console-hairline); }
+.console-frame .drawer-item:is(:hover, :focus-visible) { background: var(--console-rail-hover); box-shadow: none; }
 .console-frame .drawer-item.active {
-  background: none; color: var(--md-primary); font-weight: 650;
-  box-shadow: inset 3px 0 var(--md-primary);
+  background: var(--console-rail-active); color: var(--md-primary); font-weight: 650;
+  box-shadow: none;
 }
+.console-frame .drawer-item.active:hover { background: var(--blue-100); }
+@media (prefers-reduced-motion: reduce) { .console-frame .drawer-item { transition: none; } }
 .console-frame .drawer-item.active > .msym { color: var(--md-primary); }
 .console-frame .drawer-item .count {
   /* An outlined count, not a filled dot: the number is the point, so it must be readable. */
@@ -47,10 +61,11 @@
 }
 .console-frame .drawer-item .count,
 .console-frame .drawer-item.active .count { background: #fff; }
+.console-frame .drawer-item:is(:hover, :focus-visible) .count { border-color: var(--border); }
 .console-frame .drawer-item.active .count { border-color: var(--md-primary); color: var(--md-primary); }
 
 /* Groups are separated by space and one hairline, and are never collapsed out of sight. */
-.console-task-group + .console-task-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--console-hairline); }
+.console-task-group + .console-task-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .console-group-label {
   margin: 6px 12px 6px; color: var(--console-ink-muted);
   font-size: 15px; line-height: 20px; font-weight: 600; letter-spacing: 0;
@@ -60,13 +75,14 @@
 .console-frame .console-create {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   margin: 12px 10px 14px; padding: 12px 16px; min-height: 48px;
-  color: #fff; background: var(--md-primary); border-radius: 10px;
-  text-decoration: none; font-size: 15px; line-height: 20px; font-weight: 600;
+  color: #fff; background: var(--md-primary); border-radius: var(--shape-button);
+  text-decoration: none; font-size: 15px; line-height: 20px; font-weight: 650;
+  box-shadow: 0 1px 2px rgba(11, 94, 215, 0.24), 0 6px 16px -8px rgba(11, 94, 215, 0.5);
 }
 .console-frame .console-create:hover { background: var(--md-primary-hover); }
 
 .console-frame .appbar { min-height: var(--topbar-h); background: #fff; border-bottom: 1px solid var(--console-hairline); }
-.console-frame .appbar .btn { border-radius: var(--shape-full); height: 44px; padding: 0 24px; background: var(--md-primary); }
+.console-frame .appbar .btn { border-radius: var(--shape-button); min-height: 44px; padding: 0 20px; background: var(--md-primary); }
 .console-booking-fab { position: fixed; right: 24px; bottom: 24px; z-index: 20; text-decoration: none; }
 .console-scrim { display: none; }
 
@@ -80,7 +96,7 @@
   border: 1px solid var(--console-hairline); border-radius: 8px; background: #fff; color: var(--console-ink-muted);
 }
 .console-result-next { margin-inline-start: auto; color: var(--console-ink-muted); }
-.console-search-results .drawer-item:is(:hover, :focus-visible) { background: none; box-shadow: inset 0 0 0 1px var(--console-hairline); }
+.console-search-results .drawer-item:is(:hover, :focus-visible) { background: var(--state-hover); box-shadow: none; }
 
 @media (max-width: 1020px) {
   .shell.console-frame .drawer-pane { display: flex; visibility: hidden; }

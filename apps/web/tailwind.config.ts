@@ -30,52 +30,52 @@ export default {
   			]
   		},
   		colors: {
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			border: 'hsl(var(--sc-border))',
+  			input: 'hsl(var(--sc-input))',
+  			ring: 'hsl(var(--sc-ring))',
+  			background: 'hsl(var(--sc-background))',
+  			foreground: 'hsl(var(--sc-foreground))',
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: 'hsl(var(--sc-primary))',
+  				foreground: 'hsl(var(--sc-primary-foreground))'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: 'hsl(var(--sc-secondary))',
+  				foreground: 'hsl(var(--sc-secondary-foreground))'
   			},
   			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				DEFAULT: 'hsl(var(--sc-destructive))',
+  				foreground: 'hsl(var(--sc-destructive-foreground))'
   			},
   			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
+  				DEFAULT: 'hsl(var(--sc-muted))',
+  				foreground: 'hsl(var(--sc-muted-foreground))'
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: 'hsl(var(--sc-accent))',
+  				foreground: 'hsl(var(--sc-accent-foreground))'
   			},
   			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
+  				DEFAULT: 'hsl(var(--sc-popover))',
+  				foreground: 'hsl(var(--sc-popover-foreground))'
   			},
   			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				DEFAULT: 'hsl(var(--sc-card))',
+  				foreground: 'hsl(var(--sc-card-foreground))'
   			},
   			success: {
-  				DEFAULT: 'hsl(var(--success))',
-  				foreground: 'hsl(var(--success-foreground))'
+  				DEFAULT: 'hsl(var(--sc-success))',
+  				foreground: 'hsl(var(--sc-success-foreground))'
   			},
   			warning: {
-  				DEFAULT: 'hsl(var(--warning))',
-  				foreground: 'hsl(var(--warning-foreground))'
+  				DEFAULT: 'hsl(var(--sc-warning))',
+  				foreground: 'hsl(var(--sc-warning-foreground))'
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 4px)',
-  			sm: 'calc(var(--radius) - 8px)'
+  			lg: 'var(--sc-radius)',
+  			md: 'calc(var(--sc-radius) - 4px)',
+  			sm: 'calc(var(--sc-radius) - 8px)'
   		},
   		keyframes: {
   			'accordion-down': {

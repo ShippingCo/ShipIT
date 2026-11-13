@@ -16,7 +16,7 @@ import type {CommandIntent} from '../data-access/command-intent';
 import {TextField,SelectField} from '../components/m3/Input';
 import {useCommand,useResource,usePagedResource} from './hooks';
 import {retainAccountNavigation} from '../data-access/account-navigation';
-import {CommandNotice,Empty,Failure,Loading} from './AsyncState';
+import {DataRefresh,CommandNotice,Empty,Failure,Loading} from './AsyncState';
 import {FinancialAuditView,exactMoney,financialLabels} from './FinancialAudit';
 import {formatKolkata,rupeesToPaise,kolkataInputToInstant} from './format';
 const has=(roles:readonly OperatorRole[],...allowed:OperatorRole[])=>(allowed.some(role=>role!=='delivery_agent'&&role!=='org_admin')&&canAdminister(roles,'finance.approve'))||roles.some(role=>allowed.includes(role));
@@ -46,7 +46,7 @@ function FinancialWorkspace({controller,roles}:{controller:ScopeController;roles
  const run:Run=async(intent,id)=>{target.current=id;try{const value=await command.run(intent);if(controller.runtime.isCurrent(api.scope))saved(value.id);}catch{/* CommandNotice retains the safe outcome and original intent. */}};
  const retry=()=>{void command.retry().then(value=>{if(value&&controller.runtime.isCurrent(api.scope))saved(value.id);}).catch(()=>{});};
  const open=(id:string)=>{if(!locked){command.reset();setTask('requests');setSelected(id);setAmending(null);setRevision(value=>value+1);}};
- return <div className="ops-page finance-workflow-page"><section className="finance-workspace-intro"><PageHeader title="Approvals and refunds" description="Request a change to a booking’s charges or check a saved request." eyebrow="Money"/>
+ return <div className="ops-page finance-workflow-page"><section className="finance-workspace-intro"><PageHeader title="Approvals and refunds" eyebrow="Money"/>
  <WorkflowTabs label="Financial tasks" value={task} onChange={setTask} items={[
    ...(canRequest?[{value:'compose',label:'New request',disabled:locked}]:[]),
    {value:'requests',label:'Saved requests',disabled:locked},
@@ -54,8 +54,11 @@ function FinancialWorkspace({controller,roles}:{controller:ScopeController;roles
    ...(canDecide?[{value:'policy',label:'Approval rules',disabled:locked}]:[])
  ]}/>
  {task==='requests'&&<form className="ops-form finance-grouped-form" aria-label="Open financial request" onSubmit={event=>{event.preventDefault();if(validId(reference.trim()))open(reference.trim());}}><TextField label="Financial request reference" maxLength={36} spellCheck={false} autoComplete="off" value={reference} onChange={setReference} disabled={locked}/><button className="btn btn-outlined" disabled={locked||!validId(reference.trim())}>Open saved request</button></form>}
- <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?retry:undefined}/>{blocked&&locked&&<p role="alert">Reconcile the retained request before changing franchise or leaving this workspace.</p>}
- {task==='requests'&&selected&&!locked&&<button className="btn btn-text" onClick={()=>{command.reset();setRevision(value=>value+1);current.reload();}}>Refresh current request state</button>}</section>
+ <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?retry:undefined}/>
+ {command.phase==='error'&&<p role="alert" className="approval-separation">Nothing was approved and no money moved.</p>}
+ {command.phase==='uncertain'&&<p role="alert" className="approval-separation">We do not know whether this was approved. Check before deciding it again — no money moves either way until a payment is recorded.</p>}
+ {blocked&&locked&&<p role="alert">Reconcile the retained request before changing franchise or leaving this workspace.</p>}
+ {task==='requests'&&selected&&!locked&&<DataRefresh resource={{phase:current.phase,reload:()=>{command.reset();setRevision(value=>value+1);current.reload();}}}/>}</section>
  <div hidden={task!=='requests'}>
  {selected&&current.phase==='loading'&&<Loading label="Loading live financial request…"/>}{selected&&current.phase==='error'&&<Failure retry={current.reload} label="This financial request is unavailable in the selected franchise."/>}
  {current.value&&<RequestEvidence value={current.value} canDecide={canDecide} canAmend={canRequest} self={api.scope.authority!.userId} locked={locked} source={source} accounts={accounts} run={run} amend={request=>{command.reset();setTask('compose');setAmending({request,document_links:current.value?.document_links??[]});}}/>}
@@ -92,7 +95,7 @@ function ProposalForm({parcelSource,source,locked,run,amendment,cancelAmend}:{pa
  return <section className="card ops-card"><h2 className="t-title-lg">{amendment?'Amend my pending proposal':'New financial proposal'}</h2><p className="ops-note">{amendment?'The amended request replaces the pending one and needs a new decision.':'Load the booking to see its current charges before choosing a change.'}</p>
  {!amendment&&(loaded?<div className="finance-customer-selection"><p>Selected booking <strong>{selectedDocket||loaded}</strong></p><button type="button" className="btn btn-outlined" disabled={locked} onClick={()=>changeBooking('')}>Choose another booking</button></div>:<ParcelLookup source={parcelSource} label="Find the booking by tracking number" disabled={locked} select={parcel=>{changeBooking(parcel.booking_id);setSelectedDocket(parcel.docket);setLoaded(parcel.booking_id);}}/>)}
  <details className="finance-secondary-action" open={amendment?true:undefined}><summary>Use a saved booking reference</summary>
- <form className="ops-form finance-grouped-form" aria-label="Load proposal booking" onSubmit={event=>{event.preventDefault();if(validId(booking.trim())){setLoaded(booking.trim());observation.reload();}}}><TextField label="Proposal booking reference" maxLength={36} spellCheck={false} autoComplete="off" value={booking} onChange={changeBooking} disabled={locked||!!amendment}/><button className="btn btn-outlined" disabled={locked||!validId(booking.trim())}>Load current booking amounts</button></form></details>
+ <form className="ops-form finance-grouped-form" aria-label="Load proposal booking" onSubmit={event=>{event.preventDefault();if(validId(booking.trim())){setLoaded(booking.trim());observation.reload();}}}><TextField label="Proposal booking reference" maxLength={36} spellCheck={false} autoComplete="off" value={booking} onChange={changeBooking} disabled={locked||!!amendment} helper="Paste the booking reference from the proposal. The button below stays off until a complete reference is entered."/><button className="btn btn-outlined" disabled={locked||!validId(booking.trim())}>Load current booking amounts</button></form></details>
  {loaded&&observation.phase==='loading'&&<Loading label="Loading selected booking amounts…"/>}{loaded&&observation.phase==='error'&&<Failure retry={observation.reload} label="Booking amounts are unavailable in this franchise."/>}
  {observation.value&&observation.value.booking_id===loaded&&loaded===booking.trim()&&<><FinancePosition label="Current booking amounts" primary={{label:'Current charge',value:exactMoney(observation.value.position.gross)}} items={[
   {label:'Amount due',value:exactMoney(observation.value.position.outstanding)},
@@ -123,7 +126,20 @@ function RequestEvidence({value,canDecide,canAmend,self,locked,source,accounts,r
  <details className="finance-source-disclosure" open={!detail||undefined}><summary>Request amounts, source versions and references</summary><dl className="history-facts"><dt>Request</dt><dd className="ops-mono">{request.id}</dd><dt>Booking</dt><dd className="ops-mono">{request.booking_id}</dd><dt>Proposed by</dt><dd className="ops-mono">{request.actor_id}</dd><dt>Source versions</dt><dd>Financial {request.expected_version} · payment {request.payment_version}</dd><dt>Policy revision</dt><dd className="ops-mono">{request.policy_id??'No configured policy'}</dd><dt>Refund amount</dt><dd>{exactMoney(request.refund)}</dd>{financialComponentKeys.map(key=><React.Fragment key={key}><dt>{componentLabels[key]} reduction</dt><dd>{decimal(request[key])} rupees</dd></React.Fragment>)}<dt>Corrects refund</dt><dd className="ops-mono">{request.refund_correction_of??'None'}</dd></dl></details>
  <ul className="ops-list" aria-label="Live source documents">{value.document_links.map((row,index)=><li key={index}>{row.kind.replaceAll('_',' ')} · {row.receipt_id??row.external_ref} · {row.qualification==='issued_source'?'Issued source receipt':'Unverified external reference'}</li>)}</ul>
  {canAmend&&request.outcome==='pending'&&request.actor_id===self&&<button className="btn btn-outlined" disabled={locked} onClick={()=>amend(request)}>Amend my pending proposal</button>}
- {canDecide&&detail&&request.outcome==='pending'&&<><p className="ops-note">The server enforces the configured review threshold and self-approval policy. A cash-close approval does not qualify this decision.</p><button className="btn btn-filled" disabled={locked} onClick={()=>{void run(source.decide(request.id,'approved'),request.id);}}>Approve financial proposal</button><button className="btn btn-outlined" disabled={locked} onClick={()=>{void run(source.decide(request.id,'rejected'),request.id);}}>Reject financial proposal</button></>}
+ {canDecide&&detail&&request.outcome==='pending'&&<>
+  <p className="ops-note">The server enforces the configured review threshold and the self-approval policy. Approving a cash close does not qualify this decision.</p>
+  <div className="ops-actions">
+   <button className="btn btn-filled" disabled={locked} onClick={()=>{void run(source.decide(request.id,'approved'),request.id);}}>Approve</button>
+   <button className="btn btn-outlined" disabled={locked} onClick={()=>{void run(source.decide(request.id,'rejected'),request.id);}}>Reject</button>
+  </div>
+  {/* R-10. The single most common misreading on this screen: an approver believes pressing
+      Approve has paid somebody. It has not, and the sentence sits under the button rather
+      than anywhere else on the page. */}
+  <p className="approval-separation"><b>Approving does not pay the money.</b> You record the actual payment afterwards, against this proposal.</p>
+ </>}
+ {/* R-13: a proposal somebody has already decided is information, not an error. */}
+ {detail&&request.outcome!=='pending'&&<p role="status" className="approval-separation">
+  This was already {request.outcome==='approved'?'approved':'rejected'}. The decision stays on the record, and the proposal is closed rather than deleted.</p>}
  {canDecide&&detail&&request.outcome==='approved'&&(request.kind==='refund'?<RefundApply request={request} source={source} accounts={accounts} locked={locked} run={run}/>:<button className="btn btn-filled" disabled={locked} onClick={()=>{void run(source.apply(request.id,{expected_version:1}),request.id);}}>Apply approved financial change</button>)}
  </section>;
 }

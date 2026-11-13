@@ -3,7 +3,7 @@
 .counter-section h2 { margin-bottom: 12px; }
 .counter-section p { margin: 12px 0; }
 .counter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
-.counter-help { font-size: 13px; color: var(--md-sys-color-on-surface-variant); min-height: 18px; }
+.counter-help { font-size: 15px; line-height: 21px; color: var(--md-sys-color-on-surface-variant); min-height: 18px; }
 .counter-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
 .counter-results { list-style: none; padding: 0; }
 .counter-results .btn { height: auto; white-space: normal; text-align: left; padding: 12px; }
@@ -17,24 +17,24 @@
 .counter-workbench-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(280px,330px); align-items: start; gap: 22px; min-width: 0; }
 .counter-entry { display: grid; gap: 20px; min-width: 0; }
 .counter-workbench-layout .counter-section { padding: 22px; }
-.counter-workbench-layout .counter-section > h2 { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-bottom: 16px; }
-.counter-step { display: inline-grid; place-items: center; flex: none; width: 25px; height: 25px; border: 1px solid #d6e7f2; border-radius: 6px; background: #f0f7fb; color: var(--md-on-primary-container); font-size: 11px; font-weight: 650; }
-.counter-entry .counter-section > p { font-size: 12px; line-height: 20px; color: var(--md-on-surface-variant); }
+.counter-workbench-layout .counter-section > h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; line-height: 24px; margin-bottom: 16px; }
+.counter-step { display: inline-grid; place-items: center; flex: none; width: 25px; height: 25px; border: 1px solid var(--blue-100); border-radius: 6px; background: var(--grey-200); color: var(--md-on-primary-container); font-size: var(--text-xs); font-weight: 650; }
+.counter-entry .counter-section > p { font-size: var(--text-xs); line-height: 20px; color: var(--md-on-surface-variant); }
 .counter-review { position: sticky; top: 96px; }
 .counter-review .counter-grid { grid-template-columns: 1fr; }
-.counter-review p { font-size: 12px; line-height: 21px; }
+.counter-review p { font-size: var(--text-xs); line-height: 21px; }
 .counter-review p.t-headline-sm { font-size: 24px; line-height: 32px; letter-spacing: -.035em; font-weight: 650; color: var(--md-on-surface); padding-top: 12px; border-top: 1px solid var(--md-outline-variant); font-variant-numeric: tabular-nums; }
 .counter-review > .btn-filled { width: 100%; margin-top: 10px; }
-.counter-review-summary { display: flex; justify-content: space-between; align-items: center; padding-bottom: 13px; margin-bottom: 14px; border-bottom: 1px solid var(--md-outline-variant); font-size: 12px; color: var(--md-on-surface-variant); }
+.counter-review-summary { display: flex; justify-content: space-between; align-items: center; padding-bottom: 13px; margin-bottom: 14px; border-bottom: 1px solid var(--md-outline-variant); font-size: var(--text-xs); color: var(--md-on-surface-variant); }
 .counter-review-summary strong { color: var(--md-on-surface); font-variant-numeric: tabular-nums; }
 .counter-grid { gap: 16px 18px; }
-.counter-help { color: var(--md-on-surface-variant); font-size: 11.5px; line-height: 18px; margin: 5px 0 0 !important; }
+.counter-help { color: var(--md-on-surface-variant); font-size: 15px; line-height: 21px; margin: 5px 0 0 !important; }
 .counter-section .counter-results { display: grid; gap: 6px; margin-top: 12px; }
 .counter-results li { border: 1px solid var(--md-outline-variant); border-radius: 7px; }
-.counter-results .btn { width: 100%; justify-content: flex-start; font-size: 12px; }
+.counter-results .btn { width: 100%; justify-content: flex-start; font-size: var(--text-xs); }
 .receipt-search { display: flex; align-items: end; gap: 12px; margin-bottom: 16px; }
 .receipt-search .tf { flex: 1; max-width: 450px; }
-.receipt-search + p { color: var(--md-on-surface-variant); font-size: 12px; margin-bottom: 18px; }
+.receipt-search + p { color: var(--md-on-surface-variant); font-size: var(--text-xs); margin-bottom: 18px; }
 .counter-section > .record-table-region { margin-block: 16px; }
 .receipt-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; border-top: 1px solid var(--md-outline-variant); padding-top: 18px; margin-top: 18px; }
 .receipt-facts p { margin: 0 0 8px; }
@@ -48,43 +48,43 @@
 .counter-workbench-layout [hidden] { display:none!important; }
 .counter-workbench-layout .counter-review { position:static; }
 .counter-workbench-layout .counter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 28px; }
-.counter-workbench-layout .counter-section > h2 { font-size:22px; line-height:30px; }
+.counter-workbench-layout .counter-section > h2 { font-size:17px; line-height:24px; }
 .counter-entry .counter-section > p,.counter-review p { font-size:14px; line-height:22px; }
-.counter-help { font-size:13px; line-height:20px; }
+.counter-help { font-size:15px; line-height:21px; }
 .counter-step-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .counter-step-nav { display:flex; flex:1; gap:8px; }
-.counter-step-nav button { display:flex; gap:8px; align-items:center; padding:12px 8px; flex:1; background:white; border:0; border-bottom:2px solid var(--md-outline-variant); color:var(--md-on-surface-variant); font:inherit; font-size:13px; }
-.counter-step-nav button[aria-current=step] { border-color:#81abc4; color:#355b70; }
-.counter-step-nav button span { display:grid; place-items:center; width:24px; height:24px; flex:none; border-radius:50%; background:#eef3f6; }
-.counter-step-nav button[aria-current=step] span { background:#d7ebf8; }
+.counter-step-nav button { display:flex; gap:10px; align-items:center; padding:10px 14px; flex:1; background:transparent; border:0; border-radius:var(--shape-button); color:var(--md-on-surface-variant); font:inherit; font-size:15px; font-weight:550; min-height:44px; }
+.counter-step-nav button:hover { background:var(--state-hover); }
+.counter-step-nav button[aria-current=step] { background:var(--md-primary-container); color:var(--md-on-primary-container); font-weight:650; }
+.counter-step-nav button span { display:grid; place-items:center; width:26px; height:26px; flex:none; border-radius:50%; background:var(--workspace-rail-hover); color:var(--md-on-surface-variant); font-size:14px; font-weight:650; }
+.counter-step-nav button[aria-current=step] span { background:var(--md-primary); color:white; }
 .counter-wizard-footer { display:flex; justify-content:space-between; align-items:center; gap:16px; border-top:1px solid var(--md-outline-variant); padding-top:20px; color:var(--md-on-surface-variant); font-size:13px; }
 .counter-wizard-footer .counter-actions { margin:0; }
-@media(max-width:650px){.counter-workbench-layout .counter-grid{grid-template-columns:1fr}.counter-step-nav{width:100%;flex-basis:100%}.counter-step-nav button{display:block;font-size:12px;padding:8px 2px}.counter-step-nav button span{margin-bottom:8px}.counter-wizard-footer{flex-wrap:wrap}}
+@media(max-width:650px){.counter-workbench-layout .counter-grid{grid-template-columns:1fr}.counter-step-nav{width:100%;flex-basis:100%}.counter-step-nav button{display:block;font-size: var(--text-xs);padding:8px 2px}.counter-step-nav button span{margin-bottom:8px}.counter-wizard-footer{flex-wrap:wrap}}
 
 /* Blue Studio: one reading column, open sections and explicit review. */
 .counter-flow { gap:24px; }
 .counter-flow > .workspace-page-header,.counter-step-toolbar,.counter-workbench-layout,.counter-wizard-footer { max-width:680px; width:100%; margin-inline:auto; }
 .counter-step-toolbar { align-items:flex-start; }
 .counter-step-nav { width:100%; flex-basis:100%; }
-.counter-step-nav button { padding:10px 0 18px; border-bottom:1px solid var(--workspace-border); gap:9px; }
-.counter-step-nav button[aria-current=step] { color:var(--md-primary); border-bottom:2px solid var(--md-primary); }
+.counter-step-nav button { padding:11px 14px; gap:10px; }
 .counter-step-nav button[aria-current=step] span { color:white; background:var(--md-primary); }
-.counter-step-toolbar > .btn { min-height:28px; height:28px; font-size:12px; margin-left:auto; padding-inline:0; }
+.counter-step-toolbar > .btn { min-height:28px; height:28px; font-size: var(--text-xs); margin-left:auto; padding-inline:0; }
 .counter-workbench-layout .counter-grid { grid-template-columns:1fr; gap:20px; margin:20px 0; }
 .counter-workbench-layout .counter-section { padding:4px 0 24px; }
-.counter-workbench-layout .counter-section > h2 { font-size:20px; margin:0 0 10px; }
+.counter-workbench-layout .counter-section > h2 { font-size:17px; line-height:24px; margin:0 0 10px; }
 .counter-entry .counter-section > p,.counter-review p { font-size:13px; line-height:21px; }
-.counter-help { font-size:12px; line-height:19px; min-height:0; }
+.counter-help { font-size:15px; line-height:21px; min-height:0; }
 .counter-divider { border-top:1px solid var(--workspace-border); margin-top:28px!important; padding-top:24px; }
 .counter-selected-customer { padding:12px 0; border-block:1px solid var(--workspace-border); }
 .counter-optional { border-top:1px solid var(--workspace-border); padding:14px 0; margin:18px 0; }
 .counter-optional summary,.counter-billing-details summary,.counter-price-evidence summary { cursor:pointer; color:var(--md-primary); font-size:13px; }
 .counter-billing-details { border-block:1px solid var(--workspace-border); padding:17px 0; }
 .counter-billing-details summary { font-weight:600; color:var(--workspace-text); }
-.counter-billing-details summary > span { display:block; font-size:12px; font-weight:400; color:var(--workspace-muted); margin:5px 0 0 17px; }
+.counter-billing-details summary > span { display:block; font-size: var(--text-xs); font-weight:400; color:var(--workspace-muted); margin:5px 0 0 17px; }
 .counter-billing-details[open] > h2 { margin-top:24px; }
 .counter-billing-details > p { font-size:13px; color:var(--workspace-muted); }
-.counter-rate-message { border-left:3px solid var(--md-primary); padding:12px 16px; background:var(--workspace-subtle); font-size:13px; }
+.counter-rate-message { border:1px solid var(--blue-200); border-radius:var(--shape-button); padding:14px 16px; background:var(--md-primary-container); color:var(--md-on-primary-container); font-size:15px; line-height:21px; }
 .counter-rate-message p { margin:0 0 10px; }
 .counter-review-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:16px 0; border-bottom:1px solid var(--workspace-border); }
 .counter-review-row h3 { font-size:13px; font-weight:600; margin:0; }
@@ -95,14 +95,14 @@
 .counter-price-line { display:flex; justify-content:space-between; gap:16px; padding:13px 0; font-size:14px; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--workspace-border); }
 .counter-price-evidence { margin:12px 0; }
 .counter-confirmation { text-align:center; max-width:680px; margin-inline:auto; }
-.counter-confirmation-mark { display:grid; place-items:center; margin:0 auto 18px; width:52px; height:52px; border-radius:50%; color:#327456; background:#eaf5ef; }
+.counter-confirmation-mark { display:grid; place-items:center; margin:0 auto 18px; width:52px; height:52px; border-radius:50%; color:var(--success); background:var(--success-subtle); }
 .counter-confirmation .counter-actions { justify-content:center; }
 .counter-entry fieldset { min-width:0; padding:20px 0; border:0; border-top:1px solid var(--workspace-border); margin-top:24px; }
 .counter-entry fieldset legend { font-size:14px; font-weight:600; padding:0 10px 0 0; }
 .counter-workbench-layout .counter-rate-choices .counter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .counter-customer-mode { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0; }
 .counter-customer-mode button[aria-pressed=true] { color:var(--md-primary); background:var(--md-primary-container); border-color:var(--md-primary); }
-@media(max-width:650px){.counter-workbench-layout .counter-rate-choices .counter-grid{grid-template-columns:1fr}.counter-review-row{gap:8px}.counter-step-nav button{font-size:12px}.counter-confirmation{padding-inline:0}}
+@media(max-width:650px){.counter-workbench-layout .counter-rate-choices .counter-grid{grid-template-columns:1fr}.counter-review-row{gap:8px}.counter-step-nav button{font-size: var(--text-xs)}.counter-confirmation{padding-inline:0}}
 
 /* Two different saves, told apart on sight. A draft is never dressed as a confirmation. */
 .booking-needs {
@@ -110,12 +110,12 @@
   background: #fff; border: 1px solid var(--md-outline-variant); border-radius: 10px;
   font-size: 15px; line-height: 21px; color: var(--md-on-surface);
 }
-.booking-needs .msym { flex: none; color: #8a6d1f; }
+.booking-needs .msym { flex: none; color: var(--warning); }
 .counter-draft-saved { text-align: left; }
 .counter-draft-mark {
   display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 12px;
   border: 1px solid var(--md-outline-variant); border-radius: var(--shape-full);
-  background: #fff; color: #8a6d1f;
+  background: #fff; color: var(--warning);
 }
 .counter-draft-mark .msym { font-size: 28px; }
 .counter-draft-code { font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
@@ -124,3 +124,249 @@
 /* Choosing between saved customers is a decision, so each option is a full-width target. */
 .counter-customer-choice { display: grid; gap: 8px; margin: 14px 0 4px; }
 .counter-customer-choice .recall { width: 100%; text-align: left; }
+
+/* Why a draft is a draft. Never let a refused booking read as a cheerful confirmation. */
+.counter-draft-reason { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0;
+  padding: 12px 14px; border: 1px solid var(--m3-outline-variant, var(--border-strong)); border-radius: 12px; }
+.counter-draft-reason .msym { color: var(--m3-error, var(--danger)); flex: none; }
+
+/* The list of what is still missing. Each entry is a press that moves the cursor to the field
+   it names, so the operator never has to hunt down a long form for the one empty box. */
+.booking-needs { display:flex; gap:10px; align-items:flex-start; }
+.booking-needs > div { min-width:0; }
+.booking-needs p { margin:0; }
+.booking-needs-list { display:flex; flex-wrap:wrap; gap:4px 6px; margin:8px 0 0; padding:0; list-style:none; }
+.booking-needs-list li { display:flex; }
+.booking-needs-list button,
+.booking-needs-list span {
+  display:inline-flex; align-items:center; min-height:44px; padding:0 12px;
+  border:1px solid currentColor; border-radius:var(--shape-full, 999px);
+  background:#fff; color:inherit; font:inherit; font-size:15px; font-weight:600;
+}
+.booking-needs-list button { cursor:pointer; }
+.booking-needs-list button:hover { background:var(--grey-200); }
+.booking-needs-list button:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+
+/* ============================================================
+   The saved-booking confirmation
+   ============================================================
+   See BookingSaved.tsx for why this screen is shaped the way it is. Three bands:
+   the mark and the verdict, one card holding the docket and the two figures, then
+   the actions. Centred and capped at a reading column, because at this moment the
+   operator is looking at exactly one thing and the full 1600px canvas would scatter
+   it across the counter. */
+
+.booking-saved {
+  max-width: 560px; margin: 8px auto 0; padding: 0 4px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.saved-mark {
+  display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 20px;
+  border-radius: var(--shape-full);
+  background: var(--md-success-container); color: var(--md-success);
+}
+.saved-mark .msym { font-size: 34px; }
+.booking-saved-void .saved-mark { background: var(--md-error-container); color: var(--md-error); }
+.booking-saved .saved-title {
+  margin: 0; font-size: 30px; line-height: 36px; font-weight: 650;
+  letter-spacing: -0.03em; color: var(--md-on-surface);
+}
+.booking-saved .saved-lede {
+  margin: 8px 0 0; font-size: 15px; line-height: 22px; color: var(--md-on-surface-variant);
+}
+
+/* The one card. Hairlined, 14px, no shadow: it sits on the page, it does not float. */
+.saved-card {
+  width: 100%; margin-top: 26px; text-align: left;
+  border: 1px solid var(--md-outline-variant); border-radius: var(--shape-card);
+  background: #fff; overflow: hidden;
+}
+.saved-dockets { padding: 18px 20px 16px; }
+.saved-field-label {
+  margin: 0 0 10px; font-size: 15px; line-height: 20px; font-weight: 600;
+  color: var(--md-on-surface-variant);
+}
+.saved-docket-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+}
+.saved-docket-row + .saved-docket-row { margin-top: 12px; }
+/* The value a human copies onto parcel tape by hand. Tabular, wide-tracked, and the
+   largest thing on the screen after the verdict, so a digit cannot be misread. */
+.saved-docket-value {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 21px; line-height: 28px; font-weight: 650; letter-spacing: 0.02em;
+  color: var(--md-on-surface); overflow-wrap: anywhere; min-width: 0;
+}
+.saved-docket-copy { flex: none; }
+
+/* Two figures, one rule between them. The one still to collect carries the colour. */
+.saved-figures {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0;
+  border-top: 1px solid var(--md-outline-variant);
+}
+.saved-figures > div { padding: 16px 20px; min-width: 0; }
+.saved-figures > div + div { border-left: 1px solid var(--md-outline-variant); }
+.saved-figures dt { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+.saved-figures dd {
+  margin: 4px 0 0; font-size: 23px; line-height: 30px; font-weight: 650;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.saved-figure-due dd { color: var(--md-primary); }
+.saved-billed {
+  display: flex; gap: 9px; align-items: flex-start; margin: 0; padding: 14px 20px;
+  border-top: 1px solid var(--md-outline-variant);
+  font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant);
+}
+.saved-billed .msym { flex: none; font-size: 19px; }
+
+.saved-actions {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+  width: 100%; margin-top: 22px;
+}
+.saved-actions > .btn { flex: 1 1 auto; min-width: 180px; }
+.saved-actions > .btn-lg { flex-basis: 100%; }
+
+/* Links, not buttons: these leave the counter, and they must not compete with the
+   two controls above them for the same press. */
+.saved-links {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  gap: 6px 20px; margin-top: 20px;
+}
+.saved-links a, .saved-links .saved-link-danger {
+  font-size: 15px; line-height: 21px; font-weight: 550; color: var(--md-primary);
+  background: none; border: 0; padding: 6px 0; min-height: 44px;
+}
+.saved-links .saved-link-danger { color: var(--md-error); }
+.saved-links a:hover, .saved-links .saved-link-danger:hover { text-decoration: underline; }
+
+.saved-notes { width: 100%; margin-top: 18px; display: grid; gap: 8px; }
+.saved-notes p {
+  margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant);
+}
+.saved-notes p[role="alert"] { color: var(--md-on-error-container); }
+
+@media (max-width: 560px) {
+  .booking-saved .saved-title { font-size: 26px; line-height: 32px; }
+  .saved-figures { grid-template-columns: minmax(0, 1fr); }
+  .saved-figures > div + div { border-left: 0; border-top: 1px solid var(--md-outline-variant); }
+  .saved-actions > .btn { flex-basis: 100%; }
+}
+
+/* The draft, in the same vocabulary but never mistakable for the above: a warning
+   mark, a left-aligned column, and no figures — a draft has no money and no docket. */
+.counter-draft-saved.booking-saved { align-items: flex-start; text-align: left; }
+.counter-draft-saved .saved-mark { background: var(--md-warning-container); color: var(--md-warning); }
+
+/* ---- the change the operator owes back ------------------------------- */
+/* Optional, and out of the way until a figure is typed into it. A short payment is named
+   rather than blocked: part payment across a counter is legitimate, and a screen that
+   refuses it teaches the operator to lie to it. */
+.pay-change { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); max-width: 340px; }
+.pay-change-out { margin: 0; font-size: var(--text-base); color: var(--text); }
+.pay-change-out b { font-size: var(--text-xl); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+.pay-change-out.is-short { color: var(--danger-on-subtle); }
+.pay-change-out.is-short b { color: var(--danger); }
+
+/* ---------------------------------------------------------------------------
+   Weight, and what the parcel is actually charged on
+   ---------------------------------------------------------------------------
+   The unit sits inside the field's own cell rather than beside it: the operator
+   reads "350 g", not "350" and a control somewhere to the right. The size block
+   spans the grid because its three fields are one measurement, and splitting a
+   measurement across a column break makes it read as three unrelated numbers. */
+
+.parcel-weight { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.parcel-weight > .tf { flex: 1 1 auto; min-width: 0; }
+.parcel-weight .seg-unit { flex: none; margin-top: 6px; }
+.parcel-weight .seg-unit .seg-btn { min-width: 48px; min-height: var(--touch-min, 44px); padding-inline: 10px; }
+
+.parcel-size { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.parcel-size-head { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--md-on-surface); }
+.parcel-size-head span { display: block; font-weight: 400; font-size: 15px; color: var(--md-on-surface-variant); }
+.parcel-size-fields { display: flex; align-items: flex-start; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.parcel-size-cell { display: flex; align-items: center; gap: 6px; flex: 1 1 110px; min-width: 0; }
+.parcel-size-cell > .tf { flex: 1 1 auto; min-width: 0; }
+.parcel-size-x { flex: none; margin-top: 6px; color: var(--md-on-surface-variant); font-size: 17px; }
+
+/* The sentence an operator says out loud to a customer holding a large, light box.
+   A full hairline and a tonal wash, never a stripe down one edge. */
+.parcel-billed {
+  margin: 0; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--md-outline-variant); background: var(--md-surface-container-low, var(--grey-100));
+  font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant);
+}
+.parcel-billed strong { color: var(--md-on-surface); font-weight: 650; }
+.parcel-billed.is-size { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.parcel-billed.is-size strong { color: var(--md-on-primary-container); }
+
+@media (max-width: 600px) {
+  .parcel-size-cell { flex-basis: 100%; }
+  .parcel-size-x { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Price options
+   ---------------------------------------------------------------------------
+   One row per option: the mark, the name and the difference, then the amount.
+   The amount is right-aligned and tabular so two prices can be compared down a
+   column without reading them; the difference sits under the name because it is
+   the sentence the operator says, not a number they look up. */
+
+.price-options { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.price-options-head { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--md-on-surface); }
+.price-options-head span { display: block; font-weight: 400; color: var(--md-on-surface-variant); }
+.price-option-list { display: flex; flex-direction: column; gap: 10px; }
+
+.price-option {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: var(--touch-min, 44px);
+  padding: 14px 16px; text-align: left; cursor: pointer;
+  border: 1px solid var(--md-outline-variant); border-radius: 12px; background: var(--md-surface);
+  color: var(--md-on-surface); font: inherit;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.price-option:hover:not(:disabled) { border-color: var(--md-outline); background: var(--state-hover); }
+.price-option:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.price-option:disabled { cursor: default; opacity: 0.7; }
+.price-option.is-on { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.price-option .po-mark { flex: none; display: grid; place-items: center; }
+.price-option .po-mark .msym { font-size: 22px; color: var(--md-on-surface-variant); }
+.price-option.is-on .po-mark .msym { color: var(--md-primary); }
+.price-option .po-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.price-option .po-name { font-size: 17px; line-height: 23px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.price-option .po-diff { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+.price-option.is-on .po-diff { color: var(--md-on-primary-container); }
+.price-option .po-amount {
+  flex: none; font-size: 21px; line-height: 27px; font-weight: 650;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+/* A mark, not a claim: the shop's usual choice is labelled and left unchosen. */
+.po-tag {
+  font-style: normal; font-size: 15px; line-height: 19px; font-weight: 500;
+  padding: 1px 8px; border-radius: 999px; background: var(--grey-200); color: var(--md-on-surface-variant);
+}
+.price-option.is-on .po-tag { background: var(--md-surface); }
+.po-tag-account { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.price-option.is-negotiated { border-color: var(--md-primary); }
+
+.price-options-foot {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0;
+  font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant);
+}
+.price-options-foot .msym { flex: none; font-size: 19px; }
+
+@media (max-width: 600px) {
+  .price-option { flex-wrap: wrap; }
+  .price-option .po-amount { width: 100%; text-align: right; }
+}
+
+/* The setup link is a control, so it carries a control's height rather than the 40px a bare
+   anchor inherits from its line. It also leaves the sentence: a link stretched to 44px inside
+   running text drags the line it sits in open with it. */
+.price-options-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.price-options-foot p { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
+.po-setup {
+  display: inline-flex; align-items: center; min-height: var(--touch-min, 44px);
+  font-size: 15px; color: var(--md-primary); text-decoration: underline; text-underline-offset: 3px;
+}
+.po-setup:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; border-radius: 4px; }

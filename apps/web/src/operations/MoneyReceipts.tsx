@@ -11,12 +11,32 @@ import {customers} from '../data-access/customers';
 import {AdvanceRefunds} from './AdvanceRefunds';
 import {resourceLoaded,useCommand,usePagedResource,useResource} from './hooks';
 import {CommandNotice,Empty,Failure,Loading} from './AsyncState';
+import {Blocked} from './Blocked';
 import {TextField,SelectField} from '../components/m3/Input';
 import {formatMoney,formatKolkata,instantToKolkataInput,kolkataInputToInstant,rupeesToPaise} from './format';
+/**
+ * A customer pays. This screen puts that money against the right bills and makes the
+ * arithmetic visible while it is happening, rather than after.
+ *
+ * Three things the operator has to know, in this order: who is paying, how much they owe, and
+ * what this payment leaves behind. So the payer comes first and nothing else renders until one
+ * is chosen; then the three figures a counter is actually asked about; then one press that
+ * ticks bills oldest first, which is what almost every shop does by hand and what accounting
+ * expects. The strip underneath names the difference rather than leaving it to be worked out:
+ * over-payment becomes an advance and is never dropped, under-payment is allowed and named,
+ * because part payment is normal and a screen that refuses it teaches people to lie to it.
+ *
+ * Every failure here says, within its first two lines, whether money changed hands and whether
+ * it is safe to take it again. That is the rule for the whole of Wave 4 and it matters most
+ * here, where the cash is already in the operator's hand when the request goes out.
+ */
 const has=(roles:readonly OperatorRole[],...wanted:OperatorRole[])=>(wanted.some(role=>role!=='delivery_agent'&&role!=='org_admin')&&canAdminister(roles,'money_receipts.record'))||roles.some(role=>wanted.includes(role));
 const methodLabels:Record<ReceiptMethod,string>={cash:'Cash',upi:'UPI',card:'Card',bank_transfer:'Bank transfer',other:'Named other method'};
 const methods=Object.keys(methodLabels) as ReceiptMethod[];
 const paged=<T,>(value:{items:T[];next_cursor:string|null})=>({items:value.items,page:{has_more:value.next_cursor!==null,next_cursor:value.next_cursor}});
+const ageDays=(iso:string)=>Math.floor((Date.now()-Date.parse(iso))/86400000);
+/** Oldest bill first. The order a shop settles by hand, and the order accounting expects. */
+const oldestFirst=<T extends {confirmed_at:string}>(bills:readonly T[])=>[...bills].sort((a,b)=>Date.parse(a.confirmed_at)-Date.parse(b.confirmed_at));
 type Source=ReturnType<typeof moneyReceipts>;
 type ReceiptCustomer=Pick<CustomerDto,'id'|'name'>;
 type Bill=Awaited<ReturnType<Source['bills']>>['items'][number];
@@ -31,7 +51,13 @@ function ReceiptWorkspace({controller,roles}:{controller:ScopeController;roles:r
  const [receiptReference,setReceiptReference]=useState(''),[requestedReceipt,setRequestedReceipt]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[customer,setCustomer]=useState<ReceiptCustomer|null>(null),[selected,setSelected]=useState<string|null>(null),[revision,setRevision]=useState(0),[accountLocked,setAccountLocked]=useState(false),[navigationBlocked,setNavigationBlocked]=useState(false);
  const [changingCustomer,setChangingCustomer]=useState(false);
+ // R-1: focused on arrival. This screen has one question and it is this field.
+ useEffect(()=>{const land=window.setTimeout(()=>{
+   if(document.activeElement?.tagName!=='INPUT')document.getElementById('receipt-customer-name')?.focus();
+  },0);return()=>window.clearTimeout(land);},[]);
  const [refundLocked,setRefundLocked]=useState(false);
+ /** What the last attempt was for, so an uncertain failure can name it. */
+ const [lastAmount,setLastAmount]=useState<number|null>(null);
  const command=useCommand(intent=>source.execute(intent)),locked=command.phase==='pending'||command.phase==='uncertain'||accountLocked||refundLocked;
  const preselected=useResource(linkedCustomer??'none',signal=>canChooseCustomer&&linkedCustomer&&/^[0-9a-f-]{36}$/.test(linkedCustomer)?customerSource.read(linkedCustomer,signal):Promise.resolve(null));
  useEffect(()=>{if(preselected.value)setCustomer(preselected.value);},[preselected.value]);
@@ -43,32 +69,59 @@ function ReceiptWorkspace({controller,roles}:{controller:ScopeController;roles:r
  useEffect(()=>{const prevent=(event:MouseEvent)=>{if(locked&&event.target instanceof Element&&event.target.closest('a[href]')){event.preventDefault();event.stopPropagation();setNavigationBlocked(true);}};document.addEventListener('click',prevent,true);return()=>document.removeEventListener('click',prevent,true);},[locked]);
  const refresh=()=>{setRevision(value=>value+1);accountList.reload();};
  const confirmed=(result:MoneyReceiptResult|null)=>{if(result){setSelected(result.receipt_id);refresh();}};
- const run=async(intent:Parameters<Source['execute']>[0])=>{const result=await command.run(intent);confirmed(result);return result;};
- return <div className="ops-page"><section className="finance-workspace-intro"><PageHeader title="Money received" description="Record a customer payment against bills or keep it as an advance." eyebrow="Money"/>
-  {canChooseCustomer&&(!customer||changingCustomer)&&<form className="ops-form finance-grouped-form" aria-label="Find receipt customer" onSubmit={event=>{event.preventDefault();setQuery(search.trim());}}><TextField id="receipt-customer-name" label="Customer name prefix" type="search" maxLength={120} autoComplete="off" value={search} onChange={setSearch} disabled={locked} helper="Start of name, exactly as saved (at least 3 letters)."/><button className="btn btn-outlined" disabled={locked||search.trim().length<3}>Search customers</button>{customer&&<button type="button" className="btn btn-text" disabled={locked} onClick={()=>setChangingCustomer(false)}>Keep current customer</button>}</form>}
+ const run=async(intent:Parameters<Source['execute']>[0])=>{
+  const body=(()=>{try{return JSON.parse(intent.bodyJson) as {amount_paise?:number};}catch{return {};}})();
+  setLastAmount(typeof body.amount_paise==='number'?body.amount_paise:null);
+  const result=await command.run(intent);confirmed(result);return result;
+ };
+ return <div className="ops-page"><section className="finance-workspace-intro"><PageHeader title="Money received" eyebrow="Money"/>
+  {canChooseCustomer&&(!customer||changingCustomer)&&<form className="ops-form finance-grouped-form" aria-label="Find receipt customer" onSubmit={event=>{event.preventDefault();setQuery(search.trim());}}><TextField id="receipt-customer-name" label="Customer name prefix" type="search" maxLength={120} autoComplete="off" value={search} onChange={setSearch} disabled={locked} helper="Type the first 3 or more letters of the name. Capital letters do not matter."/><button className="btn btn-outlined" disabled={locked||search.trim().length<3}>Search customers</button>{customer&&<button type="button" className="btn btn-text" disabled={locked} onClick={()=>setChangingCustomer(false)}>Keep current customer</button>}</form>}
   {(!customer||changingCustomer)&&<>{query&&matches.phase==='empty'&&<Empty icon="person_search" title="No matching customers" body="Check the name and try at least three letters. Search uses customers in this branch."/>}{query&&matches.phase==='loading'?<Loading label="Searching customers…"/>:matches.phase==='error'?<Failure retry={matches.reload} label="Customer search unavailable."/>:<ul className="ops-list">{matches.items.map(row=><li key={row.id}><button className="btn btn-text" disabled={locked} onClick={()=>{command.reset();setCustomer(row);setSelected(null);setChangingCustomer(false);}}>{row.name} · {row.phone_display}</button></li>)}</ul>}{matches.page.has_more&&<button className="btn btn-text" disabled={locked||matches.phase==='more'} onClick={matches.loadMore}>More customers</button>}</>}
   {!canChooseCustomer&&<form className="ops-form finance-grouped-form" aria-label="Open finance receipt" onSubmit={event=>{event.preventDefault();setCustomer(null);setSelected(null);setRequestedReceipt(receiptReference.trim());}}><TextField label="Receipt reference" maxLength={36} spellCheck={false} autoComplete="off" value={receiptReference} onChange={setReceiptReference} disabled={locked} helper="Paste a saved receipt ID from this branch."/><button className="btn btn-outlined" disabled={locked||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receiptReference.trim())}>Open finance receipt</button></form>}
   {requestedReceipt&&referenced.phase==='loading'&&<Loading label="Loading referenced receipt…"/>}
   {requestedReceipt&&referenced.phase==='error'&&<Failure retry={referenced.reload} label="The receipt is unavailable in this franchise."/>}
   {customer&&<div className="finance-customer-selection"><p role="status">Selected customer: <b>{customer.name}</b></p>{canChooseCustomer&&!changingCustomer&&<button type="button" className="btn btn-text" disabled={locked} onClick={()=>{setChangingCustomer(true);requestAnimationFrame(()=>document.getElementById('receipt-customer-name')?.focus());}}>Change customer</button>}</div>}
   {navigationBlocked&&locked&&<p role="alert">Finish or reconcile the retained request before leaving this receipt workspace.</p>}
-  <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/>
+ {command.error?.code==='MONEY_RECEIPTS_DISABLED'&&<Blocked title="Recording money received is not switched on for this shop"
+   blockers={[{text:'Nothing was recorded and no money has been taken into the book. Bookings, parcels and the cashbook are unaffected, and a To Pay bill stays owed until this is switched on.',
+     fix:<>Ask whoever administers this installation to switch on money receipts.</>}]}/>}
+  {/* R-10. The amount is in the sentence, because "the money" is not what the operator is
+      holding — a number is, and it is that number they must not take twice. */}
+  <CommandNotice phase={command.phase} code={command.error?.code}
+   money={(lastAmount?formatMoney(lastAmount)+' may or may not be recorded. Do not take the money again.':'The money may or may not be recorded. Do not take it from the customer again until you have checked.')}
+   retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/>
   {!locked&&Boolean(selected)&&<button className="btn btn-text" onClick={()=>{command.reset();refresh();}}>Refresh saved receipt state</button>}
  </section>
  {canChooseCustomer&&linkedCustomer&&preselected.phase==='error'&&<Failure retry={preselected.reload} label="The linked customer is unavailable in this franchise."/>}
  {customer&&<CustomerReceipts key={customer.id} source={source} customer={customer} accounts={accountList.items} accountsReady={resourceLoaded(accountList)} roles={roles} selected={selected} select={setSelected} revision={revision} locked={locked||changingCustomer} run={run} self={api.scope.authority!.userId} initialContext={linkedContext}/>}
  {selected&&<AdvanceRefunds key={selected} api={api} receipt={selected} roles={roles} self={api.scope.authority!.userId} parentLocked={changingCustomer||command.phase==='pending'||command.phase==='uncertain'||accountLocked} busyChanged={setRefundLocked} refreshed={refresh}/>}
- {accountList.phase==='loading'&&<Loading label="Loading receiving accounts…"/>}
- {accountList.phase==='error'&&<Failure retry={accountList.reload} disabled={locked} label="Receiving accounts unavailable."/>}
- {has(roles,'franchise_admin')&&<AccountConfiguration source={accounts} items={accountList.items} accountsReady={resourceLoaded(accountList)} refreshed={accountList.reload} parentLocked={command.phase==='pending'||command.phase==='uncertain'} busyChanged={setAccountLocked}/>}
-
- {accountList.page.has_more&&<button className="btn btn-text" onClick={accountList.loadMore} disabled={accountList.phase==='more'}>More receiving accounts</button>}
+ {customer&&accountList.phase==='loading'&&<Loading label="Loading receiving accounts…"/>}
+ {/* R-1: until a payer is chosen there is nothing on this screen but the payer field. Where
+     money is received still has to be set up before the first payment, so it stays reachable
+     here, closed, rather than competing with the one question the screen is asking. */}
+ {has(roles,'franchise_admin')&&<details className="logistics-secondary" open={accountList.phase==='error'}><summary>Where money is received</summary>
+  {accountList.phase==='error'&&<Failure retry={accountList.reload} disabled={locked} label="Receiving accounts unavailable."/>}
+  <AccountConfiguration source={accounts} items={accountList.items} accountsReady={resourceLoaded(accountList)} refreshed={accountList.reload} parentLocked={command.phase==='pending'||command.phase==='uncertain'} busyChanged={setAccountLocked}/>
+  {accountList.page.has_more&&<button className="btn btn-text" onClick={accountList.loadMore} disabled={accountList.phase==='more'}>More receiving accounts</button>}
+ </details>}
  </div>;
 }
 function CustomerReceipts({source,customer,accounts,accountsReady,roles,selected,select,revision,locked,run,self,initialContext}:{source:Source;customer:ReceiptCustomer;accounts:ReceivingAccountDto[];accountsReady:boolean;roles:readonly OperatorRole[];selected:string|null;select:(id:string|null)=>void;revision:number;locked:boolean;run:(intent:Parameters<Source['execute']>[0])=>Promise<MoneyReceiptResult>;self:string;initialContext:'paid_counter'|'to_pay'}){
  const bills=usePagedResource(customer.id+'-bills-'+revision,(cursor,signal)=>source.bills(customer.id,cursor??undefined,signal).then(paged)),receipts=usePagedResource(customer.id+'-receipts-'+revision,(cursor,signal)=>source.list(customer.id,cursor??undefined,signal).then(paged));
  const writable=has(roles,'operator','franchise_admin'),focusNewPayment=useRef(false);
- return <>{writable&&!selected&&bills.phase!=='loading'&&bills.phase!=='error'&&<RecordReceipt focusOnMount={focusNewPayment.current} key={'record-'+revision} source={source} customer={customer} accounts={accounts.filter(a=>a.active)} accountsReady={accountsReady} bills={bills.items} locked={locked} run={run} self={self} initialContext={initialContext}/>}
+ const open=bills.items.filter(b=>b.outstanding_paise>0);
+ const owedTotal=open.reduce((sum,b)=>sum+b.outstanding_paise,0);
+ const stale=open.filter(b=>ageDays(b.confirmed_at)>7).reduce((sum,b)=>sum+b.outstanding_paise,0);
+ const advance=receipts.items.reduce((sum,r)=>sum+r.unallocated_paise,0);
+ return <>{bills.phase==='ready'&&<section className="receipt-figures" aria-label="What this customer owes">
+  <div><span className="rf-value">{formatMoney(owedTotal)}</span><span className="rf-label">owed in total</span></div>
+  <div><span className="rf-value">{open.length}</span><span className="rf-label">{open.length===1?'unpaid parcel':'unpaid parcels'}</span></div>
+  {/* The only coloured figure here. Over a week old is the one a manager acts on. */}
+  <div><span className={'rf-value'+(stale?' is-stale':'')}>{formatMoney(stale)}</span><span className="rf-label">over 7 days old</span></div>
+ </section>}
+ {/* R-8: money already held for this customer reduces what has to be collected now. */}
+ {advance>0&&<p className="receipt-advance" role="status"><b>{formatMoney(advance)} advance available</b> — open the saved receipt below to put it against a bill.</p>}
+ {writable&&!selected&&bills.phase!=='loading'&&bills.phase!=='error'&&<RecordReceipt focusOnMount={focusNewPayment.current} key={'record-'+revision} source={source} customer={customer} accounts={accounts.filter(a=>a.active)} accountsReady={accountsReady} bills={bills.items} locked={locked} run={run} self={self} initialContext={initialContext}/>}
  {selected&&<>{writable&&<button type="button" className="btn btn-outlined finance-next-payment" disabled={locked} onClick={()=>{focusNewPayment.current=true;select(null);}}>Record another payment</button>}<ReceiptDetail key={selected+'-'+revision} id={selected} source={source} roles={roles} bills={bills.items} locked={locked} run={run}/></>}<section className="card ops-card"><h2>Customer bills</h2>{bills.phase==='loading'?<Loading label="Loading current bills…"/>:bills.phase==='error'?<Failure retry={bills.reload} label="Current bills unavailable."/>:<RecordTable mobile="stack" label="Customer bills" rows={bills.items} rowKey={bill=>bill.booking_id} empty="No current bills for this customer." columns={[
  {key:'booking',label:'Booking',cell:bill=><details className="finance-bill-reference"><summary>Bill {bill.booking_id.slice(-8)}</summary><span className="finance-record-ref">Booking {bill.booking_id}</span><small>Payment version {bill.expected_payment_version}</small></details>},
  {key:'outstanding',label:'Outstanding',align:'right',cell:bill=>formatMoney(bill.outstanding_paise)},
@@ -84,8 +137,33 @@ function CustomerReceipts({source,customer,accounts,accountsReady,roles,selected
 
  </>;
 }
-function AllocationFields({bills,amounts,setAmounts,disabled}:{bills:Bill[];amounts:Record<string,string>;setAmounts:(value:Record<string,string>)=>void;disabled:boolean}){
- return <fieldset disabled={disabled} className="ops-form finance-grouped-form"><legend>Apply to bills (optional for a new receipt)</legend>{bills.filter(b=>b.outstanding_paise>0).map(bill=><TextField key={bill.booking_id} label={'Apply to booking '+bill.booking_id.slice(-8)} aria-label={'Apply to booking '+bill.booking_id} error={amounts[bill.booking_id]?.trim()&&(!rupeesToPaise(amounts[bill.booking_id]!)||rupeesToPaise(amounts[bill.booking_id]!)!>bill.outstanding_paise)?'Enter a positive amount within this bill’s outstanding balance.':undefined} value={amounts[bill.booking_id]??''} inputMode="decimal" onChange={value=>setAmounts({...amounts,[bill.booking_id]:value})} helper={'Booking '+bill.booking_id+' · Outstanding '+formatMoney(bill.outstanding_paise)}/>)}</fieldset>;
+function AllocationFields({bills,amounts,setAmounts,disabled,received}:{bills:Bill[];amounts:Record<string,string>;setAmounts:(value:Record<string,string>)=>void;disabled:boolean;received?:number|null}){
+ const open=bills.filter(b=>b.outstanding_paise>0);
+ /**
+  * R-3. One press fills the bills in age order until the money runs out, which is the thing
+  * an operator does by hand on a pad and gets wrong when there are six bills and a queue.
+  * The last bill filled takes whatever is left, so a part payment lands on the oldest
+  * unsettled bill rather than being spread thinly across all of them.
+  */
+ function oldest(){
+  if(received===null||received===undefined)return;
+  let left=received;const next:Record<string,string>={};
+  for(const bill of oldestFirst(open)){
+   if(left<=0)break;
+   const take=Math.min(left,bill.outstanding_paise);
+   next[bill.booking_id]=(take/100).toFixed(2);
+   left-=take;
+  }
+  setAmounts(next);
+ }
+ return <fieldset disabled={disabled} className="ops-form finance-grouped-form">
+  <legend>Which bills this pays</legend>
+  <div className="receipt-oldest">
+   <button type="button" className="btn btn-outlined" disabled={disabled||!received} onClick={oldest}>Choose oldest first</button>
+   <span className="ops-note">{received?'Ticks bills from the oldest until '+formatMoney(received)+' is used up.':'Enter the amount received first.'}</span>
+  </div>
+  {oldestFirst(open).map(bill=><TextField key={bill.booking_id} label={'Apply to booking '+bill.booking_id.slice(-8)} aria-label={'Apply to booking '+bill.booking_id} error={amounts[bill.booking_id]?.trim()&&(!rupeesToPaise(amounts[bill.booking_id]!)||rupeesToPaise(amounts[bill.booking_id]!)!>bill.outstanding_paise)?'Enter a positive amount within this bill’s outstanding balance.':undefined} value={amounts[bill.booking_id]??''} inputMode="decimal" onChange={value=>setAmounts({...amounts,[bill.booking_id]:value})} helper={'Booking '+bill.booking_id+' · Outstanding '+formatMoney(bill.outstanding_paise)+' · '+(ageDays(bill.confirmed_at)<=0?'today':ageDays(bill.confirmed_at)+(ageDays(bill.confirmed_at)===1?' day old':' days old'))}/>)}
+ </fieldset>;
 }
 function allocationInput(bills:Bill[],amounts:Record<string,string>,context:'paid_counter'|'to_pay'='to_pay'):ReceiptAllocationInput[]|null{
  const result:ReceiptAllocationInput[]=[];
@@ -105,12 +183,27 @@ export function RecordReceipt({source,customer,accounts,accountsReady,bills,lock
  return <section className="card ops-card finance-composer"><SectionHeader title="Record money received"/>{!accountsReady?<p role="status">Receiving account details need to load before recording a payment.</p>:!accounts.length?<p role="status">An administrator must configure a receiving account or cash drawer first.</p>:<form className="ops-form finance-grouped-form finance-receipt-form" aria-label="Record money received" onChangeCapture={()=>setReviewing(false)} onSubmit={event=>{void submit(event);}}><div ref={entryFields} hidden={reviewing} className="finance-receipt-entry"><p className="ops-note">Enter the money you have already received from {customer.name}.</p><fieldset disabled={locked}><legend>Payment details</legend><div className="ops-form-grid"><TextField label="Amount received (₹)" error={amount.trim()&&!paise?'Enter a positive amount within the supported range, with at most two decimals.':undefined} value={amount} onChange={setAmount} inputMode="decimal" required/><SelectField label="Receiving account / cash drawer" value={accountId} onChange={value=>{setAccountId(value);setMethod(accounts.find(a=>a.id===value)?.methods[0]??'cash');}} options={[{value:'',label:'Select receiving destination'},...accounts.map(a=>({value:a.id,label:a.name}))]}/><SelectField label="Receipt method" value={account?method:''} disabled={locked||!account||!account.methods.length} onChange={value=>setMethod(value as ReceiptMethod)} helper={!account?'Choose a receiving account or cash drawer first.':undefined} options={account?account.methods.map(m=>({value:m,label:m==='other'?account.other_method_name??'Named other':methodLabels[m]})):[{value:'',label:'Select a receiving account first'}]}/><TextField label="Money received at (Asia/Kolkata)" error={occurred&&(!time||Date.parse(time)>Date.now())?'Enter a valid time when money was received, up to the current time.':undefined} type="datetime-local" value={occurred} onChange={setOccurred} required/><SelectField label="Receiver / initial custodian" value={receiver} onChange={setReceiver} options={people.items.map(p=>({value:p.id,label:p.label}))}/><TextField label="Private external reference (optional)" value={external} onChange={setExternal} maxLength={128} helper="No card number, CVV, banking password or screenshot verification claim."/></div></fieldset>
  {people.phase==='error'&&<Failure retry={people.reload} label="Eligible receivers unavailable."/>}{people.page.has_more&&<button type="button" className="btn btn-text" disabled={locked} onClick={people.loadMore}>More eligible receivers</button>}
  <SelectField label="Payment context" value={context} disabled={locked} onChange={value=>setContext(value as typeof context)} options={[{value:'to_pay',label:'To Pay bill collection'},{value:'paid_counter',label:'Paid at counter'}]}/>
- <AllocationFields bills={bills} amounts={amounts} setAmounts={setAmounts} disabled={locked}/>{input===null&&<p role="alert">Review bill amounts and the supported allocation limit.</p>}{paise&&input&&applied>BigInt(paise)&&<p role="alert">Applied bill amounts exceed the money received. Reduce the applications or correct the receipt amount.</p>}<p role="status">Applied {formatMoney(Number(applied))} · Remaining advance {formatMoney(paise&&applied<=BigInt(paise)?paise-Number(applied):0)}</p><label><input type="checkbox" checked={collected} disabled={locked} onChange={event=>setCollected(event.target.checked)}/>I confirm this money was actually collected</label><p>Delivery alone does not mean payment. Record only actual funds received; a receipt is manually recorded, not bank verified.</p><button className="btn btn-filled" disabled={locked||!valid}>Review payment</button></div>
+ <AllocationFields bills={bills} amounts={amounts} setAmounts={setAmounts} disabled={locked} received={paise}/>{input===null&&<p role="alert">Review bill amounts and the supported allocation limit.</p>}{paise&&input&&applied>BigInt(paise)&&<p role="alert">Applied bill amounts exceed the money received. Reduce the applications or correct the receipt amount.</p>}
+ {/* R-5, R-6, R-7: bills chosen, money received, and the difference named rather than left
+     to be worked out. Over becomes an advance and is never dropped; under is allowed, because
+     part payment across a counter is normal. */}
+ <div className="receipt-strip" role="status">
+  <span><b>{formatMoney(Number(applied))}</b> on {input?.length??0} {input?.length===1?'bill':'bills'}</span>
+  <span><b>{formatMoney(paise??0)}</b> received</span>
+  {(()=>{
+   const owedNow=bills.filter(b=>b.outstanding_paise>0).reduce((sum,b)=>sum+b.outstanding_paise,0);
+   const over=paise?paise-Number(applied):0;
+   if(over>0)return <span className="is-advance">Kept as advance for this customer · <b>{formatMoney(over)}</b></span>;
+   const left=owedNow-Number(applied);
+   if(left>0)return <span className="is-short">Still owed after this · <b>{formatMoney(left)}</b></span>;
+   return <span className="is-settled">Everything owed is settled by this</span>;
+  })()}
+ </div><label><input type="checkbox" checked={collected} disabled={locked} onChange={event=>setCollected(event.target.checked)}/>I confirm this money was actually collected</label><p>Delivery alone does not mean payment. Record only actual funds received; a receipt is manually recorded, not bank verified.</p><button className="btn btn-filled" disabled={locked||!valid}>{paise?'Review '+formatMoney(paise)+' from '+customer.name:'Review payment'}</button></div>
  {reviewing&&<section className="finance-payment-review" aria-labelledby="receipt-review-title"><h3 id="receipt-review-title" ref={reviewHeading} tabIndex={-1}>Check this payment</h3><p className="finance-review-customer">{customer.name}</p>
  <FinancePosition label="Payment breakdown" primary={{label:'Money received',value:formatMoney(paise??0)}} items={[
   {label:'Applied to bills',value:formatMoney(Number(applied)),note:input?.length===1?'1 bill':(input?.length??0)+' bills'},
   {label:'Customer advance',value:formatMoney(paise&&applied<=BigInt(paise)?paise-Number(applied):0)}
- ]}/><dl className="finance-review-list"><div><dt>Received in</dt><dd>{account?.name}</dd></div><div><dt>Payment method</dt><dd>{method==='other'?account?.other_method_name:methodLabels[method]}</dd></div><div><dt>Received by</dt><dd>{people.items.find(person=>person.id===receiver)?.label}</dd></div><div><dt>Received at</dt><dd>{time?formatKolkata(time):'Check the time'}</dd></div>{external.trim()&&<div><dt>Reference</dt><dd>{external.trim()}</dd></div>}</dl>{!!input?.length&&<div className="finance-review-allocations"><h4>Payments applied to bills</h4><p className="ops-note">{context==='paid_counter'?'Paid at counter':'To Pay bill collection'}</p><ul>{input.map(allocation=><li key={allocation.booking_id}><details className="finance-bill-reference"><summary>Bill {allocation.booking_id.slice(-8)}</summary><span className="finance-record-ref">Booking {allocation.booking_id}</span></details><strong>{formatMoney(allocation.amount_paise)}</strong></li>)}</ul></div>}<p className="ops-note">This records money received. It does not verify a bank payment or send any money.</p><div className="finance-review-actions"><button type="button" className="btn btn-outlined" disabled={locked} onClick={()=>setReviewing(false)}>Edit payment details</button><button className="btn btn-filled" disabled={locked||!valid}>Confirm money received</button></div></section>}
+ ]}/><dl className="finance-review-list"><div><dt>Received in</dt><dd>{account?.name}</dd></div><div><dt>Payment method</dt><dd>{method==='other'?account?.other_method_name:methodLabels[method]}</dd></div><div><dt>Received by</dt><dd>{people.items.find(person=>person.id===receiver)?.label}</dd></div><div><dt>Received at</dt><dd>{time?formatKolkata(time):'Check the time'}</dd></div>{external.trim()&&<div><dt>Reference</dt><dd>{external.trim()}</dd></div>}</dl>{!!input?.length&&<div className="finance-review-allocations"><h4>Payments applied to bills</h4><p className="ops-note">{context==='paid_counter'?'Paid at counter':'To Pay bill collection'}</p><ul>{input.map(allocation=><li key={allocation.booking_id}><details className="finance-bill-reference"><summary>Bill {allocation.booking_id.slice(-8)}</summary><span className="finance-record-ref">Booking {allocation.booking_id}</span></details><strong>{formatMoney(allocation.amount_paise)}</strong></li>)}</ul></div>}<p className="ops-note">This records money received. It does not verify a bank payment or send any money.</p><div className="finance-review-actions"><button type="button" className="btn btn-outlined" disabled={locked} onClick={()=>setReviewing(false)}>Edit payment details</button><button className="btn btn-filled" disabled={locked||!valid}>{paise?'Record '+formatMoney(paise)+' received from '+customer.name:'Record money received'}</button></div></section>}
  </form>}</section>;
 }
 function ReceiptDetail({id,source,roles,bills,locked,run}:{id:string;source:Source;roles:readonly OperatorRole[];bills:Bill[];locked:boolean;run:(intent:Parameters<Source['execute']>[0])=>Promise<MoneyReceiptResult>}){
@@ -124,9 +217,12 @@ function ReceiptDetail({id,source,roles,bills,locked,run}:{id:string;source:Sour
  async function apply(event:React.FormEvent){event.preventDefault();if(!allocations?.length||applied>BigInt(result.unallocated_paise))return;try{await run(source.allocate(id,{expected_version:result.version,allocations}));}catch{/* parent notice */}}
  async function correct(event:React.FormEvent){event.preventDefault();if(!entry||!paise||paise>entry.amount_paise-entry.released_paise)return;try{await run(source.correct(id,{expected_version:result.version,allocation_id:entry.id,amount_paise:paise,currency:'INR',reason_code:reason}));}catch{/* parent notice */}}
  return <section className="card ops-card"><h2 ref={receiptHeading} tabIndex={-1} className="finance-saved-receipt-heading">Payment receipt</h2><p className="finance-receipt-identifier">Receipt {id}</p>
+ {/* R-11: what this payment settled, what was kept as an advance, and what is still owed —
+     the two leftovers side by side, because an operator is asked about both. */}
  <FinancePosition label="Saved payment breakdown" primary={{label:'Money received',value:formatMoney(result.received_paise)}} items={[
   {label:'Applied to bills',value:formatMoney(result.allocated_paise)},
-  {label:'Customer advance',value:formatMoney(result.unallocated_paise)},
+  {label:'Kept as advance',value:formatMoney(result.unallocated_paise)},
+  {label:'Still owed by this customer',value:formatMoney(bills.filter(b=>b.outstanding_paise>0).reduce((sum,b)=>sum+b.outstanding_paise,0))},
   ...(result.returned_paise?[{label:'Already returned',value:formatMoney(result.returned_paise)}]:[])
  ]}/>
  {finance&&(evidence.phase==='loading'?<Loading label="Loading private finance evidence…"/>:evidence.phase==='error'?<Failure retry={evidence.reload} label="Private evidence unavailable."/>:evidence.value&&<><p className="finance-saved-method">{methodLabels[evidence.value.receipt.method]} · Manually recorded · unverified</p><details className="finance-secondary-action"><summary>Payment evidence and references</summary><dl className="ops-facts"><div><dt>Actual money received</dt><dd>{formatKolkata(evidence.value.receipt.occurred_at)}</dd></div><div><dt>Server recorded</dt><dd>{formatKolkata(evidence.value.receipt.recorded_at)}</dd></div><div><dt>Method / receiving account</dt><dd>{methodLabels[evidence.value.receipt.method]} · {evidence.value.receipt.account_id}</dd></div><div><dt>Receiver / initial custodian</dt><dd>{evidence.value.receipt.receiver_id}</dd></div><div><dt>Private reference</dt><dd>{evidence.value.receipt.external_reference??'Not supplied'}</dd></div></dl></details></>)}
@@ -146,6 +242,7 @@ function AccountConfiguration({source,items,accountsReady,refreshed,parentLocked
  useEffect(()=>{if(editorOpen)editorHeading.current?.focus();else if(wasEditorOpen.current)newAccountButton.current?.focus();wasEditorOpen.current=editorOpen;},[editorOpen]);
  const [id,setId]=useState<string|null>(null),[name,setName]=useState(''),[selected,setSelected]=useState<ReceiptMethod[]>(['cash']),[other,setOther]=useState(''),[active,setActive]=useState(true);
  const command=useCommand(intent=>source.execute(intent)),ownLocked=command.phase==='pending'||command.phase==='uncertain',locked=ownLocked||parentLocked,account=items.find(a=>a.id===id);
+ const onlyActive=Boolean(account?.active)&&items.filter(a=>a.active).length===1;
  useEffect(()=>{busyChanged(ownLocked);return()=>busyChanged(false);},[ownLocked,busyChanged]);
  const choose=(a:ReceivingAccountDto|null)=>{setEditorOpen(true);command.reset();setId(a?.id??null);setName(a?.name??'');setSelected(a?.methods??['cash']);setOther(a?.other_method_name??'');setActive(a?.active??true);};
  const toggle=(method:ReceiptMethod)=>{if(method==='cash'){setSelected(['cash']);return;}setSelected(current=>current.includes(method)?current.filter(m=>m!==method):[...current.filter(m=>m!=='cash'),method]);};
@@ -156,6 +253,12 @@ function AccountConfiguration({source,items,accountsReady,refreshed,parentLocked
  {key:'version',label:'Revision',align:'right',cell:a=>a.version},
  {key:'edit',label:'Configure',cell:a=><button className="btn btn-text" disabled={locked} onClick={()=>choose(a)}>Edit account</button>},
  ]}/>)}<button ref={newAccountButton} className="btn btn-text" disabled={locked} aria-expanded={editorOpen} aria-controls="receiving-account-editor" onClick={()=>choose(null)}>New receiving account</button>
- {!accountsReady&&<p role="status">You can prepare an account draft. Load current receiving accounts before saving.</p>}{editorOpen&&<section id="receiving-account-editor" className="finance-account-editor"><h3 ref={editorHeading} tabIndex={-1}>{id?'Edit receiving account':'New receiving account details'}</h3><form className="ops-form finance-grouped-form" onSubmit={event=>{void submit(event);}}><fieldset disabled={locked}><legend>{id?'Append account revision':'Configure receiving destination'}</legend><TextField label="Account / drawer name" value={name} onChange={setName} maxLength={120} required/><fieldset><legend>Allowed methods (cash has its own drawer)</legend>{methods.map(m=><label key={m}><input type="checkbox" checked={selected.includes(m)} onChange={()=>toggle(m)}/>{methodLabels[m]} </label>)}</fieldset>{selected.includes('other')&&<TextField label="Named other method" value={other} onChange={setOther} maxLength={60} required/>}<label><input type="checkbox" checked={active} onChange={event=>setActive(event.target.checked)}/>Active for new receipts</label></fieldset><button className="btn btn-outlined" disabled={locked||!accountsReady||id!==null&&!account||!name.trim()||!selected.length||(selected.includes('other')&&!other.trim())}>Save receiving account</button><button type="button" className="btn btn-text" disabled={locked} onClick={()=>setEditorOpen(false)}>Close account editor</button></form></section>}<CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(()=>{refreshed();choose(null);setEditorOpen(false);}).catch(()=>{});}:undefined}/>
+ {!accountsReady&&<p role="status">You can prepare an account draft. Load current receiving accounts before saving.</p>}{editorOpen&&<section id="receiving-account-editor" className="finance-account-editor"><h3 ref={editorHeading} tabIndex={-1}>{id?'Edit receiving account':'New receiving account details'}</h3><form className="ops-form finance-grouped-form" onSubmit={event=>{void submit(event);}}><fieldset disabled={locked}><legend>{id?'Append account revision':'Configure receiving destination'}</legend><TextField label="Account / drawer name" value={name} onChange={setName} maxLength={120} required/><fieldset><legend>Allowed methods (cash has its own drawer)</legend>{methods.map(m=><label key={m}><input type="checkbox" checked={selected.includes(m)} onChange={()=>toggle(m)}/>{methodLabels[m]} </label>)}</fieldset>{selected.includes('other')&&<TextField label="Named other method" value={other} onChange={setOther} maxLength={60} required/>}<label><input type="checkbox" checked={active} disabled={onlyActive} onChange={event=>setActive(event.target.checked)}/>Active for new receipts</label>
+ {/* R-14, R-15, R-16. There is no delete: an account that money was received into keeps its
+     history for ever, so it is stopped instead. And the last one cannot be stopped, because a
+     shop with nowhere to receive money cannot take a payment at all. */}
+ {onlyActive&&<p className="ops-note" role="status">This is the only place money can be received, so it cannot be stopped. Add another one first.</p>}
+ {!onlyActive&&account&&!active&&<p className="ops-note" role="status">Stopping it means no new payment can be received into it. Every payment already recorded against it stays exactly as it is, and stays visible.</p>}
+ </fieldset><button className="btn btn-outlined" disabled={locked||!accountsReady||id!==null&&!account||!name.trim()||!selected.length||(selected.includes('other')&&!other.trim())}>Save receiving account</button><button type="button" className="btn btn-text" disabled={locked} onClick={()=>setEditorOpen(false)}>Close account editor</button></form></section>}<CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(()=>{refreshed();choose(null);setEditorOpen(false);}).catch(()=>{});}:undefined}/>
  </section>;
 }

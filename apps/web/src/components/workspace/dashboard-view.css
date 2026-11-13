@@ -1,134 +1,166 @@
-.operator-workspace:has(>.dispatch-board) { display:block; max-width:none; padding:0; }
-.dispatch-board {
-  --board-ink:#183b65;
-  --board-blue:#245caa;
-  --board-light:#e8f1fb;
-  --board-tint:#9fc3e8;
-  --board-rule:var(--workspace-border,#d9e1ea);
-  width:100%;
-  max-width:1500px;
-  margin-inline:auto;
-  padding:clamp(16px,2.3vw,36px);
-  color:var(--workspace-text,#17273a);
+/* The dashboard a shop owner opens first.
+   ---------------------------------------------------------------------------
+   Layout and the three graphics that exist only here: the KPI row, the journey
+   strip and the bar charts. Everything else on the screen (cards, notices, the
+   segmented control, pills, skeletons, todo rows) is a design-system component
+   defined once in styles/components.css.
+
+   The grid is fixed and opinionated on purpose. An owner who has to assemble
+   their own dashboard will not assemble one, and a layout that reorders itself
+   with the data cannot be read by position — which is how this screen is
+   actually read once it has been seen a few times. */
+
+.board { display: flex; flex-direction: column; gap: var(--space-6); }
+
+.board-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.board-head h1 { margin: 0; }
+.board-sub { margin: 2px 0 0; font-size: var(--text-base); color: var(--text-secondary); }
+.board-head-side { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+/* ---- the four figures ------------------------------------------------ */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .kpi-row { grid-template-columns: 1fr; } }
+
+.board .kpi {
+  position: relative; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-rest); padding: var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-1); min-width: 0;
+  text-decoration: none; color: inherit;
+  transition: box-shadow var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
 }
-.dispatch-board h1,.dispatch-board h2,.dispatch-board p { margin:0; }
-.dispatch-board h1 { font-size:clamp(27px,2.45vw,38px); font-weight:700; line-height:1.12; letter-spacing:-.035em; }
-.dispatch-board h2 { font-size:clamp(16px,1.3vw,20px); font-weight:650; line-height:1.35; letter-spacing:-.018em; }
-.board-heading,.board-section-head,.board-week-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.board-heading { margin-bottom:22px; }
-.board-heading p { margin-top:5px; font-size:14px; color:var(--workspace-muted); }
-.board-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:16px; border:1px solid var(--board-rule); border-radius:14px; background:var(--md-surface,#fff); overflow:hidden; }
-.dispatch-board .board-metric { min-width:0; min-height:132px; border:0; border-radius:0; box-shadow:none; background:transparent; padding:18px clamp(12px,1.35vw,22px); }
-.dispatch-board .board-metric+.board-metric { border-inline-start:1px solid var(--board-rule); }
-.dispatch-board .board-metric:hover,.dispatch-board .board-metric:focus-visible { background:var(--board-light); }
-.dispatch-board .board-metric:focus-visible { outline-offset:-3px; }
-.dispatch-board .kpic-top { display:flex; align-items:center; gap:8px; }
-.dispatch-board .kpic-ic { display:grid; place-items:center; width:30px; height:30px; flex:none; background:var(--board-light); color:var(--board-blue); border-radius:9px; }
-.dispatch-board .metric-delivered .kpic-ic { color:#276950; background:#e2f1e7; }
-.dispatch-board .metric-money .kpic-ic { color:#835422; background:#fff0d9; }
-.dispatch-board .kpic-go { margin-inline-start:auto; width:15px; font-size:15px; color:#546b82; }
-.dispatch-board .kpic-label { color:#30465e; font-size:13px; line-height:1.3; font-weight:600; }
-.dispatch-board .kpic-value { margin:13px 0 6px; font-size:clamp(24px,2.55vw,38px); line-height:1.06; letter-spacing:-.035em; font-weight:660; color:var(--board-ink); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.dispatch-board .kpic-foot,.dispatch-board .kpic-foot-t { color:var(--workspace-muted); font-size:12px; line-height:1.4; }
-.board-main,.board-secondary { display:grid; gap:16px; }
-.board-main { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); grid-template-areas:"trend queue"; align-items:stretch; }
-.board-main>*,.board-secondary>*,.board-records>* { min-width:0; }
-.board-section-head { align-items:baseline; margin-bottom:15px; }
-.board-section-head>span { font-size:12px; font-variant-numeric:tabular-nums; color:#53687d; }
-.board-queue,.board-stages,.board-module,.board-week { padding:clamp(16px,1.6vw,25px); border-radius:14px; }
-.board-queue,.board-stages,.board-module { background:#fff; border:1px solid var(--board-rule); }
-.board-queue { grid-area:queue; display:flex; flex-direction:column; }
-.board-queue .board-section-head { align-items:center; }
-.board-queue .board-count { padding:3px 9px; font-size:13px; font-weight:700; border-radius:6px; color:var(--board-ink); background:var(--board-light); }
-.board-queue ul { list-style:none; padding:0; margin:0 0 10px; }
-.board-queue li { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:12px; align-items:center; border-top:1px solid var(--board-rule); min-height:55px; padding:8px 0; font-size:14px; line-height:1.4; }
-.board-task-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; color:var(--board-blue); background:var(--board-light); }
-.board-task-icon.task-error { color:#973a31; background:#fae8e4; }
-.board-task-icon.task-warning { color:#835422; background:#fff0d9; }
-.board-task-icon .msym { font-size:18px; }
-.board-task-link { color:var(--board-blue); display:inline-flex; align-items:center; justify-content:end; gap:4px; min-height:36px; font-size:12px; font-weight:650; text-align:end; }
-.board-task-link .msym { font-size:15px; }
-.board-queue .board-note { margin-top:auto; border-top:1px solid var(--board-rule); padding-top:12px; font-size:12px; line-height:1.5; color:var(--workspace-muted); }
-.board-empty { display:flex; align-items:start; gap:10px; padding:8px 0 16px; }
-.board-empty>.msym { color:#276950; }
-.board-empty p { color:var(--workspace-muted); font-size:13px; }
-.board-week {
-  grid-area:trend; display:flex; flex-direction:column; justify-content:space-between; gap:30px;
-  background:var(--md-surface,#fff); border:1px solid var(--board-rule); color:var(--workspace-text);
+.board a.kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-raised); }
+.board a.kpi:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.board .kpi .label { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); }
+.board .kpi .label .msym { font-size: 19px; }
+.board .kpi .value {
+  font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight); font-variant-numeric: tabular-nums;
 }
-.board-week .board-week-head { align-items:start; }
-.board-week .board-week-head p,.week-total span { color:var(--workspace-muted); font-size:12px; line-height:1.45; }
-.board-week .board-week-head p { margin-top:3px; }
-.week-total { display:grid; justify-items:end; }
-.week-total strong { color:var(--board-ink); font-size:clamp(22px,2.1vw,30px); line-height:1; letter-spacing:-.025em; font-variant-numeric:tabular-nums; }
-.week-total span { margin-top:4px; }
-.week-figure { display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:10px; padding-bottom:32px; }
-.week-scale,.week-series { position:relative; height:124px; }
-.week-scale { min-width:2.4ch; line-height:1.2; color:#53677d; }
-.week-scale span { position:absolute; right:0; transform:translateY(50%); font-size:11px; font-variant-numeric:tabular-nums; }
-.week-series { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
-.week-rule { position:absolute; inset-inline:0; border-top:1px solid #e4eaf0; }
-.week-rule.is-baseline { border-color:#a3b1bf; }
-.week-column { position:relative; display:flex; align-items:end; justify-content:center; }
-.week-bar { width:min(36%,25px); position:relative; background:#7898b9; }
-.week-column.is-current .week-bar { background:#245caa; }
-.week-bar strong { position:absolute; left:50%; bottom:100%; transform:translateX(-50%); margin-bottom:3px; padding-inline:2px; background:#fff; color:#344b64; font-size:11px; line-height:1.3; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.week-day { position:absolute; top:100%; text-align:center; margin-top:7px; font-size:11px; line-height:1.2; color:#526578; }
-.week-day small { display:block; line-height:1.2; font-size:10px; }
-.week-column.is-current .week-day { color:#183b65; font-weight:700; }
-.board-secondary { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr); margin-top:16px; }
-.board-stage-list a { display:grid; grid-template-columns:minmax(78px,1fr) minmax(34px,1fr) auto; align-items:center; gap:10px; min-height:36px; font-size:13px; color:var(--workspace-text); }
-.board-stage-list a:hover { color:var(--board-blue); text-decoration:underline; }
-.board-stage-track { height:7px; border-radius:6px; background:#e9eff6; overflow:hidden; }
-.board-stage-track i { display:block; height:100%; background:var(--board-blue); border-radius:inherit; }
-.board-stage-list strong { min-width:2ch; text-align:end; font-variant-numeric:tabular-nums; }
-.dispatch-board .board-module>.card { background:transparent; padding:0; border:0; border-radius:0; box-shadow:none; }
-.board-module .bot-grid { grid-template-columns:1fr 1fr; border:0; margin:15px 0 8px; }
-.board-module .bot-cell { padding:0 5px; min-width:0; }
-.board-module .bot-cell:first-child { padding-inline-start:0; }
-.board-module .bot-top { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
-.board-module .bot-ic { border:0; background:none; width:20px; height:20px; }
-.board-module .bot-l { font-size:12px; }
-.board-module .bot-n { font-size:26px; }
-.board-module .age { padding:0; margin:12px 0; }
-.board-module .age-row { padding:4px 0; }
-.board-module .age-top { gap:6px; }
-.board-module .age-val { font-variant-numeric:tabular-nums; }
-.dispatch-board .dashboard-note { padding:6px 0; font-size:12px; line-height:1.5; color:var(--workspace-muted); }
-.dispatch-board .card-foot-link { display:block; text-align:start; padding:10px 0 0; color:var(--board-blue); font-size:13px; font-weight:600; }
-.board-records .board-section-title { margin:24px 0 12px; }
-.board-records .bk,.board-records .li { color:inherit; }
-.board-records>.card { padding:0 18px 12px; border:1px solid var(--board-rule); border-radius:14px; box-shadow:none; }
-.board-records .bk-main { min-width:0; }
-.board-records .bk-l2 { white-space:normal; overflow-wrap:anywhere; }
-.board-records .dashboard-record-detail { display:block; }
-.board-records .muted { margin-bottom:12px; }
-.dashboard-supplement { margin:16px clamp(16px,2.3vw,36px); }
-.dashboard-supplement>summary { cursor:pointer; padding:12px 0; }
-@media(max-width:1160px) {
- .board-secondary { grid-template-columns:1fr 1fr; }
- .board-secondary .board-balances { grid-column:1/-1; }
- .board-balances .age { display:flex; flex-wrap:wrap; gap:8px 22px; }
+/* The only red figure on the screen. A second one teaches the owner to ignore red. */
+.board .kpi .value.danger { color: var(--danger); }
+.board .kpi .value.muted { color: var(--text-secondary); font-weight: var(--weight-semibold); font-size: var(--text-2xl); }
+.board .kpi .foot { font-size: var(--text-sm); color: var(--text-secondary); }
+.board .kpi .delta { display: inline-flex; align-items: center; gap: 4px; font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.board .kpi .delta .msym { font-size: 16px; }
+.board .kpi .delta.up { color: var(--success); }
+/* Fewer bookings on a Sunday is not a fault, so the fall is never drawn in red. */
+.board .kpi .delta.down { color: var(--text-secondary); }
+/* The product's own argument, so it reads as different in kind from the counts beside it. */
+.board .kpi-accent { background: var(--accent-subtle); border-color: var(--blue-200); }
+.board .kpi-accent .label, .board .kpi-accent .foot, .board .kpi-accent .value { color: var(--accent-on-subtle); }
+.board .kpi-missing { background: var(--surface-sunken); box-shadow: none; }
+.kpi-spark { margin-top: auto; padding-top: var(--space-2); display: block; width: 100%; height: 28px; line-height: 0; }
+.kpi-spark polyline { stroke: var(--blue-300); }
+.kpi-accent .kpi-spark polyline { stroke: var(--accent); }
+
+/* ---- the journey ----------------------------------------------------- */
+.journey { display: flex; align-items: stretch; gap: 0; list-style: none; margin: 0; padding: 0; }
+.journey-cell { display: flex; align-items: stretch; flex: 1; min-width: 0; }
+.journey-stage {
+  flex: 1; min-width: 0; min-height: var(--touch-min);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
+  padding: var(--space-3) var(--space-2); border: 1px solid transparent;
+  border-radius: var(--radius-md); text-decoration: none; color: inherit;
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
 }
-@media(max-width:760px) {
- .board-main { grid-template-columns:1fr; grid-template-areas:"queue" "trend"; }
- .board-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .dispatch-board .board-metric { min-height:112px; padding:12px; }
- .dispatch-board .board-metric:nth-child(3) { border-inline-start:0; }
- .dispatch-board .board-metric:nth-child(n+3) { border-top:1px solid var(--board-rule); }
- .board-secondary { grid-template-columns:minmax(0,1fr); }
- .board-heading { margin-bottom:16px; }
- .board-main,.board-secondary { gap:12px; }
- .board-balances .age { display:block; }
- .board-records .bk { padding-inline:0; }
- .dispatch-board .kpic-go { display:none; }
- .board-stage-list a { min-height:44px; }
+.journey-stage:hover { background: var(--surface-hover); border-color: var(--border); }
+.journey-stage:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.journey-stage .j-icon { line-height: 1; color: var(--text-secondary); }
+.journey-stage .j-icon .msym { font-size: 22px; }
+.journey-stage .j-n {
+  font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums; color: var(--text);
 }
-@media(max-width:420px) {
- .board-queue li { gap:8px; grid-template-columns:26px minmax(0,1fr) auto; }
- .board-task-icon { width:26px; height:26px; }
- .dispatch-board .kpic-top { align-items:start; }
- .dispatch-board .kpic-label { font-size:12px; }
- .dispatch-board .kpic-ic { width:23px; height:23px; border-radius:6px; }
- .dispatch-board .kpic-ic .msym { font-size:15px; }
+.journey-stage .j-label { font-size: var(--text-sm); color: var(--text-secondary); text-align: center; }
+.journey-stage.is-zero .j-n { color: var(--text-secondary); }
+/* Returned is the one stage where a count above zero is a problem, not a position. */
+.journey-stage.alert .j-n, .journey-stage.alert .j-icon { color: var(--danger); }
+/* A line, never a shape: between two and six pixels, so two pipes stay comparable. */
+.journey-pipe { flex: 0 0 auto; width: clamp(12px, 2.4vw, 40px); display: flex; align-items: center; margin-inline: -2px; }
+.journey-pipe i { display: block; width: 100%; background: var(--blue-200); border-radius: 1px; min-height: 2px; max-height: 6px; }
+.journey-total { margin: var(--space-3) 0 0; font-size: var(--text-sm); color: var(--text-secondary); }
+@media (max-width: 860px) {
+  .journey { flex-wrap: wrap; }
+  .journey-cell { flex: 1 1 33%; }
+  .journey-pipe { display: none; }
+}
+
+/* ---- the two charts -------------------------------------------------- */
+.board-charts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+@media (max-width: 1100px) { .board-charts { grid-template-columns: 1fr; } }
+
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; }
+.bar { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); height: 100%; }
+.bar-plot { position: relative; flex: 1; display: flex; align-items: flex-end; }
+.bar-plot i { display: block; width: 100%; background: var(--blue-200); border-radius: 4px 4px 0 0; }
+/* The newest bar is the accent and carries its own value, so "today against the rest"
+   is read in one movement and no value is ever traced back to an axis. */
+.bar.is-now .bar-plot i { background: var(--accent); }
+.bar-value {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 100%; margin-bottom: 4px;
+  font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--text);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.bar-day { font-size: var(--text-xs); color: var(--text-secondary); text-align: center; min-height: 1em; }
+.bars.is-money .bar-plot i { background: var(--warning); }
+.bars.is-money .bar:first-child .bar-plot i { background: var(--blue-200); }
+.chart-caption { margin: var(--space-4) 0 0; font-size: var(--text-sm); color: var(--text-secondary); }
+.chart-blank { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); text-align: center; }
+.chart-blank .msym { font-size: 32px; color: var(--text-secondary); }
+.chart-blank p { margin: 0; color: var(--text-secondary); }
+.money-foot { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); margin-top: var(--space-4); }
+.board-fineprint { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }
+
+/* ---- what ShipIT did ------------------------------------------------- */
+/* Tinted, because this panel is an argument and not a count. It holds the figure an
+   owner repeats to someone else when they are asked what they are paying for. */
+.value-card { background: var(--accent-subtle); border-color: var(--blue-200); }
+.value-card h2 { color: var(--accent-on-subtle); }
+.value-card > p { margin: var(--space-2) 0 0; font-size: var(--text-base); color: var(--accent-on-subtle); max-width: 68ch; }
+.value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5) var(--space-6); }
+@media (max-width: 900px) { .value-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .value-grid { grid-template-columns: 1fr; } }
+.value-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v-n {
+  font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums; color: var(--accent-on-subtle);
+}
+.v-n.is-happy { color: var(--success); }
+.v-n.is-warn { color: var(--warning-on-subtle); }
+.v-l { font-size: var(--text-sm); color: var(--accent-on-subtle); }
+.value-note { margin: var(--space-5) 0 0; font-size: var(--text-sm); color: var(--accent-on-subtle); max-width: 80ch; }
+
+/* ---- needs you ------------------------------------------------------- */
+/* A full hairline and a tonal wash. Never a stripe down one edge: a one-sided edge is a
+   decoration that reads as damage and survives translation worse than a border does. */
+.board .todo { display: flex; flex-direction: column; gap: var(--space-2); }
+.board .todo-row {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  text-decoration: none; color: inherit; background: var(--surface); min-height: var(--touch-min);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+.board .todo-row:hover { box-shadow: var(--shadow-rest); }
+.board .todo-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.board .todo-row .t-ico { flex: none; width: 36px; height: 36px; border-radius: var(--radius-full); display: grid; place-items: center; background: var(--surface-sunken); }
+.board .todo-row .t-ico .msym { font-size: 19px; }
+.board .todo-row .t-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.board .todo-row .t-body b { font-weight: var(--weight-semibold); font-size: var(--text-base); }
+.board .todo-row .t-body span { font-size: var(--text-sm); color: var(--text-secondary); }
+.board .todo-row .t-go { color: var(--text-secondary); }
+.board .todo-row.tone-danger { border-color: #f6d7dc; background: var(--danger-subtle); }
+.board .todo-row.tone-danger .t-ico { background: #fbdce0; color: var(--danger-on-subtle); }
+.board .todo-row.tone-danger .t-body span { color: var(--danger-on-subtle); }
+.board .todo-row.tone-warning { border-color: #f2e0bf; background: var(--warning-subtle); }
+.board .todo-row.tone-warning .t-ico { background: #f8e5c6; color: var(--warning-on-subtle); }
+.board .todo-row.tone-warning .t-body span { color: var(--warning-on-subtle); }
+
+/* ---- when the count was taken --------------------------------------- */
+/* No auto-refresh anywhere on this screen: a figure that changes while the owner is
+   reading it is worse than a stale one. This line makes the staleness visible. */
+.board-asof { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .board .kpi, .board .todo-row, .journey-stage, .segmented button { transition: none; }
 }

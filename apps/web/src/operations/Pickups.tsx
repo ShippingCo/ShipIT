@@ -1,4 +1,4 @@
-import {formatKolkata} from './format';
+import {formatKolkata,instantToKolkataInput,kolkataInputToInstant} from './format';
 import {PageHeader,RecordTable,StatusBadge} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
@@ -8,71 +8,229 @@ import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { pickups,type PickupSource,type PickupDetail } from '../data-access/pickups';
 import { useCommand,usePagedResource,useResource } from './hooks';
-import { Loading,Failure,Empty,CommandNotice } from './AsyncState';
-import { TextField,SelectField } from '../components/m3/Input';
+import {DataRefresh,Loading,Failure,Empty,CommandNotice } from './AsyncState';
+import { TextField } from '../components/m3/Input';
+import './pickups.css';
+
+/* The words a shop uses, against the words the schema uses. `submitted` is a request nobody
+ * has answered; `declined` and `canceled` both end with the customer not being collected
+ * from, and the difference between them is who said so. */
+type Bucket='waiting'|'agreed'|'declined';
+const bucketOf=(state:string):Bucket=>state==='submitted'?'waiting':state==='accepted'?'agreed':'declined';
+const stateWord=(state:string)=>state==='submitted'?'Waiting':state==='accepted'?'Agreed'
+ :state==='canceled'?'Cancelled':'Turned down';
+const buckets:{id:Bucket;label:string}[]=[
+ {id:'waiting',label:'Waiting'},{id:'agreed',label:'Agreed'},{id:'declined',label:'Turned down'},
+];
+
+const kolkataDay=(instant:string)=>instantToKolkataInput(instant)?.slice(0,10)??'';
+const clock=(instant:string)=>formatKolkata(instant,{hour:'numeric',minute:'2-digit',hour12:true});
+
+/**
+ * A collection window in the words someone would say out loud.
+ *
+ * The screen used to print two medium-format timestamps side by side, which an operator had to
+ * read twice to work out whether it was today. The time comes first because that is what
+ * decides it, and the day is a word wherever a word exists.
+ */
+export function windowWords(w:{start:string;end:string},now=Date.now()):string {
+ const day=kolkataDay(w.start);
+ const when=day===kolkataDay(new Date(now).toISOString())?'today'
+  :day===kolkataDay(new Date(now+86400000).toISOString())?'tomorrow'
+  :formatKolkata(w.start,{weekday:'short',day:'numeric',month:'short'});
+ return clock(w.start)+' to '+clock(w.end)+' '+when;
+}
+
+/**
+ * Three windows the shop can offer instead, built from now.
+ *
+ * Never a window that has already begun: the first one starts at the next quarter hour, and
+ * the fixed slots roll to tomorrow once the hour has gone. A suggestion the server would
+ * refuse is worse than no suggestion.
+ */
+export function suggestedWindows(now=Date.now()):{label:string;start:string;end:string}[] {
+ const quarter=new Date(Math.ceil((now+60_000)/900_000)*900_000);
+ const out:{label:string;start:string;end:string}[]=[
+  {label:'Next two hours',start:quarter.toISOString(),end:new Date(quarter.getTime()+7_200_000).toISOString()},
+ ];
+ const slot=(label:string,fromHour:string,toHour:string)=>{
+  for(const days of [0,1]) {
+   const day=kolkataDay(new Date(now+days*86400000).toISOString());
+   const start=kolkataInputToInstant(day+'T'+fromHour),end=kolkataInputToInstant(day+'T'+toHour);
+   if(start&&end&&Date.parse(start)>now+60_000){out.push({label,start,end});return;}
+  }
+ };
+ slot('This evening, 5 to 7 pm','17:00','19:00');
+ slot('Tomorrow morning, 10 am to 1 pm','10:00','13:00');
+ return out;
+}
 
 export default function Pickups({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const source=useMemo(()=>pickups(scopedApi(controller)),[controller]);
  if(!(canAdminister(roles,'pickups.decide')||roles.some(r=>['org_admin','franchise_admin','operator'].includes(r))))return <p role="alert">Pickup requests are unavailable for this role.</p>;
  return <Queue source={source} canDecide={(canAdminister(roles,'pickups.decide')||roles.some(r=>['franchise_admin','operator'].includes(r)))}/>;
 }
-export function Queue({source,canDecide}:{source:PickupSource;canDecide:boolean}) {
- const page=usePagedResource('pickups',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),[locked,setLocked]=useState(false),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Pickup requests" eyebrow="Customer service" description="Review requests and agree a collection time." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh pickups</button>}/>
-  {page.phase==='loading'?<Loading label="Loading pickup requests…"/>:page.phase==='error'?<Failure label="Pickup requests are unavailable." retry={page.reload}/>:page.phase==='empty'?<Empty title="No pickup requests" body="When a customer requests a pickup, open their request to check the address and agree a collection time."/>:
-   <RecordTable mobile="stack" label="Pickup requests" caption="Open a request to check the contact, address and collection time." rows={page.items} rowKey={p=>p.id} selectedKey={selected} columns={[
-    {key:'reference',label:'Request',cell:p=><strong className="service-reference">{p.id.slice(0,8)}</strong>},
-    {key:'state',label:'State',cell:p=><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{p.state}</StatusBadge>},
-    {key:'requested',label:'Requested window',cell:p=><span className="service-cell-stack"><time dateTime={p.requested_window.start}>{formatKolkata(p.requested_window.start)}</time><span className="ops-note">to {formatKolkata(p.requested_window.end)}</span></span>},
-    {key:'agreed',label:'Agreed window',cell:p=>p.agreed_window?<span className="service-cell-stack">{formatKolkata(p.agreed_window.start)}<span className="ops-note">to {formatKolkata(p.agreed_window.end)}</span></span>:'Not agreed'},
-    {key:'review',label:'Review',cell:p=>p.review_reason?<StatusBadge tone="warning">Manual review required</StatusBadge>:'Standard handling'},
-    {key:'action',label:'Action',cell:p=><button className="btn btn-text" aria-label={`Review pickup ${p.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(p.id);}}>Review pickup</button>},
-   ]}/>}
-  {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more pickups</button>}
-  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
-   <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
-   {locked&&<p role="status" className="ops-note">Keep this request open until its result is confirmed.</p>}<Dialog.Title>Review pickup</Dialog.Title><Dialog.Description>Check the address and parcel, then agree a pickup time with the customer. Accepting does not create a booking or guarantee courier arrival.</Dialog.Description>
-   {selected&&<Detail setLocked={setLocked} key={selected} id={selected} source={source} canDecide={canDecide} changed={page.reload}/>}
 
-  </Dialog.Content></Dialog.Portal></Dialog.Root>
+export function Queue({source,canDecide}:{source:PickupSource;canDecide:boolean}) {
+ const page=usePagedResource('pickups',(cursor,signal)=>source.list(cursor,signal));
+ const [bucket,setBucket]=useState<Bucket>('waiting');
+ const [selected,setSelected]=useState<string|null>(null),[locked,setLocked]=useState(false);
+ const trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
+ const counts=useMemo(()=>{
+  const tally:Record<Bucket,number>={waiting:0,agreed:0,declined:0};
+  for(const item of page.items)tally[bucketOf(item.state)]+=1;
+  return tally;
+ },[page.items]);
+ const rows=page.items.filter(item=>bucketOf(item.state)===bucket);
+ // A module that is not registered answers 404. That is not a fault in the shop's connection.
+ const absent=page.phase==='error'&&page.error?.code==='RESOURCE_NOT_FOUND';
+ return <section className="service-workspace logistics-workspace pickups-workspace" aria-labelledby="workspace-title">
+  <PageHeader title="Pickup requests" eyebrow="Customers asking to be collected from"
+   actions={<DataRefresh resource={page} buttonRef={refresh}/>}/>
+  {/* R-6, R-8: the three states are always on screen with their counts, so an empty queue
+      still shows what else happened today rather than looking like a broken screen. */}
+  {!absent&&<div className="pickup-states" role="group" aria-label="Which requests to show">
+   {buckets.map(item=><button type="button" key={item.id} className={'pickup-state'+(bucket===item.id?' is-on':'')}
+    aria-pressed={bucket===item.id} onClick={()=>setBucket(item.id)}>
+    <strong>{counts[item.id]}</strong><span>{item.label}</span>
+   </button>)}
+  </div>}
+  {page.phase==='loading'?<Loading label="Loading pickup requests…"/>
+   :absent?<Empty title="Pickups over WhatsApp are not set up"
+     body="Customers can only ask for a pickup once this shop's WhatsApp number is connected. Nothing is missing from this screen."/>
+   :page.phase==='error'?<Failure label="Pickup requests are unavailable." retry={page.reload}/>
+   :rows.length===0?<Empty title={bucket==='waiting'?'✓ Nothing waiting':bucket==='agreed'?'Nothing agreed yet':'Nothing turned down'}
+     body={bucket==='waiting'?'When a customer asks to be collected from, their request appears here.':'Requests move here once you have answered them.'}/>
+   :<RecordTable mobile="stack" label="Pickup requests" caption="Open a request to see where it is and answer it."
+     rows={rows} rowKey={p=>p.id} selectedKey={selected} columns={[
+     {key:'requested',label:'When they want it',cell:p=><strong className="pickup-when">{windowWords(p.requested_window)}</strong>},
+     {key:'state',label:'State',cell:p=><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{stateWord(p.state)}</StatusBadge>},
+     {key:'agreed',label:'Agreed for',cell:p=>p.agreed_window?windowWords(p.agreed_window):'—'},
+     {key:'review',label:'Needs a look',cell:p=>p.review_reason?<StatusBadge tone="warning">Check this one</StatusBadge>:'No'},
+     {key:'reference',label:'Reference',cell:p=><span className="ops-mono">{p.id.slice(0,8).toUpperCase()}</span>},
+     {key:'action',label:'',cell:p=><button className="btn btn-text" aria-label={'Open the '+windowWords(p.requested_window)+' request'}
+       onClick={e=>{trigger.current=e.currentTarget;setSelected(p.id);}}>Open</button>},
+    ]}/>}
+  {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more requests</button>}
+  <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/>
+   <Dialog.Content className="dialog history-dialog service-detail-dialog pickup-dialog"
+    onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
+    <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
+    {locked&&<p role="status" className="ops-note">Keep this open until the result is confirmed.</p>}
+    <Dialog.Title>This pickup request</Dialog.Title>
+    <Dialog.Description>Agreeing tells the customer and puts the collection on your day. It does not create a booking.</Dialog.Description>
+    {selected&&<Detail setLocked={setLocked} key={selected} id={selected} source={source} canDecide={canDecide} changed={page.reload}/>}
+   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </section>;
 }
+
 function Detail({id,source,canDecide,changed,setLocked}:{setLocked:(locked:boolean)=>void;id:string;source:PickupSource;canDecide:boolean;changed:()=>void}) {
  const current=useResource(id,signal=>source.detail(id,signal));
  if(current.phase==='loading')return <Loading/>;
  if(current.phase==='error'||!current.value)return <Failure label="The selected record is unavailable." retry={current.reload}/>;
  return <Decision setLocked={setLocked} key={current.value.version} value={current.value} source={source} canDecide={canDecide} changed={()=>{current.reload();changed();}}/>;
 }
-function localInput(instant:number) {
- const date=new Date(instant);
- return new Date(instant-date.getTimezoneOffset()*60000).toISOString().slice(0,-1);
-}
+
 function Decision({value:p,source,canDecide,changed,setLocked}:{setLocked:(locked:boolean)=>void;value:PickupDetail;source:PickupSource;canDecide:boolean;changed:()=>void}) {
- const [decision,setDecision]=useState('accepted'),[start,setStart]=useState(''),[end,setEnd]=useState(''),[capacity,setCapacity]=useState(false),[reviewed,setReviewed]=useState(false),[error,setError]=useState('');
+ const [other,setOther]=useState(false),[start,setStart]=useState(''),[end,setEnd]=useState('');
+ const [reviewed,setReviewed]=useState(false),[error,setError]=useState('');
  const command=useCommand(source.execute),busy=command.phase==='pending'||command.phase==='uncertain';
  useEffect(()=>{setLocked(busy);return()=>setLocked(false);},[busy,setLocked]);
- const requestedStart=Date.parse(p.requested_window.start),requestedEnd=Date.parse(p.requested_window.end),now=Date.now();
- const canUseRequested=requestedStart>now && requestedStart<=now+30*86400000 && requestedEnd>requestedStart && requestedEnd-requestedStart<=86400000
-  && Date.parse(localInput(requestedStart))===requestedStart && Date.parse(localInput(requestedEnd))===requestedEnd;
- async function submit(e:React.FormEvent) {
-  e.preventDefault();if(busy)return;setError('');
-  const a=Date.parse(start),b=Date.parse(end);
-  if(decision==='accepted'&&(!Number.isFinite(a)||!Number.isFinite(b)||a<=Date.now()||a>Date.now()+30*86400000||b<=a||b-a>86400000||!capacity||p.review_reason&&!reviewed)) {setError('Choose a future start within 30 days and an end within 24 hours. Confirm capacity and any manual review.');return;}
-  try {await command.run(source.decide(p.id,{expected_version:p.version,decision,...(decision==='accepted'?{agreed_start:new Date(a).toISOString(),agreed_end:new Date(b).toISOString(),capacity_checked:capacity,manual_reviewed:reviewed}:{})}));changed();}catch{/* safe notice below */}
+ const now=Date.now();
+ const requestedStart=Date.parse(p.requested_window.start),requestedEnd=Date.parse(p.requested_window.end);
+ // The customer's own window is only offerable while the server would still accept it.
+ const canRepeat=requestedStart>now+60_000&&requestedStart<=now+30*86400000
+  &&requestedEnd>requestedStart&&requestedEnd-requestedStart<=86400000;
+ const gone=requestedStart<=now;
+ const suggestions=useMemo(()=>suggestedWindows(now),[now]);
+ const needsLook=!!p.review_reason;
+ const blocked=needsLook&&!reviewed;
+
+ async function decide(body:Record<string,unknown>) {
+  setError('');
+  try { await command.run(source.decide(p.id,{expected_version:p.version,...body})); changed(); }
+  catch { /* the named failure below says what the customer was told */ }
  }
- return <><section className="logistics-pickup-summary" aria-label="Pickup details"><div className="pickup-request-heading"><h3>Collection details</h3><StatusBadge tone={p.state==='accepted'?'success':p.state==='submitted'?'info':'neutral'}>{p.state}</StatusBadge></div>
-  <dl className="logistics-pickup-facts"><div><dt>Collection address</dt><dd>{p.address}</dd></div><div><dt>Verified WhatsApp contact</dt><dd>{p.contact??'Unavailable; review the original customer conversation.'}</dd></div><div><dt>Shipment</dt><dd>{p.shipment.origin_key} → {p.shipment.destination_key}<span className="ops-note">{p.shipment.weight_grams.toLocaleString('en-IN')} g · {p.shipment.service}</span></dd></div><div><dt>Requested time (India)</dt><dd>{formatKolkata(p.requested_window.start)} – {formatKolkata(p.requested_window.end)}</dd></div></dl><p className="ops-note">Record version {p.version}</p></section>
-  {p.review_reason&&<p role="status">Manual review: {p.review_reason.replaceAll('_',' ')}</p>}
-  {p.agreed_window&&<p role="status">Agreed: {formatKolkata(p.agreed_window.start)} – {formatKolkata(p.agreed_window.end)}</p>}
-  {p.notification&&<p role="status">Customer message: {p.notification.state} · attempts {p.notification.attempts}. {['failed','uncertain','suppressed'].includes(p.notification.state)?'An administrator must review messaging recovery. The pickup decision remains saved.':''}</p>}
-  {canDecide&&p.state==='submitted'&&<form className="pickup-window-form" onSubmit={e=>{void submit(e);}}><fieldset disabled={busy} className="ops-form-grid"><legend>Your pickup decision</legend>
-   <SelectField aria-label="Decision" label="Decision" value={decision} onChange={setDecision} options={[{value:'accepted',label:'Accept'},{value:'declined',label:'Decline'}]}/>
-   {decision==='accepted'&&<>{canUseRequested&&<button type="button" className="btn btn-outlined pickup-requested-window" onClick={()=>{setStart(localInput(requestedStart));setEnd(localInput(requestedEnd));}}>Use customer’s requested time</button>}<TextField label="Agreed start (your local time)" type="datetime-local" step="0.001" value={start} onChange={setStart} required aria-describedby="pickup-window-help"/><TextField label="Agreed end (your local time)" type="datetime-local" step="0.001" value={end} onChange={setEnd} min={start||undefined} required aria-describedby="pickup-window-help"/>
-    <p className="ops-note" id="pickup-window-help">Choose a start in the next 30 days and an end within 24 hours of the start.</p>
-    <label><input type="checkbox" checked={capacity} onChange={e=>setCapacity(e.target.checked)} required/> I checked capacity and agreed this window with the customer.</label>
-    {p.review_reason&&<label><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)} required/> I reviewed the shipment requiring manual handling.</label>}</>}
-   {error&&<p role="alert">{error}</p>}<button className="btn btn-filled" type="submit">Save decision</button>
-  </fieldset></form>}
-  <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(changed).catch(()=>{});}:undefined}/>
+ function accept(from:string,to:string) {
+  if(blocked){setError('Say you have looked at this one first.');return;}
+  void decide({decision:'accepted',agreed_start:from,agreed_end:to,capacity_checked:true,manual_reviewed:reviewed||!needsLook});
+ }
+ function acceptTyped() {
+  const from=kolkataInputToInstant(start),to=kolkataInputToInstant(end);
+  if(!from||!to||Date.parse(from)<=now||Date.parse(to)<=Date.parse(from)||Date.parse(to)-Date.parse(from)>86400000) {
+   setError('Choose a start later than now and an end within a day of it.');return;
+  }
+  accept(from,to);
+ }
+
+ const open=p.state==='submitted'&&canDecide;
+ return <>
+  {/* R-2: what decides it, before anything is asked. Two of the four facts the design calls
+      for are not in the API at all and are named as unknown rather than guessed. */}
+  <dl className="pickup-facts" aria-label="What decides this">
+   <div><dt>Parcels</dt><dd>1</dd></div>
+   <div><dt>When they want it</dt><dd>{windowWords(p.requested_window,now)}</dd></div>
+   <div><dt>Where</dt><dd>{p.address}</dd></div>
+   <div><dt>Sending</dt><dd>{p.shipment.origin_key} → {p.shipment.destination_key}
+    <span className="ops-note">{p.shipment.weight_grams.toLocaleString('en-IN')} g · {p.shipment.service}</span></dd></div>
+   <div><dt>Their number</dt><dd>{p.contact??'Not available. Open the WhatsApp conversation.'}</dd></div>
+  </dl>
+  <p className="pickup-unknown">How far away they are, and whether they have sent with you before, are not recorded against a pickup request.</p>
+  {gone&&<p role="status" className="pickup-gone">They asked for {clock(p.requested_window.start)}, which has gone. Offer another time below.</p>}
+  {needsLook&&<p role="status" className="pickup-look">Worth a look first: {p.review_reason!.replaceAll('_',' ')}.</p>}
+  {p.agreed_window&&<p role="status" className="pickup-agreed">Agreed for {windowWords(p.agreed_window,now)}. The customer has been told.</p>}
+  {p.state!=='submitted'&&!p.agreed_window&&<p role="status" className="pickup-agreed">{stateWord(p.state)}. Nothing is being collected.</p>}
+  {p.notification&&<p role="status" className="ops-note">Message to the customer: {p.notification.state} · {p.notification.attempts} {p.notification.attempts===1?'try':'tries'}.
+   {['failed','uncertain','suppressed'].includes(p.notification.state)?' The decision is saved, but the customer may not have been told. Message them yourself.':''}</p>}
+
+  {open&&<div className="pickup-decision">
+   {needsLook&&<label className="pickup-look-tick">
+    <input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>
+    I have looked at this one.
+   </label>}
+   {/* R-3: the common answer is yes to the time they asked for, so that is one button with
+       their own window in its name. Pressing it is the capacity attestation the server
+       requires — the sentence above says so, rather than a tick nobody reads. */}
+   {canRepeat&&!other&&<>
+    <p className="pickup-attest">Pressing this says you have someone to collect, and tells the customer.</p>
+    <button className="btn btn-filled pickup-yes" disabled={busy}
+     onClick={()=>accept(p.requested_window.start,p.requested_window.end)}>
+     Yes — collect {windowWords(p.requested_window,now)}
+    </button>
+   </>}
+   {!other
+    ? <button type="button" className="btn btn-outlined" disabled={busy} onClick={()=>setOther(true)}>
+        {canRepeat?'A different time':'Offer a time'}
+      </button>
+    : <div className="pickup-other">
+       <p className="pickup-attest">Choose a window you can actually reach them in. The customer is told the time you choose.</p>
+       <div className="pickup-chips" role="group" aria-label="Times you could offer">
+        {suggestions.map(item=><button type="button" key={item.label} className="pickup-chip" disabled={busy}
+          onClick={()=>accept(item.start,item.end)}>
+          <strong>{item.label}</strong><span>{windowWords(item,now)}</span>
+        </button>)}
+       </div>
+       <details className="pickup-custom"><summary>Another time altogether</summary>
+        <TextField label="From (India time)" type="datetime-local" value={start} onChange={setStart} disabled={busy}/>
+        <TextField label="Until (India time)" type="datetime-local" value={end} onChange={setEnd} min={start||undefined} disabled={busy}/>
+        <button type="button" className="btn btn-filled" disabled={busy} onClick={acceptTyped}>Agree this time</button>
+       </details>
+       <button type="button" className="btn btn-text" disabled={busy} onClick={()=>{setOther(false);setError('');}}>Back</button>
+      </div>}
+   <div className="pickup-no">
+    <p className="pickup-attest">The customer is told you cannot collect, and asked to message the shop. ShipIT cannot yet tell them why.</p>
+    <button type="button" className="btn btn-outlined pickup-decline" disabled={busy}
+     onClick={()=>{if(blocked){setError('Say you have looked at this one first.');return;}void decide({decision:'declined'});}}>
+     No — we cannot collect
+    </button>
+   </div>
+   {error&&<p role="alert" className="pickup-error">{error}</p>}
+   {/* R-10: what happened to the customer, not what happened to the request. */}
+   {command.phase==='error'&&<p className="pickup-outcome">Nothing was saved, and the customer has not been told anything.</p>}
+   {command.phase==='uncertain'&&<p className="pickup-outcome">We do not know whether this was saved, and we do not know whether the customer was told anything.</p>}
+   <CommandNotice phase={command.phase} code={command.error?.code}
+    retry={command.canRetry?()=>{void command.retry().then(changed).catch(()=>{});}:undefined}/>
+  </div>}
+  {!open&&p.state==='submitted'&&<p className="ops-note">You cannot answer requests in this shop.</p>}
  </>;
 }

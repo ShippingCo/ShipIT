@@ -124,8 +124,10 @@ async function inspect(db: QueryExecutor, role: string, names: readonly string[]
         -- oidvectortypes separates arguments with ', ' while declared requirements use ','.
         -- Comparing the raw strings matched only single-argument functions, so every
         -- multi-argument requirement reported missing_object and db:doctor failed on
-        -- functions that exist and are already granted. Compare resolved identities instead.
-        SELECT to_regprocedure(object)::oid
+        -- functions that exist and are already granted. Normalise the separator; keep the
+        -- lookup itself exactly as it was, so nothing else about resolution changes.
+        SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname||'.'||p.proname||'('||replace(oidvectortypes(p.proargtypes),', ',',')||')'=object
       ) END AS oid FROM requested
     ) SELECT kind,object,privilege,column_name,
       CASE WHEN oid IS NULL OR (column_name IS NOT NULL AND NOT EXISTS(

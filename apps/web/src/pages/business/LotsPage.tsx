@@ -22,7 +22,7 @@ export default function LotsPage() {
   return (
     <div className="page">
       <div className="page-actions">
-        <Button icon="add" onClick={() => setCreateOpen(true)}>Create Lot</Button>
+        <Button icon="add" onClick={() => setCreateOpen(true)}>Create lot</Button>
       </div>
 
       <div className="grid3">

@@ -103,10 +103,10 @@ export function createMoneyReceiptService(database:DatabasePool,writesEnabled=tr
  async function bills(token:string,query:unknown,correlation:string) {
   const q=validate.receiptPage(query,true);
   return withMoneyReceiptScope(database,token,q.organizationId,q.franchiseId,'money_receipts.select',correlation,async s=>{
-   await receipts.customer(s.command,q.customerId!);const rows=await receipts.customerBookingIds(s.command,q.customerId!,q.cursor,q.limit+1),items: {booking_id:string;currency:'INR';gross_paise:number;outstanding_paise:number;expected_payment_version:number}[]=[];
+   await receipts.customer(s.command,q.customerId!);const rows=await receipts.customerBookingIds(s.command,q.customerId!,q.cursor,q.limit+1),items: {booking_id:string;currency:'INR';gross_paise:number;outstanding_paise:number;expected_payment_version:number;confirmed_at:string}[]=[];
    for(const row of rows.slice(0,q.limit)){
     const projection=await payments.projection(s.payment,await payments.obligation(s.payment,row.id));
-    items.push({booking_id:row.id,currency:'INR',gross_paise:projection.gross_paise,outstanding_paise:projection.outstanding_paise,expected_payment_version:projection.version});
+    items.push({booking_id:row.id,currency:'INR',gross_paise:projection.gross_paise,outstanding_paise:projection.outstanding_paise,expected_payment_version:projection.version,confirmed_at:instant(row.confirmed_at)});
    }
    return {items,next_cursor:rows.length>q.limit?rows[q.limit-1]!.id:null};
   });

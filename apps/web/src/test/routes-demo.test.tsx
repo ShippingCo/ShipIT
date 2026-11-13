@@ -22,17 +22,25 @@ afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('matches the demo route hierarchy, keeps planning counts truthful, and shows expandable history',async()=>{
  vi.stubGlobal('fetch',vi.fn(async(path:string)=>reads(path)));
  render(<MemoryRouter><Routes controller={controller()} roles={['operator']}/></MemoryRouter>);
- expect(await screen.findByText('Ahmedabad → Mumbai')).toBeVisible();expect(screen.getByText('1 planning entry')).toBeVisible();expect(screen.getByRole('button',{name:'Mark departed'})).toBeEnabled();
- const toggle=screen.getByRole('button',{name:'Show history (1)'});expect(toggle).toHaveAttribute('aria-expanded','false');fireEvent.click(toggle);expect(screen.getByText('Synthetic route history')).toBeVisible();expect(toggle).toHaveAttribute('aria-expanded','true');
- fireEvent.click(screen.getByRole('button',{name:'Plan Route'}));const dialog=screen.getByRole('dialog',{name:'Plan dispatch route'});expect(within(dialog).getByLabelText('From')).toHaveValue('Ahmedabad');expect(within(dialog).getByLabelText('Departure')).toHaveAttribute('type','datetime-local');expect(within(dialog).getByText('No lots yet. You can attach them later.')).toBeVisible();
+ // R-1: the vehicle leads, at the largest size on the card.
+ expect(await screen.findByText('SYN-888')).toBeVisible();
+ expect(screen.getByText('Ahmedabad → Mumbai')).toBeVisible();
+ expect(screen.getByText('1 booking planned into this trip, not booked yet.')).toBeVisible();
+ // A trip with planned bookings and no parcels has no sheet to seal, so its one primary
+ // action is the next thing that really happens to it.
+ expect(screen.getByRole('button',{name:'Record that it has left'})).toBeEnabled();
+ const toggle=screen.getByRole('button',{name:'Show what has happened (1)'});expect(toggle).toHaveAttribute('aria-expanded','false');fireEvent.click(toggle);expect(screen.getByText('Synthetic route history')).toBeVisible();expect(toggle).toHaveAttribute('aria-expanded','true');
+ fireEvent.click(screen.getByRole('button',{name:'Plan a trip'}));const dialog=screen.getByRole('dialog',{name:'Plan a trip'});expect(within(dialog).getByLabelText('From')).toHaveValue('Ahmedabad');expect(within(dialog).getByLabelText('When it leaves')).toHaveAttribute('type','datetime-local');expect(within(dialog).getByText('No bags yet. You can load them later.')).toBeVisible();
+ // R-6: the schema's own words appear nowhere a person can read them.
+ for(const word of [/manifest/i,/finalize/i,/route event/i,/\bleg\b/i])expect(document.body.textContent).not.toMatch(word);
 });
 it('records planning departure with an exact retry after a lost response and never dispatches a parcel',async()=>{
  let failed=true,current=route;const writes:RequestInit[]=[];
  const fetcher=vi.fn(async(path:string,options:RequestInit={})=>{if(options.method==='PATCH'){writes.push(options);if(failed)throw new TypeError('Synthetic lost acknowledgement');current={...route,version:2,planning_progress:'departed'};return json(current);}return reads(path,current);});vi.stubGlobal('fetch',fetcher);
  render(<MemoryRouter><Routes controller={controller()} roles={['operator']}/></MemoryRouter>);
- fireEvent.click(await screen.findByRole('button',{name:'Mark departed'}));const dialog=screen.getByRole('dialog');expect(within(dialog).getByText(/Parcel custody stays unchanged/)).toBeVisible();fireEvent.click(within(dialog).getByRole('button',{name:'Mark departed'}));
- const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.queryByRole('button',{name:'Close'})).not.toBeInTheDocument();fireEvent.keyDown(document,{key:'Escape'});expect(dialog).toBeVisible();failed=false;fireEvent.click(retry);
- await screen.findByRole('button',{name:'Mark arrived'});expect(writes).toHaveLength(2);expect(writes[0]!.body).toBe(writes[1]!.body);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(JSON.parse(String(writes[0]!.body)).planning_progress).toBe('departed');expect(fetcher.mock.calls.some(([p])=>p.includes('/dispatch?'))).toBe(false);
+ fireEvent.click(await screen.findByRole('button',{name:'Record that it has left'}));const dialog=screen.getByRole('dialog');expect(within(dialog).getByText(/changes nothing about any parcel/)).toBeVisible();fireEvent.click(within(dialog).getByRole('button',{name:'Record that it has left'}));
+ const retry=await screen.findByRole('button',{name:'Check if it saved'});expect(screen.queryByRole('button',{name:'Close'})).not.toBeInTheDocument();fireEvent.keyDown(document,{key:'Escape'});expect(dialog).toBeVisible();failed=false;fireEvent.click(retry);
+ await screen.findByRole('button',{name:'Record something that happened'});expect(writes).toHaveLength(2);expect(writes[0]!.body).toBe(writes[1]!.body);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(JSON.parse(String(writes[0]!.body)).planning_progress).toBe('departed');expect(fetcher.mock.calls.some(([p])=>p.includes('/dispatch?'))).toBe(false);
 });
 it('resumes a physical departure after a lost dispatch response without repeating finalization or changing evidence',async()=>{
  const physical={...route,planning_entry_ids:undefined},dispatchable={id:id(20),version:1,status:'checked_in'} as ParcelRead;
@@ -47,5 +55,5 @@ it('resumes a physical departure after a lost dispatch response without repeatin
 
 it('uses physical journey evidence rather than an earlier planning delay for the current status',()=>{
  const latest={event_id:id(22),route_id:route.id,version:3,manifest_id:manifest.id,manifest_version:1,kind:'departure' as const,effective_at:now,updated_count:1,skipped_count:0,eta:{state:'unavailable' as const,base_at:null,revised_at:null,total_delay_minutes:0}};
- expect(routeStage({route:{...route,state:'finalized',planning_delay_minutes:240},manifest,rows:[],lotIds:[],entryIds:[],history:[],latest})).toBe('departed');
+ expect(routeStage({route:{...route,state:'finalized',planning_delay_minutes:240},manifest,rows:[],lotIds:[],entryIds:[],history:[],latest,bagOf:new Map()})).toBe('departed');
 });

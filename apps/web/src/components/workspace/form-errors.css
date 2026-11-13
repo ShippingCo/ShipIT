@@ -1,0 +1,34 @@
+/* What a form refused: once at the top, once beside the field.
+ *
+ * Red is spent only here and on the field itself, so a problem is the loudest thing on the
+ * screen without the screen ever being loud. Both floors apply: nothing under 15px to read,
+ * nothing under 44px to press. */
+.form-errors {
+  --fe-bad:var(--danger);
+  margin:0 0 18px; padding:14px 16px;
+  border:1px solid var(--fe-bad); border-radius:var(--shape-card, 12px);
+  background:#fff; color:var(--workspace-text, var(--text));
+}
+.form-errors:focus { outline:none; }
+.form-errors:focus-visible { outline:2px solid var(--fe-bad); outline-offset:2px; }
+.form-errors-head { display:flex; align-items:center; gap:9px; margin:0 0 4px; font-size:16px; line-height:23px; }
+.form-errors-head .msym { flex:none; color:var(--fe-bad); }
+.form-errors-head strong { font-weight:650; }
+.form-errors ul { list-style:none; margin:0; padding:0; }
+.form-errors li {
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 8px;
+  padding:2px 0; font-size:15px; line-height:22px;
+}
+/* The field name is the way to the field: a press puts the cursor in it. */
+.form-errors li a {
+  display:inline-flex; align-items:center; min-height:44px; padding-inline:2px;
+  color:var(--fe-bad); font-weight:650; text-decoration:underline; text-underline-offset:3px;
+}
+.form-errors li a:hover { text-decoration-thickness:2px; }
+.form-errors li a:focus-visible { outline:2px solid var(--fe-bad); outline-offset:2px; border-radius:4px; }
+.form-errors li span { color:var(--workspace-muted, var(--text-secondary)); }
+.form-errors-note { margin:8px 0 0; font-size:15px; line-height:21px; color:var(--workspace-muted, var(--text-secondary)); }
+
+/* A control the form has refused carries the mark itself, not only a message under it. */
+.operator-shell [aria-invalid="true"] { border-color:var(--danger); }
+.operator-shell [aria-invalid="true"]:focus-visible { outline-color:var(--danger); }

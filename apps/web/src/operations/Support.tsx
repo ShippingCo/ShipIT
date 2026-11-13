@@ -9,7 +9,7 @@ import type { ScopeController } from '../operator/scope';
 import { scopedApi } from '../data-access/scoped-api';
 import { support,type SupportSource,type SupportDetail } from '../data-access/support';
 import { useCommand,usePagedResource,useResource } from './hooks';
-import { Loading,Failure,Empty,CommandNotice } from './AsyncState';
+import { DataRefresh,Loading,Failure,Empty,CommandNotice } from './AsyncState';
 import { SelectField,TextArea } from '../components/m3/Input';
 
 const caseReason=(reason:string)=>reason==='human_requested'?'Customer asked for help':reason.replaceAll('_',' ');
@@ -20,11 +20,11 @@ export default function Support({controller,roles}:{controller:ScopeController;r
 }
 export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:boolean}) {
  const page=usePagedResource('support',(cursor,signal)=>source.list(cursor,signal)),[selected,setSelected]=useState<string|null>(null),[locked,setLocked]=useState(false),trigger=useRef<HTMLButtonElement|null>(null),refresh=useRef<HTMLButtonElement|null>(null);
- return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Support" eyebrow="Customer service" description="Review customer requests and follow up." actions={<button ref={refresh} className="btn btn-outlined" onClick={page.reload}>Refresh cases</button>}/>
-  {page.phase==='loading'?<Loading label="Loading support cases…"/>:page.phase==='error'?<Failure label="Support cases are unavailable." retry={page.reload}/>:page.phase==='empty'?<Empty title="No support cases" body="When a customer asks for help, their case appears here. Open it to see the reason and choose who will follow up."/>:
-   <RecordTable mobile="stack" label="Support cases" caption="Cases in this branch · open a case for customer details" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
+ return <section className="service-workspace logistics-workspace" aria-labelledby="workspace-title"><PageHeader title="Problems" eyebrow="When something goes wrong" actions={<DataRefresh resource={page} buttonRef={refresh}/>}/>
+  {page.phase==='loading'&&!page.items.length?<Loading label="Loading problems…"/>:page.phase==='error'?<Failure label="Problems could not be loaded." retry={page.reload}/>:page.phase==='empty'?<Empty title="✓ No problems open" body="When a customer tells you something has gone wrong, it appears here with what they said and what it is about."/>:
+   <RecordTable mobile="stack" label="Problems" caption="Problems in this branch · open one to see what the customer said" rows={page.items} rowKey={c=>c.id} selectedKey={selected} columns={[
     {key:'reference',label:'Case',cell:c=><div className="record-identity"><strong>{caseReason(c.reason)}</strong><span>Case {c.id.slice(0,8)}</span></div>},
-    {key:'state',label:'State',cell:c=><StatusBadge tone={c.state==='resolved'?'success':c.state==='open'?'warning':'info'}>{c.state}</StatusBadge>},
+    {key:'state',label:'State',cell:c=><StatusBadge tone={c.state==='resolved'?'success':c.state==='open'?'warning':'info'}>{c.state==='resolved'?'Closed':c.state==='open'?'Nobody on it yet':'Being handled'}</StatusBadge>},
     {key:'assigned',label:'Assigned to',cell:c=>c.assigned_staff_id?<span className="service-reference">{c.assigned_staff_id.slice(0,8)}</span>:'Unassigned'},
     {key:'updated',label:'Updated',cell:c=><time dateTime={c.updated_at}>{formatKolkata(c.updated_at)}</time>},
     {key:'action',label:'Action',cell:c=><button ref={button=>{if(button&&c.id===selected)trigger.current=button;}} className="btn btn-text" aria-label={`Review case ${c.id}`} onClick={e=>{trigger.current=e.currentTarget;setSelected(c.id);}}>Review case</button>},
@@ -32,7 +32,7 @@ export function SupportQueue({source,canWrite}:{source:SupportSource;canWrite:bo
   {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={page.loadMore}>Load more cases</button>}
   <Dialog.Root open={selected!==null} onOpenChange={open=>{if(!open&&!locked)setSelected(null);}}><Dialog.Portal><Dialog.Overlay className="scrim"/><Dialog.Content className="dialog history-dialog service-detail-dialog" onCloseAutoFocus={e=>{e.preventDefault();(trigger.current?.isConnected?trigger.current:refresh.current)?.focus();}}>
    <Dialog.Close disabled={locked} className="btn btn-outlined service-detail-close">Close</Dialog.Close>
-   {locked&&<p role="status" className="ops-note">Keep this request open until its result is confirmed.</p>}<Dialog.Title>Support case</Dialog.Title><Dialog.Description>Private staff workspace. Internal notes are never sent to the customer.</Dialog.Description>
+   {locked&&<p role="status" className="ops-note">Keep this request open until its result is confirmed.</p>}<Dialog.Title>This problem</Dialog.Title><Dialog.Description>Private staff workspace. Internal notes are never sent to the customer.</Dialog.Description>
    {selected&&<SupportCaseDetail setLocked={setLocked} key={selected} id={selected} source={source} canWrite={canWrite} changed={page.reload}/>}
 
   </Dialog.Content></Dialog.Portal></Dialog.Root>
@@ -46,9 +46,9 @@ export function SupportCaseDetail({id,source,canWrite,changed,setLocked}:{setLoc
 }
 function CaseCommands({value:c,source,canWrite,refresh,setLocked}:{setLocked:(locked:boolean)=>void;value:SupportDetail;source:SupportSource;canWrite:boolean;refresh:()=>void}) {
  const mine=c.assigned_staff_id===c.current_actor_id;
- const actionLabels:Record<string,string>={claim:'Claim case',assign:'Assign case',respond:'Reply to customer',note:'Add internal note',resolve:'Resolve case',reopen:'Reopen case'};
+ const actionLabels:Record<string,string>={claim:'I will handle this',assign:'Give it to someone',respond:'Reply to the customer',note:'Note for your own staff',resolve:'Close it',reopen:'Open it again'};
  const actions=c.state==='resolved'?['reopen']:c.state==='open'?['claim','assign']:mine?['respond','note','resolve','assign']:['assign'];
- const [action,setAction]=useState(actions[0]!),[text,setText]=useState(''),[assigned,setAssigned]=useState(''),[reason,setReason]=useState('needs_followup');
+ const [action,setAction]=useState(actions[0]!),[text,setText]=useState(''),[assigned,setAssigned]=useState(''),[reason,setReason]=useState('answered');
  const command=useCommand(source.execute),busy=command.phase==='pending'||command.phase==='uncertain';
  useEffect(()=>{setLocked(busy);return()=>setLocked(false);},[busy,setLocked]);
  async function submit(e:React.FormEvent) {
@@ -57,7 +57,7 @@ function CaseCommands({value:c,source,canWrite,refresh,setLocked}:{setLocked:(lo
  }
  return <><header className="service-record-head"><div><h3>{caseReason(c.reason)}</h3>
     <p>{c.assigned_staff_id===c.current_actor_id?'Owner: You':c.assigned_staff_id?'Owner: Assigned staff':'Owner: Unassigned'}</p></div>
-    <StatusBadge tone={c.state==='resolved'?'success':'info'}>{c.state}</StatusBadge></header><p>{c.availability}</p>
+    <StatusBadge tone={c.state==='resolved'?'success':'info'}>{c.state==='resolved'?'Closed':c.state==='open'?'Nobody on it yet':'Being handled'}</StatusBadge></header><p>{c.availability}</p>
   <details className="logistics-secondary"><summary>Case references</summary><p>Case reference: <span className="logistics-reference">{c.id}</span> · Version {c.version}</p>{c.assigned_staff_id&&<p>Assigned staff reference: <span className="logistics-reference">{c.assigned_staff_id}</span></p>}{c.parcel_id&&<p>Verified parcel: <span className="logistics-reference">{c.parcel_id}</span></p>}</details>
   <h3>Recent customer context</h3><p className="ops-note">Safe conversation outcomes only. Ask the customer for details if needed. Never ask for their delivery code.</p>
   {!c.context.length&&<p className="ops-note">No earlier customer activity is available for this case.</p>}<ServiceActivity label="Customer activity" items={c.context.map((event,index)=>({
@@ -67,7 +67,11 @@ function CaseCommands({value:c,source,canWrite,refresh,setLocked}:{setLocked:(lo
    <SelectField aria-label="Action" label="Action" value={action} onChange={setAction} options={actions.map(v=>({value:v,label:actionLabels[v]!}))}/>
    {action==='assign'&&<SelectField aria-label="Assign to staff" label="Assign to staff" value={assigned} onChange={setAssigned} options={[{value:'',label:'Choose a staff member'},...c.staff.map(s=>({value:s.id,label:s.id===c.current_actor_id?'You':s.id}))]}/>}
    {['respond','note'].includes(action)&&<TextArea id="support-message" label={action==='note'?'Internal note':'Customer message'} value={text} onChange={setText} required maxLength={2000} rows={4} helper={action==='note'?'Visible only to staff. Do not include delivery codes or passwords.':'Outside the messaging window, replies are saved as blocked. Never include delivery codes or passwords.'}/>}
-   {['resolve','reopen'].includes(action)&&<SelectField aria-label="Reason" label="Reason" value={reason} onChange={setReason} options={['customer_request','needs_followup','answered','operational_review','incorrect_resolution'].map(v=>({value:v,label:v.replaceAll('_',' ')}))}/>}
+   {action==='resolve'&&<SelectField aria-label="How it ended" label="How it ended" value={reason} onChange={setReason}
+   helper="A closed problem always says how it ended. This is what somebody reads if the customer comes back."
+   options={[{value:'answered',label:'Explained it to them'},{value:'customer_request',label:'They dropped it'},{value:'operational_review',label:'Refunded or replaced'},{value:'incorrect_resolution',label:'Closed in error'}]}/>}
+ {action==='reopen'&&<SelectField aria-label="Why it is open again" label="Why it is open again" value={reason} onChange={setReason}
+   options={[{value:'needs_followup',label:'Still not sorted out'},{value:'customer_request',label:'The customer came back'},{value:'incorrect_resolution',label:'It was closed by mistake'}]}/>}
    <button className="btn btn-filled" disabled={action==='assign'&&!assigned} type="submit">{action==='respond'?'Submit reply':action==='note'?'Save internal note':actionLabels[action]}</button>
   </fieldset></form>}
   <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(refresh).catch(()=>{});}:undefined}/>

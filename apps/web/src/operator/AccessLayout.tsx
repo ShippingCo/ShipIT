@@ -1,15 +1,11 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react';
-import {gsap} from 'gsap';
-import Lenis from 'lenis';
-import counterPhoto from '../assets/access-photography/counter.webp';
-import dispatchPhoto from '../assets/access-photography/dispatch.webp';
-import handoverPhoto from '../assets/access-photography/handover.webp';
+import {CounterScene, DispatchScene, HandoverScene} from './access-illustrations';
 import './counter-identity.css';
 
 const chapters = [
-  {photo:counterPhoto,name:'Booking', title:'At the counter.', caption:'One docket for every parcel.'},
-  {photo:dispatchPhoto,name:'Dispatch', title:'On the move.', caption:'From the branch to the delivery route.'},
-  {photo:handoverPhoto,name:'Delivery', title:'At the door.', caption:'A handover, with proof of delivery.'},
+  {Scene:CounterScene, name:'At the counter', caption:'Every parcel gets one docket, and the customer gets the number.'},
+  {Scene:DispatchScene, name:'On the route', caption:'Loads leave the branch together, and the shop can see where each one is.'},
+  {Scene:HandoverScene, name:'At the door', caption:'A handover is recorded as proof, not remembered as a promise.'},
 ];
 
 function ParcelMark() {
@@ -19,54 +15,53 @@ function ParcelMark() {
   </svg>;
 }
 
-function JourneyPoster() {
-  const wrapper=useRef<HTMLDivElement>(null),film=useRef<HTMLDivElement>(null);
+/**
+ * What the software is, shown rather than described.
+ *
+ * This used to be a magazine cover: a masthead, an edition number, a monospace kicker, a 70px
+ * display headline and a row of numbered chapter buttons — five competing voices beside a
+ * sign-in form that only wanted to be quiet. It now holds one scene, one sentence, and three
+ * thin segments to move between them.
+ *
+ * The scene sits directly on the panel with no frame of its own, so there is no box inside a
+ * box, and it cross-fades rather than scrolling: a slower, quieter change that needs no
+ * smooth-scroll machinery and no second rendering path for reduced motion.
+ */
+function JourneyPanel() {
   const [chapter,setChapter]=useState(0);
-  const current=useRef(0);
-  const move=useRef<(index:number)=>void>(()=>{});
+  const paused=useRef(false);
   useEffect(()=>{
-    const viewport=wrapper.current,content=film.current;
-    if(!viewport||!content)return;
-    const position=()=>{viewport.scrollTop=current.current*viewport.clientHeight;};
-    move.current=position;
-    const media=gsap.matchMedia();
-    if(typeof window.matchMedia==='function')media.add('(min-width: 900px) and (prefers-reduced-motion: no-preference)',()=>{
-      const scroll=new Lenis({wrapper:viewport,content,autoRaf:false,smoothWheel:false,syncTouch:false,virtualScroll:()=>false});
-      let frame=0;
-      const tick=(time:number)=>{scroll.raf(time);if(scroll.isScrolling==='smooth')frame=requestAnimationFrame(tick);};
-      move.current=index=>{
-        cancelAnimationFrame(frame);
-        scroll.scrollTo(index*viewport.clientHeight,{duration:.55,force:true});
-        frame=requestAnimationFrame(tick);
-      };
-      gsap.fromTo(content.querySelector('.dispatch-photo'),{scale:1.035,transformOrigin:'50% 50%'},{scale:1,duration:1,ease:'power3.out'});
-      return ()=>{cancelAnimationFrame(frame);scroll.destroy();move.current=position;position();};
-    });
-    window.addEventListener('resize',position);
-    return ()=>{media.revert();window.removeEventListener('resize',position);move.current=()=>{};};
+    if(typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    // Slow enough to read the sentence twice; stopped for good the moment a person chooses.
+    const timer=window.setInterval(()=>{if(!paused.current)setChapter(index=>(index+1)%chapters.length);},7000);
+    return ()=>window.clearInterval(timer);
   },[]);
-  const choose=(index:number)=>{current.current=index;setChapter(index);move.current(index);};
-  return <aside className="access-poster" aria-label="A parcel’s journey">
-    <div className="poster-mast"><span className="poster-insignia" aria-hidden="true">↗</span> ShippingCo Dispatch <span className="poster-edition">Field series / 01</span></div>
-    <div className="poster-window" ref={wrapper}><div className="poster-film" ref={film}>
-      {chapters.map((item,index)=><div className="poster-slide" key={item.name} aria-hidden={index!==chapter}>
-        <span className="poster-kicker">0{index+1} / {item.name}</span><p className="poster-title">{item.title}</p>
-        <figure className="dispatch-photo-frame"><img className="dispatch-photo" src={item.photo} width={1536} height={1024} alt="" decoding="async"/></figure><p className="poster-caption">{item.caption}</p>
-      </div>)}
-    </div></div>
-    <div className="poster-controls" aria-label="Journey stages">{chapters.map((item,index)=><button type="button" key={item.name} aria-pressed={chapter===index} onClick={()=>choose(index)}><span>0{index+1}</span>{item.name}</button>)}</div>
+  const choose=(index:number)=>{paused.current=true;setChapter(index);};
+  return <aside className="access-panel" aria-label="What ShippingCo does">
+    <div className="panel-stage">
+      {chapters.map((item,index)=>
+        <div key={item.name} className={'panel-slide'+(index===chapter?' is-on':'')} aria-hidden={index!==chapter}>
+          <item.Scene/>
+        </div>)}
+    </div>
+    <div className="panel-say">
+      <p className="panel-name">{chapters[chapter]!.name}</p>
+      <p className="panel-caption">{chapters[chapter]!.caption}</p>
+    </div>
+    <div className="panel-steps" role="group" aria-label="Choose a stage">
+      {chapters.map((item,index)=>
+        <button type="button" key={item.name} className={index===chapter?'is-on':undefined}
+          aria-pressed={index===chapter} onClick={()=>choose(index)}>
+          <span className="workspace-visually-hidden">{item.name}</span>
+        </button>)}
+    </div>
   </aside>;
 }
 
 export function AccessLayout({children}:{children:ReactNode}) {
   return <main className="access-layout">
-    <div className="access-brand"><ParcelMark/><strong>ShippingCo</strong>
-      <svg className="access-brand-route" viewBox="0 0 116 38" fill="none" aria-hidden="true">
-        <path d="M5 29h29c16 0 9-20 25-20h48" stroke="#6c8cae" strokeWidth="1" strokeDasharray="2 3"/>
-        <path className="access-brand-ink" pathLength="1" d="M5 29h29c16 0 9-20 25-20h48" stroke="#bad5f5" strokeWidth="2"/>
-        <circle cx="5" cy="29" r="3" fill="#bed6f2"/><circle cx="107" cy="9" r="4" fill="#f5c269"/>
-      </svg></div>
+    <div className="access-brand"><ParcelMark/><strong>ShippingCo</strong></div>
     <div className="access-task">{children}</div>
-    <JourneyPoster/>
+    <JourneyPanel/>
   </main>;
 }

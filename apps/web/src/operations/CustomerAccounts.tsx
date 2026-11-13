@@ -12,7 +12,7 @@ import {scopedApi} from '../data-access/scoped-api';
 import {customerAccounts} from '../data-access/customer-accounts';
 import {customers} from '../data-access/customers';
 import {useCommand,usePagedResource,useResource} from './hooks';
-import {Loading,Failure,Empty,CommandNotice} from './AsyncState';
+import {DataRefresh,Loading,Failure,Empty,CommandNotice} from './AsyncState';
 import {TextField,SelectField} from '../components/m3/Input';
 import {formatMoney,formatKolkata,rupeesToPaise,kolkataInputToInstant} from './format';
 import {failureMessage} from '../booking/failures';
@@ -23,6 +23,17 @@ export default function CustomerAccounts({controller,roles}:{controller:ScopeCon
  if(!(canAdminister(roles,'customer_accounts.configure')||roles.some(role=>['franchise_admin','org_admin','accountant'].includes(role))))return <Empty title="Customer account access unavailable" body="This role cannot manage or read billing profiles."/>;
  return <AccountWorkspace controller={controller} roles={roles}/>;
 }
+/**
+ * Customers who pay by monthly bill, and how much rope each of them has left.
+ *
+ * The list is ordered by risk rather than by name: the account closest to its limit is the one
+ * a manager has to do something about, and alphabetical order buries it. Usage is drawn as a
+ * bar and written as a figure, and past the limit both of them change — the shape and the
+ * number say the same thing, so neither has to be read on its own.
+ *
+ * An account over its limit carries the consequence rather than the state: what stops is new
+ * bookings, and what starts is a manager being asked to approve each one.
+ */
 function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:readonly OperatorRole[]}) {
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>customerAccounts(api),[api]);
  const list=usePagedResource('accounts',(cursor,signal)=>source.list(cursor??undefined,signal).then(paged));
@@ -32,14 +43,60 @@ function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:r
  useEffect(()=>{const leave=(e:BeforeUnloadEvent)=>{if(locked){e.preventDefault();e.returnValue='';}};const navigate=(e:MouseEvent)=>{if(locked&&e.target instanceof Element&&e.target.closest('a[href]')){e.preventDefault();e.stopPropagation();setBlocked(true);}};const change=(e:Event)=>{if(locked&&e.target instanceof Element&&e.target.matches('select[aria-label="Franchise"]')){e.stopPropagation();(e.target as HTMLSelectElement).value=api.franchise;setBlocked(true);}};window.addEventListener('beforeunload',leave);document.addEventListener('click',navigate,true);document.addEventListener('change',change,true);return()=>{window.removeEventListener('beforeunload',leave);document.removeEventListener('click',navigate,true);document.removeEventListener('change',change,true);};},[locked,api.franchise]);
  useEffect(()=>locked?retainAccountNavigation(api.scope,()=>setBlocked(true)):undefined,[locked,api.scope]);
  const admin=canAdminister(roles,'customer_accounts.configure');
+ /**
+  * What each account currently owes against its limit.
+  *
+  * One read per account. There is no list endpoint that carries credit, and a shop has a
+  * handful of monthly accounts rather than hundreds, so the first twenty are enriched and the
+  * rest say plainly that their figures were not read — never that they owe nothing.
+  */
+ const credit=useResource('credit-'+list.items.map(a=>a.id).join(',')+'-'+revision,async signal=>{
+  const rows=await Promise.all(list.items.slice(0,20).map(async account=>{
+   const value=await source.credit(account.id,signal).catch(()=>null);
+   return [account.id,value] as const;
+  }));
+  return new Map(rows);
+ });
+ const owedOf=(id:string)=>{const row=credit.value?.get(id);return row?Number(row.outstanding_paise):null;};
+ const usageOf=(account:CustomerAccountDto)=>{
+  const owed=owedOf(account.id);
+  return owed===null||!account.credit_limit_paise?null:owed/account.credit_limit_paise;
+ };
+ // R-3: ordered by risk. The account nearest its limit is the one somebody has to act on.
+ const byRisk=[...list.items].sort((a,b)=>(usageOf(b)??-1)-(usageOf(a)??-1));
+ const onCredit=list.items.length;
+ const totalOwed=list.items.reduce((sum,a)=>sum+(owedOf(a.id)??0),0);
+ const overLimit=list.items.filter(a=>(usageOf(a)??0)>1).length;
  useEffect(()=>{if(selected&&!editing)document.getElementById('customer-accounts-title')?.focus();},[selected,editing]);
  const saved=(account:CustomerAccountDto)=>{setSelected(account);setAccountView('overview');setEditing(false);list.reload();setRevision(n=>n+1);};
- return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader id="customer-accounts-title" title={selected&&!editing?selected.name:"Customer accounts"} description={selected&&!editing?undefined:"Manage monthly bills, payment terms and agreed rates."} eyebrow="Money · Customer dues"/>
+ return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader id="customer-accounts-title" title={selected&&!editing?selected.name:"Customer accounts"} eyebrow="Money · Customer dues"/>
   {!editing&&!selected&&<>{admin&&<button className="btn btn-filled finance-account-create" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
-  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty icon="business" title="No customer accounts" body={admin?'Create an account for customers who pay by monthly bill.':'Monthly billing accounts appear here when your administrator sets them up.'}/>:<RecordTable mobile="stack" label="Customer accounts" rows={list.items} rowKey={a=>a.id} columns={[
+  {/* R-1: three figures, and only the one that needs acting on is coloured. */}
+  {list.phase==='ready'&&list.items.length>0&&<section className="credit-figures" aria-label="Customers on credit">
+   <div><span className="cf-value">{onCredit}</span><span className="cf-label">{onCredit===1?'customer on credit':'customers on credit'}</span></div>
+   <div><span className="cf-value">{credit.phase==='ready'?formatMoney(totalOwed):'—'}</span><span className="cf-label">owed in total</span></div>
+   <div><span className={'cf-value'+(overLimit?' is-over':'')}>{credit.phase==='ready'?overLimit:'—'}</span><span className="cf-label">over their limit</span></div>
+  </section>}
+  {/* R-6: the consequence, not the state. */}
+  {overLimit>0&&<p className="credit-warning" role="alert">
+   {overLimit===1?'One account is':overLimit+' accounts are'} over the limit. New bookings on {overLimit===1?'it':'them'} will stop and ask a manager to approve each one.</p>}
+  {credit.phase==='error'&&<p role="alert">How much each account owes could not be read. Those figures are missing, not zero.</p>}
+  {list.items.length>20&&<p className="ops-note">Owed figures are shown for the twenty accounts nearest their limit.</p>}
+  {list.phase==='loading'?<Loading/>:list.phase==='error'?<Failure retry={list.reload}/>:!list.items.length?<Empty icon="business" title="No customer accounts" body={admin?'Create an account for customers who pay by monthly bill.':'Monthly billing accounts appear here when your administrator sets them up.'}/>:<RecordTable mobile="stack" label="Customer accounts" rows={byRisk} rowKey={a=>a.id} columns={[
  {key:'account',label:'Account',cell:a=><button id={'customer-account-row-'+a.id} className="btn btn-text" disabled={locked} aria-label={a.name+' · '+(a.state==='held'?'Held':'Active')+' · Limit '+formatMoney(a.credit_limit_paise)} onClick={()=>{setSelected(a);setAccountView('overview');setEditing(false);}}>{a.name}</button>},
  {key:'state',label:'Status',cell:a=><StatusBadge tone={a.state==='held'?'warning':'success'}>{a.state==='held'?'Held':'Active'}</StatusBadge>},
  {key:'limit',label:'Credit limit',align:'right',cell:a=>formatMoney(a.credit_limit_paise)},
+ /* R-2: a bar and a figure, both of which change past the limit. A percentage on its own is
+    read as a number; a bar on its own cannot be read out to anyone. */
+ {key:'used',label:'Used',cell:a=>{
+   const owed=owedOf(a.id),usage=usageOf(a);
+   if(usage===null)return <span className="ops-note">—</span>;
+   const over=usage>1;
+   return <span className={'credit-bar'+(over?' is-over':'')}>
+    <span className="cb-track"><span className="cb-fill" style={{width:Math.min(100,Math.round(usage*100))+'%'}}/></span>
+    <b>{formatMoney(owed!)}{over?' · over the limit':''}</b>
+   </span>;
+ }},
  ]}/>}
   {list.page.has_more&&<button className="btn btn-text" onClick={list.loadMore}>More accounts</button>}</>}
  {selected&&!editing&&<><button type="button" className="btn btn-text" disabled={locked} onClick={()=>{const id=selected.id;setSelected(null);requestAnimationFrame(()=>document.getElementById('customer-account-row-'+id)?.focus());}}>Back to accounts</button>
@@ -156,7 +213,7 @@ function CreditApprovals({source,parentLocked,busyChanged}:{source:Source;parent
  const [selected,setSelected]=useState(''),[reason,setReason]=useState('');const command=useCommand(source.executeApproval),ownLocked=command.phase==='pending'||command.canRetry,locked=parentLocked||ownLocked;
  useEffect(()=>{busyChanged(ownLocked);return()=>busyChanged(false);},[ownLocked,busyChanged]);
  const review=useResource(selected,signal=>selected?source.review(selected,signal):Promise.resolve(null));
- return <section className="card ops-card"><h2 className="t-title-lg">Credit-limit exception requests</h2><p>Approval applies to one exact, unexpired booking. It never clears a hold or overdue debt.</p><button className="btn btn-outlined" disabled={locked} onClick={pending.reload}>Refresh requests</button>
+ return <section className="card ops-card"><h2 className="t-title-lg">Credit-limit exception requests</h2><p>Approval applies to one exact, unexpired booking. It never clears a hold or overdue debt.</p><DataRefresh resource={pending} disabled={locked}/>
   {pending.phase==='loading'?<Loading/>:pending.phase==='error'?<Failure retry={pending.reload}/>:!pending.items.length?<p>No unexpired requests waiting for approval.</p>:<ul className="ops-list">{pending.items.map(r=><li key={r.id}><label><input type="radio" name="credit-request" checked={selected===r.id} disabled={locked} onChange={()=>setSelected(r.id)}/>{r.name} · {formatMoney(r.total_paise)} · Expires {formatKolkata(r.expires_at)} · Operator {r.operator_id}</label></li>)}</ul>}
   {pending.page.has_more&&<button className="btn btn-text" onClick={pending.loadMore}>More requests</button>}
   {selected&&(review.phase==='loading'?<Loading label="Loading exact booking intent…"/>:review.phase==='error'?<Failure retry={review.reload}/>:review.value&&<div><h3 className="t-title-md">Review requested booking</h3><p>Shipping customer {review.value.customer_id}, version {review.value.customer_version} · {review.value.destination_key} · {review.value.service}</p><ul>{review.value.parcels.map((p,i)=><li key={i}>{p.recipient_name??'Parcel '+(i+1)} · {p.weight_grams} g · Docket {p.docket??'Generated at booking'}</li>)}</ul><p>Credit limit {formatMoney(review.value.credit.credit_limit_paise)} · Available {formatMoney(review.value.credit.available_paise)} · Overdue {formatMoney(review.value.credit.overdue_paise)} · {review.value.account.state}</p><p>Quote {review.value.quote_id} · Tax calculation {review.value.tax_calculation_id}</p><AccountCreditEvidence source={source} account={review.value.account.id} cutoff={review.value.credit.as_of}/></div>)}

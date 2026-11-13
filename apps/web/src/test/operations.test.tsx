@@ -85,7 +85,30 @@ describe('production operational screens',()=>{
   const active={parcel_id:parcelId,docket:'SYN-34',parcel_version:5,attempt_id:id(70),assignment_id:id(71),attempt_number:1,challenge_ref:id(72),challenge_version:1,status:'active',expires_at:now,resend_available_at:'2020-01-01T00:00:00.000Z',resends_remaining:3,verification_attempts_remaining:5,send_state:'accepted',send_reason:'provider_accepted',proof_method:null,exception:null};
   const consumed={...active,parcel_version:6,status:'consumed',proof_method:'otp_verified',resends_remaining:3};let delivered=false,writes=0,reads=0;let firstBody:unknown,firstHeaders:unknown;
   vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes(`/deliveries/${parcelId}/complete`)&&options.method==='POST'){writes++;expect(JSON.parse(String(options.body))).toMatchObject({proof:'123456',challenge_ref:id(72)});if(writes===1){firstBody=options.body;firstHeaders=options.headers;throw new TypeError('Synthetic disconnect');}expect(options.body).toBe(firstBody);expect(options.headers).toEqual(firstHeaders);delivered=true;return json(consumed);}if(path.includes(`/deliveries/${parcelId}?`)){reads++;return json(delivered?consumed:active);}if(path.includes('/deliveries?'))return json(delivered?{items:[],scope_revision:'revision-2'}:queue);throw new Error(`Unexpected ${path}`);}));
-  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));const input=await screen.findByLabelText('6-digit recipient code');expect(screen.getByRole('heading',{name:'SYN-34'})).toHaveFocus();expect(screen.queryByText(/private|verifier|ciphertext/i)).not.toBeInTheDocument();expect(input).toHaveAttribute('type','password');fireEvent.click(screen.getByText('Delivery needs an exception'));fireEvent.change(screen.getByLabelText('Protected evidence ID (UUID)'),{target:{value:id(91)}});expect(screen.getByRole('button',{name:'Request independent approval'})).toBeDisabled();fireEvent.click(screen.getByLabelText('The recipient is here with me'));expect(screen.getByRole('button',{name:'Request independent approval'})).toBeEnabled();fireEvent.change(input,{target:{value:'123456'}});fireEvent.click(screen.getByRole('button',{name:'Verify and complete delivery'}));const retry=await screen.findByRole('button',{name:'Retry same request'});expect(screen.getByRole('button',{name:'Close detail'})).toBeDisabled();expect(screen.getByRole('button',{name:'Request independent approval'})).toBeDisabled();fireEvent.click(retry);await waitFor(()=>expect(writes).toBe(2));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));expect(input).toHaveValue('');expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
+  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button',{name:'Open SYN-34'}));
+  const input=await screen.findByLabelText('The 6 digits they read out');
+  // R-1: the docket is the page heading, and it takes the focus when the parcel opens.
+  expect(screen.getByRole('heading',{name:'SYN-34',level:1})).toHaveFocus();
+  expect(screen.queryByText(/private|verifier|ciphertext/i)).not.toBeInTheDocument();
+  expect(input).toHaveAttribute('type','password');
+  // R-2: this parcel has nothing to collect, so there is no money card at all - not an empty one.
+  expect(screen.queryByText('Take before you hand it over')).not.toBeInTheDocument();
+  // R-13: the supervised route cannot be asked for without the photo that replaces the code.
+  fireEvent.click(screen.getByRole('radio',{name:'Someone else is taking it'}));
+  expect(screen.getByText(/the only proof that replaces the code/)).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Who is taking it'),{target:{value:'Neighbour at 12B'}});
+  expect(screen.getByRole('button',{name:'Ask a manager to approve this handover'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('radio',{name:'They gave the code'}));
+  const code=await screen.findByLabelText('The 6 digits they read out');
+  fireEvent.change(code,{target:{value:'123456'}});
+  fireEvent.click(screen.getByRole('button',{name:'Complete delivery'}));
+  const retry=await screen.findByRole('button',{name:'Check if it saved'});
+  expect(screen.getByRole('button',{name:'All deliveries'})).toBeDisabled();
+  fireEvent.click(retry);await waitFor(()=>expect(writes).toBe(2));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));
+  // R-7: the boxes are cleared, and nothing about this delivery is kept on the device.
+  expect(screen.getByLabelText('The 6 digits they read out')).toHaveValue('');
+  expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
  });
  it('round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary',()=>{
   expect(instantToKolkataInput('2026-09-20T12:00:00.000Z')).toBe('2026-09-20T17:30');
@@ -100,7 +123,29 @@ describe('production operational screens',()=>{
    if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes('/parcels?'))return json(page([parcel]));if(path.includes(`/parcels/${parcelId}/timeline`))return json({items:[]});if(path.includes(`/parcels/${parcelId}/lot-membership`))return json(null);if(path.includes(`/parcels/${parcelId}?`))return json(parcel);
    if(path.includes(`/bookings/${bookingId}/payments`)&&(!options.method||options.method==='GET')){paymentReads++;return json({booking_id:bookingId,obligation_id:id(40),currency:'INR',gross_paise:10000,collected_paise:0,outstanding_paise:10000,state:'uncollected',version:1});}throw new Error('Unexpected legacy financial mutation');
   });vi.stubGlobal('fetch',fetcher);render(<MemoryRouter><Packages controller={controller()} roles={['operator','franchise_admin']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));await screen.findByText('To-Pay ledger');await screen.findByText('uncollected');expect(paymentReads).toBe(1);
-  expect(screen.getByRole('button',{name:'check in'})).toBeVisible();expect(screen.queryByText(/OTP/i)).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/delivered/i})).not.toBeInTheDocument();expect(screen.getByRole('link',{name:'Open money receipts'})).toHaveAttribute('href','/business/money-receipts');expect(screen.queryByRole('button',{name:'Confirm money received'})).not.toBeInTheDocument();expect(fetcher.mock.calls.some(([,options])=>options?.method==='POST')).toBe(false);
+  expect(screen.getByRole('button',{name:'Check in at hub'})).toBeVisible();expect(screen.queryByText(/OTP/i)).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/delivered/i})).not.toBeInTheDocument();expect(screen.getByRole('link',{name:'Open money receipts'})).toHaveAttribute('href','/business/money-receipts');expect(screen.queryByRole('button',{name:'Confirm money received'})).not.toBeInTheDocument();expect(fetcher.mock.calls.some(([,options])=>options?.method==='POST')).toBe(false);
+ });
+ it('asks for the hub by name, never for a reference the operator cannot know',async()=>{
+  // The point of the rebuilt check-in. The server validates location_ref and evidence_ref
+  // as UUIDs and nothing more, so the console used to put two 36-character hex fields in
+  // front of a counter clerk and disable the button until both were typed. Neither field
+  // may ever appear again; what the screen asks for is the name of a shed.
+  vi.stubGlobal('fetch',vi.fn(async(path:string)=>{
+   if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});
+   if(path.includes('/parcels?'))return json(page([parcel]));
+   if(path.includes(`/parcels/${parcelId}/timeline`))return json({items:[]});
+   if(path.includes(`/parcels/${parcelId}/lot-membership`))return json(null);
+   if(path.includes(`/parcels/${parcelId}?`))return json(parcel);
+   if(path.includes(`/bookings/${bookingId}/payments`))return json({booking_id:bookingId,obligation_id:id(40),currency:'INR',gross_paise:0,collected_paise:0,outstanding_paise:0,state:'settled',version:1});
+   throw new Error(`Unexpected ${path}`);
+  }));
+  render(<MemoryRouter><Packages controller={controller()} roles={['operator','franchise_admin']}/></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button',{name:'Open'}));
+  await screen.findByRole('button',{name:'Check in at hub'});
+  expect(screen.queryByLabelText(/UUID/i)).toBeNull();
+  expect(screen.queryByLabelText('Evidence reference')).toBeNull();
+  expect(screen.queryByLabelText('Location reference')).toBeNull();
+  expect(screen.getByLabelText('Name of the hub')).toBeInTheDocument();
  });
  it('removes the exact lot membership with the keyboard-reachable action and confirms ungrouped from the server',async()=>{
   let removed=false;const member={id:membershipId,lot_id:lotId,parcel_id:parcelId,started_at:now,ended_at:null,end_reason:null};vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});if(path.includes('/lots?'))return json(page([{...lot,active_member_count:removed?0:1,version:removed?2:1}]));if(path.includes(`/lots/${lotId}/memberships`))return json(page(removed?[]:[member]));if(path.includes(`/lots/${lotId}?`))return json({...lot,active_member_count:removed?0:1,version:removed?2:1});if(path.includes(`/lots/${lotId}/parcels/${parcelId}/remove`)&&options.method==='POST'){removed=true;return json({lots:[{...lot,version:2,active_member_count:0}],membership:null});}if(path.includes(`/parcels/${parcelId}/lot-membership`))return json(null);throw new Error(`Unexpected ${path}`);}));render(<MemoryRouter><Lots controller={controller()} roles={['franchise_admin']}/></MemoryRouter>);fireEvent.click(await screen.findByRole('button',{name:'Open'}));const remove=await screen.findByRole('button',{name:'Remove'});remove.focus();expect(remove).toHaveFocus();fireEvent.click(remove);expect(await screen.findByText(/is now ungrouped/)).toHaveTextContent(parcelId);
@@ -210,10 +255,13 @@ it('shows the proof exception route when a parcel has no receiver phone',async()
    return json(path.includes('/deliveries?')?{items:[queued],scope_revision:'revision'}:detail);
  }));
  render(<MemoryRouter><Deliveries controller={controller()} roles={['delivery_agent']}/></MemoryRouter>);
- fireEvent.click(await screen.findByRole('button',{name:'Open'}));
- expect(await screen.findByText(/No receiver phone was provided/)).toBeVisible();expect(screen.getByText('No code')).toBeVisible();
- expect(screen.queryByLabelText('6-digit recipient code')).not.toBeInTheDocument();
- expect(screen.queryByText('Code expires')).not.toBeInTheDocument();
- expect(screen.getByLabelText('Protected evidence ID (UUID)')).toBeVisible();
- expect(screen.getByRole('checkbox',{name:'The recipient is here with me'})).not.toBeChecked();
+ // The queue says plainly that this one cannot be done with a code, before it is opened.
+ expect(await screen.findByText(/no code can be sent/)).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'Open SYN-NO-PHONE'}));
+ expect(await screen.findByText(/No phone number was given for this parcel/)).toBeVisible();
+ expect(screen.queryByLabelText('The 6 digits they read out')).not.toBeInTheDocument();
+ // The supervised route is the only way through, and it names what it needs.
+ fireEvent.click(screen.getByRole('radio',{name:'Someone else is taking it'}));
+ expect(screen.getByLabelText('Who is taking it')).toBeVisible();
+ expect(screen.getByRole('button',{name:'Ask a manager to approve this handover'})).toBeDisabled();
 });

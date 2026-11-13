@@ -30,44 +30,48 @@ function mount(area:'lots'|'routes',readState:'empty'|'failed'|'loading',readOnl
  return writes;
 }
 
-it.each(['empty','failed'] as const)('creates an empty lot when saved data is %s',async state=>{
+it.each(['empty','failed'] as const)('starts an empty bag when saved data is %s',async state=>{
  const writes=mount('lots',state);
- if(state==='failed')await screen.findByRole('alert');else await screen.findByText('No lots yet');
- fireEvent.click(screen.getByRole('button',{name:'Create Lot'}));
- const dialog=within(screen.getByRole('dialog',{name:'New lot'}));
- fireEvent.change(dialog.getByRole('textbox',{name:'Destination city'}),{target:{value:'Mumbai'}});
- fireEvent.change(dialog.getByRole('textbox',{name:'Lot name'}),{target:{value:'Mumbai evening'}});
- expect(dialog.getByRole('button',{name:'Create lot'})).toBeEnabled();
- fireEvent.click(dialog.getByRole('button',{name:'Create lot'}));
- expect(await screen.findByText('LOT-701 saved with 0 selected parcels.')).toBeVisible();
+ if(state==='failed')await screen.findByRole('alert');else await screen.findByText('No bags yet');
+ fireEvent.click(screen.getByRole('button',{name:'Start a bag'}));
+ const dialog=within(screen.getByRole('dialog',{name:'Start a bag'}));
+ // R-6: one question. The bag is named from its city and the day, so there is nothing to type.
+ fireEvent.change(dialog.getByRole('textbox',{name:'City'}),{target:{value:'Mumbai'}});
+ expect(dialog.queryByRole('textbox',{name:/name/i})).toBeNull();
+ expect(dialog.getByRole('button',{name:'Start the bag'})).toBeEnabled();
+ fireEvent.click(dialog.getByRole('button',{name:'Start the bag'}));
+ expect(await screen.findByText('Mumbai bag saved with 0 parcels.')).toBeVisible();
  expect(writes).toHaveLength(1);
- expect(writes[0]).toMatchObject({body:{name:'Mumbai evening',destination_key:'MUMBAI',planning_entry_ids:[]}});
+ expect(writes[0]).toMatchObject({body:{destination_key:'MUMBAI',planning_entry_ids:[]}});
 });
 
 it.each(['empty','failed'] as const)('schedules a route without lots when saved data is %s',async state=>{
  const writes=mount('routes',state);
- if(state==='failed')await screen.findByRole('alert');else await screen.findByText('No routes yet');
- fireEvent.click(screen.getByRole('button',{name:'Plan Route'}));
- const dialog=within(screen.getByRole('dialog',{name:'Plan dispatch route'}));
- fireEvent.change(dialog.getByRole('textbox',{name:'From'}),{target:{value:'Ahmedabad'}});
+ if(state==='failed')await screen.findByRole('alert');else await screen.findByText('No trips yet');
+ fireEvent.click(screen.getByRole('button',{name:'Plan a trip'}));
+ const dialog=within(screen.getByRole('dialog',{name:'Plan a trip'}));
+ // R-5: two things are asked. The plate is accepted exactly as typed.
+ fireEvent.change(dialog.getByRole('textbox',{name:'Vehicle number'}),{target:{value:'gj-04-tr-1234'}});
  fireEvent.change(dialog.getByRole('textbox',{name:'Destination city'}),{target:{value:'Mumbai'}});
- fireEvent.click(dialog.getByRole('button',{name:'Schedule route'}));
- expect(await screen.findByText(/Route .* scheduled\./)).toBeVisible();
+ fireEvent.change(dialog.getByRole('textbox',{name:'From'}),{target:{value:'Ahmedabad'}});
+ fireEvent.click(dialog.getByRole('button',{name:'Plan the trip'}));
+ expect(await screen.findByText(/planned\./)).toBeVisible();
  expect(writes).toHaveLength(1);
- expect(writes[0]).toMatchObject({body:{origin:'Ahmedabad',destination:'Mumbai'}});
+ expect(writes[0]).toMatchObject({body:{origin:'Ahmedabad',destination:'Mumbai',carrier_code:'GJ-04-TR-1234'}});
 });
 
 it.each(['lots','routes'] as const)('opens the %s editor while initial data is still loading',area=>{
  mount(area,'loading');
- fireEvent.click(screen.getByRole('button',{name:area==='lots'?'Create Lot':'Plan Route'}));
+ fireEvent.click(screen.getByRole('button',{name:area==='lots'?'Start a bag':'Plan a trip'}));
  const dialog=within(screen.getByRole('dialog'));
- expect(dialog.getByRole('textbox',{name:'Destination city'})).toBeEnabled();
- fireEvent.change(dialog.getByRole('textbox',{name:'Destination city'}),{target:{value:'Pune'}});
- expect(dialog.getByRole('textbox',{name:'Destination city'})).toHaveValue('Pune');
+ const field=area==='lots'?'City':'Destination city';
+ expect(dialog.getByRole('textbox',{name:field})).toBeEnabled();
+ fireEvent.change(dialog.getByRole('textbox',{name:field}),{target:{value:'Pune'}});
+ expect(dialog.getByRole('textbox',{name:field})).toHaveValue('Pune');
 });
 
 it.each(['lots','routes'] as const)('keeps %s creation unavailable to read-only users',async area=>{
  mount(area,'empty',true);
- await screen.findByText(area==='lots'?'No lots yet':'No routes yet');
- expect(screen.queryByRole('button',{name:area==='lots'?'Create Lot':'Plan Route'})).not.toBeInTheDocument();
+ await screen.findByText(area==='lots'?'No bags yet':'No trips yet');
+ expect(screen.queryByRole('button',{name:area==='lots'?'Start a bag':'Plan a trip'})).not.toBeInTheDocument();
 });

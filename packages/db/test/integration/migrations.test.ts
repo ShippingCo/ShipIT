@@ -19,7 +19,7 @@ await test('#190 populated policy upgrade preserves real grants and confines own
  await owner.query("INSERT INTO shipit.memberships(id,user_id,organization_id,role) VALUES($1,$2,$3,'org_admin'),($4,$5,$3,'franchise_admin')",[ownerGrant,user,org,localGrant,local]);
  await owner.query('INSERT INTO shipit.membership_franchise_scopes(membership_id,organization_id,franchise_id) VALUES($1,$2,$3)',[localGrant,org,a]);
  const before=(await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows;
- assert.deepEqual(await db.migrate(),{applied:14});assert.deepEqual(await db.migrate(),{applied:0});
+ assert.deepEqual(await db.migrate(),{applied:15});assert.deepEqual(await db.migrate(),{applied:0});
  assert.deepEqual((await owner.query('SELECT * FROM shipit.memberships ORDER BY id')).rows,before);
  const rows=(await owner.query<{membership_id:string;franchise_id:string}>('SELECT membership_id,franchise_id FROM shipit.business_membership_scopes')).rows;
  assert.deepEqual(rows.filter(r=>r.membership_id===ownerGrant).map(r=>r.franchise_id).sort(),[a,b].sort());

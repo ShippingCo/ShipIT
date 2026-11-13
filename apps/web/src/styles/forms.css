@@ -9,13 +9,13 @@
 .operator-workspace fieldset>legend{font-size:14px;font-weight:600;line-height:1.5;color:var(--workspace-text);padding-inline:0;margin-bottom:12px}
 .operator-workspace .ops-form-grid>h3,.operator-workspace .ops-form-grid>legend,.operator-workspace .ops-form-grid>.tf:has(textarea){grid-column:1/-1}
 .operator-workspace .form-secondary-options{margin-block:8px;min-width:0}
-.operator-workspace .form-secondary-options>summary{font-size:12px;color:#52647b;padding:8px 0}
-.operator-workspace .form-secondary-options>p{font-size:12px;color:#637083;line-height:1.65;max-width:84ch;margin:8px 0}
+.operator-workspace .form-secondary-options>summary{font-size: var(--text-xs);color:var(--grey-700);padding:8px 0}
+.operator-workspace .form-secondary-options>p{font-size: var(--text-xs);color:var(--text-secondary);line-height:1.65;max-width:84ch;margin:8px 0}
 .operator-workspace .form-secondary-options[open]>.tf,.operator-workspace .form-secondary-options[open]>form{margin-top:12px}
 .operator-workspace .service-report-controls>.tf{flex:1 1 180px;max-width:320px}
 .operator-workspace .service-report-controls>.ops-actions{flex-basis:100%}
 .operator-workspace .service-report-controls>.form-secondary-options{flex-basis:100%}
 .operator-workspace .settings-holidays{grid-column:1/-1}
-.settings-holidays .ops-actions{align-items:flex-end;gap:12px}.settings-holidays ul{list-style:none;padding:0;max-width:420px}.settings-holidays li{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e9ef;padding:4px 0;font-size:13px}
-.operator-workspace :is(input,select,textarea,button):focus-visible{outline:2px solid #2868c7;outline-offset:3px}
+.settings-holidays .ops-actions{align-items:flex-end;gap:12px}.settings-holidays ul{list-style:none;padding:0;max-width:420px}.settings-holidays li{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding:4px 0;font-size:13px}
+.operator-workspace :is(input,select,textarea,button):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:700px){.operator-workspace .service-report-controls>.tf{flex-basis:100%;max-width:none}.operator-workspace .ops-form-grid{grid-template-columns:minmax(0,1fr)}.settings-holidays .ops-actions>.tf{flex:1 1 100%}}

@@ -1,7 +1,6 @@
 import {ReportWorkspace} from './ReportWorkspace';
 import './report-page.css';
 import {ReportMeasures} from './ReportMeasures';
-import {Msym} from '../components/m3/Icon';
 import {PageHeader,SectionHeader,RecordTable} from '../components/workspace/Workspace';
 import {canAdminister} from '@shippingco/shared';
 import {DatePresets} from './DatePresets';
@@ -53,15 +52,56 @@ export function OperationalReports({controller,roles}:{controller:ScopeControlle
   const canExport=(canAdminister(roles,'financial.export')||roles.some(r=>['franchise_admin','accountant'].includes(r)));
   const franchises=scopes.items;
   const reportPreference=preference.value?.values.report_scope??null;
-  const reportTypes=[
-   ...(canFinance?[{id:'sales' as const,title:'Sales register and GST',description:'Booking charges, tax and financial corrections.'},{id:'ageing' as const,title:'Outstanding payments',description:'Booking balances and To-Pay ageing.'},{id:'bookings' as const,title:'Booking snapshots',description:'Saved booking details, totals and exports.'}]:[]),
-   ...(canPerformance?[{id:'performance' as const,title:'Delivery performance',description:'Recorded delivery results and exceptions.'}]:[]),
-   ...(canEffectiveness?[{id:'effectiveness' as const,title:'Messages and assistant',description:'Provider progress and customer assistance.'}]:[]),
-   ...(canFinance?[{id:'costs' as const,title:'Shipment costs',description:'Recorded costs and contribution.'},{id:'owner' as const,title:'Owner summaries',description:'Saved summaries and review alerts.'},{id:'accountant' as const,title:'Accountant register',description:'Review financial records and exports.'}]:[])
-  ];
+  /**
+   * Reports, grouped by who asks for them.
+   *
+   * Not a select. A select hides every report but one and tells an owner nothing about what
+   * exists, so they ask their accountant instead. Cards show the whole shelf, and each one
+   * carries the question it answers — this is the only place in the product where supporting
+   * text is mandatory, because a report's name never says what it is for.
+   *
+   * A report this role or shop cannot use is **absent**. A greyed card is an advertisement for
+   * something nobody can have, and an empty group is not drawn at all.
+   */
+  type ReportChoice={id:typeof view;title:string;description:string};
+  const groups:{label:string;reports:ReportChoice[]}[]=[
+   {label:'Running the shop',reports:[
+    ...(canPerformance?[{id:'performance' as const,title:'Delivery performance',description:'Of the parcels that went out, how many arrived, and what happened to the rest.'}]:[]),
+    ...(canEffectiveness?[{id:'effectiveness' as const,title:'Messages and the assistant',description:'How many customers were reached, and how many questions the assistant answered without a person.'}]:[]),
+   ]},
+   {label:'Money',reports:[
+    ...(canFinance?[
+     {id:'ageing' as const,title:'Who owes you money',description:'What is still unpaid, and how long it has been unpaid for.'},
+     {id:'sales' as const,title:'Sales and GST',description:'What you charged, what tax was on it, and every correction since.'},
+     {id:'costs' as const,title:'What each parcel cost you',description:'Recorded costs against what you charged, so you can see what is worth carrying.'},
+    ]:[]),
+   ]},
+   {label:'Your accountant',reports:[
+    ...(canFinance?[
+     {id:'accountant' as const,title:'Accountant register',description:'Every financial record for a period, in the form an accountant asks for.'},
+     {id:'bookings' as const,title:'Booking snapshots',description:'A frozen copy of a day\u2019s bookings and totals, saved so it cannot change later.'},
+     {id:'owner' as const,title:'Owner summaries',description:'The saved summaries sent to an owner, and what was flagged for review.'},
+    ]:[]),
+   ]},
+  ].filter(group=>group.reports.length>0);
+  const reportTypes=groups.flatMap(group=>group.reports);
   const selectedReport=reportTypes.find(report=>report.id===view);
-  return <div className="service-reports reference-service"><PageHeader title="Reports" description="Choose a report to view figures for your branch."/>
-  <div className="report-choice"><span className="report-choice-icon" aria-hidden="true"><Msym name="analytics"/></span><SelectField label="Report type" value={view} disabled={costBusy} options={reportTypes.map(report=>({value:report.id,label:report.title}))} onChange={value=>{const next=reportTypes.find(report=>report.id===value);if(next)setView(next.id);}}/>{selectedReport&&<p>{selectedReport.description}</p>}</div>
+  return <div className="service-reports reference-service"><PageHeader title="Reports"/>
+  {groups.map(group=><section key={group.label} className="report-group" aria-labelledby={'report-group-'+group.label.replaceAll(' ','-')}>
+   <h2 id={'report-group-'+group.label.replaceAll(' ','-')} className="t-title-sec">{group.label}</h2>
+   <ul className="report-cards">
+    {group.reports.map(report=><li key={report.id}>
+     <button type="button" className={'report-card'+(view===report.id?' on':'')} aria-pressed={view===report.id}
+       disabled={costBusy} onClick={()=>setView(report.id)}>
+      <span className="rc-title">{report.title}</span>
+      {/* R-2: the question it answers. Mandatory here and nowhere else. */}
+      <span className="rc-why">{report.description}</span>
+     </button>
+    </li>)}
+   </ul>
+  </section>)}
+  {reportTypes.length===0&&<p role="status">No report is available for your role in this branch.</p>}
+  {selectedReport&&<p className="report-open" role="status">Showing: <b>{selectedReport.title}</b></p>}
   {canFinance&&<section className="service-report-scope" aria-label="Authorized report scopes"><details className="service-report-scope-details"><summary>Report scope details</summary><p>Current branch: {franchises.find(branch=>branch.id===costSource.api.franchise)?.name??costSource.api.franchise}. Choose other branches in the report when available.</p></details>{scopes.phase==='loading'&&<p role="status">Loading authorized scope options…</p>}{scopes.phase==='error'&&<><p role="alert">Authorized report scopes could not be loaded.</p><button className="btn btn-outlined" onClick={scopes.reload}>Reload report scope options</button></>}{scopes.page.has_more&&<button className="btn btn-outlined" disabled={scopes.phase==='more'} onClick={scopes.loadMore}>Load more authorized franchises</button>}{preference.phase==='error'&&<p role="status">Report scope preference could not be resolved. No saved preference was applied.</p>}</section>}<div className="reference-report-body">{view==='effectiveness'?(canEffectiveness?<EffectivenessView source={effectivenessSource}/>:<p role="alert">Messaging reports unavailable for this role.</p>):view==='performance'?(canPerformance?<PerformanceView source={performanceSource} canExport={canAdminister(roles,'financial.export')}/>:<p role="alert">Performance unavailable for this role.</p>):!canFinance?<p role="alert">Financial reports unavailable for this role.</p>:view==='accountant'?<AccountantRegister key={generation} source={accountantSource} canExport={canExport} franchises={franchises}/>:view==='owner'?<OwnerSummaries key={generation} controller={controller} canExport={canExport} franchises={franchises}/>:view==='costs'?<ShipmentCosts key={generation} source={costSource} canManage={canAdminister(roles,'financial.export')} canExport={canExport} franchises={franchises} preference={reportPreference} busy={setCostBusy} isCurrent={()=>controller.runtime.isCurrent(costSource.api.scope)}/>:view==='ageing'?<AgeingView source={ageingSource} canExport={canExport}/>:view==='sales'?<SalesView source={salesSource} canExport={canExport} canManage={canAdminister(roles,'financial.export')} franchises={franchises} preference={reportPreference}/>:<ReportView source={source} canExport={canExport}/>}</div></div>;
 }
 export function ReportView({source,canExport}:{source:ReportSource;canExport:boolean}) {

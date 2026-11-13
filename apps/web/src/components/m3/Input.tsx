@@ -21,9 +21,11 @@ export interface TextFieldProps
   onChange: (value: string) => void;
   /** Trailing Material Symbols glyph name. */
   trailing?: React.ReactNode;
+  /** The input itself, for a caller that has to move the cursor into it. */
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
-export function TextField({ label, value, onChange, type = 'text', error, helper, trailing, list, className, style, onBlur, id:providedId, 'aria-describedby':describedBy, ...rest }: TextFieldProps) {
+export function TextField({ label, value, onChange, type = 'text', error, helper, trailing, list, className, style, onBlur, inputRef, id:providedId, 'aria-describedby':describedBy, ...rest }: TextFieldProps) {
   const generatedId=React.useId(),id=providedId??generatedId,helpId=`${id}-help`;
   const [focused, setFocused] = React.useState(false);
   const float = focused || String(value ?? '') !== '' || ['date', 'datetime-local'].includes(type);
@@ -32,6 +34,7 @@ export function TextField({ label, value, onChange, type = 'text', error, helper
       {label&&<label className="tf-label" htmlFor={id}>{label}</label>}
       <span className="tf-box">
         <input
+          ref={inputRef}
           id={id} type={type} value={value ?? ''} list={list}
           aria-describedby={[describedBy,error||helper?helpId:undefined].filter(Boolean).join(' ')||undefined}
           aria-invalid={error ? true : undefined}

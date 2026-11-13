@@ -2,9 +2,20 @@ import type { PricingQuoteInput, TaxFacts } from '@shippingco/shared';
 export const emptyDraft = () => ({
   name: '', phone: '', address: '', recipientName: '', recipientPhone: '', recipientAddress: '',
   serviceOptionId:'', recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:'',
-  destination: '', weight: '', service: 'standard', docket: '', override: '', packing: '', reason: 'customer_agreement',
+  destination: '', weight: '', service: '', docket: '', override: '', packing: '', reason: 'customer_agreement',
+  // Outside dimensions in whole centimetres. Optional: a parcel that is heavy for its size is
+  // priced on the scale and needs none of this. They are counter arithmetic for the chargeable
+  // weight and are not sent to the server, which records what the scale actually read.
+  lengthCm: '', widthCm: '', heightCm: '',
+  // Which unit the operator is typing in. The stored weight is always whole grams; this only
+  // decides what the field shows, so switching it never changes the parcel.
+  weightUnit: 'kg',
   registration: 'unregistered', recipientState: '', gstin: '', handoverState: '', recipientRef: '', evidenceRef: '',
   specialCase: 'none', paymentMode: 'to_pay', method: '',
+  // Counter arithmetic only. It is kept with the draft so a resumed booking still knows what
+  // the customer handed over, and it is never part of the booking sent to the server: what was
+  // actually received is recorded as a receipt, against its own ledger.
+  cashGiven: '',
 });
 export type Draft = ReturnType<typeof emptyDraft>;
 export type Field = keyof Draft;
@@ -37,6 +48,14 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if(!['solid','documents','liquid','semi_liquid','other'].includes(d.contentsType))e.contentsType='Choose a contents type.';
     if(['liquid','semi_liquid'].includes(d.contentsType)&&(!/^[1-9][0-9]*$/.test(d.liquidQuantity)||Number(d.liquidQuantity)>100000000))e.liquidQuantity='Enter a positive quantity up to 100,000 litres, with up to three decimal places.';
     }
+    {
+      const dims=[['lengthCm',d.lengthCm],['widthCm',d.widthCm],['heightCm',d.heightCm]] as const;
+      if(dims.some(([,value])=>value!=='')){
+        for(const [field,value] of dims){
+          if(!/^[1-9][0-9]{0,2}$/.test(value))e[field]='Enter all three sides in whole centimetres, 1 to 999.';
+        }
+      }
+    }
     if(d.declaredValue&&(!/^(0|[1-9][0-9]*)$/.test(d.declaredValue)||!Number.isSafeInteger(Number(d.declaredValue))))e.declaredValue='Enter zero or a positive amount with up to two decimal places.';
     const docket = d.docket.replace(/^[ \t]+|[ \t]+$/g, '').toUpperCase();
     if (!docket) e.docket = 'Enter the docket number on this parcel.';
@@ -68,8 +87,8 @@ export function taxFacts(d: Draft): TaxFacts {
     evidence_ref: d.evidenceRef || null, special_case: d.specialCase as TaxFacts['special_case'] };
 }
 
-export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'recipientCountry' | 'recipientPin' | 'recipientCity' | 'recipientRegion' | 'weight' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity' | 'declaredValue'>;
-export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',weight:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:''});
+export type ParcelDraft = Pick<Draft, 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'recipientCountry' | 'recipientPin' | 'recipientCity' | 'recipientRegion' | 'weight' | 'weightUnit' | 'lengthCm' | 'widthCm' | 'heightCm' | 'docket' | 'contentsType' | 'contentsDescription' | 'liquidQuantity' | 'declaredValue'>;
+export const emptyParcel = (): ParcelDraft => ({recipientName:'',recipientPhone:'',recipientAddress:'',recipientCountry:'IN',recipientPin:'',recipientCity:'',recipientRegion:'',weight:'',weightUnit:'kg',lengthCm:'',widthCm:'',heightCm:'',docket:'',contentsType:'solid',contentsDescription:'',liquidQuantity:'',declaredValue:''});
 export const receiverFields = ['recipientName','recipientPhone','recipientAddress','recipientCountry','recipientPin','recipientCity','recipientRegion'] as const;
 /**
  * A draft's own number, short enough to read out on the phone or write in a paper book,
@@ -94,7 +113,7 @@ export function draftCode(id: string): string {
  * Fields a real booking needs but a draft does not. They are excluded from the "can this be
  * booked" question so a missing tax detail does not read to the operator as a missing parcel.
  */
-const optionalForBooking = ['recipientRef', 'evidenceRef', 'handoverState', 'recipientState', 'gstin', 'specialCase', 'method'] as const;
+const optionalForBooking = ['recipientRef', 'evidenceRef', 'handoverState', 'recipientState', 'gstin', 'specialCase', 'method', 'cashGiven'] as const;
 
 /** Short, concrete words for what is still missing. Shown to the operator, so no field names. */
 const needLabels: Partial<Record<Field, string>> = {
@@ -105,6 +124,7 @@ const needLabels: Partial<Record<Field, string>> = {
   liquidQuantity: 'liquid quantity', declaredValue: 'declared value',
   docket: 'docket number', service: 'delivery service', destination: 'destination',
   weight: 'weight', packing: 'packing amount', override: 'freight amount',
+  lengthCm: 'parcel size', widthCm: 'parcel size', heightCm: 'parcel size',
 };
 
 /**
@@ -112,18 +132,31 @@ const needLabels: Partial<Record<Field, string>> = {
  * An empty list means "Save booking" will produce parcels; anything else means the counter can
  * only keep a draft, and the operator is told exactly that before pressing the button.
  */
-export function bookingNeeds(draft: Draft, additional: ParcelDraft[], priced: boolean): string[] {
+/**
+ * What is still missing, each item carrying the field it belongs to.
+ *
+ * The counter used to render these as a sentence — "Needs: customer name, phone number,
+ * docket number" — which tells an operator what is wrong but not where it is. On a form this
+ * long that is a hunt. Returning the field key lets the counter make each one a press that
+ * moves the cursor to the field.
+ */
+export interface BookingNeed { field: Field | null; label: string }
+export function bookingNeedFields(draft: Draft, additional: ParcelDraft[], priced: boolean): BookingNeed[] {
   const errors = validate(draft, 'booking');
   for (const key of optionalForBooking) delete errors[key];
-  const needs: string[] = [];
+  const needs: BookingNeed[] = [];
   for (const [field, label] of Object.entries(needLabels)) {
-    if (errors[field as Field] && !needs.includes(label)) needs.push(label);
+    if (errors[field as Field] && !needs.some(need => need.label === label)) needs.push({ field: field as Field, label });
   }
   additionalParcelErrors(draft, additional).forEach((parcel, index) => {
-    if (Object.values(parcel).some(Boolean)) needs.push(`details for parcel ${index + 2}`);
+    if (Object.values(parcel).some(Boolean)) needs.push({ field: null, label: `details for parcel ${index + 2}` });
   });
-  if (!priced) needs.push('a price');
+  if (!priced) needs.push({ field: 'override', label: 'a price' });
   return needs;
+}
+
+export function bookingNeeds(draft: Draft, additional: ParcelDraft[], priced: boolean): string[] {
+  return bookingNeedFields(draft, additional, priced).map(need => need.label);
 }
 
 export function parcelErrors(parcel: ParcelDraft): Errors {
@@ -141,9 +174,39 @@ export function additionalParcelErrors(first: Draft, parcels: ParcelDraft[]): Er
     return errors;
   });
 }
+/**
+ * Cubic centimetres that count as one kilogram. Shop-wide, not per-carrier — see the PRD's Q3.
+ * 5000 is the figure every Indian surface network this product talks to publishes.
+ */
+export const volumetricDivisor = 5000;
+
+export interface BilledWeight { grams: string; basis: 'actual' | 'size'; actual: string; volumetric: string | null }
+
+/**
+ * What the parcel is charged on.
+ *
+ * A courier bills the greater of what the scale reads and what the parcel takes up on the
+ * vehicle. The operator is never shown the division: they are shown the number that won and
+ * told which of the two it was, because that is the sentence they have to say to a customer
+ * who is looking at a light box and a large price.
+ */
+export function billedWeight(parcel: Pick<ParcelDraft,'weight'|'lengthCm'|'widthCm'|'heightCm'>): BilledWeight | null {
+  if (!/^[1-9][0-9]*$/.test(parcel.weight) || !Number.isSafeInteger(Number(parcel.weight))) return null;
+  const actual = BigInt(parcel.weight);
+  const sides = [parcel.lengthCm, parcel.widthCm, parcel.heightCm];
+  if (!sides.every(side => /^[1-9][0-9]{0,2}$/.test(side))) return { grams: String(actual), basis: 'actual', actual: String(actual), volumetric: null };
+  const divisor = BigInt(volumetricDivisor);
+  // Rounded up to the next whole gram: a part gram is never given away, and never charged twice.
+  const volumetric = (sides.reduce((product, side) => product * BigInt(side), 1000n) + divisor - 1n) / divisor;
+  const grams = volumetric > actual ? volumetric : actual;
+  if (grams > BigInt(Number.MAX_SAFE_INTEGER)) return null;
+  return { grams: String(grams), basis: volumetric > actual ? 'size' : 'actual', actual: String(actual), volumetric: String(volumetric) };
+}
+
+/** Chargeable grams for the whole booking. Empty when any parcel cannot be weighed or totalled. */
 export function totalWeight(first: Draft, additional: ParcelDraft[]): string {
-  const weights = [first, ...additional].map(p => p.weight);
-  if(weights.some(w => !/^[1-9][0-9]*$/.test(w))) return '';
-  const total = weights.reduce((sum,w) => sum + BigInt(w), 0n);
+  const billed = [first, ...additional].map(billedWeight);
+  if (billed.some(value => value === null)) return '';
+  const total = billed.reduce((sum, value) => sum + BigInt(value!.grams), 0n);
   return total <= BigInt(Number.MAX_SAFE_INTEGER) ? String(total) : '';
 }

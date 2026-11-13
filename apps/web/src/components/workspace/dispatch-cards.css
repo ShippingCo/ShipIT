@@ -13,14 +13,14 @@
 .operation-dialog-body .ops-facts { overflow-wrap:anywhere; }
 .operation-dialog-body .logistics-selected { max-width:none; }
 .reference-package-table .record-identity { max-width:240px; }
-.reference-dispatch-card.card { box-shadow:none; }
+.reference-dispatch-card.card { box-shadow:var(--shadow-rest); }
 .reference-logistics .workspace-page-heading h1 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .reference-logistics .workspace-page-header { align-items:center; margin-bottom:0; }
 .reference-logistics .workspace-page-description { margin:0; }
 .reference-logistics .btn { border-radius:var(--shape-full); }
 .reference-logistics .workspace-filterbar .tf { flex:0 1 320px; }
 .reference-logistics .logistics-search { border:0; padding-top:0; }
-.reference-logistics .reference-package-table { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); padding:20px; box-shadow:none; }
+.reference-logistics .reference-package-table { border:1px solid var(--md-outline-variant); border-radius:var(--shape-lg); padding:20px; box-shadow:var(--shadow-rest); }
 .reference-logistics .logistics-search-primary .searchbar { min-width:0; }
 .operation-dialog-body .ops-grid>.ops-fact { display:grid; gap:6px; }
 .operation-dialog-body .ops-detail>.ops-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }

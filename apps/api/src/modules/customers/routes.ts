@@ -2,13 +2,17 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { createCustomerService } from './service.ts';
 import { idempotencyKey, noQuery } from './validation.ts';
 import { HttpError } from '../../plugins/errors.ts';
+import { CUSTOMER_SEARCH_BUDGET_PER_MINUTE } from '../../server.ts';
 interface Params { organization_id: string; franchise_id: string; customer_id: string }
 export function registerCustomers(app: FastifyInstance, service: ReturnType<typeof createCustomerService>, secure: boolean) {
   const base = '/api/v1/organizations/:organization_id/franchises/:franchise_id/customers';
   const session = (r: FastifyRequest) => r.cookies[secure ? '__Host-shipit_session' : 'shipit_session'] ?? '';
-  // createRateLimit counts independently of the global handler's per-request marker.
-  // Default normalized network key; no request query, contact or tenant value is a key.
-  const searchBudget = app.createRateLimit({ max:30,timeWindow:60_000 });
+  // createRateLimit counts independently of the global handler's per-request marker, and
+  // inherits the server's identity key: the budget belongs to the signed-in session, not to
+  // the address. One shop is one address, so an address-keyed budget punished every counter
+  // in a branch together and could be reset by moving address. No request query, contact or
+  // tenant value is ever part of the key.
+  const searchBudget = app.createRateLimit({ max:CUSTOMER_SEARCH_BUDGET_PER_MINUTE,timeWindow:60_000 });
   app.get<{ Params: Params }>(base, { preHandler: async (request, reply) => {
     const result = await searchBudget(request);
     if (!result.isAllowed && result.isExceeded) {

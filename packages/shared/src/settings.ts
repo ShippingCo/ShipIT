@@ -45,10 +45,15 @@ export function parseSettingsTimezone(value:unknown):string|null {
 }
 
 /** Display and branding preferences; never a replacement for issued tax or receipt evidence. */
-export interface ShopPresentation {tagline:string;origin_city:string;support_phone:string;address:string;assistant_name:string;logo:string|null}
+export interface ShopPresentation {tagline:string;origin_city:string;support_phone:string;address:string;assistant_name:string;logo:string|null;
+ /** The shop's own conditions of carriage, printed as the only fine print on a receipt.
+  *  Optional, and optional on purpose: a liability line invented by this software and printed
+  *  on a tax document would be a promise no one in the shop agreed to. Absent until set. */
+ terms?:string}
 export function parseShopPresentation(value:unknown):ShopPresentation|null{
  if(!value||typeof value!=='object'||Array.isArray(value))return null;const v=value as Record<string,unknown>,limits={tagline:160,origin_city:120,support_phone:40,address:500,assistant_name:120};
- if(Object.keys(v).some(k=>!Object.hasOwn(limits,k)&&k!=='logo'))return null;
+ if(Object.keys(v).some(k=>!Object.hasOwn(limits,k)&&k!=='logo'&&k!=='terms'))return null;
+ if(v.terms!==undefined&&(typeof v.terms!=='string'||v.terms.length>500||Array.from(v.terms).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127)))return null;
  for(const [k,max] of Object.entries(limits))if(typeof v[k]!=='string'||(v[k] as string).length>max||Array.from(v[k] as string).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127))return null;
  if(typeof v.support_phone==='string'&&v.support_phone&&!/^\+?[0-9 ()-]{7,40}$/.test(v.support_phone))return null;
  if(v.logo!==null&&(typeof v.logo!=='string'||v.logo.length>30000||!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(v.logo)))return null;

@@ -9,9 +9,25 @@ import type { Outbound } from '../whatsapp/outbound-repository.ts';
 import type { Pickup } from './repository.ts';
 import { expectations } from './rules.ts';
 
+/**
+ * What the customer reads on their phone after the shop decides.
+ *
+ * This used to be `Pickup <uuid>: declined.` followed by two ISO instants — a machine
+ * record sent to a person who asked to be collected from. The reference stays, short, because
+ * it is what the customer types back to cancel; everything else is now the local time they
+ * will be standing there, in words, and the shop’s own expectations line last.
+ */
+function decisionText(p:Pickup) {
+ const reference=p.id.slice(0,8).toUpperCase();
+ if(p.state!=='accepted')return `We cannot collect from you for that request (${reference}). Please message the shop to arrange another time. ${expectations}`;
+ const day=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'short',day:'numeric',month:'short'}).format(p.agreed_start!);
+ const clock=(at:Date)=>new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true}).format(at);
+ return `Your pickup is agreed for ${day}, ${clock(p.agreed_start!)} to ${clock(p.agreed_end!)} (request ${reference}). ${expectations}`;
+}
+
 export async function enqueueDecision(scope:TenantAccess,deps:WhatsappDependencies,p:Pickup,event:string) {
  const config=deps.configuration.webhook!,id=randomUUID(),c=scope.context;
- const text=`Pickup ${p.id}: ${p.state}. ${p.state==='accepted'?`Agreed window ${p.agreed_start!.toISOString()} to ${p.agreed_end!.toISOString()}. `:'Contact the franchise to discuss alternatives. '}${expectations}`;
+ const text=decisionText(p);
  const input=outboundInput({source_kind:'pickup',source_id:event,affected_entity_id:p.id,purpose:'requested_assistance',format:'text',text});
  await scopedQuery(scope,['pickups.decide'],`INSERT INTO shipit.whatsapp_outbound
   (id,organization_id,franchise_id,installation_id,contact_key,contact_version,source_id,affected_entity_id,source_kind,purpose,fingerprint,sealed_payload,key_version,expires_at,state,reason_code,correlation_id,pickup_event_id)

@@ -8,6 +8,7 @@
 .shop-settings .dlg-actions>span {margin-right:auto;}
 .shop-demo {margin-top:16px;}
 .shop-demo p {margin:6px 0 12px;}
-.shop-advanced {margin-top:20px;font-size:13px;}
+.shop-advanced {margin-top:20px;font-size:15px;line-height:21px;}
+.shop-advanced a {display:inline-flex;align-items:center;min-height:44px;}
 @media(max-width:600px){.shop-settings .form-grid{grid-template-columns:minmax(0,1fr);}.shop-settings .form-grid .span2{grid-column:auto;}.shop-settings .dlg-actions{flex-wrap:wrap;}.shop-settings .dlg-actions>span{width:100%;}}
-.operator-workspace .shop-fields .tf .tf-label {font-size:13px;line-height:19.5px;min-height:19.5px;}
+.operator-workspace .shop-fields .tf .tf-label {font-size:15px;line-height:21px;min-height:21px;}

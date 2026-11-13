@@ -23,7 +23,7 @@ function AdvancedMessaging({controller,roles}:{controller:ScopeController;roles:
  const source=useMemo(()=>messaging(scopedApi(controller)),[controller]);
  const [view,setView]=useState<HistoryView>('messages'),[status,setStatus]=useState(''),[kind,setKind]=useState(''),[correlation,setCorrelation]=useState(''),[filterCorrelation,setFilterCorrelation]=useState('');
  if(!roles.some(role=>allowed.includes(role)))return <p role="alert">Messaging history is unavailable for this role.</p>;
- return <section className="service-workspace logistics-workspace reference-service" aria-labelledby="workspace-title"><PageHeader title="Messages" eyebrow="Customer service" description="Track messages and follow up on failures."/>
+ return <section className="service-workspace logistics-workspace reference-service" aria-labelledby="workspace-title"><PageHeader title="Messages" eyebrow="Customer service"/>
   <FilterBar label="Messaging history filters"><SelectField aria-label="History view" label="History view" value={view} onChange={value=>{setView(value as HistoryView);setStatus('');setKind('');}} options={[{value:'messages',label:'Messages'},{value:'automation',label:'Automation'}]}/>
    <SelectField aria-label={view==='messages'?'Message status':'Automation outcome'} label={view==='messages'?'Message status':'Automation outcome'} value={status} onChange={setStatus} options={[{value:'',label:'All'},...(view==='messages'?messageStates:automationStates).map(value=>({value,label:statusLabel[value]}))]}/>
    <SelectField aria-label="Notification kind" label="Notification kind" value={kind} onChange={setKind} options={[{value:'',label:'All'},...kinds.map(value=>({value,label:kindLabel[value]}))]}/>
@@ -85,7 +85,7 @@ export function NotificationDetail({source,view,id,roles,changed,setLocked}:{set
    {row.fanout_items.length>0&&<><h4>Route fanout decisions</h4><ul className="ops-list">{row.fanout_items.map(item=><li className="ops-row" key={item.parcel_id}><span className="ops-row-main">Parcel {item.parcel_id}<span>{statusLabel[item.outcome]} · {item.reason_code.replaceAll('_',' ')}</span>{item.outbound_intent_id&&<span>Message reference: {item.outbound_intent_id}</span>}</span></li>)}</ul></>}
    {canAdminister(roles,'whatsapp.write')&&row.recovery.kind!=='none'&&<button className="btn btn-outlined" disabled={busy||!!confirm} onClick={()=>{void prepare('redrive');}}>Redrive original message</button>}
    {(canAdminister(roles,'whatsapp.write')||roles.some(role=>['franchise_admin','operator','dispatcher'].includes(role)))&&row.reminder.eligible&&<button className="btn btn-outlined" disabled={busy} onClick={()=>{void prepare('reminder');}}>Send route reminder</button>}
-   {confirm&&<div className="ops-alert" role="alert"><p>This provider outcome is uncertain. Retrying may deliver a duplicate message. Confirm only after investigating provider evidence.</p><button autoFocus className="btn btn-filled" disabled={busy} onClick={()=>{void command.run(source.redrive(confirm)).then(confirmed).catch(()=>setConfirm(null));}}>I investigated — retry despite duplicate risk</button><button className="btn btn-text" onClick={()=>setConfirm(null)}>Cancel retry</button></div>}
+   {confirm&&<div className="ops-alert" role="alert"><p><strong>We could not tell whether this message was sent.</strong> Sending it again may deliver a second copy to the customer. Check the provider record first.</p><button autoFocus className="btn btn-filled" disabled={busy} onClick={()=>{void command.run(source.redrive(confirm)).then(confirmed).catch(()=>setConfirm(null));}}>I checked — send it again</button><button className="btn btn-text" onClick={()=>setConfirm(null)}>Cancel retry</button></div>}
   </>}
   {error&&<p role="alert">{error}</p>}<CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(confirmed).catch(()=>{});}:undefined}/>
  </>;
@@ -97,4 +97,19 @@ function Evidence({row}:{row:HistoryRow}) {return <dl className="history-facts">
  {row.fanout&&<><dt>Route fanout</dt><dd>{row.fanout.id} · {statusLabel[row.fanout.state]}</dd><dt>Route reference</dt><dd>{row.fanout.route_id}</dd><dt>Business decisions</dt><dd>{row.fanout.completed_count} queued · {row.fanout.skipped_count} skipped/suppressed · {row.fanout.failed_count} blocked</dd></>}
  </dl>;}
 
+/**
+ * What the customer did or did not get.
+ *
+ * Four states and no more: Sent, Delivered, Read, Did not arrive. A provider's own code is
+ * never shown, because a shop cannot act on "rejected_412" — it can act on whether the person
+ * waiting for a parcel was told anything. Where something did not arrive, the consequence for
+ * the customer is named first and the provider's reason is one clause at the end of it.
+ */
+export function customerFacingState(state:string):'Sent'|'Delivered'|'Read'|'Did not arrive'|'Waiting'{
+ if(state==='read')return 'Read';
+ if(state==='delivered')return 'Delivered';
+ if(state==='sent')return 'Sent';
+ if(['failed','rejected','undeliverable','expired'].includes(state))return 'Did not arrive';
+ return 'Waiting';
+}
 export default function Messaging(props:{controller:ScopeController;roles:readonly OperatorRole[]}){const [params]=useSearchParams();return params.get('view')==='advanced'?<AdvancedMessaging {...props}/>:<AutomationWorkspace {...props}/>;}
