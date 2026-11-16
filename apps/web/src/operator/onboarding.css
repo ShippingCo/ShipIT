@@ -1,0 +1,52 @@
+/* Shop setup.
+ *
+ * Three questions on one card, all visible from the start, each one collapsing to its own
+ * answer once it is given. The marks down the left are the only progress indicator: a shop
+ * owner who does not read English fluently can still see two ticks and one number left.
+ * Same floors as everywhere else — 15px of text, 44px of target. */
+.setup-card { width:100%; max-width:520px; text-align:start; }
+.setup-lead { margin:8px 0 0; font-size:15px; line-height:22px; color:var(--text-secondary); }
+
+.setup-steps { list-style:none; margin:22px 0 0; padding:0; display:grid; gap:0; }
+.setup-step { display:grid; grid-template-columns:28px minmax(0,1fr); gap:14px; padding:0 0 20px; }
+/* One continuous line joining the marks, so the three read as one path rather than three cards. */
+.setup-step:not(:last-child) .setup-mark { position:relative; }
+.setup-step:not(:last-child) .setup-mark::after {
+  content:''; position:absolute; top:30px; left:50%; width:1px; height:calc(100% + 20px - 30px);
+  background:var(--border);
+}
+.setup-mark {
+  display:grid; place-items:center; width:28px; height:28px; box-sizing:border-box;
+  border:1px solid var(--border); border-radius:var(--shape-full); background:#fff;
+  font-size:15px; font-weight:650; line-height:1; color:var(--text-secondary);
+}
+.setup-mark .msym { font-size:18px; }
+.setup-step.is-now > .setup-mark { border-color:var(--accent-hover); background:var(--accent-hover); color:#fff; }
+.setup-step.is-done > .setup-mark { border-color:var(--accent-hover); color:var(--accent-hover); }
+
+.setup-body { min-width:0; display:grid; gap:12px; align-content:start; }
+.setup-title { margin:0; font-size:17px; line-height:28px; font-weight:650; color:var(--text); }
+.setup-step.is-later .setup-title { color:var(--text-secondary); }
+
+/* An answered step: the answer itself, large enough to check, and one way to go back to it. */
+.setup-answer { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:-6px; }
+.setup-answer strong { font-size:15px; line-height:21px; font-weight:650; color:var(--text); overflow-wrap:anywhere; }
+.setup-change {
+  min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:#fff;
+  font:inherit; font-size:15px; font-weight:650; color:var(--accent-hover); cursor:pointer;
+}
+.setup-change:hover { background:var(--surface-sunken); }
+.setup-change:focus-visible { outline:2px solid var(--accent-hover); outline-offset:2px; }
+
+.setup-card .setup-next, .setup-card .setup-open { min-height:48px; justify-self:start; }
+.setup-card .setup-open { width:100%; justify-self:stretch; }
+.setup-after { margin:0; font-size:15px; line-height:22px; color:var(--text-secondary); }
+.setup-note { margin:0; font-size:15px; line-height:21px; color:var(--text-secondary); }
+.setup-failure { margin:0; font-size:15px; line-height:22px; color:var(--danger); }
+.setup-card .operator-branch-code > summary { min-height:44px; display:flex; align-items:center; font-size:15px; }
+
+@media(max-width:560px) {
+  .setup-step { grid-template-columns:24px minmax(0,1fr); gap:12px; }
+  .setup-mark { width:24px; height:24px; }
+  .setup-step:not(:last-child) .setup-mark::after { top:26px; height:calc(100% + 20px - 26px); }
+}

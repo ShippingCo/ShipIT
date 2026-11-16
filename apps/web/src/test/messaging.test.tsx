@@ -55,9 +55,9 @@ describe('production messaging history',()=>{
    if(path.includes('/'+id(80)+'?')){reads++;return json({...detail,message:{...detail.message,state:'uncertain',version:reads===1?3:5},recovery:{kind:'investigate_uncertain',expected_version:reads===1?3:5,allowed_reasons:['retry_uncertain_confirmed']}});}
    return json(page([message]));
   }));mount(['franchise_admin']);fireEvent.click(await screen.findByRole('button',{name:'Inspect Booking confirmation '+id(80)}));fireEvent.click(await screen.findByRole('button',{name:'Redrive original message'}));
-  await screen.findByText(/Retrying may deliver a duplicate/);expect(writes.length).toBe(0);fireEvent.click(screen.getByText('I investigated — retry despite duplicate risk'));
-  fireEvent.click(await screen.findByText('Retry same request'));await waitFor(()=>expect(writes.length).toBe(2));expect(writes[1].body).toBe(writes[0].body);expect(writes[1].headers).toEqual(writes[0].headers);expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:5,reason_code:'retry_uncertain_confirmed'});
-  await waitFor(()=>expect(screen.getByText('Server update confirmed.')).toBeVisible());
+  await screen.findByText(/may deliver a second copy to the customer/);expect(writes.length).toBe(0);fireEvent.click(screen.getByText('I checked — send it again'));
+  fireEvent.click(await screen.findByText('Check if it saved'));await waitFor(()=>expect(writes.length).toBe(2));expect(writes[1].body).toBe(writes[0].body);expect(writes[1].headers).toEqual(writes[0].headers);expect(JSON.parse(String(writes[0].body))).toEqual({expected_version:5,reason_code:'retry_uncertain_confirmed'});
+  await waitFor(()=>expect(screen.getByText('Saved.')).toBeVisible());
   await screen.findByText('Accepted by provider',{selector:'span'});
   fireEvent.click(screen.getByRole('button',{name:'Close'}));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Inspect Booking confirmation '+id(80)})).toHaveFocus());
@@ -78,11 +78,11 @@ describe('production messaging history',()=>{
  });
  it.each(['accountant','read_only','delivery_agent'] as const)('denies %s navigation and direct route',role=>{
   const ctx={...context,franchises:context.franchises.map(f=>({...f,roles:[role]}))} as OperatorContext;render(<MemoryRouter initialEntries={['/business/automation']}><BusinessShell controller={controller([role])} context={ctx} select={()=>{}}/></MemoryRouter>);
-  expect(screen.queryByRole('link',{name:'Automation Feed'})).not.toBeInTheDocument();expect(screen.getByRole('alert')).toHaveTextContent('unavailable for this role');
+  expect(screen.queryByRole('link',{name:'Messages'})).not.toBeInTheDocument();expect(screen.getByRole('alert')).toHaveTextContent('unavailable for this role');
  });
  it.each(['org_admin','franchise_admin','operator','dispatcher'] as const)('allows %s navigation',async role=>{
   serve();const ctx={...context,franchises:context.franchises.map(f=>({...f,roles:[role]}))} as OperatorContext;
-  render(<MemoryRouter initialEntries={['/business/automation']}><BusinessShell controller={controller([role])} context={ctx} select={()=>{}}/></MemoryRouter>);const navigation=screen.getAllByRole('link',{name:'Automation Feed'});expect(navigation).toHaveLength(1);expect(navigation[0]).toHaveAttribute('href','/business/automation');expect(navigation[0]).toHaveAttribute('aria-current','page');await screen.findByText('Accepted by provider',{selector:'span'});
+  render(<MemoryRouter initialEntries={['/business/automation']}><BusinessShell controller={controller([role])} context={ctx} select={()=>{}}/></MemoryRouter>);const navigation=screen.getAllByRole('link',{name:'Messages'});expect(navigation).toHaveLength(1);expect(navigation[0]).toHaveAttribute('href','/business/automation');expect(navigation[0]).toHaveAttribute('aria-current','page');await screen.findByText('Accepted by provider',{selector:'span'});
  });
  it('rejects malformed successful status DTOs',()=>{expect(()=>historyDto({...message,message:{...message.message,state:'sent_and_delivered'}})).toThrow();});
 });

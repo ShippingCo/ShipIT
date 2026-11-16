@@ -2,4 +2,36 @@
 .receipts-table :is(th, td):nth-child(3),
 .receipts-table :is(th, td):nth-child(4),
 .receipts-table :is(th, td):nth-child(5) { text-align: center; }
-.receipts-table .receipt-payment-unknown { color: #475467; background: #f2f4f7; border-color: #e4e7ec; }
+.receipts-table .receipt-payment-unknown { color: var(--text); background: var(--grey-200); border-color: var(--border); }
+
+/* ---------------------------------------------------------------------------
+   Receipts
+   ---------------------------------------------------------------------------
+   The range control, the row that opens a document, and the document itself.
+
+   The sheet is injected exactly as it prints, so it is styled only by the
+   inline rules the renderer already carries. Everything here is around it:
+   the paper it sits on, and the room it needs. Nothing in this file may
+   change a value, a size or a colour inside the sheet, because then the
+   screen and the paper would be two different documents. */
+
+.receipts-toolbar { flex-wrap: wrap; gap: 12px; align-items: center; }
+.receipts-dates { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0 0; }
+.receipts-dates > .tf { flex: 1 1 180px; min-width: 0; max-width: 260px; }
+
+/* The docket is the handle: it is what the customer says out loud, so it is what opens
+   their receipt. A full-height target, underlined, never a bare coloured word. */
+.receipt-open {
+  font: inherit; color: var(--md-primary); background: none; border: 0; padding: 4px 0;
+  min-height: var(--touch-min, 44px); cursor: pointer; text-align: left;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.receipt-open:hover { color: var(--md-on-surface); }
+.receipt-open:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; border-radius: 4px; }
+
+.receipt-open-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+
+/* Paper. A plain white field with room around it, so the sheet reads as a document
+   lying on the screen rather than as a block of the page. */
+.receipt-document { background: #fff; padding: 24px; overflow-x: auto; }
+@media (max-width: 600px) { .receipt-document { padding: 14px; } }

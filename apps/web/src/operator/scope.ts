@@ -3,21 +3,46 @@ import { ApiFailure } from '../data-access/errors';
 import { createScopeRuntime } from '../data-access/scope-runtime';
 import { createOperatorDataSource } from './data-source';
 import type { OperatorDataSource } from './data-source';
-export type ScopeState = { status: 'loading' | 'signed_out' | 'error' | 'loaded'; context: OperatorContext | null; path: string; notice?: string };
+export type ScopeState = { status: 'loading' | 'signed_out' | 'error' | 'loaded'; context: OperatorContext | null; path: string; notice?: string;
+  /** Why the shell is in `error`: a revoked authority, or a server we simply could not reach. */
+  reason?: 'access' | 'unreachable' };
+
+/** Only 401 means signed out, and only an authorization answer means access changed. A timeout,
+ *  a 429, a 5xx or a dropped connection proves nothing about authority, so it must never clear
+ *  the workspace or tell a cashier they have been signed out. */
+const UNREACHABLE_CODES = ['REQUEST_TIMEOUT', 'RATE_LIMITED', 'INTERNAL_ERROR', 'TEMPORARILY_UNAVAILABLE'];
+export function classifyFailure(error: unknown): 'signed_out' | 'access' | 'unreachable' {
+  if (!(error instanceof ApiFailure)) return 'unreachable';
+  if (error.kind !== 'response') return 'unreachable';
+  if (error.code === 'UNAUTHENTICATED') return 'signed_out';
+  if (UNREACHABLE_CODES.includes(error.code)) return 'unreachable';
+  return 'access';
+}
 
 /** #17's shell controller owns one generalized private lifetime for all future domain adapters. */
 export function createScopeController(source: OperatorDataSource = createOperatorDataSource()) {
-  const runtime = createScopeRuntime(error => clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error'));
+  const runtime = createScopeRuntime(error => fail(error));
   let state: ScopeState = { status: 'loading', context: null, path: '' };
   let navigation=0;
   const listeners = new Set<() => void>();
   const set = (next: ScopeState) => { state = next; listeners.forEach(listener => listener()); };
-  function clear(status: ScopeState['status'] = 'loading', path = state.path) {
-    navigation++; runtime.invalidate(); set({ status, context: null, path });
+  function clear(status: ScopeState['status'] = 'loading', path = state.path, reason?: ScopeState['reason']) {
+    navigation++; runtime.invalidate(); set({ status, context: null, path, reason });
+  }
+  const UNREACHABLE_NOTICE = 'The shop could not reach the server just now. Your work is still here — try again in a moment.';
+  /** Route a failure by what it actually proves. A server we could not reach keeps the
+   *  workspace on screen with a quiet notice; only a real authorization answer clears it. */
+  function fail(error: unknown, path = state.path, keep: OperatorContext | null = state.context) {
+    const kind = classifyFailure(error);
+    if (kind === 'unreachable') {
+      if (keep) { set({ status: 'loaded', context: keep, path, notice: UNREACHABLE_NOTICE }); return; }
+      clear('error', path, 'unreachable'); return;
+    }
+    clear(kind === 'signed_out' ? 'signed_out' : 'error', path, kind === 'signed_out' ? undefined : 'access');
   }
   function denied(error: unknown) {
     if (error instanceof ApiFailure && ['UNAUTHENTICATED', 'ACTION_FORBIDDEN', 'RESOURCE_NOT_FOUND'].includes(error.code)) {
-      clear(error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error');
+      clear(error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error', state.path, error.code === 'UNAUTHENTICATED' ? undefined : 'access');
     }
   }
   return {
@@ -37,7 +62,7 @@ export function createScopeController(source: OperatorDataSource = createOperato
           set({ status: 'loaded', context, path });
         }
       } catch (error) {
-        if (runtime.isCurrent(current)) clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error', path);
+        if (runtime.isCurrent(current)) fail(error, path, null);
       }
     },
     // Route changes hide private UI while checking current authority, but are not
@@ -56,7 +81,7 @@ export function createScopeController(source: OperatorDataSource = createOperato
         }
         set({status:'loaded',context,path});
       } catch(error) {
-        if(request===navigation&&runtime.isCurrent(current))clear(error instanceof ApiFailure&&error.code==='UNAUTHENTICATED'?'signed_out':'error',path);
+        if(request===navigation&&runtime.isCurrent(current))fail(error,path,previous);
       }
     },
     async revalidate(selected?: string) {
@@ -74,8 +99,8 @@ export function createScopeController(source: OperatorDataSource = createOperato
         } else if (state.notice) set({ ...state, notice: undefined });
       } catch (error) {
         if (!runtime.isCurrent(current)) return;
-        if (error instanceof ApiFailure && ['UNAUTHENTICATED', 'ACTION_FORBIDDEN', 'RESOURCE_NOT_FOUND'].includes(error.code)) denied(error);
-        else set({ ...state, notice: 'Workspace access could not be refreshed. Each action still requires server authorization.' });
+        if (classifyFailure(error) === 'unreachable') set({ ...state, notice: UNREACHABLE_NOTICE });
+        else denied(error);
       }
     },
     async command<T>(work: () => Promise<T>): Promise<T> {
@@ -90,7 +115,7 @@ export function createScopeController(source: OperatorDataSource = createOperato
         const result = await work(current.signal);
         if (runtime.isCurrent(current)) paint(result);
       } catch (error) {
-        if (runtime.isCurrent(current)) clear(error instanceof ApiFailure && error.code === 'UNAUTHENTICATED' ? 'signed_out' : 'error');
+        if (runtime.isCurrent(current)) fail(error);
       }
     },
   };

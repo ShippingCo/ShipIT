@@ -19,6 +19,8 @@
     "dev:web": "node scripts/local.mjs web",
     "dev:worker": "node scripts/local.mjs worker",
     "db:start": "node scripts/local.mjs db",
+    "db:doctor": "node scripts/local.mjs doctor",
+    "db:access": "node scripts/local.mjs access",
     "build": "pnpm --filter @shippingco/api build && pnpm --filter @shippingco/web build",
     "preview": "pnpm --filter @shippingco/web preview",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:web && pnpm test:attachments",

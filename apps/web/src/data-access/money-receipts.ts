@@ -21,7 +21,7 @@ const receiptEvidence=object({id:uuid,customer_id:uuid,account_id:uuid,account_r
 const historyEntry=object({id:uuid,booking_id:uuid,payment_entry_id:uuid,kind:choice('allocation','release'),amount_paise:integer(1),release_of:nullable(uuid),version:integer(1),recorded_at:instant,released_paise:integer()});
 const historyPage=object({items:array(historyEntry),next_cursor:nullable(uuid)}),receiverPage=object({items:array(object({id:uuid,label:text})),next_cursor:nullable(uuid)});
 const resultPage=object({items:array(moneyReceiptResult),next_cursor:nullable(uuid)}),accountPage=object({items:array(receivingAccountDto),next_cursor:nullable(uuid)});
-const billPage=object({items:array(object({booking_id:uuid,currency:choice('INR'),gross_paise:integer(),outstanding_paise:integer(),expected_payment_version:integer()})),next_cursor:nullable(uuid)});
+const billPage=object({items:array(object({booking_id:uuid,currency:choice('INR'),gross_paise:integer(),outstanding_paise:integer(),expected_payment_version:integer(),confirmed_at:instant})),next_cursor:nullable(uuid)});
 function query(cursor?:string,customer?:string){return (customer?'&customer_id='+uuid(customer):'')+(cursor?'&cursor='+uuid(cursor):'');}
 export function moneyReceipts(api:ScopedApi) {
  const source=api.path('/api/v1/money-receipts');

@@ -5,7 +5,7 @@ import {cashClose,type CashCloseSource} from '../data-access/cash-close';
 import type {ScopedApi} from '../data-access/scoped-api';
 import type {CommandIntent} from '../data-access/command-intent';
 import {useCommand,usePagedResource,useResource} from './hooks';
-import {CommandNotice,Empty,Failure,Loading} from './AsyncState';
+import {DataRefresh,CommandNotice,Empty,Failure,Loading} from './AsyncState';
 import {TextField, DateField,SelectField} from '../components/m3/Input';
 import {formatMoney,formatKolkata,rupeesToPaise,kolkataInputToInstant} from './format';
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -28,7 +28,9 @@ export default function CashClosing({api,locations,admin,canRecord,canExport,isC
  const count=inspected??s?.count??s?.accepted_count??null;
  const download=async()=>{if(!exportId)return;setDownloading(true);setDownloadError('');try{const result=await source.download(exportId);if(!isCurrent())return;const url=URL.createObjectURL(new Blob([result.csv],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='cash-closing-'+result.snapshot.capture_id+'.csv';document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{if(isCurrent())setDownloadError('Private export unavailable. Refresh current authorization and capture again if expired.');}finally{setDownloading(false);}};
  return <>
- <section className="card ops-card"><SectionHeader title={"Daily cash closing"} description={"Count a named drawer, review its sources and retain any shortage or excess. A physical opening or carry is an observation and does not add spendable funds."}/><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(r=>{if(r)completed(r);}).catch(()=>{});}:undefined}/>{intentError&&<p role="alert">{intentError}</p>}{blocked&&locked&&<p role="alert">Reconcile this exact closing command before leaving or changing franchise.</p>}{!locked&&<button className="btn btn-text" onClick={()=>{command.reset();setRevision(v=>v+1);}}>Refresh closing evidence</button>}</section>
+ <section className="card ops-card"><SectionHeader title={"Daily cash closing"} description={"Count a named drawer, review its sources and retain any shortage or excess. A physical opening or carry is an observation and does not add spendable funds."}/><CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(r=>{if(r)completed(r);}).catch(()=>{});}:undefined}/>
+ {command.phase==='error'&&<p role="alert" className="cash-not-closed"><b>The day was not closed. Nothing has been locked.</b> Today&rsquo;s movements can still be changed, and the drawer can be counted again.</p>}
+ {command.phase==='uncertain'&&<p role="alert" className="cash-not-closed"><b>We do not know whether the day was closed.</b> Check before counting again — do not assume either way.</p>}{intentError&&<p role="alert">{intentError}</p>}{blocked&&locked&&<p role="alert">Reconcile this exact closing command before leaving or changing franchise.</p>}{!locked&&<DataRefresh resource={{phase:'ready',reload:()=>{command.reset();setRevision(v=>v+1);}}}/>}</section>
  {canRecord&&<OpenSession key={'open-'+revision} source={source} locations={locations} locked={locked} open={input=>{void run(()=>source.command('open',null,input));}} select={id=>{setSelected(id);setInspected(null);}}/>}
  <section className="card ops-card"><h2 className="t-title-lg">Closing history</h2>{list.phase==='loading'&&<Loading/>}{list.phase==='error'&&<Failure retry={list.reload}/>} {list.phase==='empty'&&<Empty title="No drawer sessions" body="Open a drawer with an explicit initial physical observation."/>}{list.items.length>0&&<RecordTable label="Drawer closing history" rows={list.items} rowKey={item=>item.id} selectedKey={selected} columns={[
  {key:'location',label:'Drawer',cell:item=><button className="btn btn-text" disabled={locked} aria-label={item.location_name+' · '+item.day+' · #'+item.sequence+' · '+item.state} onClick={()=>{setSelected(item.id);setInspected(null);setExportId(null);}}>{item.location_name}</button>},
@@ -47,7 +49,14 @@ export default function CashClosing({api,locations,admin,canRecord,canExport,isC
  <ClosingChecklist detail={current}/>
  {canRecord&&current.can_capture&&s.current_initial_opening&&<OpeningEditor key={'opening-'+s.version} original={s.current_initial_opening} locked={locked} save={input=>send('revise_opening',{...input,expected_version:s.version,opening_id:s.current_initial_opening!.initial_revision_id!})}/>}
  {admin&&s.current_initial_opening&&!s.initial_opening_review&&['open','rejected','submitted'].includes(s.state)&&<OpeningReview key={'opening-review-'+s.version} locked={locked} mode={current.review.opening_mode} save={(reason,ack)=>send('review_opening',{expected_version:s.version,opening_id:s.current_initial_opening!.initial_revision_id!,reason,sole_admin_acknowledged:ack})}/>}
- {canRecord&&current.can_capture&&<CountEditor key={s.id+'-'+s.version} locked={locked} original={s.count??s.accepted_count} save={input=>send('count',{...input,expected_version:s.version})}/>}
+ {canRecord&&current.can_capture&&<CountEditor key={s.id+'-'+s.version} locked={locked} original={s.count??s.accepted_count}
+   expected={(()=>{
+     const controls=current.current_controls;
+     const opening=s.count?.opening.counted_paise??s.accepted_count?.opening.counted_paise??s.current_initial_opening?.counted_paise;
+     if(!controls||opening===undefined)return null;
+     return BigInt(opening)+BigInt(controls.inflow_paise)-BigInt(controls.outflow_paise);
+   })()}
+   save={input=>send('count',{...input,expected_version:s.version})}/>}
  {count&&<CountEvidence count={count} session={s.id} source={source} locked={locked}/>}
  {count&&canExport&&<section className="card ops-card"><h3 className="t-title-md">Private closing export</h3><p>Freezes this exact retained count and source evidence. Explanations remain in authorized history.</p><button className="btn btn-outlined" disabled={locked} onClick={()=>{void run(()=>source.export(s.id,count.id));}}>Capture private count export</button>{exportId&&<button className="btn btn-outlined" disabled={locked||downloading} onClick={()=>{void download();}}>Download closing CSV</button>}{downloadError&&<p role="alert">{downloadError}</p>}</section>}
  {canRecord&&s.state==='open'&&s.count&&s.count.actor_id===api.scope.authority?.userId&&<ReasonAction key={'submit-'+s.version} label="Submit exact saved count" locked={locked||current.opening_changed||current.source_changed} hint="Submission freezes both the opening provenance and this ending observation for review." run={reason=>send('submit',{expected_version:s.version,count_id:s.count!.id,reason})}/>}
@@ -82,11 +91,64 @@ function OpeningReview({mode,locked,save}:{mode:string|null;locked:boolean;save:
  const [reason,setReason]=useState(''),[ack,setAck]=useState(false);
  return <section className="card ops-card"><h3 className="t-title-md">Review initial opening separately</h3><p>This approval covers only the current opening observation. The ending count still needs its own distinct review. {mode==='different_admin_required'?'Another eligible local administrator must review your opening.':mode==='sole_admin_self'?'You are the sole eligible local administrator; explicit self-approval acknowledgment is required.':'Review the attributed amount, time and correction evidence before approving.'}</p><form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();save(reason.trim(),ack);}}>{mode==='sole_admin_self'&&<label><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} disabled={locked}/> I explicitly acknowledge sole-admin opening self approval</label>}<TextField label="Opening approval reason" value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!reason.trim()||mode==='different_admin_required'||mode==='sole_admin_self'&&!ack}>Approve exact opening</button></form></section>;
 }
-function CountEditor({locked,original,save}:{locked:boolean;original:CashCloseCountDto|null;save:(input:{counted_at:string;counted_paise:number;denominations:CashCloseDenomination[];reason:string})=>void}){
+/**
+ * Counting the drawer.
+ *
+ * One large field, because this is a person with notes in one hand typing with the other, and
+ * then three lines in the order the arithmetic actually goes: what the book expects, what was
+ * counted, and the difference between them. The difference is computed and never typed — a
+ * figure an operator can type is a figure that can be made to agree.
+ *
+ * "Short by" and "Over by" are different words in different colours. Over is as interesting as
+ * short: money in the drawer that the book does not know about is a movement nobody recorded.
+ *
+ * A reason is required only when there is a difference. Demanding one on a count that matches
+ * teaches people to type "ok", and then the reasons on the counts that matter say "ok" too.
+ */
+function CountEditor({locked,original,expected,save}:{locked:boolean;original:CashCloseCountDto|null;expected:bigint|null;save:(input:{counted_at:string;counted_paise:number;denominations:CashCloseDenomination[];reason:string})=>void}){
  const [amount,setAmount]=useState(original?`${BigInt(original.counted_paise)/100n}.${String(BigInt(original.counted_paise)%100n).padStart(2,'0')}`:''),[at,setAt]=useState(''),[reason,setReason]=useState(''),[denoms,setDenoms]=useState(''),[error,setError]=useState(''),[retain,setRetain]=useState(!!original);
- return <section className="card ops-card"><h3 className="t-title-md">Save physical count</h3><form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();try{const count=rupeesToPaise(amount),time=retain&&original?original.counted_at:kolkataInputToInstant(at);if(count===null||!time||!reason.trim())throw new Error();const denominations=denominationInput(denoms,count);setError('');save({counted_at:time,counted_paise:count,denominations,reason:reason.trim()});}catch{setError('Enter a count (zero is valid), actual time and explanation. Optional denomination rows must be unique and total the physical count.');}}}>
- <TextField label="Physical ending count (₹)" value={amount} onChange={setAmount} inputMode="decimal" disabled={locked} required/>{original&&<label><input type="checkbox" checked={retain} onChange={e=>setRetain(e.target.checked)} disabled={locked}/> Retain observed ending time {formatKolkata(original.counted_at)} while reconciling evidence</label>}{!retain&&<TextField label="Counted at (Kolkata)" type="datetime-local" value={at} onChange={setAt} disabled={locked} required/>}<label>Optional denominations (₹ × quantity, one per line)<textarea className="input" rows={3} value={denoms} onChange={e=>setDenoms(e.target.value)} disabled={locked} aria-describedby="close-denomination-help"/></label><p id="close-denomination-help">For example: 500 × 10. Leave blank for a total-only count.</p><TextField label="Count and difference explanation" value={reason} onChange={setReason} disabled={locked} required/>{error&&<p role="alert">{error}</p>}<button className="btn btn-filled" disabled={locked}>Save immutable count</button>
- </form></section>;
+ const counted=rupeesToPaise(amount);
+ const gap=expected!==null&&counted!==null?BigInt(counted)-expected:null;
+ const short=gap!==null&&gap<0n,over=gap!==null&&gap>0n,matches=gap!==null&&gap===0n;
+ const size=gap===null?null:Number(gap<0n?-gap:gap);
+ // R-16: only a real difference needs explaining.
+ const needsReason=short||over;
+ const label=counted===null||expected===null?'Close the day'
+   :short?'Close the day · '+formatMoney(size!)+' short'
+   :over?'Close the day · '+formatMoney(size!)+' over'
+   :'Close the day · it matches';
+ return <section className="card ops-card cash-count"><h3 className="t-title-md">Count the drawer</h3>
+  <form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();try{
+    const count=rupeesToPaise(amount),time=retain&&original?original.counted_at:kolkataInputToInstant(at);
+    if(count===null||!time||needsReason&&!reason.trim())throw new Error();
+    const denominations=denominationInput(denoms,count);
+    setError('');save({counted_at:time,counted_paise:count,denominations,reason:reason.trim()||'Counted and matched the book.'});
+   }catch{setError(needsReason?'Enter the counted amount, the time, and why it does not match.':'Enter the counted amount (zero is valid) and the time. Optional denomination rows must be unique and total the count.');}}}>
+   {/* R-13: one large field. */}
+   <TextField className="cash-count-field" label="What you counted (₹)" value={amount} onChange={setAmount} inputMode="decimal" disabled={locked} required/>
+   {/* R-14: three lines, and the difference is computed. */}
+   <dl className="cash-count-lines">
+    <div><dt>The book says</dt><dd>{expected===null?'—':formatMoney(Number(expected))}</dd></div>
+    <div><dt>You counted</dt><dd>{counted===null?'—':formatMoney(counted)}</dd></div>
+    <div className={short?'is-short':over?'is-over':matches?'is-match':undefined}>
+     <dt>{short?'Short by':over?'Over by':'Difference'}</dt>
+     <dd>{size===null?'—':matches?'Nothing — it matches':formatMoney(size)}</dd>
+    </div>
+   </dl>
+   {expected===null&&<p className="ops-note">What the book expects could not be worked out yet. It is missing, not zero — save the count and the figure will be frozen with it.</p>}
+   {over&&<p className="ops-note">More in the drawer than the book knows about usually means a movement nobody recorded. It needs explaining just as a shortfall does.</p>}
+   {original&&<label><input type="checkbox" checked={retain} onChange={e=>setRetain(e.target.checked)} disabled={locked}/> Keep the time it was counted, {formatKolkata(original.counted_at)}</label>}
+   {!retain&&<TextField label="Time you counted it (Kolkata)" type="datetime-local" value={at} onChange={setAt} disabled={locked} required/>}
+   <label>Notes and coins, if you counted them (₹ × how many, one per line)<textarea className="input" rows={3} value={denoms} onChange={e=>setDenoms(e.target.value)} disabled={locked} aria-describedby="close-denomination-help"/></label>
+   <p id="close-denomination-help">For example: 500 × 10. Leave it blank if you only have a total.</p>
+   {needsReason&&<TextField label="Why it does not match" value={reason} onChange={setReason} disabled={locked} required
+     helper="Required because there is a difference. What you write here is what someone reads next month."/>}
+   {/* R-17: what closing does, before it is done. */}
+   <p className="cash-count-final" role="status">Once this is approved, today&rsquo;s movements for this drawer cannot be changed. A mistake found later is corrected by a new linked entry, so both the error and the fix stay visible.</p>
+   {error&&<p role="alert">{error}</p>}
+   {/* R-18: the difference is in the label of the button that commits it. */}
+   <button className="btn btn-filled" disabled={locked||counted===null||needsReason&&!reason.trim()}>{label}</button>
+  </form></section>;
 }
 function ReasonAction({label,hint,locked,run}:{label:string;hint:string;locked:boolean;run:(reason:string)=>void}){const [reason,setReason]=useState('');return <section className="card ops-card"><h3 className="t-title-md">{label}</h3><p>{hint}</p><form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();if(reason.trim())run(reason.trim());}}><TextField label={label+' reason'} value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!reason.trim()}>{label}</button></form></section>;}
 function Review({locked,mode:approvalMode,rejectionMode,stale,submit}:{locked:boolean;mode:string|null;rejectionMode:string|null;stale:boolean;submit:(kind:'approve'|'reject',reason:string,ack:boolean)=>void}){const [kind,setKind]=useState<'approve'|'reject'>('approve'),[reason,setReason]=useState(''),[ack,setAck]=useState(false),mode=kind==='reject'?rejectionMode:approvalMode;return <section className="card ops-card"><h3 className="t-title-md">Review exact submitted evidence</h3><p>{mode==='sole_admin_self'?'You are currently the only eligible local admin. Explicit acknowledgment is required.':mode==='different_admin_required'?'An observation awaiting approval is yours. Another eligible local admin must review it; a separate opening approval can allow its observer to review the ending recorded by someone else.':'Independent administrator review.'}</p><form className="ops-form finance-grouped-form" onSubmit={e=>{e.preventDefault();submit(kind,reason.trim(),ack);}}><SelectField label="Closing review decision" aria-label="Closing review decision" value={kind} onChange={value=>setKind(value as typeof kind)} disabled={locked} options={[{value:'approve',label:'Approve physical count and retain discrepancy'},{value:'reject',label:'Reject and request linked count'}]}/>{mode==='sole_admin_self'&&<label><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} disabled={locked}/> I explicitly acknowledge sole-admin self approval</label>}<TextField label="Closing review reason" value={reason} onChange={setReason} disabled={locked} required/><button className="btn btn-filled" disabled={locked||!reason.trim()||mode==='different_admin_required'||mode==='sole_admin_self'&&!ack||kind==='approve'&&stale}>Record closing review</button></form></section>;}

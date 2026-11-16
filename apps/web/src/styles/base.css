@@ -25,10 +25,10 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 a { color: var(--md-primary); text-decoration: none; }
 img { max-width: 100%; display: block; }
 
-::selection { background: #D3E3FD; color: #1E3A8A; }
+::selection { background: var(--blue-100); color: var(--accent-on-subtle); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #d4d9e0; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 :focus-visible {
@@ -45,10 +45,10 @@ img { max-width: 100%; display: block; }
 .t-title-md { font-size: 15.5px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
 .t-body-lg { font-size: 15.5px; line-height: 23px; font-weight: 400; }
 .t-body-md { font-size: 14px; line-height: 20px; font-weight: 400; }
-.t-body-sm { font-size: 12.5px; line-height: 17px; font-weight: 400; }
+.t-body-sm { font-size: 15px; line-height: 21px; font-weight: 400; }
 .t-label-lg { font-size: 13.5px; line-height: 20px; font-weight: 600; letter-spacing: -0.006em; }
-.t-label-md { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.01em; }
-.t-label-sm { font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.02em; }
+.t-label-md { font-size: var(--text-xs); line-height: 16px; font-weight: 600; letter-spacing: 0.01em; }
+.t-label-sm { font-size: var(--text-xs); line-height: 15px; font-weight: 600; letter-spacing: 0.02em; }
 
 .muted { color: var(--md-on-surface-variant); }
 .faint { color: var(--md-outline); }

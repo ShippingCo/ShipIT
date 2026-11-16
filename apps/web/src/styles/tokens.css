@@ -1,126 +1,390 @@
 /* ============================================================
-   ShippingCo — Material Design 3 token system
-   Seed: brand blue · Light scheme · Blue-tinted neutrals
+   ShippingCo — design tokens
+   ============================================================
+
+   Mirrors "D:\ShipIT Design and PRDs\00 Design System\tokens.css" v1.0.
+   If that file and this one disagree, that file is right. Keep them in step.
+
+   One file decides every colour, radius, shadow, type step and spacing step in
+   the console. Nothing below this line invents a value; screens borrow from here.
+
+   The system adapts Airbnb's Design Language System. What we take is its
+   STRUCTURE — one accent used once per screen, a neutral ramp that does the real
+   work, hierarchy from weight before size, radii that vary by a component's role,
+   and a single resting elevation. What we do not take is its brand: Rausch red
+   becomes ShipIT blue, and Airbnb Cereal (proprietary) becomes Inter, which the
+   type community treats as its closest open substitute.
+
+   THREE DELIBERATE DEVIATIONS FROM AIRBNB, and why:
+     1. Body text is 15px, not Airbnb's 14px. ShipIT's operators read English as a
+        second language on cheap counter monitors. 15px is a floor.
+     2. Borders are load-bearing. Airbnb gets separation from photography and
+        whitespace; a courier console has neither, so a 1px hairline is a
+        first-class token here.
+     3. Status colour is a full semantic family, not a single accent. Money and
+        custody states must be distinguishable at a glance, not read.
+
+   SECTION 9 is a compatibility layer: every --md-*, --shape-*, --elev-*, --dur-*
+   token the console already uses is redefined in terms of the roles above. That
+   is how ~1000 existing call sites restyle without being edited. New code uses
+   the role names in sections 2–8; the --md-* names are not extended further.
    ============================================================ */
 
 :root {
-  /* ---- Primary (counter ink blue) ---- */
-  --md-primary: #245caa;
-  --md-on-primary: #ffffff;
-  --md-primary-container: #e3edfb;
-  --md-on-primary-container: #183b65;
-  --md-primary-hover: #194d91;
+  /* -----------------------------------------------------------------------
+     1. COLOUR — PALETTE
+     Raw values. Never reference these directly from a component; use the
+     semantic roles in section 2. A raw value in a component file is a bug.
+     ----------------------------------------------------------------------- */
 
-  /* ---- Secondary (steel blue) ---- */
-  --md-secondary: #4b5563;
-  --md-on-secondary: #ffffff;
-  --md-secondary-container: #f3f4f6;
-  --md-on-secondary-container: #374151;
+  /* Brand blue. The one accent. Airbnb uses Rausch exactly this way: for the
+     single most important action on a screen, and almost nowhere else. */
+  --blue-50:  #eef4ff;
+  --blue-100: #dbe7ff;
+  --blue-200: #bcd2fe;
+  --blue-300: #8fb4fc;
+  --blue-400: #5b8ef7;
+  --blue-500: #2f6ce8;
+  --blue-600: #0b5ed7;   /* BRAND. White 15px/600 on this is 5.2:1 — passes AA */
+  --blue-700: #0a4fb4;
+  --blue-800: #0c4292;
+  --blue-900: #0e3874;
 
-  /* ---- Tertiary (sky blue) ---- */
-  --md-tertiary: #00639b;
-  --md-on-tertiary: #ffffff;
-  --md-tertiary-container: #c2e7ff;
-  --md-on-tertiary-container: #001d35;
+  /* Neutrals, close to Airbnb's own ramp: a true grey with no blue cast, which
+     keeps the accent the only coloured thing on the screen. */
+  --grey-0:   #ffffff;
+  --grey-25:  #fcfcfc;
+  --grey-50:  #f7f7f7;   /* Airbnb's hover/surface grey */
+  --grey-100: #f1f1f3;   /* navigation rail */
+  --grey-200: #ebebeb;
+  --grey-300: #dddddd;   /* Airbnb's border grey. THE hairline. */
+  --grey-400: #c2c2c2;
+  --grey-500: #949494;
+  --grey-600: #6a6a6a;   /* Airbnb's muted text. 5.41:1 on white — passes AA */
+  --grey-700: #4a4a4a;
+  --grey-800: #333333;
+  --grey-900: #222222;   /* Airbnb's primary text. 15.91:1 on white */
 
-  /* ---- Error ---- */
-  --md-error: #b3261e;
-  --md-on-error: #ffffff;
-  --md-error-container: #f9dedc;
-  --md-on-error-container: #410e0b;
+  /* Status. Each is a trio: a solid for icons and text on white, a container
+     wash for notice backgrounds, and an "on-container" for text inside it. */
+  --green-600:  #0e7a3c;
+  --green-100:  #e7f6ed;
+  --green-900:  #0a4a24;
+  --amber-500:  #d08700;   /* chart fills only — too light for text */
+  --amber-600:  #8a5300;
+  --amber-100:  #fdf1dd;
+  --amber-900:  #593500;
+  --red-600:    #c3182b;
+  --red-100:    #fdecee;
+  --red-900:    #7a0e1b;
 
-  /* ---- Semantic extensions (harmonized to scheme) ---- */
-  --md-success: #146c2e;
-  --md-success-container: #c9f0d3;
-  --md-on-success-container: #052d12;
-  --md-warning: #8f5000;
-  --md-warning-strong: #f79009;
-  --md-warning-container: #ffe2c2;
-  --md-on-warning-container: #4a2b00;
+  /* -----------------------------------------------------------------------
+     2. COLOUR — SEMANTIC ROLES
+     This is what components use. Renaming a role here restyles the product.
+     ----------------------------------------------------------------------- */
 
-  /* ---- Surfaces ----
-     Working surfaces remain white. The workspace layer supplies a neutral gray
-     navigation background and subtle table headers; blue is reserved for actions
-     and selection. Hierarchy comes from borders, type and spacing. */
-  --md-surface: #ffffff;
-  --md-surface-dim: #ffffff;
-  --md-background: #ffffff;
-  --md-surface-lowest: #ffffff;
-  --md-surface-low: #ffffff;
-  --md-surface-c: #ffffff;
-  --md-surface-high: #ffffff;
-  --md-surface-highest: #ffffff;
-  --md-on-surface: #111827;
-  --md-on-surface-variant: #5a6474;
-  --md-outline: #98a2b3;
-  /* THE stroke. Every border in the app is 1px of this colour — cards, inputs,
-     chips, buttons, icon frames, dividers, table rules. Do not introduce a second
-     border colour or a second width; emphasis comes from ink and space, not strokes. */
-  --md-outline-variant: #e3e6eb;
+  /* Surfaces */
+  --surface:            var(--grey-0);     /* the work canvas: always white */
+  --surface-sunken:     var(--grey-50);    /* wells, table headers, code blocks */
+  --surface-rail:       var(--grey-100);   /* the navigation rail */
+  --surface-hover:      var(--grey-50);
+  --surface-pressed:    var(--grey-200);
+  --surface-selected:   var(--blue-50);
+
+  /* Text. Three levels and no more. A fourth tier is always a sign that
+     something on the screen should have been removed instead. */
+  --text:               var(--grey-900);
+  --text-secondary:     var(--grey-600);
+  --text-disabled:      var(--grey-400);
+  --text-on-accent:     var(--grey-0);
+  --text-accent:        var(--blue-600);
+  --text-link:          var(--blue-600);
+
+  /* Lines */
+  --border:             var(--grey-300);   /* the only border you need */
+  --border-strong:      var(--grey-400);   /* inputs at rest, so they read as enterable */
+  --border-accent:      var(--blue-600);
+  --divider:            var(--grey-200);   /* inside a card, between rows */
+
+  /* Accent */
+  --accent:             var(--blue-600);
+  --accent-hover:       var(--blue-700);
+  --accent-pressed:     var(--blue-800);
+  --accent-subtle:      var(--blue-50);
+  --accent-on-subtle:   var(--blue-800);
+
+  /* Status roles */
+  --success:            var(--green-600);
+  --success-subtle:     var(--green-100);
+  --success-on-subtle:  var(--green-900);
+  --warning:            var(--amber-600);
+  --warning-subtle:     var(--amber-100);
+  --warning-on-subtle:  var(--amber-900);
+  --danger:             var(--red-600);
+  --danger-subtle:      var(--red-100);
+  --danger-on-subtle:   var(--red-900);
+
+  /* Focus. One ring, everywhere, never removed. */
+  --focus-ring:         0 0 0 2px var(--grey-0), 0 0 0 4px var(--blue-600);
+  --focus-ring-inset:   inset 0 0 0 2px var(--blue-600);
+
+  /* -----------------------------------------------------------------------
+     3. TYPE
+     One family. Hierarchy comes from WEIGHT first, size second — the single
+     most characteristic thing about Airbnb's type, and the reason their dense
+     screens stay calm.
+     ----------------------------------------------------------------------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* 15px is the floor — see deviation 1 at the top of this file. */
+  --text-xs:    13px;   /* legal lines, table superscripts. Never a sentence. */
+  --text-sm:    15px;   /* THE FLOOR. Secondary text, labels, captions. */
+  --text-base:  15px;   /* body */
+  --text-md:    17px;   /* card titles, emphasised body */
+  --text-lg:    20px;   /* section headings (h2) */
+  --text-xl:    24px;   /* page headings (h1) */
+  --text-2xl:   30px;   /* confirmation screens, the one number that matters */
+  --text-3xl:   38px;   /* KPI figures */
+
+  --weight-regular:  400;
+  --weight-medium:   500;   /* labels, nav, table headers */
+  --weight-semibold: 600;   /* headings, buttons, the working weight */
+  --weight-bold:     700;   /* numbers that carry money */
+
+  --leading-tight:  1.2;    /* headings and figures */
+  --leading-snug:   1.35;   /* card titles, table cells */
+  --leading-normal: 1.5;    /* body — never tighter */
+
+  /* Airbnb tightens large text optically and leaves body alone. */
+  --tracking-tight:  -0.02em;   /* --text-2xl and up */
+  --tracking-snug:   -0.011em;  /* --text-lg, --text-xl */
+  --tracking-normal: 0;
+
+  /* -----------------------------------------------------------------------
+     4. SPACE — a 4px grid, as Airbnb uses.
+     ----------------------------------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;   /* the default gutter between cards */
+  --space-8:  32px;
+  --space-10: 40px;   /* between page sections */
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* -----------------------------------------------------------------------
+     5. SHAPE
+     Airbnb's radii are not one value — they vary by the component's ROLE.
+     Small utilities are nearly square; things you touch are round; things that
+     filter or select are pills. Copying that variation is most of what makes
+     an interface read as "Airbnb-like".
+     ----------------------------------------------------------------------- */
+  --radius-xs:   6px;    /* tags, inline code, swatches */
+  --radius-sm:   8px;    /* ghost and text buttons, menu items, nav rows */
+  --radius-md:   12px;   /* inputs, selects, filled and outlined buttons */
+  --radius-lg:   16px;   /* cards, panels, notices, table containers */
+  --radius-xl:   20px;   /* modals, sheets, popovers */
+  --radius-2xl:  28px;   /* the hero/command surface */
+  --radius-full: 999px;  /* chips, filter pills, avatars, status dots */
+
+  /* -----------------------------------------------------------------------
+     6. ELEVATION
+     Airbnb runs almost the whole product on ONE resting tier; everything else
+     is a hairline. Three tiers only exist here because a console has real
+     overlays.
+     ----------------------------------------------------------------------- */
+  --shadow-none:    none;
+  --shadow-rest:    0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  --shadow-raised:  0 2px 4px rgba(0, 0, 0, 0.06), 0 10px 24px -8px rgba(0, 0, 0, 0.12);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-modal:   0 8px 28px rgba(0, 0, 0, 0.28);
+  --shadow-accent:  0 1px 2px rgba(11, 94, 215, 0.24), 0 6px 16px -8px rgba(11, 94, 215, 0.5);
+
+  --z-base:    1;
+  --z-sticky:  10;
+  --z-popover: 99;
+  --z-modal:   100;
+  --z-toast:   110;
+
+  /* -----------------------------------------------------------------------
+     7. SIZE — control heights.
+     44px is the floor for anything a finger or a hurried hand will hit.
+     ----------------------------------------------------------------------- */
+  --control-sm:  36px;
+  --control-md:  44px;   /* DEFAULT. Inputs, selects, buttons. */
+  --control-lg:  52px;   /* the one primary action on a confirmation screen */
+  --touch-min:   44px;
+
+  --field-padding-x:  var(--space-4);
+  --button-padding-x: var(--space-5);
+
+  /* Layout */
+  --rail-width:  248px;
+  --content-max: 1280px;
+  --reading-max: 640px;   /* a column of prose never exceeds this */
+  --page-gutter: clamp(16px, 3vw, 36px);
+
+  /* -----------------------------------------------------------------------
+     8. MOTION
+     Airbnb's motion is short and physical: things scale slightly under the
+     press, and nothing slides far. Anything over 240ms reads as lag.
+     ----------------------------------------------------------------------- */
+  --duration-instant: 90ms;
+  --duration-fast:    140ms;
+  --duration-base:    200ms;
+  --duration-slow:    280ms;
+  --ease-out:         cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:      cubic-bezier(0.22, 1, 0.36, 1);
+  --press-scale:      0.97;
+
+  /* =======================================================================
+     9. COMPATIBILITY LAYER
+     The console's existing stylesheets reference these names ~1000 times.
+     Each one is now an alias onto a role above, so the whole product follows
+     the system without a thousand edits. Do not add new names here.
+     ======================================================================= */
+
+  /* Brand */
+  --md-primary:               var(--accent);
+  --md-on-primary:            var(--text-on-accent);
+  --md-primary-hover:         var(--accent-hover);
+  --md-primary-press:         var(--accent-pressed);
+  --md-primary-container:     var(--accent-subtle);
+  --md-on-primary-container:  var(--accent-on-subtle);
+
+  /* Secondary — quiet ink emphasis. */
+  --md-secondary:             var(--grey-700);
+  --md-on-secondary:          var(--grey-0);
+  --md-secondary-container:   var(--grey-50);
+  --md-on-secondary-container: var(--grey-800);
+
+  /* Tertiary. The parallel teal accent is retired: a second accent competes
+     with the first, and Airbnb's whole colour discipline is that there is one.
+     These now resolve to the blue family and the name is on its way out. */
+  --md-tertiary:              var(--blue-800);
+  --md-on-tertiary:           var(--grey-0);
+  --md-tertiary-container:    var(--accent-subtle);
+  --md-on-tertiary-container: var(--accent-on-subtle);
+
+  /* Outcomes */
+  --md-error:                 var(--danger);
+  --md-on-error:              var(--grey-0);
+  --md-error-container:       var(--danger-subtle);
+  --md-on-error-container:    var(--danger-on-subtle);
+
+  --md-success:               var(--success);
+  --md-on-success:            var(--grey-0);
+  --md-success-container:     var(--success-subtle);
+  --md-on-success-container:  var(--success-on-subtle);
+
+  --md-warning:               var(--warning);
+  --md-warning-strong:        var(--amber-500);
+  --md-warning-container:     var(--warning-subtle);
+  --md-on-warning-container:  var(--warning-on-subtle);
+
+  /* Surfaces. White is the only resting background; the sunken step is a well,
+     not a page colour. */
+  --md-surface:         var(--surface);
+  --md-surface-dim:     var(--surface);
+  --md-background:      var(--surface);
+  --md-surface-lowest:  var(--surface);
+  --md-surface-low:     var(--surface);
+  --md-surface-c:       var(--surface);
+  --md-surface-high:    var(--surface);
+  --md-surface-highest: var(--surface);
+
+  /* Ink and strokes. --md-outline-variant is THE hairline: every border in the
+     app is 1px of it, and no border is ever drawn on one side alone as
+     decoration — a stripe down the edge of a panel reads as damage. */
+  --md-on-surface:          var(--text);
+  --md-on-surface-variant:  var(--text-secondary);
+  --md-outline:             var(--border-strong);
+  --md-outline-variant:     var(--border);
 
   /* Transient interaction feedback only — never a resting background. */
-  --state-hover: rgba(16, 24, 40, 0.04);
-  --state-press: rgba(16, 24, 40, 0.08);
-  /* Neutral track for progress/meters, which need a visible unfilled portion. */
-  --track: #eef0f3;
-  --md-inverse-surface: #111827;
-  --md-inverse-on-surface: #f9fafb;
-  --md-inverse-primary: #aac7fa;
+  --state-hover: rgba(34, 34, 34, 0.045);
+  --state-press: rgba(34, 34, 34, 0.085);
+  /* Neutral track for progress and meters, which need a visible unfilled part. */
+  --track: var(--grey-200);
 
-  /* ---- Scrim ---- */
-  --md-scrim: rgba(16, 24, 40, 0.5);
+  --md-inverse-surface:    var(--grey-900);
+  --md-inverse-on-surface: var(--grey-50);
+  --md-inverse-primary:    var(--blue-300);
+  --md-scrim:              rgba(34, 34, 34, 0.45);
 
-  /* ---- Shape scale ---- */
-  --shape-xs: 4px;
-  --shape-sm: 8px;
-  --shape-md: 12px;
-  --shape-lg: 16px;
-  --shape-xl: 24px;
-  --shape-xxl: 28px;
-  --shape-full: 999px;
+  /* Shape aliases */
+  --shape-xs:     var(--radius-xs);
+  --shape-sm:     var(--radius-sm);
+  --shape-md:     var(--radius-md);
+  --shape-lg:     var(--radius-lg);
+  --shape-xl:     var(--radius-xl);
+  --shape-xxl:    var(--radius-2xl);
+  --shape-full:   var(--radius-full);
+  --shape-card:   var(--radius-lg);
+  --shape-button: var(--radius-md);
+  --shape-field:  var(--radius-md);
+  --shape-tile:   var(--radius-lg);
 
-  /* ---- Elevation ---- */
-  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
-  --elev-2: 0 4px 14px -2px rgba(16, 24, 40, 0.09), 0 2px 5px -2px rgba(16, 24, 40, 0.05);
-  --elev-3: 0 18px 44px -10px rgba(16, 24, 40, 0.18), 0 6px 12px -6px rgba(16, 24, 40, 0.07);
+  /* Elevation aliases */
+  --elev-1:          var(--shadow-rest);
+  --elev-2:          var(--shadow-raised);
+  --elev-3:          var(--shadow-popover);
+  --elev-card:       var(--shadow-rest);
+  --elev-card-hover: var(--shadow-raised);
 
-  /* ---- Motion ---- */
-  --ease-emph: cubic-bezier(0.2, 0, 0, 1);
+  /* Motion aliases */
+  --ease-emph:     var(--ease-spring);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --dur-s: 120ms;
-  --dur-m: 220ms;
-  --dur-l: 380ms;
+  --dur-s:         var(--duration-fast);
+  --dur-m:         var(--duration-base);
+  --dur-l:         var(--duration-slow);
 
-  /* ---- Layout ---- */
-  --drawer-w: 264px;
-  --topbar-h: 64px;
+  /* Layout aliases */
+  --drawer-w:  var(--rail-width);
+  --topbar-h:  64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --dur-s: 0ms;
+    --dur-m: 0ms;
+    --dur-l: 0ms;
+    --press-scale: 1;
+  }
 }
 
 /* Status → token mapping (single source of truth for pills).
-   Deliberately restrained: most states are NEUTRAL. Colour is spent only where the
-   state demands an action or reports an outcome — out for delivery, delivered,
-   delayed, failed, returning. Everything else is a plain outlined label. */
+   Deliberately restrained: most states are NEUTRAL. Colour is spent only where
+   the state demands an action or reports an outcome — out for delivery,
+   delivered, delayed, failed, returning. Everything else is a plain label. */
 :root {
-  --status-neutral-bg: #ffffff;
-  --status-neutral-fg: var(--md-on-surface-variant);
+  --status-neutral-bg: var(--surface-sunken);
+  --status-neutral-fg: var(--text-secondary);
 
   --status-booked-bg: var(--status-neutral-bg);
   --status-booked-fg: var(--status-neutral-fg);
-  --status-checked_in-bg: var(--status-neutral-bg);
-  --status-checked_in-fg: var(--status-neutral-fg);
-  --status-dispatched-bg: var(--status-neutral-bg);
-  --status-dispatched-fg: var(--status-neutral-fg);
-  --status-in_transit-bg: var(--status-neutral-bg);
-  --status-in_transit-fg: var(--status-neutral-fg);
+  --status-checked_in-bg: var(--accent-subtle);
+  --status-checked_in-fg: var(--accent-on-subtle);
+  --status-dispatched-bg: var(--accent-subtle);
+  --status-dispatched-fg: var(--accent-on-subtle);
+  --status-in_transit-bg: var(--accent-subtle);
+  --status-in_transit-fg: var(--accent-on-subtle);
 
-  --status-out_for_delivery-bg: var(--md-warning-container);
-  --status-out_for_delivery-fg: var(--md-on-warning-container);
-  --status-delivered-bg: var(--md-success-container);
-  --status-delivered-fg: var(--md-on-success-container);
-  --status-delayed-bg: var(--md-error-container);
-  --status-delayed-fg: var(--md-on-error-container);
-  --status-failed_attempt-bg: var(--md-error-container);
-  --status-failed_attempt-fg: var(--md-on-error-container);
-  --status-rto-bg: var(--md-warning-container);
-  --status-rto-fg: var(--md-on-warning-container);
+  --status-out_for_delivery-bg: var(--warning-subtle);
+  --status-out_for_delivery-fg: var(--warning-on-subtle);
+  --status-delivered-bg: var(--success-subtle);
+  --status-delivered-fg: var(--success-on-subtle);
+  --status-delayed-bg: var(--danger-subtle);
+  --status-delayed-fg: var(--danger-on-subtle);
+  --status-failed_attempt-bg: var(--danger-subtle);
+  --status-failed_attempt-fg: var(--danger-on-subtle);
+  --status-rto-bg: var(--warning-subtle);
+  --status-rto-fg: var(--warning-on-subtle);
 }

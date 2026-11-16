@@ -45,7 +45,7 @@ export function OperatorSearch({controller,links,close}:{controller:ScopeControl
       <SelectField label="Search for" value={kind} options={options} onChange={value=>{clear();setQuery('');setKind(value);}}/>
       {kind==='phone'
         ? <PhoneField id={fieldId} label="Customer phone" value={query} maxLength={40} error={error} onChange={value=>{clear();setQuery(value);}}/>
-        : <SearchField id={fieldId} label={kind==='tasks'?'Find a task':kind==='tracking'?'Full tracking number':'Customer name'} value={query} onChange={value=>{clear();setQuery(value);}} maxLength={kind==='tracking'?32:120} autoComplete="off" error={error} helper={kind==='name'?'Use the same capital letters as the saved name.':undefined}/>}
+        : <SearchField id={fieldId} label={kind==='tasks'?'Find a task':kind==='tracking'?'Full tracking number':'Customer name'} value={query} onChange={value=>{clear();setQuery(value);}} maxLength={kind==='tracking'?32:120} autoComplete="off" error={error} helper={kind==='name'?'Capital letters do not matter.':undefined}/>}
       {kind!=='tasks'&&<button type="submit" className="btn btn-filled" disabled={state.phase==='loading'}>Search</button>}
     </form>
     {kind==='tasks'?<nav className="console-search-results" aria-label="Matching tasks">{matchingTasks.length===0&&<p role="status">No matching tasks. Try a different name.</p>}{matchingTasks.map(link=><Link key={link.area} to={link.to} onClick={close} className="drawer-item"><span className="console-result-icon"><Msym name={link.icon}/></span><span>{link.label}</span><Msym className="console-result-next" name="chevron_right"/></Link>)}</nav>:<div className="console-search-results" aria-live="polite">

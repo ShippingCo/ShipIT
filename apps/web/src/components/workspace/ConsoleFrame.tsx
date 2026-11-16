@@ -1,29 +1,21 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Link,useLocation,useNavigate} from 'react-router-dom';
 import {Msym} from '../m3/Icon';
-import {consoleTasks,taskGroups,toolGroup,type ConsoleLink} from './console-navigation';
+import {consoleAreas,consoleSections,type ConsoleLink} from './console-navigation';
 import './console-frame.css';
 
 export function ConsoleNavigation({links,area,onNavigate}:{links:readonly ConsoleLink[];area:string;onNavigate:()=>void}) {
-  const primary=links.filter(link=>consoleTasks.some(task=>task.area===link.area));
-  const extra=links.filter(link=>!consoleTasks.some(task=>task.area===link.area));
-  const extraActive=extra.some(link=>link.area===area);
-  const [expanded,setExpanded]=useState(extraActive);
-  useEffect(()=>{if(extraActive)setExpanded(true);},[extraActive]);
-  const render=(link:ConsoleLink)=><Link key={link.area} to={link.to} onClick={onNavigate} aria-current={area===link.area?'page':undefined} className={`drawer-item${area===link.area?' active':''}`}><Msym name={link.icon}/><span>{link.label}</span>{link.badge!==undefined&&<span className="count">{link.badge}</span>}</Link>;
+  const create=links.find(link=>link.area==='booking');
+  const render=(link:ConsoleLink)=><Link key={link.area} to={link.to} onClick={onNavigate}
+    aria-current={area===link.area?'page':undefined} className={`drawer-item${area===link.area?' active':''}`}>
+    <Msym name={link.icon}/><span>{link.label}</span>{link.badge!==undefined&&<span className="count">{link.badge}</span>}</Link>;
   return <nav id="workspace-navigation" className="drawer-section console-navigation" aria-label="Workspace navigation">
-    {primary.filter(link=>link.area==='booking').map(link=><Link key={link.area} className="console-create" to={link.to}
-      aria-current={area===link.area?'page':undefined} onClick={onNavigate}><Msym name="add"/>{link.label}</Link>)}
-    {taskGroups.map(group=>{
-      const items=group.areas.flatMap(id=>primary.filter(link=>link.area===id));
-      if(!items.length)return null;
-      return <div key={group.label} role="group" aria-label={group.label} className="console-task-group">
-        <div className="console-group-label" aria-hidden="true">{group.label}</div>{items.map(render)}
-      </div>;
-    })}
-    {extra.length>0&&<details open={expanded} className="console-more"><summary onClick={event=>{event.preventDefault();setExpanded(value=>!value);}}>More tools</summary><div role="group" aria-label="More tools">{toolGroup(extra).map(group=><div key={group.label} className="console-tool-branch">
-      <div className="console-group-label">{group.label}</div>{group.links.map(render)}
-    </div>)}</div></details>}
+    {create&&<Link className="console-create" to={create.to} aria-current={area===create.area?'page':undefined}
+      onClick={onNavigate}><Msym name="add"/>{create.label}</Link>}
+    {consoleSections(links.filter(link=>link.area!=='booking')).map(section=>
+      <div key={section.label} role="group" aria-label={section.label} className="console-task-group">
+        <div className="console-group-label">{section.label}</div>{section.links.map(render)}
+      </div>)}
   </nav>;
 }
 
@@ -57,7 +49,7 @@ export function ConsoleFrame({links,area,businessName,subtitle,logo,footer,scope
       <header className={`appbar${scrolled?' scrolled':''}`}>
         <button ref={toggle} type="button" className="iconbtn burger" aria-label={open?'Close workspace navigation':'Open workspace navigation'} aria-controls="workspace-navigation" aria-expanded={open} onBlur={event=>{if(open&&event.relatedTarget instanceof Node&&!drawer.current?.contains(event.relatedTarget))setOpen(false);}} onClick={()=>setOpen(value=>!value)}><Msym name={open?'close':'menu'}/></button>
         {!home&&<button type="button" className="iconbtn" onClick={()=>navigate('/business')} aria-label="Back to dashboard"><Msym name="arrow_back"/></button>}
-        <div className="appbar-title u-grow t-title-lg">{links.find(link=>link.area===area)?.label??'ShippingCo'}</div>
+        <div className="appbar-title u-grow t-title-lg">{links.find(link=>link.area===area)?.label??consoleAreas[area]?.label??'ShippingCo'}</div>
         <button type="button" className="appbar-search" onClick={onSearch} aria-label={searchLabel}><Msym name="search"/><span className="lbl">Search anything…</span><kbd className="searchbar-kbd">Ctrl K</kbd></button>
         {home&&booking&&<Link className="btn btn-filled appbar-cta" to={booking.to}><Msym name="add"/>New Booking</Link>}
       </header>

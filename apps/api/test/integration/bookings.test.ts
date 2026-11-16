@@ -44,7 +44,9 @@ it('normalizes absent recipient contact without weakening supplied phone and nam
  expect(party({name:'  Ada  ',address:'Depot'})).toMatchObject({name:'Ada',phone_normalized:null});
  expect(party({phone:'+91 98765 43210',address:'Depot'})).toMatchObject({name:null,phone_normalized:'+919876543210'});
  expect(party({name:'Ada',phone:'+91 98765 43210'}).address).toBe('');
- expect(()=>party({})).toThrow();
+ // The delivery address is optional: a booking with no receiver details at all is accepted.
+ expect(party({})).toEqual({name:null,phone_normalized:null,phone_display:null,address:''});
+ expect(party({address:'   '}).address).toBe('');
  for(const invalid of [{phone:'invalid'},{phone:123},{name:42},{phone_normalized:'+919876543210'}])expect(()=>party(invalid)).toThrow();
 });
 it('normalizes ASCII docket edges/case and preserves internal punctuation',() => {

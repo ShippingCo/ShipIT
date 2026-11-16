@@ -4,6 +4,7 @@ import type {OperatorRole,PaymentProjection,LotMembershipDto,LotDto,LotMembershi
 import type {ScopeController} from '../operator/scope';
 import {scopedApi} from '../data-access/scoped-api';
 import {bookingEntries,type CounterEntry} from '../data-access/booking-entries';
+import {bookingNeeds,draftCode,emptyDraft,type Draft,type ParcelDraft} from '../booking/form';
 import {parcels,type ParcelRead} from '../data-access/parcels';
 import {payments} from '../data-access/payments';
 import {lots} from '../data-access/lots';
@@ -11,7 +12,7 @@ import {receipts} from '../data-access/receipts';
 import type {ScopedApi} from '../data-access/scoped-api';
 import {printReceiptFor,loadShopLogo} from '../utils/receipt';
 import {useCommand,usePagedResource,useResource} from './hooks';
-import {CommandNotice} from './AsyncState';
+import {DataRefresh,CommandNotice} from './AsyncState';
 import {Loading,Failure} from './AsyncState';
 import {Msym} from '../components/m3/Icon';
 import {Button,Checkbox} from '../components/m3/Button';
@@ -20,9 +21,10 @@ import {SearchBar,FilterChips,DateFilter,dateWindow,type DatePreset,type CustomR
 import {TextArea,SelectField} from '../components/m3/Input';
 import {Dialog} from '../components/m3/Dialog';
 import {Journey} from '../components/m3/Journey';
+import {PageHeader} from '../components/workspace/Workspace';
 import type {ParcelStatus as JourneyStatus} from '../data/types';
 
-const filters=[{value:'all',label:'All'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
+const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
 const stageLabels:Record<string,string>={booked:'Booked',checked_in:'At hub',dispatched:'Dispatched',in_transit:'On the way',out_for_delivery:'Out for delivery'};
 export interface SavedBookingRow{
  id:string;docket:string;name:string;phone:string;city:string;address:string;service:string;weight:number|null;amount:number|null;payment:'paid'|'topay'|'unknown';status:string;createdAt:number;lotId:string|null;lotCode:string;entry?:CounterEntry;parcel?:ParcelRead;
@@ -33,10 +35,12 @@ export function counterBookingRow(entry:CounterEntry):SavedBookingRow{
  const f=entry.data.fields,freight=integer(f.override),packing=integer(f.packing),sum=BigInt(freight??0)+BigInt(packing??0);
  const amount=freight===null&&packing===null||sum>BigInt(Number.MAX_SAFE_INTEGER)?null:Number(sum);
  const grams=integer(f.weight);
- return {id:'entry:'+entry.id,docket:f.docket||entry.id.slice(0,8),name:f.name||'—',phone:f.phone||'',city:cityName(f.destination||f.recipientCity||''),address:f.recipientAddress||f.address||'',service:f.service==='express'?'Express':f.service==='same_city'?'Same-city':f.service==='standard'?'Standard':f.service||'—',weight:grams===null?null:grams/1000,amount,payment:'unknown',status:'booked',createdAt:Date.parse(entry.confirmed_at),lotId:null,lotCode:'',entry};
+ return {id:'entry:'+entry.id,docket:f.docket||draftCode(entry.id),name:f.name||'—',phone:f.phone||'',city:cityName(f.destination||f.recipientCity||''),address:f.recipientAddress||f.address||'',service:f.service==='express'?'Express':f.service==='same_city'?'Same-city':f.service==='standard'?'Standard':f.service||'—',weight:grams===null?null:grams/1000,amount,payment:'unknown',status:'draft',createdAt:Date.parse(entry.confirmed_at),lotId:null,lotCode:'',entry};
 }
 export function filterSavedBookings(rows:SavedBookingRow[],filter:string){
- if(filter==='active')return rows.filter(r=>!['delivered','rto','cancelled'].includes(r.status));
+ if(filter==='drafts')return rows.filter(r=>r.status==='draft');
+ // A draft is not work in motion: it has no parcel, so it cannot be active, delayed or paid.
+ if(filter==='active')return rows.filter(r=>!['delivered','rto','cancelled','draft'].includes(r.status));
  if(filter==='delayed')return rows.filter(r=>r.status==='failed_attempt');
  if(filter==='delivered')return rows.filter(r=>r.status==='delivered');
  if(filter==='topay')return rows.filter(r=>r.payment==='topay');
@@ -44,7 +48,7 @@ export function filterSavedBookings(rows:SavedBookingRow[],filter:string){
 }
 const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
 const time=(ts:number)=>new Date(ts).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
-const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':undefined}/>;
+const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':row.status==='draft'?'Draft — not booked':undefined}/>;
 const payChip=(row:SavedBookingRow)=><span className={'pill '+(row.payment==='paid'?'st-delivered':row.payment==='topay'?'pill-warn':'')}>{row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'}</span>;
 
 export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void)=>React.ReactNode}){
@@ -90,10 +94,16 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
  const open=allRows.find(r=>r.id===openId),refresh=()=>{page.reload();entries.reload();metadata.reload();lotPage.reload();};
  const close=()=>{setOpenId(null);if(selected){const next=new URLSearchParams(params);next.delete('open');next.delete('parcel');setParams(next,{replace:true});}};
  return <div className="page saved-bookings-demo" aria-label="Saved bookings">
-  <h1 className="workspace-visually-hidden">Packages</h1>
+  <PageHeader title="Packages"
+   actions={<DataRefresh resource={{phase:[page,entries,metadata,lotPage].some(r=>r.phase==='loading')?'loading':'ready',reload:refresh}}/>}/>
   <div className="toolbar"><SearchBar value={q} onChange={setQ} autoFocus placeholder="Search docket, name, phone or city" label="Search packages"/><DateFilter preset={range} onPreset={setRange} custom={custom} onCustom={setCustom}/></div>
   <FilterChips options={chipOptions} value={filter} onChange={setFilter} counts={counts}/>
-  {pickedIds.length>0&&<div className="bulkbar"><span className="bulkbar-n">{pickedIds.length} selected</span><Button size="sm" variant="outlined" icon="warehouse" disabled={!canBulk||bulkBusy||selectedParcels.some(p=>p.status!=='booked')} onClick={()=>setBulkAction('check_in')}>Check in at hub</Button><Button size="sm" variant="outlined" icon="local_shipping" disabled={!canBulk||bulkBusy||selectedParcels.some(p=>p.status!=='checked_in')} onClick={()=>setBulkAction('dispatch')}>Dispatch</Button><Button size="sm" variant="outlined" icon="layers" disabled title="Open a booking to assign its lot">Move to lot</Button><button type="button" className="bulkbar-clear" disabled={bulkBusy} onClick={()=>setPicked({})}>Clear</button></div>}
+  {pickedIds.length>0&&<BulkBar chosen={pickedIds.length} drafts={pickedIds.length-selectedParcels.length}
+   hidden={pickedIds.filter(id=>!list.some(row=>row.id===id)).length}
+   notBooked={selectedParcels.filter(p=>p.status!=='booked').length}
+   notAtHub={selectedParcels.filter(p=>p.status!=='checked_in').length}
+   enabled={canBulk&&!bulkBusy} busy={bulkBusy}
+   act={action=>setBulkAction(action)} clear={()=>setPicked({})}/>}
   {page.phase==='error'&&<Failure retry={page.reload} label="Shipment bookings could not be loaded."/>}
   {entries.phase==='error'&&<Failure retry={entries.reload} label="Saved bookings could not be loaded."/>}
   <Card><div className="tbl-wrap"><table className="tbl" aria-label="Packages"><thead><tr>
@@ -107,8 +117,53 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
   {(page.phase==='loading'||entries.phase==='loading')&&!list.length?<Loading label="Loading bookings…"/>:!list.length&&<EmptyState icon={q?'search_off':'inventory_2'} title={q?'Nothing matches that search':'No packages here'} sub={q?'Try a docket number, name or phone.':'Parcels appear here as soon as they are booked.'} action={q?<Button variant="outlined" style={{marginTop:12}} onClick={()=>setQ('')}>Clear search</Button>:undefined}/>}
   </div></Card>
   {page.page.has_more&&<Button variant="outlined" onClick={page.loadMore} disabled={page.phase==='more'}>Load more bookings</Button>}
-  {bulkAction&&operationalBulk&&<Dialog open size="lg" title={bulkAction==='check_in'?'Check in selected parcels':'Dispatch selected parcels'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulkAction(null);}}>{operationalBulk(selectedParcels,bulkAction,setBulkBusy,refresh)}</Dialog>}
+  {bulkAction&&operationalBulk&&<Dialog open size="lg" title={bulkAction==='check_in'?'Check in at the hub':'Send out for delivery'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulkAction(null);}}>{operationalBulk(selectedParcels,bulkAction,setBulkBusy,refresh)}</Dialog>}
   {open&&<SavedBookingDialog key={open.id} row={open} api={api} lots={lotPage.value?.items??[]} close={close} refresh={refresh} operationalDetail={operationalDetail}/>}
+ </div>;
+}
+
+
+/**
+ * The bar that appears when parcels are ticked.
+ *
+ * Three things it has to get right, and did not:
+ *
+ *  - It said "2 selected". An operator about to move other people's parcels reads
+ *    a count of parcels, not a count of selections.
+ *  - A disabled action gave no reason, or hid one in a `title` attribute nobody
+ *    hovers. An action the operator can see but cannot press, with no explanation,
+ *    reads as a broken button.
+ *  - Ticking a parcel and then changing the filter hid it while keeping it chosen,
+ *    so the count disagreed with the table and nothing said why.
+ */
+export function BulkBar({chosen,drafts,hidden,notBooked,notAtHub,enabled,busy,act,clear}:{
+ chosen:number;drafts:number;hidden:number;notBooked:number;notAtHub:number;
+ enabled:boolean;busy:boolean;act:(action:'check_in'|'dispatch')=>void;clear:()=>void;
+}){
+ const parcels=chosen===1?'parcel':'parcels';
+ const blocked=(n:number,state:string)=>{
+  if(n===0)return null;
+  if(drafts===chosen)return `${drafts===1?'That is a draft':'Those are drafts'}, not booked parcels yet.`;
+  // When everything chosen is blocked, saying "3 of the 3" makes the operator do
+  // arithmetic to reach "all of them".
+  if(n>=chosen)return chosen===1?`It is ${state}.`:`None of them is ${state.replace(/^not /,'')}.`;
+  return `${n} of the ${chosen} ${n===1?'is':'are'} ${state}.`;
+ };
+ const checkInWhy=blocked(notBooked+drafts,'not waiting to be checked in');
+ const dispatchWhy=blocked(notAtHub+drafts,'not at a hub yet');
+ return <div className="bulkbar" role="group" aria-label="Chosen parcels">
+  <div className="bulkbar-head">
+   <span className="bulkbar-n">{chosen} {parcels} chosen</span>
+   {hidden>0&&<span className="bulkbar-hidden">{hidden} not shown by this filter</span>}
+  </div>
+  <div className="bulkbar-actions">
+   <Button size="sm" variant="filled" icon="warehouse" disabled={!enabled||!!checkInWhy} onClick={()=>act('check_in')}>Check in at hub</Button>
+   <Button size="sm" variant="outlined" icon="local_shipping" disabled={!enabled||!!dispatchWhy} onClick={()=>act('dispatch')}>Send out for delivery</Button>
+   <button type="button" className="bulkbar-clear" disabled={busy} onClick={clear}>Clear</button>
+  </div>
+  {(checkInWhy||dispatchWhy)&&<p className="bulkbar-why">{checkInWhy&&dispatchWhy&&checkInWhy===dispatchWhy?checkInWhy
+   :[checkInWhy&&`Cannot check in — ${checkInWhy.charAt(0).toLowerCase()+checkInWhy.slice(1)}`,
+     dispatchWhy&&`Cannot send out — ${dispatchWhy.charAt(0).toLowerCase()+dispatchWhy.slice(1)}`].filter(Boolean).join(' ')}</p>}
  </div>;
 }
 
@@ -132,22 +187,33 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
   }catch{/* CommandNotice retains the immutable request. */}
  }
  const [msgText,setMsgText]=useState(''),[showActions,setShowActions]=useState(false),[printMessage,setPrintMessage]=useState(''),[printing,setPrinting]=useState(false);
- const items=row.entry?[{event_id:row.entry.id,sequence:1,occurred_at:row.entry.confirmed_at,code:'parcel.booked',status:'booked',label:'Booking created at counter'}]:timeline.value?.items??[];
+ const items=row.entry?[{event_id:row.entry.id,sequence:1,occurred_at:row.entry.confirmed_at,code:'booking.draft',status:'draft',label:'Draft saved at the counter'}]:timeline.value?.items??[];
  const flowStatus=(['booked','checked_in','dispatched','in_transit','out_for_delivery','delivered','failed_attempt','rto'].includes(row.status)?row.status:'booked') as JourneyStatus;
+ // A draft never entered the parcel journey, so showing one would state a movement that
+ // has not happened. Say plainly what it is and offer the way to finish it instead.
+ const isDraft=!!row.entry;
+ const draftNeeds=useMemo(()=>{
+   if(!row.entry)return [];
+   const fields=row.entry.data.fields,draft={...emptyDraft(),...fields} as Draft;
+   return bookingNeeds(draft,row.entry.data.additional_parcels as ParcelDraft[],!!draft.serviceOptionId||draft.override!=='');
+ },[row.entry]);
  const service=row.service+(row.weight===null?'':` · ${row.weight.toLocaleString('en-IN')} kg`);
  async function print(){if(printing)return;setPrinting(true);setPrintMessage('');try{
   if(row.parcel)await printReceiptFor(api,await receipts(api).booking(row.parcel.booking_id));
   else await printCounterRecord(row,api);
  }catch{setPrintMessage('The receipt could not be opened. Retry printing without creating another booking.');}finally{setPrinting(false);}}
  return <Dialog open onClose={()=>{if(!moving)close();}} hideClose={moving} size="lg" title={<span className="u-row mono" style={{fontSize:19}}>{row.docket} {statusPill(row)}</span>}>
-  <div className="jrn-wrap"><Journey status={flowStatus} timeline={items.map(t=>({ts:Date.parse(t.occurred_at),status:t.status as JourneyStatus,title:t.label}))} format={ts=>new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}/></div>
+  {isDraft
+    ? <p className="ops-alert saved-draft-note" role="status"><Msym name="draft"/><span>This is a draft, not a booking. No docket was created and it cannot be checked in or dispatched.{draftNeeds.length>0&&<> Still needed: <strong>{draftNeeds.join(', ')}</strong>.</>}</span></p>
+    : <div className="jrn-wrap"><Journey status={flowStatus} timeline={items.map(t=>({ts:Date.parse(t.occurred_at),status:t.status as JourneyStatus,title:t.label}))} format={ts=>new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}/></div>}
   <div className="grid2" style={{gap:20}}><div>
    <div className="ph-box u-center u-col" style={{height:130,borderRadius:'var(--shape-md)',gap:4}}><Msym name="image" style={{fontSize:30}}/><span className="t-body-sm">No parcel photo</span></div>
    <div className="t-body-sm" style={{display:'grid',gap:8,marginTop:14}}>{[['Customer',[row.name,row.phone].filter(Boolean).join(' · ')],['Address',row.address||'—'],['Service',service],['Amount',money(row.amount)],['Payment',row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'],['Lot',row.lotCode||'—']].map(([k,v])=><div key={k} className="u-between" style={{borderBottom:'1px solid var(--md-outline-variant)',paddingBottom:6}}><span className="muted">{k}</span><span style={{textAlign:'right'}}>{v}</span></div>)}</div>
    {!['delivered','rto','cancelled'].includes(row.status)&&<SelectField label="Move to lot" value={row.lotId||''} disabled={!row.parcel||moving||membership.phase==='loading'} onChange={id=>void assignLot(id)} options={[{value:'',label:'Not in a lot'},...lotList.filter(l=>l.state==='active'||l.id===row.lotId).map(l=>({value:l.id,label:`${l.code} · ${l.name}`}))]} trailing="layers" style={{marginTop:12}}/>}
    {['booked','checked_in','dispatched','in_transit','failed_attempt'].includes(row.status)&&<div className="u-row u-wrap" style={{marginTop:12}}><Button size="sm" icon={row.status==='booked'?'warehouse':row.status==='checked_in'?'local_shipping':'mark_email_read'} disabled={!row.parcel||moving} title={!row.parcel?'Shipment details are needed before intake or dispatch':undefined} onClick={()=>setShowActions(true)}>{row.status==='booked'?'Check In at Hub':row.status==='checked_in'?'Dispatch':row.status==='failed_attempt'?'Try Delivery Again':'Out for Delivery'}</Button></div>}
    <CommandNotice phase={lotCommand.phase} code={lotCommand.error?.code} retry={lotCommand.canRetry?()=>{void lotCommand.retry().then(()=>{membership.reload();refresh();}).catch(()=>{});}:undefined}/>
-   {row.entry&&<p className="counter-help" style={{marginTop:10}}>Entered charges are shown. Tax and payment are not recorded; shipment actions need a shipment record.</p>}
+   {row.entry&&<><p className="counter-help" style={{marginTop:10}}>Entered charges are shown. Tax and payment are not recorded; a draft cannot be checked in or dispatched.</p>
+   <Button icon="edit" style={{marginTop:10}} onClick={()=>{window.location.hash='#/business/new-booking?draft='+row.entry!.id;close();}}>Finish this booking</Button></>}
   </div><div>
    <div className="section-label" style={{margin:'0 0 10px'}}>Timeline<span className="rule"/></div>
    {timeline.phase==='error'?<Button variant="text" onClick={timeline.reload}>Retry timeline</Button>:<ul className="tline">{[...items].reverse().map((t,i)=><li key={t.event_id}><span className={'node '+(t.status==='booked'&&i===items.length-1?'':'done')}><Msym name={t.status==='booked'&&i===items.length-1?'':'check'}/></span><div className="t-head">{t.code==='parcel.booked'?'Booking created at counter':t.label} <span className="t-time">{time(Date.parse(t.occurred_at))}</span></div></li>)}</ul>}
@@ -162,8 +228,8 @@ function SavedBookingDialog({row,api,lots:lotList,close,refresh,operationalDetai
 async function printCounterRecord(row:SavedBookingRow,api:ReturnType<typeof scopedApi>){
  const win=window.open('','_blank','width=760,height=900');if(!win)throw new Error('PRINT_WINDOW_BLOCKED');
  const doc=win.document;doc.title='Booking '+row.docket;const logo=await loadShopLogo(api);if(api.scope.signal.aborted){win.close();throw Error('Receipt access changed.');}if(logo){const img=doc.createElement('img');img.src=logo;img.alt='Shop logo';img.width=56;img.height=56;doc.body.append(img);}
- const title=doc.createElement('h1');title.textContent='Booking acknowledgement';doc.body.append(title);
+ const title=doc.createElement('h1');title.textContent='Booking draft — not a booking';doc.body.append(title);
  const table=doc.createElement('table');
- for(const [label,value] of [['Docket',row.docket],['Customer',row.name],['Phone',row.phone||'Not recorded'],['Destination',row.city||'Not recorded'],['Address',row.address||'Not recorded'],['Entered charges',money(row.amount)],['Payment','Not recorded']]){const tr=doc.createElement('tr'),th=doc.createElement('th'),td=doc.createElement('td');th.textContent=label;td.textContent=value;tr.append(th,td);table.append(tr);}
- doc.body.append(table);const note=doc.createElement('p');note.textContent='Confirmed counter record. This acknowledgement is not a tax invoice or payment receipt.';doc.body.append(note);win.print();
+ for(const [label,value] of [['Draft number',row.docket],['Customer',row.name],['Phone',row.phone||'Not recorded'],['Destination',row.city||'Not recorded'],['Address',row.address||'Not recorded'],['Entered charges',money(row.amount)],['Payment','Not recorded']]){const tr=doc.createElement('tr'),th=doc.createElement('th'),td=doc.createElement('td');th.textContent=label;td.textContent=value;tr.append(th,td);table.append(tr);}
+ doc.body.append(table);const note=doc.createElement('p');note.textContent='This is an unfinished counter draft. No docket has been issued, the parcel cannot be dispatched, and this is not a tax invoice or payment receipt.';doc.body.append(note);win.print();
 }

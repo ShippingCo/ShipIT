@@ -6,6 +6,7 @@ import { DatabaseError, withTransaction, type DatabasePool } from '@shippingco/d
 import { customerSnapshot } from '@shippingco/shared';
 import { customerSetup, customerPath, contact } from '../customer-support.ts';
 import { org,A,B,C,otherOrg } from '../audit-support.ts';
+import { CUSTOMER_SEARCH_BUDGET_PER_MINUTE, READ_BUDGET_PER_MINUTE } from '../../src/server.ts';
 import { createCustomerService } from '../../src/modules/customers/service.ts';
 import { createTenancyService } from '../../src/modules/tenancy/service.ts';
 import { approvedAuthority } from '../tenancy-support.ts';
@@ -162,7 +163,9 @@ await test('keyset/has_more are scoped, literal prefixes cannot become wildcards
   }while(cursor&&pages<10);
   assert.equal(pages,3);assert.deepEqual(seen,created);assert.equal(new Set(seen).size,5);
   assert.equal((await s.search({search_by:'name',q:'Synthetic%_'})).json().items.length,5);
-  assert.equal((await s.search({search_by:'name',q:'synthetic'})).json().items.length,0);
+  // Name search folds case on purpose: a counter typing 'synthetic' must find 'Synthetic'.
+  // Literal % and _ above still match literally, which is the property this test guards.
+  assert.equal((await s.search({search_by:'name',q:'synthetic'})).json().items.length,5);
   const first=(await s.search({limit:'2'})).json(),token=first.page.next_cursor;
   for(const extra of [{limit:'3'},{q:'+1202555010'},{search_by:'name',q:'Synthetic'},{cursor:token.slice(1)}] as Record<string,string>[])assert.equal((await s.search({limit:'2',cursor:token,...extra})).json().error.code,'CURSOR_INVALID');
   assert.equal((await s.search({limit:'2',cursor:token},a2.token,B)).json().error.code,'CURSOR_INVALID');
@@ -172,21 +175,36 @@ await test('keyset/has_more are scoped, literal prefixes cannot become wildcards
   assert.equal((await s.search({limit:'2',cursor:token},s.operator.token,B)).json().error.code,'CURSOR_INVALID');
 });
 
-await test('search limiter is stricter than global, cannot be reset with new query or selector, safe Retry-After',{timeout:30000},async t=>{
+await test('search limiter is stricter than global, cannot be reset with new query, selector or address, safe Retry-After',{timeout:120000},async t=>{
   const s=await customerSetup(t),row=(await s.create()).json();
-  for(let i=0;i<30;i++)assert.equal((await s.search({q:i%2?'+12025550100':'+12025550'},s.operator.token,A,org,'192.0.2.19')).statusCode,200);
+  for(let i=0;i<CUSTOMER_SEARCH_BUDGET_PER_MINUTE;i++)assert.equal((await s.search({q:i%2?'+12025550100':'+12025550'},s.operator.token,A,org,'192.0.2.19')).statusCode,200);
   const limited=await s.search({q:'+12025550101'},s.operator.token,A,org,'192.0.2.19');
   assert.equal(limited.statusCode,429);assert.equal(limited.json().error.code,'RATE_LIMITED');assert.ok(Number(limited.headers['retry-after'])>0);
   assert.equal((await s.search({},s.operator.token,B,org,'192.0.2.19')).statusCode,429);
-  assert.equal((await s.search({},s.operator.token,A,org,'192.0.2.20')).statusCode,200);
+  // The search budget belongs to the session, not the address: one shop is one IP, so an
+  // address-keyed budget both punished every counter in a branch together and could be reset
+  // by moving address. Changing address does not hand out a fresh allowance.
+  assert.equal((await s.search({},s.operator.token,A,org,'192.0.2.20')).statusCode,429);
+  // A different operator's session still has its own full allowance from the same address.
+  assert.equal((await s.search({},(await s.grant('operator',[A])).token,A,org,'192.0.2.19')).statusCode,200);
   const fact=(await s.db.adminQuery('SELECT * FROM shipit.audit_records WHERE correlation_id=$1',[limited.headers['x-request-id']])).rows[0]!;
   assert.equal(fact.action,'customer.list');assert.equal(fact.resource_type,'customer');assert.equal(fact.organization_id,null);assert.equal(fact.resource_id,null);
   assert.ok(!s.logs.join('').includes('+12025550101'));
-  // Customer searches also consume the unchanged global 120/minute budget.
-  for(let i=0;i<30;i++)assert.equal((await s.search({},s.operator.token,A,org,'192.0.2.21')).statusCode,200);
-  for(let i=0;i<90;i++)assert.equal((await s.app.inject({url:customerPath()+'/'+row.id,cookies:s.cookies(s.operator.token),remoteAddress:'192.0.2.21'})).statusCode,200);
-  const global=await s.app.inject({url:customerPath()+'/'+row.id,cookies:s.cookies(s.operator.token),remoteAddress:'192.0.2.21'});
+  // Searches also consume the wider global read budget, which belongs to the same session.
+  // The loop is driven by the configured number so this evidence cannot drift from it again.
+  const fresh=await s.grant('operator',[A]);
+  assert.equal((await s.search({},fresh.token,A,org,'192.0.2.21')).statusCode,200);
+  let reads=1;
+  while(reads<READ_BUDGET_PER_MINUTE) {
+    const response=await s.app.inject({url:customerPath()+'/'+row.id,cookies:s.cookies(fresh.token),remoteAddress:'192.0.2.21'});
+    assert.equal(response.statusCode,200,'read '+reads+' of '+READ_BUDGET_PER_MINUTE);
+    reads++;
+  }
+  const global=await s.app.inject({url:customerPath()+'/'+row.id,cookies:s.cookies(fresh.token),remoteAddress:'192.0.2.21'});
   assert.equal(global.statusCode,429);assert.equal(global.json().error.code,'RATE_LIMITED');
+  // That ceiling is the session's, so an untouched session from the same address is unaffected.
+  const other=await s.grant('operator',[A]);
+  assert.equal((await s.app.inject({url:customerPath()+'/'+row.id,cookies:s.cookies(other.token),remoteAddress:'192.0.2.21'})).statusCode,200);
 });
 
 await test('mutation/audit/receipt failures roll back all effects and lost COMMIT reply safely replays',{timeout:30000},async t=>{

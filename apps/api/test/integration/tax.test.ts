@@ -66,3 +66,33 @@ it('reproduces M01, M04 and M06 contract fixtures and large safe integer arithme
   expect(large.tax_total_paise).toBe(Number((4_000_000_000_000_001n+10n)/20n));
   expect(large.components.reduce((sum,c) => sum+BigInt(c.amount_paise),0n)).toBe(BigInt(large.tax_total_paise));
 });
+
+/**
+ * A shop configuring GST for the first time has no saved GSTIN to fall back on. The settings
+ * form offers "leave blank to keep the saved one", and the code took that literally even when
+ * nothing was saved — passing `undefined` into the policy validator, which rejected it as a
+ * malformed GSTIN and reported the fault against the field `tax`. The operator saw only
+ * "the server rejected the change (VALIDATION_FAILED)" with no way to tell which of three
+ * fields was wrong.
+ */
+it('names the GST field at fault instead of rejecting the whole settings change', async () => {
+  const { settingsInput, settingsPolicy } = await import('../../src/modules/tax/business-settings.ts');
+  const now = new Date(start);
+  const saved = { policy: { supplier_gstin: '27ABCDE1234F1Z5' } } as unknown as PolicyRow;
+  const attempt = (body: Record<string, unknown>, existing: PolicyRow | null = null) =>
+    settingsPolicy(settingsInput(body), now, existing);
+
+  const firstSave = { mode: 'courier18', supplier_state: '27', supplier_gstin: '', expected_version: 0 };
+  expect(() => attempt(firstSave)).toThrowError(
+    expect.objectContaining({ details: [{ field: 'supplier_gstin', code: 'REQUIRED' }] }));
+
+  // A blank GSTIN still means "keep the saved one" once there is one to keep.
+  expect(attempt(firstSave, saved).supplier_gstin).toBe('27ABCDE1234F1Z5');
+
+  // A GSTIN belonging to another state is the single most likely typo here, and it has to
+  // read as a GSTIN problem rather than as an unexplained rejection.
+  expect(() => attempt({ ...firstSave, supplier_gstin: '29ABCDE1234F1Z5' })).toThrowError(
+    expect.objectContaining({ details: [{ field: 'supplier_gstin', code: 'INVALID_FORMAT' }] }));
+
+  expect(attempt({ ...firstSave, supplier_gstin: '27ABCDE1234F1Z5' }).supplier_gstin).toBe('27ABCDE1234F1Z5');
+});

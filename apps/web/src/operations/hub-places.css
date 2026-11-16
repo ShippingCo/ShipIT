@@ -1,0 +1,58 @@
+/* The hub picker. See HubPlacePicker.tsx for why this exists at all. */
+.hub-picker { display: grid; gap: 12px; }
+.hub-picker-label {
+  margin: 0; font-size: 15px; line-height: 21px; font-weight: 600; color: var(--md-on-surface);
+}
+.hub-picker-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* A named place is a target, not a line of text: 44px tall, icon first, and it holds
+   a visible selected state so the operator can see which shed they just said. */
+.hub-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 10px 16px;
+  border: 1px solid var(--workspace-border); border-radius: var(--shape-full);
+  background: white; color: var(--md-on-surface);
+  font-size: 15px; font-weight: 550; line-height: 21px;
+  transition: background-color var(--dur-s), border-color var(--dur-s), box-shadow var(--dur-s);
+}
+.hub-chip .msym { font-size: 19px; color: var(--md-on-surface-variant); flex: none; }
+.hub-chip:hover:not(:disabled) { border-color: var(--md-outline); }
+.hub-chip[aria-checked="true"] {
+  background: var(--md-primary); border-color: var(--md-primary); color: white;
+  box-shadow: var(--elev-card);
+}
+.hub-chip[aria-checked="true"] .msym { color: white; }
+.hub-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.hub-chip-add { border-style: dashed; color: var(--md-primary); }
+.hub-chip-add .msym { color: var(--md-primary); }
+
+.hub-picker-add { display: grid; gap: 12px; max-width: 380px; }
+.hub-picker-add-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hub-picker-forget {
+  justify-self: start; padding: 6px 0; min-height: 44px; border: 0; background: none;
+  font-size: 15px; color: var(--md-on-surface-variant); text-decoration: underline;
+}
+@media (prefers-reduced-motion: reduce) { .hub-chip { transition: none; } }
+
+/* ---- The check-in sheet ---------------------------------------------------- */
+/* What is about to happen, in one list the operator can count against the parcels
+   in their hands. The reference the server needs is minted here, not typed. */
+.hub-confirm { display: grid; gap: 18px; }
+.hub-confirm-count {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 17px; line-height: 24px; font-weight: 650; color: var(--md-on-surface);
+}
+.hub-confirm-count .msym { font-size: 24px; color: var(--md-primary); }
+.hub-dockets {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none;
+}
+.hub-dockets li {
+  padding: 7px 13px; border-radius: var(--shape-full);
+  background: var(--workspace-rail-hover);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 15px; line-height: 21px; font-weight: 600; color: var(--md-on-surface);
+}
+/* The audit reference. Present and copyable, but the size of a footnote: it is for
+   the person who later asks "which check-in was that", not for the clerk. */
+.hub-confirm-ref { margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
+.hub-confirm-ref code { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; overflow-wrap: anywhere; }

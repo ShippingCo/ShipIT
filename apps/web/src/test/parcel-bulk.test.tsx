@@ -58,13 +58,13 @@ it('keyboard-reachable selection/action/retry, disabled pending state and live t
   render(<BulkParcelPanel controller={s.controller} action="check_in" candidates={items.map((item,i)=>({label:`Parcel ${i+1}`,item}))} refreshFailed={refresh}/>);
   const boxes=screen.getAllByRole('checkbox');
   for(const box of boxes){box.focus();expect(document.activeElement).toBe(box);fireEvent.click(box);}
-  const action=screen.getByRole('button',{name:'Check in at hub'});action.focus();fireEvent.click(action);
+  const action=screen.getByRole('button',{name:/^Check in \d+ parcels?$/});action.focus();fireEvent.click(action);
   await waitFor(()=>expect(action).toBeDisabled());expect(boxes[0]).toBeDisabled();expect(screen.getByRole('status')).toHaveTextContent('Processing');
   await act(async()=>{finish(json(mixed));});
   expect(document.activeElement).toBe(screen.getByRole('status'));
   expect(screen.getByRole('status')).toHaveTextContent('2 selected · 1 completed · 2 need attention');
-  expect(boxes[0]).not.toBeChecked();expect(boxes[1]).toBeChecked();expect(screen.getByText('Version changed. Refresh before retry.')).toBeVisible();
-  const retry=screen.getByRole('button',{name:'Retry failed'});retry.focus();expect(document.activeElement).toBe(retry);expect(retry).toBeEnabled();
+  expect(boxes[0]).not.toBeChecked();expect(boxes[1]).toBeChecked();expect(screen.getByText('Someone else changed this parcel. Reload and try it again.')).toBeVisible();
+  const retry=screen.getByRole('button',{name:'Try the ones that failed'});retry.focus();expect(document.activeElement).toBe(retry);expect(retry).toBeEnabled();
   fireEvent.click(retry);await waitFor(()=>expect(s.calls).toHaveLength(2));
   expect((JSON.parse(String(s.calls[1].options.body)) as BulkParcelRequest).items.map(item=>item.parcel_id)).toEqual([id(2),id(3)]);
   await act(async()=>{finish(json({action:'check_in',items:mixed.items.slice(1),summary:{succeeded:0,failed:2}}));});

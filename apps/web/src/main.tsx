@@ -10,6 +10,7 @@ import './operations/finance-layouts.css';
 import './operations/service-layouts.css';
 import './styles/studio.css';
 import './styles/forms.css';
+import './styles/readability.css'; // after every screen sheet: the 15px/44px floor wins
 import './styles/tailwind.css'; // last: utilities must be able to win
 
 const container = document.getElementById('root');

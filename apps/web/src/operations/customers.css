@@ -1,0 +1,120 @@
+/* Customers
+   ---------------------------------------------------------------------------
+   A search box, a list of people, and one person at a time.
+
+   The list is rows rather than a table on purpose. A table sets every column to
+   the width of its widest value, so one long address makes every other row
+   taller; a row of three parts — mark, name, figure — holds its height whatever
+   is in it, and truncates the one part that can afford to be truncated. */
+
+.customer-find { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.customer-find > .tf, .customer-find > .counter-phone-field { flex: 1 1 320px; min-width: 0; max-width: 520px; }
+.customer-find > .btn { margin-top: 6px; }
+
+.customer-limited {
+  margin: 0 0 16px; padding: 12px 16px; border-radius: 10px;
+  border: 1px solid var(--md-outline-variant); background: var(--md-warning-container, var(--grey-100));
+  color: var(--md-on-surface); font-size: 15px; line-height: 21px;
+}
+
+.customer-results { list-style: none; margin: 12px 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.customer-row {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px;
+  padding: 12px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  border: 1px solid var(--md-outline-variant); border-radius: 12px; background: var(--md-surface);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.customer-row:hover { border-color: var(--md-outline); background: var(--state-hover); }
+.customer-row:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+
+/* Initials, not a photograph and not an icon: two letters tell the operator they have the
+   right person at a glance, and the product has no picture of anyone to show. */
+.cr-initials {
+  flex: none; width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--md-primary-container); color: var(--md-on-primary-container);
+  font-size: 15px; font-weight: 650; letter-spacing: 0.02em;
+}
+.cr-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cr-name { font-size: 17px; line-height: 23px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-meta { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Owed is coloured only when there is something owed. A grey zero is a fact; a red zero is a scare. */
+.cr-owed { flex: none; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--md-on-surface-variant); }
+.cr-owed.is-owed { color: var(--md-error); font-weight: 650; }
+.customer-row .msym { flex: none; color: var(--md-on-surface-variant); }
+
+.customer-none, .customer-search-failed {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  padding: 24px 0;
+}
+.customer-none .msym { font-size: 32px; color: var(--md-on-surface-variant); }
+.customer-none p { margin: 0; font-size: 17px; }
+
+/* ---- one customer ---------------------------------------------------- */
+
+.customer-profile { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+.customer-profile > * { width: 100%; }
+.customer-profile > .btn { width: auto; }
+.customer-contact { margin: 0; font-size: 17px; line-height: 24px; color: var(--md-on-surface-variant); }
+
+.customer-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .customer-figures { grid-template-columns: 1fr; } }
+.cust-figure {
+  padding: 18px 20px; border: 1px solid var(--md-outline-variant); border-radius: 14px;
+  background: var(--md-surface); display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.cf-label { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+.cf-value {
+  margin: 0; font-size: 30px; line-height: 36px; font-weight: 700;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--md-on-surface);
+}
+.cf-value.is-owed { color: var(--md-error); }
+.cf-value.is-quiet { font-size: 22px; line-height: 30px; color: var(--md-on-surface-variant); font-weight: 600; }
+.cf-foot { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+
+.customer-credit {
+  padding: 18px 20px; border: 1px solid var(--md-outline-variant); border-radius: 14px;
+  background: var(--md-surface); display: flex; flex-direction: column; gap: 12px; align-items: flex-start;
+}
+.customer-credit h2 { margin: 0; }
+.customer-credit dl { display: flex; gap: 28px; flex-wrap: wrap; margin: 0; }
+.customer-credit dt { margin: 0; font-size: 15px; color: var(--md-on-surface-variant); }
+.customer-credit dd { margin: 2px 0 0; font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.customer-overlimit {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--md-outline-variant); background: var(--md-warning-container, var(--grey-100));
+  font-size: 15px; line-height: 21px;
+}
+.customer-overlimit .msym { flex: none; font-size: 19px; }
+
+.customer-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; padding: 0; }
+.customer-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: var(--touch-min, 44px);
+  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface); color: inherit; text-decoration: none; font-size: 15px;
+}
+a.customer-chip:hover { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+a.customer-chip:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.customer-chip b { font-variant-numeric: tabular-nums; }
+
+.customer-parcels { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.customer-parcels li {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 16px; border: 1px solid var(--md-outline-variant); border-radius: 12px;
+  font-size: 15px; line-height: 21px; min-height: var(--touch-min, 44px);
+}
+.customer-parcels li > span:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+
+.customer-edit {
+  padding: 20px; border: 1px solid var(--md-outline-variant); border-radius: 14px;
+  background: var(--md-surface); display: flex; flex-direction: column; gap: 14px;
+}
+.customer-edit h2 { margin: 0; }
+.customer-clash {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--md-outline-variant); background: var(--md-warning-container, var(--grey-100));
+  font-size: 15px; line-height: 21px;
+}
+.customer-clash .msym { flex: none; font-size: 19px; }
+/* The sentence that makes this form usable: what it changes, and what it leaves alone. */
+.customer-blast { margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); max-width: 70ch; }

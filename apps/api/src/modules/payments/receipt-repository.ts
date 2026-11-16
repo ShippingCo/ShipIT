@@ -93,7 +93,7 @@ export async function customerReceiptIds(scope:TenantAccess,customer:string,curs
  WHERE {{franchise:organization_id:franchise_id}} AND customer_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3`,[customer,cursor,limit])).rows;
 }
 export async function customerBookingIds(scope:TenantAccess,customer:string,cursor:string|null,limit:number) {
- return (await scopedQuery<{id:string}>(scope,['money_receipts.select'],`SELECT b.id FROM shipit.bookings b
+ return (await scopedQuery<{id:string;confirmed_at:Date}>(scope,['money_receipts.select'],`SELECT b.id,b.confirmed_at FROM shipit.bookings b
  JOIN shipit.booking_obligations o ON o.organization_id=b.organization_id AND o.franchise_id=b.franchise_id AND o.booking_id=b.id
  WHERE {{franchise:b.organization_id:b.franchise_id}} AND COALESCE((SELECT (c.result->'account'->'debtor'->>'source_customer_id')::uuid FROM shipit.booking_commands c WHERE c.organization_id=b.organization_id AND c.franchise_id=b.franchise_id AND c.id=b.command_id AND c.state='committed'),b.customer_id)=$1 AND ($2::uuid IS NULL OR b.id>$2) ORDER BY b.id LIMIT $3`,[customer,cursor,limit])).rows;
 }

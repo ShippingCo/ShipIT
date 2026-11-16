@@ -22,9 +22,13 @@ it('retains partial decimal editing and updates after an external draft change',
  fireEvent.click(screen.getByRole('button',{name:'Change source'}));expect(input).toHaveValue('1.25');
  fireEvent.change(input,{target:{value:'1e3'}});expect(input).toHaveValue('1e3');expect(screen.getByLabelText('grams')).toHaveTextContent('invalid-decimal');
 });
-it('accepts only published rate choices and discards unneeded pricing details',()=>{
- const parsed=publishedChoices(rateCard);expect(parsed.rules).toEqual([{destination_key:'SYN_DEST',service:'standard'}]);
- expect(parsed).not.toHaveProperty('approval_ref');expect(parsed.rules[0]).not.toHaveProperty('freight_paise');
+// The decoder keeps each rule's weight band and its two amounts, because the counter shows
+// what every service costs at this parcel's weight and must not ask the server once per card.
+// Nothing new is exposed: this is the shop's own published card, already in this response to
+// this same operator. Everything the counter has no use for is still discarded.
+it('accepts only published rate choices, keeping the prices it quotes from and nothing else',()=>{
+ const parsed=publishedChoices(rateCard);expect(parsed.rules).toEqual([{destination_key:'SYN_DEST',service:'standard',min_weight_grams:1,max_weight_grams:null,freight_paise:12551,packing_paise:249}]);
+ expect(parsed).not.toHaveProperty('approval_ref');expect(parsed.rules[0]).not.toHaveProperty('id');
  expect(()=>publishedChoices({...rateCard,state:'draft'})).toThrow();
  expect(()=>publishedChoices({...rateCard,rules:[{destination_key:'SYN_DEST',service:'unknown'}]})).toThrow();
 });

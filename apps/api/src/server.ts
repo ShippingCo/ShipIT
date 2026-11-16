@@ -76,8 +76,8 @@ import { createAuditService } from './modules/audit/service.ts';
 import { registerAudit } from './modules/audit/routes.ts';
 import { registerSecurityAudit } from './modules/audit/security.ts';
 import { createSecurityCounters, type SecurityTelemetry } from './modules/audit/telemetry.ts';
-import { randomUUID } from 'node:crypto';
-import Fastify, { LogController, type FastifyInstance } from 'fastify';
+import { createHash, randomUUID } from 'node:crypto';
+import Fastify, { LogController, type FastifyInstance, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
@@ -98,6 +98,16 @@ import { registerDeliveries } from './modules/deliveries/routes.ts';
 import type { DeliveryProofConfiguration } from './modules/deliveries/types.ts';
 
 export interface ServerDependencies { config: RuntimeConfig; database: DatabasePool; logSink?: LogSink; auth?: AuthConfiguration; securityTelemetry?: SecurityTelemetry; pricingClock?:()=>Date; attachments?:AttachmentDependencies; whatsapp?:WhatsappDependencies;deliveryProof?:DeliveryProofConfiguration }
+/**
+ * Per-identity budgets for one minute. Reads are far larger than writes because a single
+ * screen load is many reads, and a burst of them must never spend a cashier's ability to
+ * save. Exported so tests assert the configured number rather than a copy of it.
+ */
+export const READ_BUDGET_PER_MINUTE = 1200;
+export const WRITE_BUDGET_PER_MINUTE = 240;
+/** Customer search is stricter than the general read budget: it reads other people's data. */
+export const CUSTOMER_SEARCH_BUDGET_PER_MINUTE = 30;
+
 export function buildServer({ config, database, logSink, auth, securityTelemetry=createSecurityCounters(), pricingClock, attachments, whatsapp, deliveryProof }: ServerDependencies) {
   const app: FastifyInstance = Fastify({
     logger: loggerOptions(config, logSink),
@@ -128,7 +138,22 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', ...(auth ? ['X-CSRF-Token'] : [])], exposedHeaders: ['x-request-id'],
     strictPreflight: true, maxAge: 600,
   });
-  app.register(rateLimit, { max: 120, timeWindow: 60_000, cache: 10_000,
+  // One shop is one IP. Keying the limiter on the address made every counter in a
+  // branch share a single budget, so ordinary navigation produced real 429s. Key on the
+  // session when the request carries one, and give reads their own, larger budget than
+  // writes so a burst of screen loads can never spend a cashier's ability to save.
+  const sessionCookie = /(?:^|;\s*)(?:__Host-)?shipit_session=([^;]+)/;
+  const rateLimitKey = (request: FastifyRequest) => {
+    const matched = sessionCookie.exec(request.headers.cookie ?? '');
+    const identity = matched
+      ? 's:' + createHash('sha256').update(matched[1]!).digest('base64url').slice(0, 22)
+      : 'i:' + request.ip;
+    // Separate buckets: a read burst must not consume the write allowance for the same actor.
+    return identity + (request.method === 'GET' || request.method === 'HEAD' ? ':r' : ':w');
+  };
+  app.register(rateLimit, {
+    max: request => (request.method === 'GET' || request.method === 'HEAD' ? READ_BUDGET_PER_MINUTE : WRITE_BUDGET_PER_MINUTE),
+    timeWindow: 60_000, cache: 20_000, keyGenerator: rateLimitKey,
     errorResponseBuilder: () => new HttpError('RATE_LIMITED'),
   });
   app.after(() => {
@@ -154,7 +179,12 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
       registerBookings(instance,createBookingService(database,auth.keys.browser,pricingClock,config.customerAccountWritesEnabled===true&&config.environment!=='demo'),config.environment!=='developer');
       const parcelService=createParcelService(database,pricingClock);
       registerParcelCommands(instance,parcelService,config.environment!=='developer',createParcelBulkService(database,parcelService));
+      // Without recipient-proof configuration the whole prefix used to be unrouted, so the
+      // screen got a bare 404 and offered a Retry that could never succeed. Answer the prefix
+      // either way: configured, the real service; unconfigured, a named, final 409.
       if(deliveryProof)registerDeliveries(instance,createDeliveryService(database,deliveryProof,whatsapp,pricingClock),config.environment!=='developer');
+      else{const unconfigured=()=>{throw new HttpError('DELIVERIES_DISABLED');};
+        for(const path of ['/api/v1/deliveries','/api/v1/deliveries/*']){instance.get(path,unconfigured);instance.post(path,unconfigured);}}
       registerRoutes(instance,createRouteService(database,auth.keys.browser,whatsapp),config.environment!=='developer',createRouteEventService(database),createRouteDelayReminderService(database,pricingClock));
       registerCustody(instance,database,config.environment!=='developer',config.custodyWritesEnabled===true&&config.environment!=='demo');
       const cashbookWrites=config.cashbookWritesEnabled===true&&config.environment!=='demo';

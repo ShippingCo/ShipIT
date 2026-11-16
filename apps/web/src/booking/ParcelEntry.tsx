@@ -4,6 +4,7 @@ import {Msym} from '../components/m3/Icon';
 import {ConfirmDialog} from '../components/m3/Dialog';
 import {PhoneField} from './PhoneField';
 import {UnitField,displayUnits} from './UnitField';
+import {WeightField,ParcelSize} from './WeightField';
 import {parcelErrors,receiverFields,type Errors,type ParcelDraft} from './form';
 
 const contentsTypes = [
@@ -42,12 +43,15 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
     {primaryFields}
     <div className="counter-grid">
       {!primaryFields&&<><TextField {...props('docket')} label={label('Docket number','docket number')} maxLength={32} autoComplete="off" spellCheck={false} autoCapitalize="characters"/>
-      <UnitField {...props('weight')} places={3} label={first?'Weight (kg)':'Package '+number+' · Weight (kg)'} placeholder="e.g. 0.5" error={errors.weight?'Enter a positive weight in kg, with up to three decimal places.':undefined}/></>}
+      <WeightField id={id('weight')} label={first?'Weight':'Package '+number+' · Weight'} value={parcel.weight} unit={parcel.weightUnit} disabled={disabled}
+        error={errors.weight?'Enter a positive weight, greater than zero.':undefined}
+        onChange={value=>onChange('weight',value)} onUnit={value=>onChange('weightUnit',value)}/></>}
       <SelectField {...props('contentsType')} label={label('Contents type','contents type')} options={contentsTypes}/>
       <TextField {...props('contentsDescription')} label={label('Contents description','contents description')} maxLength={200} placeholder="e.g. Cotton shirts"/>
       {['liquid','semi_liquid'].includes(parcel.contentsType)&&
         <UnitField {...props('liquidQuantity')} places={3} label={label('Liquid quantity (litres)','liquid quantity (litres)')}/>}
-      {!primaryFields&&<UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} helper="Optional"/>}
+      {!primaryFields&&<ParcelSize parcel={parcel} disabled={disabled} errors={errors} idFor={id} labelFor={side=>label(side,side.toLowerCase())} onChange={onChange}/>}
+      {!primaryFields&&<UnitField {...props('declaredValue')} places={2} label={label('Declared goods value (₹)','declared goods value (₹)')} className="is-optional"/>}
     </div>
     {!hideReceiver&&<>
     <h3 className="parcel-receiver-heading"><Msym name="pin_drop"/>Receiver {first?'':'for parcel '+number}<small className="booking-receiver-country">India</small></h3>
@@ -59,8 +63,8 @@ export function ParcelEntry({parcel,number,errors,disabled,onChange,onRemove,ear
       <ConfirmDialog open={replaceOpen} onClose={()=>setReplaceOpen(false)} title={'Replace receiver on parcel '+number+'?'} body={'Copy the receiver and delivery address from parcel '+sourceNumber+'. Fields left blank on the source parcel will also be blank here. Your docket, contents and weight stay saved in this draft.'} confirmLabel="Replace receiver" onConfirm={applyCopy}/>
     </div>}
     <div className="counter-grid booking-address-grid">
-      <TextField {...props('recipientName')} label={label('Recipient name','recipient name')} helper="Optional" maxLength={120}/>
-      <PhoneField {...props('recipientPhone')} label={label('Recipient phone','recipient phone')} helper="Optional. Add a number for delivery updates and the recipient code."/>
+      <TextField {...props('recipientName')} label={label('Recipient name','recipient name')} className="is-optional" maxLength={120}/>
+      <PhoneField {...props('recipientPhone')} label={label('Recipient phone','recipient phone')} className="is-optional" helper=""/>
       <TextField {...props('recipientAddress')} label={label('Recipient address','recipient address')} maxLength={500} className="booking-span" placeholder="Building, street and area"/>
 
       <TextField {...props('recipientPin')} label={label('PIN code','PIN code')} inputMode="numeric" maxLength={6}/>

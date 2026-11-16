@@ -80,11 +80,45 @@ export interface SegmentedControlProps<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
   className?: string;
+  /** Accessible name for the group. Required when the control has no visible label beside it. */
+  label?: string;
+  /**
+   * Render as a radiogroup rather than a group of toggles.
+   *
+   * A set of choices where exactly one is always true is a radiogroup, and a screen reader
+   * announces it as "1 of 3" rather than reading three independent pressed states. It also
+   * carries one tab stop and moves between options with the arrow keys, which is what a
+   * keyboard user expects of a choice and not of a row of buttons.
+   */
+  radio?: boolean;
 }
 
-export function SegmentedControl<T extends string = string>({ options, value, onChange, className }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string = string>({ options, value, onChange, className, label, radio = false }: SegmentedControlProps<T>) {
+  const container = React.useRef<HTMLDivElement>(null);
+  const move = (delta: number) => {
+    const index = options.findIndex((o) => o.value === value);
+    const next = options[(index + delta + options.length) % options.length];
+    if (!next) return;
+    onChange(next.value);
+    // Focus follows selection in a radiogroup, so the arrow key moves the ring as well as the choice.
+    window.requestAnimationFrame(() => {
+      container.current?.querySelectorAll<HTMLButtonElement>('.seg-btn')[options.indexOf(next)]?.focus();
+    });
+  };
   return (
-    <div className={cx('seg', className)} role="group">
+    <div
+      ref={container}
+      className={cx('seg', className)}
+      role={radio ? 'radiogroup' : 'group'}
+      aria-label={label}
+      onKeyDown={radio ? (event) => {
+        const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+        if (!delta) return;
+        event.preventDefault();
+        move(delta);
+      } : undefined}
+    >
       {options.map((o) => {
         const selected = value === o.value;
         return (
@@ -92,7 +126,10 @@ export function SegmentedControl<T extends string = string>({ options, value, on
             key={o.value}
             type="button"
             className={cx('seg-btn', selected && 'on')}
-            aria-pressed={selected}
+            role={radio ? 'radio' : undefined}
+            aria-checked={radio ? selected : undefined}
+            aria-pressed={radio ? undefined : selected}
+            tabIndex={radio && !selected ? -1 : undefined}
             onClick={() => onChange(o.value)}
           >
             <Msym name="check" />

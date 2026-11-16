@@ -41,42 +41,57 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 const fill=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label,{exact:true}),{target:{value}});
 async function start(){render(<App/>);await screen.findByRole('heading',{name:'New booking',level:1});await waitFor(()=>expect(document.querySelector('#booking-cities option')).not.toBeNull());}
-function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
+function core(paid=false){fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');fill('Docket number','00123-A');fill('Weight (kg)','0.999');chooseService();fill('Freight ₹','125.51');fill('Packing ₹','2.49');if(!paid)fireEvent.click(screen.getByRole('button',{name:'To Pay'}));}
+// Nothing is priced until a service is chosen (R-19): a pre-selected tier is a tier sold by
+// accident, so the counter now makes the operator say which one — and so must the test.
+const chooseService=()=>{const card=screen.queryByRole('radio',{name:/Standard/});if(card)fireEvent.click(card);else fill('Service','standard');};
 async function calculate(){await waitFor(()=>expect(summary().getByText('₹151.04')).toBeVisible());}
 async function entered(paid=false){await start();core(paid);await calculate();}
 const summary=()=>within(screen.getByRole('complementary',{name:'Booking summary'}));
-const save=()=>fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+const save=()=>fireEvent.click(screen.getByRole('button',{name:/^Save booking/}));
+const payBy=(label:string)=>fireEvent.click(screen.getByRole('button',{name:label}));
+// A form that cannot become a booking names its button differently, before it is pressed.
+const saveDraft=()=>fireEvent.click(screen.getByRole('button',{name:'Save as draft'}));
 async function recalculate(){await calculate();}
 function addPackage(number:number){fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel '+number+' docket number','SYN-PACK-'+number);fill('Package '+number+' · Weight (kg)','0.5');fireEvent.click(screen.getAllByRole('button',{name:'Use receiver from parcel 1'}).at(-1)!);}
 
 describe('production counter API composition',{timeout:20000},()=>{
- it('confirms a booking with all user fields blank and no fabricated contact or charges',async()=>{
-  await start();fill('Weight (kg)','');save();await screen.findByRole('heading',{name:'Booking saved'});
+ it('keeps a blank form as a named draft, never as a confirmed booking',async()=>{
+  await start();fill('Weight (kg)','');
+  // The main button always means a booking; keeping a draft is its own, quieter action.
+  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'Save as draft'})).toBeVisible();
+  saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'',phone:'',docket:'',weight:'',override:'',packing:''});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
   expect(posts('/api/v1/pricing/quote')).toHaveLength(0);
-  expect(screen.getByRole('status')).toHaveTextContent('Confirmed. All entered details have been saved.');
+  expect(screen.getByRole('status')).toHaveTextContent('not a booking yet');
  });
  it('saves partial confirmed details without requiring freight, phone or destination',async()=>{
-  await start();fill('Customer name','Partial sender');fill('Delivery address','Partial address');fill('Packing ₹','39');save();
-  await screen.findByRole('heading',{name:'Booking saved'});
+  await start();fill('Customer name','Partial sender');fill('Delivery address','Partial address');fill('Packing ₹','39');saveDraft();
+  await screen.findByRole('heading',{name:'Draft saved'});
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'Partial sender',recipientAddress:'Partial address',phone:'',destination:'',packing:'3900',override:''});
  });
  it('retries an uncertain optional save with the same key and unchanged fields',async()=>{
   let fail=true;override=c=>c.path.startsWith('/api/v1/bookings/entries?')&&c.options.method==='POST'&&fail?Promise.reject(new TypeError('offline')):undefined;
-  await start();fill('Customer name','Retained entry');save();await screen.findByText(/Outcome uncertain/);
+  await start();fill('Customer name','Retained entry');saveDraft();await screen.findByText(/Outcome uncertain/);
   const first=posts('/api/v1/bookings/entries?')[0];expect(screen.getByLabelText('Customer name')).toBeDisabled();
-  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Booking saved'});
+  fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Draft saved'});
   const second=posts('/api/v1/bookings/entries?')[1];expect(key(second)).toBe(key(first));expect(body(second)).toEqual(body(first));expect(savedEntries).toHaveLength(1);
  });
- it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
+ it('keeps one page in working order, sender then delivery then parcel then charges, with no separate steps',async()=>{
+  // The order follows the conversation at the counter: who is sending, where it is going,
+  // what it is, what it costs. The city and the delivery address sit together because they
+  // answer the same question; freight leads packing because it is the larger figure.
   await start();
-  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
-  for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
-  for(const name of ['Photo','Video','Voice note','Add package','Save booking','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
+  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Destination city','Delivery address','Docket number','Weight (kg)','Length (cm)','Width (cm)','Height (cm)','Declared goods value ₹','Add to lot','Service','Freight ₹','Packing ₹']);
+  for(const name of ['Customer','Delivery','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
+  // A new booking starts with the cursor in the first field.
+  expect(screen.getByLabelText('WhatsApp number')).toHaveFocus();
+  for(const name of ['Photo','Video','Voice note','Add package','Save as draft','Discard this draft'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
-  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Paid now'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','true');
  });
  it('looks up repeat customers on phone blur and only fills the selected customer',async()=>{
   await start();fill('WhatsApp number',f.customer.phone_display);fireEvent.blur(screen.getByLabelText('WhatsApp number'));
@@ -88,10 +103,47 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();save();await screen.findByRole('alert');expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
   reject=false;save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(1);
  });
- it('preserves entered contact details without replacing an ambiguous existing customer',async()=>{
-  await start();core();fill('Customer name','Another sender');save();await screen.findByRole('heading',{name:'Booking saved'});
+ it('asks which customer a reused phone belongs to instead of silently keeping a draft',async()=>{
+  // A saved customer with this phone under a different name is not a reason to stop booking.
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
   expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);
-  expect(body(posts('/api/v1/bookings/entries?')[0]).fields.name).toBe('Another sender');
+  expect(screen.queryByRole('heading',{name:'Draft saved'})).toBeNull();
+  expect(dialog.getByText(f.customer.name)).toBeVisible();
+  expect(dialog.getByText('Another sender')).toBeVisible();
+  // Choosing the saved customer carries the same booking through to a real booking.
+  fireEvent.click(dialog.getByText(f.customer.name).closest('button')!);
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('can keep the typed name as a new customer instead',async()=>{
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  fireEvent.click(dialog.getByText(/A different person/).closest('button')!);
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(body(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)[0]).name).toBe('Another sender');
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+ it('never lets the customer question end in another draft',async()=>{
+  // Reaching this dialog means Save booking was pressed on a complete form. A draft escape
+  // here let a reopened draft loop straight back into another draft, forever.
+  await start();core();fill('Customer name','Another sender');save();
+  const dialog=within(await screen.findByRole('dialog',{name:'Is this the same customer?'}));
+  expect(dialog.queryByRole('button',{name:/draft/i})).toBeNull();
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+  // Leaving the question unanswered returns to the form with everything still typed.
+  fireEvent.click(dialog.getByRole('button',{name:'Keep editing'}));
+  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.getByLabelText('Customer name')).toHaveValue('Another sender');
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('does not ask about a saved customer whose name differs only by case or spacing',async()=>{
+  await start();core();fill('Customer name','  '+f.customer.name.toUpperCase()+' ');save();
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(screen.queryByRole('dialog',{name:'Is this the same customer?'})).toBeNull();
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
  it('does not treat failed customer lookup as a new customer',async()=>{
   await entered();override=c=>c.path.includes('/customers?')?Promise.reject(new TypeError('offline')):undefined;
@@ -121,14 +173,14 @@ describe('production counter API composition',{timeout:20000},()=>{
   await entered();fill('Declared goods value ₹','1000.01');save();await screen.findByRole('heading',{name:'Booking saved'});expect(body(posts('/api/v1/bookings?')[0]).parcels[0].details).toEqual({declared_value_paise:100001});
  });
  it('preserves an unassessed decimal entry without inventing a calculated charge',async()=>{
-  await entered();fill('Freight ₹','12.345');save();await screen.findByRole('heading',{name:'Booking saved'});
+  await entered();fill('Freight ₹','12.345');saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields.override).toBe('invalid-decimal:12.345');expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
  it('continues converting valid packing and freight to exact paise',async()=>{
   await entered();fill('Packing ₹','3.01');await recalculate();expect(body(posts('/api/v1/pricing/quote').at(-1)!)).toMatchObject({charges:{freight_paise:12551,packing_paise:301}});
  });
  it('payment choices and implicit form submission never confirm a booking',async()=>{
-  await entered();fireEvent.click(screen.getByRole('button',{name:'Paid now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:'Save booking'})).toHaveAttribute('type','button');
+  await entered();fireEvent.click(screen.getByRole('button',{name:'Cash now'}));fireEvent.submit(screen.getByRole('form',{name:'New booking'}));expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(screen.getByRole('button',{name:/^Save booking/})).toHaveAttribute('type','button');
  });
  it('prints only after saving and does not recreate a booking when printing is cancelled',async()=>{
   const print=vi.spyOn(window,'print').mockImplementation(()=>{});await entered();expect(print).not.toHaveBeenCalled();save();await screen.findByRole('heading',{name:'Booking saved'});fireEvent.click(screen.getByRole('button',{name:'Print booking receipt'}));await waitFor(()=>expect(print).toHaveBeenCalledTimes(1));fireEvent.click(screen.getByRole('button',{name:'Print booking receipt'}));await waitFor(()=>expect(print).toHaveBeenCalledTimes(2));expect(posts('/api/v1/bookings?')).toHaveLength(1);
@@ -141,7 +193,7 @@ describe('production counter API composition',{timeout:20000},()=>{
   fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fireEvent.click(screen.getByRole('button',{name:'Keep booking'}));expect(posts(cancelPath)).toHaveLength(0);fireEvent.click(screen.getByRole('button',{name:'Cancel saved booking'}));await screen.findByLabelText('Reason for cancellation');fill('Reason for cancellation','Sender withdrew all packages');fireEvent.click(screen.getByRole('button',{name:'Confirm cancellation'}));await screen.findByText('Cancelled 3 parcels in this booking.');fireEvent.click(screen.getByRole('button',{name:'Done'}));expect(screen.getByRole('heading',{name:'Booking cancelled',level:1})).toBeVisible();expect(posts(cancelPath)).toHaveLength(1);
  });
  it('records entered duplicate dockets without creating conflicting dispatch parcels',async()=>{
-  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');save();await screen.findByRole('heading',{name:'Booking saved'});
+  await entered();addPackage(2);fill('Parcel 2 docket number','00123-a');saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(posts('/api/v1/bookings?')).toHaveLength(0);expect(body(posts('/api/v1/bookings/entries?')[0]).additional_parcels[0].docket).toBe('00123-a');
  });
  it('copies a chosen earlier receiver only on request and confirms replacements without changing parcel contents',async()=>{
@@ -165,8 +217,56 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Retry receipt'});fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
  });
- it('explicit save confirms an entry without requiring sender fields',async()=>{
-  await start();save();await screen.findByRole('heading',{name:'Booking saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ it('explicit save keeps a draft without requiring sender fields',async()=>{
+  await start();saveDraft();await screen.findByRole('heading',{name:'Draft saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('marks every missing required field red when Save booking is pressed, and never saves a draft for it',async()=>{
+  await start();
+  const invalid=(label:string)=>expect(screen.getByLabelText(label,{exact:true})).toHaveAttribute('aria-invalid','true');
+  // Nothing is red before the press: an untouched form is not a form full of mistakes.
+  expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+  for(const label of ['WhatsApp number','Customer name','Destination city','Docket number'])invalid(label);
+  // The delivery address is optional, so it is never marked.
+  expect(screen.getByLabelText('Delivery address',{exact:true})).not.toHaveAttribute('aria-invalid');
+  expect(screen.getByLabelText('Customer name')).toHaveAccessibleDescription('Enter the customer name.');
+  // The cursor goes to the first one, and nothing was sent anywhere.
+  await waitFor(()=>expect(screen.getByLabelText('WhatsApp number')).toHaveFocus());
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  expect(screen.queryByRole('heading',{name:'Draft saved'})).toBeNull();
+  // Filling a field clears its own mark.
+  fill('Docket number','00123-A');expect(screen.getByLabelText('Docket number',{exact:true})).not.toHaveAttribute('aria-invalid');
+  // A complete form books, and the draft action is no longer offered.
+  core();await calculate();
+  expect(screen.queryByRole('button',{name:'Save as draft'})).toBeNull();
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+ });
+ it('books from the published rate card without a typed freight amount',async()=>{
+  // A shop that has published its prices must be able to complete a booking from them.
+  // Requiring a hand-typed freight every time made the rate card unusable.
+  await start();
+  fill('Customer name',f.customer.name);fill('WhatsApp number',f.customer.phone_display);
+  fill('Delivery address','21 Fictional Street');fill('Destination city','SYN DEST');
+  fill('Docket number','00124-B');fill('Weight (kg)','0.999');chooseService();
+  await waitFor(()=>expect(posts('/api/v1/pricing/quote').length).toBeGreaterThan(0));
+  expect(body(posts('/api/v1/pricing/quote').at(-1)!)).not.toHaveProperty('charges');
+  await waitFor(()=>expect(screen.queryByText(/This cannot be booked yet/)).toBeNull());
+  // R-27: the button states the action and the amount it will take.
+  expect(screen.getByRole('button',{name:'Save booking and collect ₹151.04'})).toBeVisible();
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('offers a readable draft number and a way back into the same form',async()=>{
+  await start();fill('Customer name','Unfinished sender');fill('Delivery address','9 Fictional Road');saveDraft();
+  await screen.findByRole('heading',{name:'Draft saved'});
+  // Not the 36-character identifier the operator cannot read out or write down.
+  const code=screen.getByText(/^D-[0-9A-HJ-NP-Z]{6}$/);expect(code).toBeVisible();
+  expect(document.body.textContent).not.toContain(savedEntries[0]!.id);
+  fireEvent.click(screen.getByRole('button',{name:'Finish this booking'}));
+  expect(screen.getByLabelText('Customer name')).toHaveValue('Unfinished sender');
+  expect(screen.getByLabelText('Delivery address')).toHaveValue('9 Fictional Road');
+  expect(screen.getByRole('button',{name:'Save as draft'})).toBeVisible();
  });
  it.each(['VERSION_CONFLICT','ACTION_FORBIDDEN','RESOURCE_NOT_FOUND'])('handles safe %s without losing the draft or claiming success',async code=>{
   await entered();override=c=>c.path.startsWith('/api/v1/bookings?')?Promise.resolve(f.json({error:{code,private_details:'SYN_PRIVATE'}},code==='ACTION_FORBIDDEN'?403:code==='RESOURCE_NOT_FOUND'?404:409)):undefined;save();await screen.findByRole('alert');expect(screen.getByLabelText('Customer name')).toHaveValue(f.customer.name);expect(screen.queryByRole('heading',{name:'Booking saved'})).toBeNull();expect(document.body.textContent).not.toContain('SYN_PRIVATE');
@@ -191,20 +291,22 @@ describe('production counter API composition',{timeout:20000},()=>{
   const controller=createScopeController();await controller.load();const flow=createBookingWorkflow(controller);flow.activate();flow.change('name','Synthetic private draft');const generation=controller.runtime.ticket().generation;
   await controller.revalidate();expect(controller.runtime.ticket().generation).toBe(generation);expect(flow.snapshot().draft.name).toBe('Synthetic private draft');
   override=c=>c.path.startsWith('/api/v1/operator-context')?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;
-  await controller.revalidate();expect(flow.snapshot().draft.name).toBe('Synthetic private draft');expect(controller.snapshot().notice).toContain('could not be refreshed');
+  await controller.revalidate();expect(flow.snapshot().draft.name).toBe('Synthetic private draft');expect(controller.snapshot().notice).toContain('could not reach the server');
   override=c=>c.path.startsWith('/api/v1/operator-context')?Promise.resolve(f.json({...f.context,franchises:f.context.franchises.map(x=>({...x,roles:['read_only']}))})):undefined;
   await controller.revalidate();expect(controller.runtime.ticket().generation).not.toBe(generation);expect(flow.snapshot().draft.name).toBe('');expect(()=>scopedApi(controller)).not.toThrow();flow.dispose();
  });
  it('filters receipt rows immediately and restores them when the search is cleared',async()=>{
+  // The list opens on today (R-1); this fixture books on the synthetic clock, so widen it first.
   window.location.hash='/business/receipts';render(<App/>);
+  fireEvent.click(await screen.findByRole('radio',{name:'Any date'}));
   await screen.findByText('SYN-33');fill('Search receipts','UNKNOWN');
   expect(screen.getByText('No receipts match')).toBeVisible();
-  fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
+  fireEvent.click(screen.getByRole('button',{name:'Show every receipt'}));
   expect(screen.getByText('SYN-33')).toBeVisible();
  });
  it('receipt discovery supports empty and safe denied/retry states',async()=>{
   window.location.hash='/business/receipts';let denied=true;override=c=>c.path.startsWith('/api/v1/parcels')?Promise.resolve(denied?f.json({error:{code:'ACTION_FORBIDDEN'}},403):f.json({items:[],page:{next_cursor:null,has_more:false}})):undefined;
-  render(<App/>);await screen.findByText(/Receipts could not be loaded/);denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No receipts yet');
+  render(<App/>);await screen.findByText(/Receipts could not be loaded/);denied=false;fireEvent.click(screen.getByRole('button',{name:'Retry'}));await screen.findByText('No receipts today yet');
  });
 });
 
@@ -221,7 +323,7 @@ describe('monthly account booking',{timeout:20000},()=>{
  async function selected(){
   override=c=>{const value=accountResponses(c);return value?Promise.resolve(value):undefined;};
   const controller=createScopeController();await controller.load();const flow=createBookingWorkflow(controller);flow.activate();flow.select(f.customer);
-  for(const [field,value] of Object.entries({recipientAddress:'21 Fictional Street',destination:'SYN_DEST',docket:'00123-A',weight:'999',handoverState:'27'}))flow.change(field as Parameters<typeof flow.change>[0],value);
+  for(const [field,value] of Object.entries({recipientAddress:'21 Fictional Street',destination:'SYN_DEST',service:'standard',docket:'00123-A',weight:'999',handoverState:'27'}))flow.change(field as Parameters<typeof flow.change>[0],value);
   flow.selectAccount(account);flow.recordTaxEntry();await flow.preview();return flow;
  }
  it('retains an uncertain credit request identity and saves the exact approved debtor',async()=>{
@@ -268,21 +370,27 @@ it('keeps the entered booking when leaving the draft is cancelled',async()=>{
  await start();fill('Customer name','Unsaved sender');fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(posts('/api/v1/bookings?')).toHaveLength(0);
 });
 
-it('adds and removes packages directly below the docket row before saving a customer',async()=>{
+it('adds and removes packages at the end of the parcel section before saving a customer',async()=>{
+ // The button sits where the new parcel appears, after the first parcel's own fields and
+ // before the charges, so adding one never means hunting down the page for it.
  await start();
  const add=screen.getByRole('button',{name:'Add package'});
- expect(screen.getByLabelText('Docket number').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
- expect(add.compareDocumentPosition(screen.getByLabelText('Weight (kg)'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
- fireEvent.click(add);fill('Parcel 2 docket number','SECOND-001');fireEvent.click(add);
+ expect(screen.getByLabelText('Add to lot').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Photo'}).compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(add.compareDocumentPosition(screen.getByLabelText('Freight ₹'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ fireEvent.click(add);fill('Parcel 2 docket number','SECOND-001');
+ // A new parcel is added above the button, so the button is always the last thing in the section.
+ expect(screen.getByLabelText('Parcel 2 docket number').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ fireEvent.click(add);
  expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('SECOND-001');expect(screen.getByLabelText('Parcel 3 docket number')).toHaveValue('');expect(screen.getByText('3 packages in this booking')).toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'Remove package 3'}));expect(screen.queryByLabelText('Parcel 3 docket number')).toBeNull();expect(screen.getByText('2 packages in this booking')).toBeVisible();
  expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(0);
 });
 it('cancels an unsaved booking only after confirming discard and can keep editing',async()=>{
  await start();fill('Customer name','Unsaved sender');fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel 2 docket number','KEEP-002');
- fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
+ fireEvent.click(screen.getByRole('button',{name:'Discard this draft'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
  expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('KEEP-002');
- fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
+ fireEvent.click(screen.getByRole('button',{name:'Discard this draft'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
  expect(posts('/api/v1/bookings')).toHaveLength(0);
 });
 
@@ -315,4 +423,106 @@ it('uses the saved demo GST setting for a live summary and saves without billing
  expect(screen.queryByRole('button',{name:'Calculate total'})).toBeNull();expect(screen.queryByLabelText('GST registration')).toBeNull();
  save();await screen.findByRole('heading',{name:'Booking saved'});
  expect(posts('/api/v1/bookings?')).toHaveLength(1);expect(body(posts('/api/v1/tax/intents')[0]).facts.handover_state).toBe('27');
+});
+
+describe('counter money controls',{timeout:20000},()=>{
+ it('records how the money arrived rather than assuming cash', async()=>{
+  // Every paid booking used to be recorded as cash, because the method was fixed when the
+  // screen loaded and never asked for. A UPI payment then entered the cashbook as notes in
+  // the drawer, and the day would not reconcile.
+  await entered(true);
+  expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','true');
+  payBy('UPI now');
+  expect(screen.getByRole('button',{name:'UPI now'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','false');
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  // The booking itself carries no payment method: what was received is a receipt, recorded
+  // against its own ledger. What changed is which receipt the counter offers to record.
+  expect(body(posts('/api/v1/bookings?')[0])).not.toHaveProperty('method');
+  expect(screen.getByRole('link',{name:'Open payments / apply advance'}))
+    .toHaveAttribute('href',expect.stringContaining('context=paid_counter'));
+ });
+
+ it('works out the change, and names a shortfall without refusing the booking', async()=>{
+  await entered(true);
+  const cash=()=>screen.getByLabelText('Cash given ₹',{exact:true});
+  fireEvent.change(cash(),{target:{value:'200'}});
+  expect(screen.getByText(/Change to give back/)).toHaveTextContent('₹48.96');
+  fireEvent.change(cash(),{target:{value:'151.04'}});
+  expect(screen.getByText(/Change to give back/)).toHaveTextContent('₹0.00');
+  // Part payment across a counter is legitimate. A screen that refuses it teaches the
+  // operator to lie to it, so the shortfall is named and saving stays available.
+  fireEvent.change(cash(),{target:{value:'100'}});
+  const short=screen.getByText(/Short by/);
+  expect(short).toHaveTextContent('₹51.04');
+  expect(short).toHaveTextContent('Saving is still allowed');
+  expect(screen.getByRole('button',{name:/^Save booking/})).toBeEnabled();
+ });
+
+ it('asks for cash given only where cash is what is being taken', async()=>{
+  await entered(true);
+  expect(screen.getByLabelText('Cash given ₹',{exact:true})).toBeVisible();
+  payBy('UPI now');
+  expect(screen.queryByLabelText('Cash given ₹',{exact:true})).toBeNull();
+  payBy('To Pay');
+  expect(screen.queryByLabelText('Cash given ₹',{exact:true})).toBeNull();
+  // Nothing is collected now, so the button does not promise to collect anything.
+  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
+ });
+
+ it('never sends counter arithmetic to the server', async()=>{
+  await entered(true);
+  fireEvent.change(screen.getByLabelText('Cash given ₹',{exact:true}),{target:{value:'200'}});
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('cashGiven');
+  expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('20000');
+ });
+});
+
+describe('counter working surface',{timeout:20000},()=>{
+ it('says what is wrong with a field when the operator leaves it, and stays quiet about empty ones',async()=>{
+  await start();
+  const docket=screen.getByLabelText('Docket number',{exact:true});
+  fireEvent.change(docket,{target:{value:'bad docket!'}});
+  // Nothing while typing: a half-typed value is not a mistake yet.
+  expect(docket).not.toHaveAttribute('aria-invalid');
+  fireEvent.blur(docket);
+  expect(docket).toHaveAttribute('aria-invalid','true');
+  expect(docket).toHaveAccessibleDescription(/letters, numbers or hyphens/);
+  // A field that was visited and left empty is "not filled in yet": the summary lists it.
+  const name=screen.getByLabelText('Customer name',{exact:true});
+  fireEvent.blur(name);expect(name).not.toHaveAttribute('aria-invalid');
+  // Correcting it clears the message without another blur.
+  fireEvent.change(docket,{target:{value:'00123-A'}});
+  expect(docket).not.toHaveAttribute('aria-invalid');
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('saves with Ctrl+Enter from any field, and never on a bare Enter',async()=>{
+  await entered();
+  const field=screen.getByLabelText('Delivery address',{exact:true});
+  fireEvent.keyDown(field,{key:'Enter'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  fireEvent.keyDown(field,{key:'Enter',ctrlKey:true});
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+ it('states who pays and when beside the total',async()=>{
+  await entered(true);
+  expect(summary().getByText('Customer pays now in cash')).toBeVisible();
+  payBy('UPI now');expect(summary().getByText('Customer pays now by UPI')).toBeVisible();
+  payBy('To Pay');expect(summary().getByText('Receiver pays on delivery')).toBeVisible();
+ });
+ it('keeps one filled button, Save booking, and offers a draft only as a quiet second action',async()=>{
+  await start();
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveClass('btn-filled');
+  expect(screen.getByRole('button',{name:'Save as draft'})).toHaveClass('btn-text');
+  core();await calculate();
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveClass('btn-filled');
+ });
+ it('puts the destination and the delivery address in one section',async()=>{
+  await start();
+  const delivery=screen.getByRole('group',{name:'Delivery'});
+  expect(within(delivery).getByLabelText('Destination city')).toBeVisible();
+  expect(within(delivery).getByLabelText('Delivery address')).toBeVisible();
+ });
 });

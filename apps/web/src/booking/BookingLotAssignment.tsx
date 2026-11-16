@@ -63,7 +63,7 @@ export function useBookingLotAssignment(api:ScopedApi,booking:BookingConfirmatio
 
   const reset=()=>{assignment.current=null;setSelected(null);setProgress(0);setPhase('idle');};
   const picker=!booking ? <div>
-      <SelectField label="Add to lot" disabled={disabled||!destination} value={selection?.id??''} options={[
+      <SelectField label="Add to lot" className="is-optional" disabled={disabled||!destination} value={selection?.id??''} options={[
         {value:'',label:destination?'None':'Choose destination first'},...page.items.map(lot=>({value:lot.id,label:lot.code+' · '+lot.name}))
       ]} onChange={id=>setSelected(page.items.find(lot=>lot.id===id)??null)}/>
       {page.phase==='loading'&&<small role="status">Loading lots…</small>}

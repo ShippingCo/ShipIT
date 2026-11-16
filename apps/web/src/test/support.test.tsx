@@ -13,11 +13,21 @@ describe('human support queue',()=>{
  it('gives the support dialog an accessible name, handles Escape and restores keyboard focus',async()=>{
   render(<SupportQueue source={fixture()} canWrite={true}/>);
   const trigger=await screen.findByRole('button',{name:/Review case/});trigger.focus();fireEvent.click(trigger);
-  const dialog=await screen.findByRole('dialog',{name:'Support case'});
+  const dialog=await screen.findByRole('dialog',{name:'This problem'});
   expect(dialog).toHaveAccessibleDescription('Private staff workspace. Internal notes are never sent to the customer.');
   await screen.findByLabelText('Action');fireEvent.keyDown(dialog,{key:'Escape',code:'Escape'});
   await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(trigger).toHaveFocus();
+ });
+ it('confirms that a refresh actually fetched, so the press is never silent',async()=>{
+  // A refresh that redraws identical data used to look like a broken button. The page must
+  // say when what is on screen was fetched, and it must stay quiet until actually asked.
+  const source=fixture();render(<SupportQueue source={source} canWrite={true}/>);
+  await screen.findByRole('button',{name:/Review case/});
+  expect(screen.queryByText('Updated just now')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Refresh'}));
+  expect(await screen.findByText('Updated just now')).toBeVisible();
+  expect(source.list).toHaveBeenCalledTimes(2);
  });
  it('loads private detail on selection and returns keyboard focus after close',async()=>{
   const source=fixture();render(<SupportQueue source={source} canWrite={true}/>);expect(screen.getByRole('status')).toHaveTextContent('Loading');
@@ -27,12 +37,12 @@ describe('human support queue',()=>{
  });
  it('handles empty, loading and retriable read errors',async()=>{
   const source=fixture();vi.mocked(source.list).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({items:[],page:{has_more:false,next_cursor:null}});
-  render(<SupportQueue source={source} canWrite={false}/>);expect(await screen.findByRole('alert')).toHaveTextContent('unavailable');
-  fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(await screen.findByText('No support cases')).toBeVisible();
+  render(<SupportQueue source={source} canWrite={false}/>);expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded');
+  fireEvent.click(screen.getByRole('button',{name:'Retry'}));expect(await screen.findByText('✓ No problems open')).toBeVisible();
  });
  it('claims a case then shows owner reply and internal-note actions',async()=>{
   const source=fixture();render(<SupportQueue source={source} canWrite={true}/>);fireEvent.click(await screen.findByRole('button',{name:/Review case/}));await screen.findByText(value.availability);
-  vi.mocked(source.detail).mockResolvedValue({...value,state:'claimed',version:2,assigned_staff_id:actor});fireEvent.click(screen.getByRole('button',{name:'Claim case'}));
+  vi.mocked(source.detail).mockResolvedValue({...value,state:'claimed',version:2,assigned_staff_id:actor});fireEvent.click(screen.getByRole('button',{name:'I will handle this'}));
   expect(await screen.findByText('Owner: You')).toBeVisible();expect(source.command).toHaveBeenCalledWith(id,{action:'claim',expected_version:1});
   expect(screen.getByLabelText('Customer message')).toBeRequired();fireEvent.change(screen.getByLabelText('Action'),{target:{value:'note'}});expect(screen.getByLabelText('Internal note')).toBeRequired();
   fireEvent.click(screen.getByRole('button',{name:'Close'}));await waitFor(()=>expect(screen.getByRole('button',{name:/Review case/})).toHaveFocus());
@@ -42,9 +52,9 @@ describe('human support queue',()=>{
   vi.mocked(source.execute).mockRejectedValueOnce(new ApiFailure('TEMPORARILY_UNAVAILABLE',{kind:'network',dispatched:true}));
   render(<SupportQueue source={source} canWrite={true}/>);fireEvent.click(await screen.findByRole('button',{name:/Review case/}));await screen.findByText(value.availability);
   fireEvent.change(screen.getByLabelText('Customer message'),{target:{value:'Please describe your question.'}});fireEvent.click(screen.getByRole('button',{name:'Submit reply'}));
-  expect(await screen.findByRole('button',{name:'Retry same request'})).toBeVisible();expect(screen.getByRole('button',{name:'Close'})).toBeDisabled();fireEvent.keyDown(document.activeElement!,{key:'Escape'});expect(screen.getByRole('dialog')).toBeVisible();expect(screen.getByLabelText('Customer message')).toHaveValue('Please describe your question.');
+  expect(await screen.findByRole('button',{name:'Check if it saved'})).toBeVisible();expect(screen.getByRole('button',{name:'Close'})).toBeDisabled();fireEvent.keyDown(document.activeElement!,{key:'Escape'});expect(screen.getByRole('dialog')).toBeVisible();expect(screen.getByLabelText('Customer message')).toHaveValue('Please describe your question.');
   vi.mocked(source.detail).mockResolvedValue({...claimed,version:3,history:[{id,action:'responded',reason:'operational_review',actor_id:actor,actor_type:'user',occurred_at:instant,text:'Please describe your question.',message_state:'failed',message_reason:'customer_window_closed',attempts:0}]});
-  fireEvent.click(screen.getByRole('button',{name:'Retry same request'}));expect(await screen.findByText(/Customer message: failed/)).toBeVisible();expect(vi.mocked(source.execute).mock.calls[0]![0]).toBe(vi.mocked(source.execute).mock.calls[1]![0]);
+  fireEvent.click(screen.getByRole('button',{name:'Check if it saved'}));expect(await screen.findByText(/Customer message: failed/)).toBeVisible();expect(vi.mocked(source.execute).mock.calls[0]![0]).toBe(vi.mocked(source.execute).mock.calls[1]![0]);
  });
  it('keeps drafts after stale state and denies read-only staff mutation',async()=>{
   const source=fixture({...value,state:'claimed',version:2,assigned_staff_id:actor});vi.mocked(source.execute).mockRejectedValue(new ApiFailure('VERSION_CONFLICT'));
@@ -55,6 +65,6 @@ describe('human support queue',()=>{
  });
  it('requires a reason to reopen a resolved case',async()=>{
   const source=fixture({...value,state:'resolved',version:3});render(<SupportQueue source={source} canWrite={true}/>);fireEvent.click(await screen.findByRole('button',{name:/Review case/}));await screen.findByText(value.availability);
-  expect(screen.getByLabelText('Action')).toHaveValue('reopen');fireEvent.change(screen.getByLabelText('Reason'),{target:{value:'incorrect_resolution'}});fireEvent.click(screen.getByRole('button',{name:'Reopen case'}));await waitFor(()=>expect(source.command).toHaveBeenCalledWith(id,{action:'reopen',expected_version:3,reason:'incorrect_resolution'}));
+  expect(screen.getByLabelText('Action')).toHaveValue('reopen');fireEvent.change(screen.getByLabelText('Why it is open again'),{target:{value:'incorrect_resolution'}});fireEvent.click(screen.getByRole('button',{name:'Open it again'}));await waitFor(()=>expect(source.command).toHaveBeenCalledWith(id,{action:'reopen',expected_version:3,reason:'incorrect_resolution'}));
  });
 });

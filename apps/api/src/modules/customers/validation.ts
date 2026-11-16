@@ -41,8 +41,10 @@ export function bookingRecipient(value: unknown): import('@shippingco/shared').B
   const name = body.name == null ? null : text(body.name, 'name', 120, true) || null;
   const absentPhone = body.phone == null || (typeof body.phone === 'string' && /^ {0,40}$/.test(body.phone));
   const number = absentPhone ? null : phone(body.phone);
-  // Full-contact bookings historically allowed an empty address, including retained replays.
-  const address = text(body.address === undefined ? '' : body.address, 'address', 500, Boolean(name && number));
+  // The delivery address is optional at the counter: the destination city is what a booking
+  // needs, and the address is often only known later. It was previously required unless the
+  // receiver's name and phone were both given.
+  const address = text(body.address === undefined ? '' : body.address, 'address', 500, true);
   return {name, phone_normalized: number?.normalized ?? null, phone_display: number?.display ?? null,
     address};
 }

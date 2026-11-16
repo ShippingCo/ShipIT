@@ -35,6 +35,23 @@ describe('signed business webhook boundary',()=>{
     expect((await app.inject(url.replace(webhookConfig.verify_token,'wrong'))).statusCode).toBe(403);
     expect(logs.join('')).not.toContain(webhookConfig.verify_token);
   });
+  it('accepts matching Meta handshake aliases and rejects ambiguity or extra fields',async()=>{
+    const {app,database}=setup();
+    const params=new URLSearchParams({'hub.mode':'subscribe','hub.verify_token':webhookConfig.verify_token,'hub.challenge':'12345',
+      hub_mode:'subscribe',hub_verify_token:webhookConfig.verify_token,hub_challenge:'12345'});
+    const url='/webhooks/whatsapp?'+params;
+    const response=await app.inject(url);
+    expect(response.statusCode).toBe(200);expect(response.body).toBe('12345');
+    for(const field of ['hub_mode','hub_verify_token','hub_challenge']){
+      const changed=new URLSearchParams(params);changed.set(field,'wrong');
+      expect((await app.inject('/webhooks/whatsapp?'+changed)).statusCode).toBe(403);
+      const repeated=new URLSearchParams(params);repeated.append(field,params.get(field)!);
+      expect((await app.inject('/webhooks/whatsapp?'+repeated)).statusCode).toBe(403);
+    }
+    expect((await app.inject(url+'&unexpected=value')).statusCode).toBe(403);
+    expect((await app.inject(url+'&hub.challenge=67890')).statusCode).toBe(403);
+    expect(database.connect).not.toHaveBeenCalled();
+  });
   it('rejects tampering, missing/wrong signatures before parsing or database work',async()=>{
     const {app,database}=setup(),body=JSON.stringify(callback([status()]));
     for(const [payload,headers] of [[body+' ',signed(body)],[body,signed(body,'wrong')],['invalid',signed(body)],[body,{'content-type':'application/json'}]] as const) {

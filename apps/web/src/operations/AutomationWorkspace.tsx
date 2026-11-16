@@ -7,7 +7,7 @@ import {scopedApi,type ScopedApi} from '../data-access/scoped-api';
 import {messaging,type HistoryRow,type MessagingSource} from '../data-access/messaging';
 import {support,type SupportSource} from '../data-access/support';
 import {useCommand,usePagedResource,useResource} from './hooks';
-import {Loading,Failure,CommandNotice} from './AsyncState';
+import {DataRefresh,Loading,Failure,CommandNotice} from './AsyncState';
 import {NotificationDetail} from './Messaging';
 import {SupportCaseDetail} from './Support';
 import {kindLabel,statusLabel} from './messaging-labels';
@@ -16,6 +16,7 @@ import {FilterChips} from '../components/m3/Controls';
 import {Card,EmptyState} from '../components/m3/Surface';
 import {Msym} from '../components/m3/Icon';
 import {Button} from '../components/m3/Button';
+import {PageHeader} from '../components/workspace/Workspace';
 import './automation-workspace.css';
 const categories=[{value:'all',label:'All'},{value:'booking',label:'Bookings',icon:'note_add'},{value:'status',label:'Status',icon:'local_shipping'},{value:'delay',label:'Delays',icon:'warning'},{value:'otp',label:'OTP',icon:'lock'}];
 export function notificationCategory(kind:string){return kind==='booking_confirmation'?'booking':kind==='delivery_otp'?'otp':['route_delay','route_delayed','route_delay_reminder'].includes(kind)?'delay':'status';}
@@ -38,13 +39,16 @@ function AutomationFeed({api,source,cases,roles}:{api:ScopedApi;source:Messaging
  const counts=Object.fromEntries(categories.map(c=>[c.value,c.value==='all'?automated.length:automated.filter(r=>notificationCategory(r.notification_kind)===c.value).length]));
  function open(event:React.MouseEvent<HTMLButtonElement>,next:Selection){trigger.current=event.currentTarget;setSelection(next);setNotice('');}
  function handled(){setSelection(null);queue.reload();setNotice('Marked as handled.');}
- return <div className="page live-automation"><div className="page-actions"><button ref={refresh} className="btn btn-text btn-sm" onClick={()=>{queue.reload();history.reload();setNotice('');}} disabled={locked||history.phase==='loading'||queue.phase==='loading'}><Msym name="refresh"/>Refresh feed</button></div>{notice&&<p role="status">{notice}</p>}
+ return <div className="page live-automation">
+  <PageHeader title="Messages"/>
+  <div className="page-actions"><DataRefresh buttonRef={refresh} disabled={locked}
+   resource={{phase:history.phase==='loading'||queue.phase==='loading'?'loading':'ready',reload:()=>{queue.reload();history.reload();setNotice('');}}}/></div>{notice&&<p role="status">{notice}</p>}
  {canSupport&&<><h2 className="section-label"><span className="sec-ic"><Msym name="support_agent"/></span>Needs a person<span className="count-note">{queue.phase==='loading'?'Loading…':queue.phase==='error'?'Unavailable':`${waiting.length} waiting${queue.page.has_more?' in loaded cases':''}`}</span></h2>
- {queue.phase==='loading'?<Loading label="Loading support cases…"/>:queue.phase==='error'?<Failure label="Support cases could not be loaded." retry={queue.reload}/>:<Card>{waiting.length?waiting.map(c=><CaseRow key={c.id} value={c} canWrite={canWrite} open={(event,kind)=>open(event,{kind,id:c.id})}/>):<EmptyState icon="support_agent" title="No cases waiting" sub={queue.page.has_more?'No waiting cases in the records loaded so far. Load more cases to check earlier records.':'Customer requests that need a person appear here.'}/>}</Card>}
+ {queue.phase==='loading'&&!queue.items.length?<Loading label="Loading support cases…"/>:queue.phase==='error'?<Failure label="Support cases could not be loaded." retry={queue.reload}/>:<Card>{waiting.length?waiting.map(c=><CaseRow key={c.id} value={c} canWrite={canWrite} open={(event,kind)=>open(event,{kind,id:c.id})}/>):<EmptyState icon="support_agent" title="No cases waiting" sub={queue.page.has_more?'No waiting cases in the records loaded so far. Load more cases to check earlier records.':'Customer requests that need a person appear here.'}/>}</Card>}
  {queue.page.has_more&&queue.phase!=='error'&&<Button variant="text" disabled={queue.phase==='more'} onClick={queue.loadMore}>{queue.phase==='more'?'Loading…':'Load more cases'}</Button>}</>}
  <h2 className="section-label"><span className="sec-ic"><Msym name="forward_to_inbox"/></span>Sent automatically</h2>
  <FilterChips options={categories} value={kind} onChange={setKind} counts={counts}/>
- {history.phase==='loading'?<Loading label="Loading messaging history…"/>:history.phase==='error'?<Failure label="Messaging history could not be loaded." retry={history.reload}/>:<>
+ {history.phase==='loading'&&!history.items.length?<Loading label="Loading messaging history…"/>:history.phase==='error'?<Failure label="Messaging history could not be loaded." retry={history.reload}/>:<>
  {history.page.has_more&&<p className="ops-note feed-page-note">Category counts cover the {automated.length} loaded automated messages. Load older history to see more.</p>}
  <Card className="automation-messages">{items.length?items.map(row=><MessageRow key={row.id} row={row} open={event=>open(event,{kind:'message',id:row.id})}/>):<EmptyState icon="forward_to_inbox" title={kind==='all'?'Nothing sent yet':'No messages in this category'} sub={kind==='all'?'Automated updates appear here when a booking, dispatch or delivery creates a message.':'Choose another category or load older history to find more messages.'} action={kind==='all'?<Button icon="bolt" onClick={()=>nav('/business/routes')}>Trigger your first alert</Button>:<Button variant="text" onClick={()=>setKind('all')}>Show all messages</Button>}/>}</Card>
  {history.page.has_more&&<Button variant="text" disabled={history.phase==='more'} onClick={history.loadMore}>{history.phase==='more'?'Loading…':'Load older history'}</Button>}</>}

@@ -10,9 +10,40 @@ import Onboarding, { clearPending } from './Onboarding';
 import { connectInvalidation } from '../data-access/invalidation';
 import { ApiFailure } from '../data-access/errors';
 import { createScopeController } from './scope';
+import type { OperatorDataSource } from './data-source';
 import './operator.css';
 import './auth.css';
 import {Msym} from '../components/m3/Icon';
+
+/**
+ * Signed in, but nobody has added you to a shop.
+ *
+ * This used to read "No available workspace" and tell the person to ask an administrator —
+ * without saying which of their numbers to have invited. A staff member on a shared counter
+ * machine has no way to guess, and the owner on the other end of the phone call has no way to
+ * check. The contact this session actually signed in with is the whole answer, so it is on the
+ * screen, ready to be read down a phone.
+ */
+function NoShopYet({source,busy,check}:{source:OperatorDataSource;busy:boolean;check:()=>void}) {
+  const [signedInAs,setSignedInAs]=useState('');
+  useEffect(()=>{
+    const abort=new AbortController();
+    void source.contacts(abort.signal)
+      .then(result=>{
+        const chosen=result.contacts.find(c=>c.channel==='whatsapp')??result.contacts[0];
+        if(!abort.signal.aborted&&chosen)setSignedInAs(chosen.address);
+      })
+      .catch(()=>{/* the screen is still correct without it */});
+    return ()=>abort.abort();
+  },[source]);
+  return <main className="operator-center"><section className="card operator-card">
+    <span className="workspace-state-icon"><Msym name="storefront"/></span>
+    <h1 id="access-title" tabIndex={-1} className="t-headline-sm">You are signed in, but no shop has added you yet</h1>
+    <p role="alert">Ask the shop owner to invite you. Tell them to invite this number{signedInAs?':':'.'}</p>
+    {signedInAs&&<p className="operator-signed-in-as"><strong>{signedInAs}</strong></p>}
+    <button className="btn btn-outlined" disabled={busy} onClick={check}>Check again</button>
+  </section></main>;
+}
 
 export default function OperatorApp() {
   const [controller] = useState(() => createScopeController());
@@ -61,13 +92,13 @@ export default function OperatorApp() {
     if (signOutPending) title = busy ? 'Signing out' : 'Finish signing out';
     else if (checking) title = 'Checking access';
     else if (state.status === 'signed_out') title = 'Sign in';
-    else if (state.status === 'error') title = 'Workspace access unavailable';
+    else if (state.status === 'error') title = state.reason === 'unreachable' ? 'Cannot reach the server' : 'Workspace access unavailable';
     else if (state.context?.state === 'onboarding_required') title = 'Set up your shop';
     else if (state.context?.state === 'ready') title = document.querySelector('.console-frame .appbar-title')?.textContent || 'Dashboard';
-    else title = 'No available workspace';
+    else title = 'No shop yet';
     document.title = `${title} · ShippingCo`;
     if (!checking && state.context?.state !== 'ready') document.getElementById(state.context?.state === 'onboarding_required' ? 'onboarding-title' : 'access-title')?.focus();
-  }, [state.status, state.path, state.context, location.pathname, signOutPending, busy]);
+  }, [state.status, state.reason, state.path, state.context, location.pathname, signOutPending, busy]);
   async function accept(event: React.FormEvent) {
     event.preventDefault(); if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage('');
     const token = invitation; setInvitation(''); controller.clear();
@@ -112,14 +143,17 @@ export default function OperatorApp() {
     {signOutPending ? <main className="operator-center"><section className="card operator-card operator-auth-card" aria-labelledby="access-title"><span className="workspace-auth-mark"><Msym name="logout"/></span><h1 id="access-title" tabIndex={-1}>{busy?'Signing out…':'Finish signing out'}</h1><p role={busy?'status':'alert'}>{busy?'Closing your session. Private workspace data has been cleared.':'The connection was interrupted. Private workspace data is hidden, but your session may still be active.'}</p>{!busy&&<button className="btn btn-filled" onClick={()=>{void logout();}}>Retry sign out</button>}</section></main> : loading ? <main className="operator-center" role="status">Checking workspace access…</main> : state.status === 'signed_out' ?
       <AccessLayout><SignIn source={controller.source} complete={async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); }} /></AccessLayout> :
       state.status === 'error' ? <main className="operator-center"><section className="card operator-card">
-        <span className="workspace-state-icon"><Msym name="lock_reset"/></span><h1 id="access-title" tabIndex={-1} className="t-headline-sm">Workspace access unavailable</h1>
-        <p role="alert">Your session or access may have changed, or the service is unavailable. Private workspace data has been cleared.</p>
+        <span className="workspace-state-icon"><Msym name={state.reason === 'unreachable' ? 'wifi_off' : 'lock_reset'}/></span>
+        <h1 id="access-title" tabIndex={-1} className="t-headline-sm">{state.reason === 'unreachable' ? 'Cannot reach the server' : 'Workspace access unavailable'}</h1>
+        <p role="alert">{state.reason === 'unreachable'
+          ? 'Your shop is still signed in. The internet or the server did not answer, so nothing could be loaded yet.'
+          : 'Your session or access may have changed. Private workspace data has been cleared.'}</p>
         <button className="btn btn-filled" disabled={busy} onClick={() => { void refresh(true); }}>Try again</button>
       </section></main> : context?.state === 'ready' ? <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
       }} profile={profile}/> : <>
         {context?.state === 'onboarding_required' ? <AccessLayout><Onboarding key={context.user_id} controller={controller} userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /></AccessLayout> :
-          <main className="operator-center"><section className="card operator-card"><span className="workspace-state-icon"><Msym name="storefront"/></span><h1 id="access-title" tabIndex={-1} className="t-headline-sm">No available workspace</h1><p role="alert">Ask your shop administrator to restore your access or send a new invitation.</p><button className="btn btn-outlined" disabled={busy} onClick={()=>{void refresh(true);}}>Check access</button></section></main>}
+          <NoShopYet source={controller.source} busy={busy} check={()=>{void refresh(true);}}/>}
       </>}
     {state.notice && <p role="status" className="operator-message">{state.notice}</p>}
     {!signOutPending && !loading && state.status !== 'signed_out' && context?.state!=='ready' && <footer className="operator-actions">{profile}</footer>}

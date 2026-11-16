@@ -20,3 +20,7 @@
 }
 
 .operator-shell .appbar { background: var(--md-surface, #fff); }
+
+/* R-11: the contact to have invited, large enough to read down a phone. */
+.operator-signed-in-as { margin:0; font-variant-numeric:tabular-nums; }
+.operator-signed-in-as strong { font-size:21px; line-height:28px; font-weight:650; }

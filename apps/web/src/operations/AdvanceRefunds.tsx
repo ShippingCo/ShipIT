@@ -27,7 +27,9 @@ export function AdvanceRefunds({api,receipt,roles,self,parentLocked,busyChanged,
  const run=(operation:AdvanceRefundOperation,request:string|null,input:Record<string,unknown>)=>{void command.run(source.intent(operation,request,input)).then(update).catch(()=>{});};
  const roots=history.items.filter(c=>c.operation==='request'),reasonValid=reason.trim().length>=3&&reason.trim().length<=500;
  return <section className="card ops-card finance-refund-workflow"><SectionHeader title="Unused advance refunds"/><p>Request a refund, get a different administrator’s approval, then record the actual return. Approval does not move money. Only unallocated funds qualify; seller COD cannot be returned here.</p>
- <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>{void command.retry().then(v=>{if(v)update();}).catch(()=>{});}:undefined}/>
+ <CommandNotice phase={command.phase} code={command.error?.code}
+  money="The refund may or may not be recorded. Do not pay it out again until you have checked."
+  retry={command.canRetry?()=>{void command.retry().then(v=>{if(v)update();}).catch(()=>{});}:undefined}/>
  <p role="status" aria-live="polite">{notice}</p>
  {balance.phase==='loading'?<Loading label="Loading advance balance…"/>:balance.phase==='error'?<Failure retry={balance.reload} label="Advance balance unavailable."/>:balance.value&&<p>Unallocated {formatMoney(balance.value.unallocated_paise)} · Returned {formatMoney(balance.value.returned_paise??0)}. Available refund capacity is rechecked against current COD reservations.</p>}
  {(requester||admin)&&<TextField label="Advance refund reason" value={reason} onChange={setReason} disabled={locked} maxLength={500} helper="Explain the request, review or actual return (3–500 characters)."/>}

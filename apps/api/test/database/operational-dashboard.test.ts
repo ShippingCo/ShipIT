@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import type {OperationalDashboard} from '@shippingco/shared';
+import {dashboardSeriesDays,type OperationalDashboard} from '@shippingco/shared';
 import {bookingSetup} from '../booking-support.ts';
 import {org,A,B,otherOrg,C} from '../audit-support.ts';
 import {startTestDelivery,testDeliveryCode} from '../delivery-support.ts';
@@ -13,9 +13,33 @@ await test('dashboard counts all parcels and distinct bookings beyond a list pag
   const response=await get();assert.equal(response.statusCode,200,response.body);const value=response.json<OperationalDashboard>();
   assert.equal(value.booked_today,3);assert.equal(value.booked_yesterday,0);assert.equal(value.stages.booked,150);assert.equal(value.delivered_today,0);
   assert.equal(value.week.length,7);assert.equal(value.week[0]!.day,'2098-12-29');assert.equal(value.week[6]!.day,'2099-01-04');assert.equal(value.week.reduce((n,d)=>n+d.bookings,0),3);
+  // The trailing series the tiles, the sparkline and the chart ranges all read. It is a fixed
+  // width ending today, and its last day has to agree with the day's own figures or the screen
+  // would show a chart that contradicts the number printed beside it.
+  assert.equal(value.days.length,dashboardSeriesDays);
+  assert.equal(value.days[dashboardSeriesDays-1]!.day,'2099-01-01');
+  assert.equal(value.days[0]!.day,'2098-12-03');
+  assert.equal(value.days[dashboardSeriesDays-1]!.bookings,value.booked_today);
+  assert.equal(value.days[dashboardSeriesDays-1]!.delivered,value.delivered_today);
+  assert.equal(value.days.reduce((n,d)=>n+d.bookings,0),3);
+  assert.equal(value.days.every(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.day)),true);
+  // Courier volume is weekly-cyclical, so the comparison the dashboard shows is the same
+  // weekday a week ago, never yesterday. Nothing was booked a week before these three.
+  assert.equal(value.booked_same_weekday_last_week,0);
   s.setNow('2099-01-01T18:29:59.999Z');assert.equal((await get()).json().booked_today,3);
   s.setNow('2099-01-01T18:30:00.000Z');const next=(await get()).json<OperationalDashboard>();assert.equal(next.day,'2099-01-02');assert.equal(next.booked_today,0);assert.equal(next.booked_yesterday,3);
   s.setNow('2099-01-04T18:30:00.000Z');const monday=(await get()).json<OperationalDashboard>();assert.equal(monday.week[0]!.day,'2099-01-05');assert.equal(monday.week.reduce((n,d)=>n+d.bookings,0),0);
+  // A week on, the same three bookings are what "last Thursday" means, and they are still in
+  // the thirty-day series while the Monday week no longer contains them.
+  s.setNow('2099-01-08T12:00:00.000Z');const later=(await get()).json<OperationalDashboard>();
+  assert.equal(later.day,'2099-01-08');assert.equal(later.booked_today,0);assert.equal(later.booked_same_weekday_last_week,3);
+  assert.equal(later.days.length,dashboardSeriesDays);assert.equal(later.days[dashboardSeriesDays-1]!.day,'2099-01-08');
+  assert.equal(later.days.find(d=>d.day==='2099-01-01')!.bookings,3);
+  s.setNow('2099-02-01T12:00:00.000Z');const month=(await get()).json<OperationalDashboard>();
+  // Past the window the series reports zeros rather than dropping days: a chart with holes in
+  // it cannot be compared across ranges.
+  assert.equal(month.days.length,dashboardSeriesDays);assert.equal(month.days.reduce((n,d)=>n+d.bookings,0),0);
+  s.setNow('2099-01-01T00:00:00.000Z');
   assert.equal(JSON.stringify(value).includes(s.source.phone),false);assert.equal(JSON.stringify(value).includes('paise'),false);
 });
 

@@ -32,7 +32,11 @@ export function BusinessGstSettings({controller,roles}:{controller:ScopeControll
   {current.phase==='error'?<p role="alert">GST settings could not be loaded. <button className="btn btn-text" onClick={current.reload}>Retry</button></p>:<form className="ops-form" onSubmit={e=>{e.preventDefault();void save();}}><fieldset disabled={busy||current.phase==='loading'||!admin}><legend className="sr-only">GST settings</legend><div className="ops-form-grid">
    <SelectField label="GST treatment" options={gstModes} value={mode} onChange={setMode}/>
    <SelectField label="Business state" options={[{value:'',label:'Choose state'},...bookingStates]} value={state} onChange={setState} required/>
-   {admin&&<TextField label="GSTIN" value={gstin} onChange={setGstin} maxLength={15} required={!current.value?.id} helper={current.value?.id?'Leave blank to keep the saved GSTIN.':undefined}/>}
+   {/* R-13: the hint states what is actually checked. `tax/validation.ts` does PAN-based
+       structural validation only — no checksum, no registration lookup — so a field that
+       accepted a GSTIN used to imply the government had agreed it exists. */}
+   {admin&&<TextField label="GSTIN" value={gstin} onChange={setGstin} maxLength={15} required={!current.value?.id}
+     helper={'We check the shape of it, not whether it is active.'+(current.value?.id?' Leave blank to keep the saved GSTIN.':'')}/>}
   </div></fieldset>{admin&&<button className="btn btn-filled" disabled={busy||current.phase==='loading'} type="submit">{command.phase==='pending'?'Saving…':'Save'}</button>}</form>}
   <CommandNotice phase={command.phase} code={command.error?.code} retry={command.canRetry?()=>void retry():undefined}/>
   {command.phase==='confirmed'&&<p role="status">GST settings saved.</p>}

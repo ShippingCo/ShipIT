@@ -53,6 +53,11 @@ test('local commands use the correct workspace and forward arguments without a s
     command: 'docker', args: ['start', 'custom-postgres'], cwd: root,
   });
   assert.equal(localCommand('db', root, {}).args[1], 'shipit-postgres-local');
+  for (const [service, mode] of [['doctor', 'doctor'], ['access', 'repair']]) {
+    assert.deepEqual(localCommand(service, root, {}, ['settings']).args, [
+      '--experimental-strip-types', resolve(root, 'packages/db/src/runtime-access-cli.ts'), mode, 'settings',
+    ]);
+  }
   assert.throws(() => localCommand('db', root, { LOCAL_DB_CONTAINER: '--all' }), /Invalid/);
   assert.throws(() => localCommand('db', root, {}, ['--attach']), /extra arguments/);
   assert.throws(() => localCommand('unknown', root, {}), /Use api/);

@@ -25,7 +25,10 @@ describe('saved bookings use the demo composition',()=>{
   expect(screen.getByPlaceholderText('Search docket, name, phone or city')).toBeVisible();
   expect(screen.getByRole('button',{name:/All time/})).toBeVisible();
   expect(screen.getByRole('button',{name:'All 1'})).toHaveAttribute('aria-pressed','true');
-  expect(screen.getByRole('button',{name:'Active 1'})).toBeVisible();
+  // The saved entry is a draft, so it is counted as one and never as work in motion.
+  expect(screen.getByRole('button',{name:'Drafts 1'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'Active 0'})).toBeVisible();
+  expect(screen.getByText('Draft — not booked')).toBeVisible();
   expect(screen.getByText('Mumbai')).toBeVisible();expect(screen.getByText('₹59')).toBeVisible();
   expect(screen.queryByRole('heading',{name:'Confirmed counter bookings'})).toBeNull();
  });
@@ -36,16 +39,25 @@ describe('saved bookings use the demo composition',()=>{
  it('opens the matching journey and two-column dialog on row click, with the actual confirmation timeline',async()=>{
   await start();fireEvent.click(screen.getByText('REAL-123'));
   const dialog=within(await screen.findByRole('dialog'));
-  for(const text of ['At hub','Dispatched','In transit','Out','Delivered','No parcel photo','Timeline','Booking created at counter','Send custom WhatsApp update','Saved address'])expect(dialog.getByText(text,{exact:true})).toBeVisible();
-  expect(dialog.getByLabelText('Message to customer')).toBeVisible();expect(dialog.getByRole('button',{name:'Print receipt'})).toBeVisible();expect(dialog.getByLabelText('Move to lot')).toBeVisible();
-  expect(dialog.getByRole('button',{name:'Check In at Hub'})).toBeDisabled();
+  for(const text of ['No parcel photo','Timeline','Draft saved at the counter','Send custom WhatsApp update','Saved address'])expect(dialog.getByText(text,{exact:true})).toBeVisible();
+  // A draft never entered the parcel journey, so no stage of it is claimed.
+  for(const text of ['At hub','Dispatched','In transit','Delivered'])expect(dialog.queryByText(text,{exact:true})).toBeNull();
+  expect(dialog.getByText(/not a booking/)).toBeVisible();
+  expect(dialog.queryByRole('button',{name:'Check In at Hub'})).toBeNull();
+  expect(dialog.getByRole('button',{name:'Finish this booking'})).toBeVisible();
+  expect(dialog.getByLabelText('Message to customer')).toBeVisible();expect(dialog.getByRole('button',{name:'Print receipt'})).toBeVisible();
   expect(dialog.getByText('Not recorded',{exact:true})).toBeVisible();
   fireEvent.click(dialog.getByRole('button',{name:'Close'}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
  });
  it('does not misrepresent selected Paid now as recorded money or missing amounts as zero',()=>{
   const row=counterBookingRow(entry);expect(row.payment).toBe('unknown');expect(row.amount).toBe(5900);
+  expect(row.status).toBe('draft');
   const empty=counterBookingRow({...entry,data:{fields:{},additional_parcels:[]}});expect(empty.amount).toBeNull();expect(empty.weight).toBeNull();
-  expect(filterSavedBookings([row],'topay')).toHaveLength(0);expect(filterSavedBookings([row],'active')).toHaveLength(1);
+  // Without a typed docket the row shows a readable draft number, never a sliced identifier.
+  expect(empty.docket).toMatch(/^D-[0-9A-HJ-NP-Z]{6}$/);
+  expect(filterSavedBookings([row],'topay')).toHaveLength(0);
+  expect(filterSavedBookings([row],'active')).toHaveLength(0);
+  expect(filterSavedBookings([row],'drafts')).toHaveLength(1);
  });
 });
 it('keeps the saved-booking popup open while an embedded shipment command is pending or uncertain',async()=>{

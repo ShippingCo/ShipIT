@@ -44,7 +44,7 @@ export default function RoutesPage() {
   return (
     <div className="page">
       <div className="page-actions">
-        <Button icon="add" onClick={() => setPlanOpen(true)}>Plan Route</Button>
+        <Button icon="add" onClick={() => setPlanOpen(true)}>Plan route</Button>
       </div>
 
       {GROUPS.map((g) => {

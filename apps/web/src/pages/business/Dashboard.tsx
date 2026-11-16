@@ -1,14 +1,14 @@
-import {businessDay,dayStart,weekMonday} from '../../operations/business-dates';
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {businessDay,dayStart} from '../../operations/business-dates';
+import React, { useState } from 'react';
+
 import { Msym } from '../../components/m3/Icon';
-import { Card, EmptyState } from '../../components/m3/Surface';
-import { Ring } from '../../components/m3/Meter';
-import {DashboardView} from '../../components/workspace/DashboardView';
+
+
+import {DashboardView,type DashboardRange} from '../../components/workspace/DashboardView';
 import { useDB } from '../../context/AppContext';
 import {
-  bookingsOfRoute, activeDelayFor, toPaySummary, reachSummary, openEscalations,
-  recoveryQueue, fmtMoney, fmtDT, prettyPhone, grossOf } from '../../data/store';
+  bookingsOfRoute, toPaySummary, reachSummary, openEscalations,
+  recoveryQueue, fmtMoney, grossOf } from '../../data/store';
 
 /*
   The dashboard, written for the person who actually uses it: an SME courier operator
@@ -36,68 +36,27 @@ import {
     4. Where are my parcels?
 */
 
-const ROUTE_STATUS = (r) =>
-  r.status === 'delayed' ? { cls: 'st-delayed', label: 'Delayed' }
-  : r.status === 'departed' ? { cls: 'st-dispatched', label: 'Departed' }
-  : r.status === 'arrived' ? { cls: 'st-delivered', label: 'Arrived' }
-  : { cls: 'st-booked', label: 'Scheduled' };
 
-const MODE_ICON = { Flight: 'flight', Train: 'train', Road: 'local_shipping', Ship: 'directions_boat' };
 
 /* Every stage keeps its own icon and is always drawn, even at zero. A pipeline whose
    shape changes with the data cannot be learned; one that stays put can be read by
    position alone once the operator has seen it a few times. */
 const STAGES = [
-  { key: 'booked', label: 'Booked', icon: 'receipt_long' },
+  { key: 'booked', label: 'At the counter', icon: 'receipt_long' },
   { key: 'checked_in', label: 'At hub', icon: 'warehouse' },
   { key: 'dispatched', label: 'Dispatched', icon: 'local_shipping' },
   { key: 'in_transit', label: 'On the way', icon: 'alt_route' },
   { key: 'out_for_delivery', label: 'Out for delivery', icon: 'moped' },
 ];
 
-/* Each booking row is led by the icon for the stage it is in, reusing exactly the
-   glyphs from the parcel-journey block above so the two teach each other. */
-const STATUS_ICON = {
-  booked: 'receipt_long', checked_in: 'warehouse', dispatched: 'local_shipping',
-  in_transit: 'alt_route', out_for_delivery: 'moped', delivered: 'task_alt',
-  failed_attempt: 'priority_high', rto: 'keyboard_return',
-};
 
 const DAY_MS = 864e5;
 
-function ago(ts) {
-  const m = Math.floor((Date.now() - ts) / 60000);
-  if (m < 60) return `${Math.max(1, m)}m ago`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
-}
-
-const reduceMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
-
 /* Counts up to the real value. Motion here points at information, it does not decorate. */
-function Count({ to, format = (n) => n }) {
-  const [n, setN] = useState(() => (reduceMotion() ? to : 0));
-  useEffect(() => {
-    if (reduceMotion() || !to) { setN(to); return; }
-    let raf; let start;
-    const step = (t) => {
-      if (start === undefined) start = t;
-      const p = Math.min(1, (t - start) / 650);
-      setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [to]);
-  return <>{format(n)}</>;
-}
 
 export default function Dashboard() {
   const data = useDB();
-  const nav = useNavigate();
+  const [range, setRange] = useState<DashboardRange>(7);
   if (!data) return null;
 
   const startOfToday = Date.parse(dayStart(businessDay()));
@@ -189,23 +148,11 @@ export default function Dashboard() {
     ...s,
     n: data.bookings.filter((b) => b.status === s.key).length,
   }));
-  const moving = stages.reduce((n, s) => n + s.n, 0);
+
 
   const todayBookings = data.bookings.filter((b) => b.createdAt >= startOfToday);
-  const deliveredToday = data.bookings.filter(
-    (b) => b.status === 'delivered' && (b.deliveredTs || 0) >= startOfToday).length;
 
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const from = Date.parse(dayStart(weekMonday(businessDay()))) + i * DAY_MS;
-    return {
-      key: from,
-      label: new Date(from).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata',weekday: 'narrow' }),
-      full: new Date(from).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata',weekday: 'long', day: 'numeric', month: 'short' }),
-      n: data.bookings.filter((b) => b.createdAt >= from && b.createdAt < from + DAY_MS).length,
-      today: from===startOfToday,
-    };
-  });
-  const deltaVsYesterday = todayBookings.length - data.bookings.filter(b=>b.createdAt>=startOfToday-DAY_MS&&b.createdAt<startOfToday).length;
+
 
   /* ---------- 4b. how old the unpaid money is ---------- */
   const unsettled = data.bookings.filter((b) => b.payment && !b.payment.settled && b.status === 'delivered');
@@ -218,88 +165,102 @@ export default function Dashboard() {
     const days = Math.floor((Date.now() - (b.deliveredTs || b.createdAt)) / DAY_MS);
     (days <= 3 ? buckets[0] : days <= 7 ? buckets[1] : buckets[2]).value += grossOf(b);
   });
-  const ageMax = Math.max(1, ...buckets.map((b) => b.value));
 
-  /* ---------- 5. the assistant's claim ---------- */
-  const asked = reach.handled + reach.needHuman;
-  const autoRate = asked > 0 ? (reach.handled / asked) * 100 : null;
 
-  const todayRoutes = data.routes.filter((r) => r.departAt < startOfToday + DAY_MS);
+
+  /* ---------- 6. the trailing month, which the chart ranges read ---------- */
+  const series = Array.from({ length: 30 }, (_, i) => {
+    const from = startOfToday - (29 - i) * DAY_MS;
+    return {
+      day: new Date(from).toISOString().slice(0, 10),
+      n: data.bookings.filter((b) => b.createdAt >= from && b.createdAt < from + DAY_MS).length,
+      label: new Date(from).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'narrow' }),
+      full: new Date(from).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'short' }),
+    };
+  });
+  const shown = series.slice(-range);
+  const busiest = (() => {
+    const byDay = new Map<number, { sum: number; n: number }>();
+    shown.forEach((point) => {
+      const index = new Date(point.day + 'T12:00:00Z').getUTCDay();
+      const entry = byDay.get(index) || { sum: 0, n: 0 };
+      byDay.set(index, { sum: entry.sum + point.n, n: entry.n + 1 });
+    });
+    const means = [...byDay.entries()].map(([index, entry]) => ({ index, mean: entry.sum / entry.n }));
+    if (!means.length) return 'No bookings in this period yet.';
+    const top = means.reduce((a, b) => (b.mean > a.mean ? b : a), means[0]!);
+    if (top.mean <= 0) return 'No bookings in this period yet.';
+    const name = new Date(Date.UTC(2024, 0, 7 + top.index)).toLocaleDateString('en-IN', { weekday: 'long', timeZone: 'UTC' });
+    return `Busiest on ${name}s.`;
+  })();
+
+  /* ---------- 7. the four figures, and the one list that needs a person ---------- */
+  const lastWeekSameDay = data.bookings.filter(
+    (b) => b.createdAt >= startOfToday - 7 * DAY_MS && b.createdAt < startOfToday - 6 * DAY_MS).length;
+  const change = lastWeekSameDay > 0
+    ? Math.round(((todayBookings.length - lastWeekSameDay) / lastWeekSameDay) * 100) : null;
+  const weekdayName = new Date(startOfToday).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long' });
+  const askedTotal = reach.handled + reach.needHuman;
+
+  const todo = queue.slice(0, 3).map((item) => ({
+    key: item.key,
+    icon: item.icon,
+    tone: (item.tone === 'error' ? 'danger' : 'warning') as 'danger' | 'warning',
+    title: item.title,
+    detail: `Decide what to do: ${item.cta.toLowerCase()}.`,
+    go: item.go,
+  }));
+
+  const peakBucket = Math.max(1, ...buckets.map((b) => b.value));
 
   return <DashboardView
     date={new Date().toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'numeric',month:'long'})}
-    contextAction={<a href="#/customer" target="_blank" rel="noreferrer" className="btn btn-text"><Msym name="chat"/>Customer WhatsApp</a>}
-    queue={queue} emptyQueueTitle="All good — nothing needs you" emptyQueueNote="Every parcel and every customer is up to date."
-    assistant={<Card pad className="agent">
-        {autoRate !== null && (
-          <div className="agent-hero">
-            <Ring value={autoRate} size={104} label="on its own" />
-            <div style={{ minWidth: 0 }}>
-              <div className="agent-claim">
-                {reach.handled} of {asked} customer question{asked === 1 ? '' : 's'} answered without you
-              </div>
-              <div className="agent-claim-sub">
-                {reach.needHuman > 0
-                  ? `${reach.needHuman} still needs a person.`
-                  : 'Nothing is waiting on you right now.'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="bot-grid">
-          {[
-            { k: 'people', icon: 'group', label: 'Customers reached', n: reach.people },
-            { k: 'sent', icon: 'send', label: 'Updates sent for you', n: reach.sent },
-            { k: 'thanks', icon: 'favorite', label: 'Said thank you', n: reach.thanks },
-            { k: 'human', icon: 'support_agent', label: 'Need a person', n: reach.needHuman,
-              alert: reach.needHuman > 0 },
-          ].map((c) => (
-            <div key={c.k} className={`bot-cell${c.alert ? ' is-alert' : ''}`}>
-              <div className="bot-top">
-                <span className="bot-ic"><Msym name={c.icon} /></span>
-                <span className="bot-l">{c.label}</span>
-              </div>
-              <div className="bot-n"><Count to={c.n} /></div>
-            </div>
-          ))}
-        </div>
-
-        <button type="button" className="card-foot-link agent-cta" onClick={() => nav('/business/feed')}>
-          Open conversations
-        </button>
-      </Card>}
-    metrics={[
-      {key:'moving',icon:'local_shipping',label:'Parcels moving',tone:'info',value:<Count to={moving}/>,foot:moving>0?'with you right now':'nothing in transit',go:'/business/packages'},
-      {key:'money',icon:'currency_rupee',label:'Money to collect',tone:toPay.amount>0?'warning':'ok',value:<Count to={toPay.amount} format={fmtMoney}/>,foot:toPay.count>0?`from ${toPay.count} delivered parcel${toPay.count===1?'':'s'}`:'everything is paid',go:'/business/packages?filter=topay'},
-      {key:'booked',icon:'note_add',label:'Booked today',tone:'info',value:<Count to={todayBookings.length}/>,delta:deltaVsYesterday,go:'/business/packages?booked=today'},
-      {key:'delivered',icon:'task_alt',label:'Delivered today',tone:'ok',value:<Count to={deliveredToday}/>,foot:deliveredToday>0?'reached the customer':'none delivered yet',go:'/business/packages?filter=delivered'},
-    ]}
-    stages={stages.map(stage=>({...stage,go:'/business/packages?filter='+stage.key}))}
-    week={week.map(day=>({...day,day:String(day.key)}))}
-    moneyAge={<Card>
-            {toPay.amount > 0 ? (
-              <div className="age">
-                {buckets.map((b) => (
-                  <div key={b.key} className={`age-row age-${b.tone}`}>
-                    <div className="age-top">
-                      <span className="age-dot" />
-                      <span className="age-lbl">{b.label}</span>
-                      <span className="age-val">{fmtMoney(b.value)}</span>
-                    </div>
-                    <div className="age-track">
-                      <div className="age-fill" style={{ width: `${(b.value / ageMax) * 100}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon="verified" title="Every parcel is paid"
-                sub="Nothing is waiting to be collected." />
-            )}
-          </Card>}
-    routes={todayRoutes.map(route=>({id:route.id,icon:MODE_ICON[route.mode]||'route',title:route.origin+' → '+route.destination,detail:route.code+' · '+bookingsOfRoute(route).length+' parcels · '+fmtDT(route.departAt),status:ROUTE_STATUS(route).label,statusClass:ROUTE_STATUS(route).cls,go:'/business/routes'}))}
-    recent={data.bookings.slice(0,6).map(booking=>({id:booking.id,icon:activeDelayFor(booking)&&booking.status!=='delivered'?'priority_high':STATUS_ICON[booking.status]||'inventory_2',title:<><span className="mono bk-dk">{booking.docket}</span><span className="bk-to">to {booking.to}</span></>,detail:booking.name+' · '+prettyPhone(booking.phone)+' · '+ago(booking.createdAt),amount:fmtMoney(grossOf(booking)),status:booking.payment&&!booking.payment.settled?'To Pay':'Paid',paymentDue:Boolean(booking.payment&&!booking.payment.settled),tone:activeDelayFor(booking)&&booking.status!=='delivered'?'is-late':booking.status==='delivered'?'is-done':undefined,go:'/business/packages?open='+encodeURIComponent(booking.id)}))}
+    asOf={new Date().toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit'})}
+    branch="Pune — Kothrud"
     newBooking="/business/booking"
+    contextAction={<a href="#/customer" target="_blank" rel="noreferrer" className="btn btn-text"><Msym name="chat"/>Customer WhatsApp</a>}
+    notices={[]}
+    tiles={[
+      {key:'booked',icon:'note_add',label:'Booked today',value:String(todayBookings.length),
+        foot:change===null?`nothing last ${weekdayName}`
+          :change===0?`the same as last ${weekdayName}`
+          :<><span className={'delta '+(change>0?'up':'down')}><Msym name={change>0?'arrow_upward':'arrow_downward'}/>{Math.abs(change)}%</span> vs last {weekdayName}</>,
+        spark:series.slice(-7).map((point)=>point.n),go:'/business/packages?booked=today'},
+      {key:'money',icon:'currency_rupee',label:'Still to collect',value:fmtMoney(toPay.amount),
+        foot:toPay.count>0
+          ?`across ${toPay.count} delivered parcel${toPay.count===1?'':'s'} · ${fmtMoney(buckets[2]!.value)} over a week old`
+          :'everything delivered is paid',
+        go:'/business/packages?filter=topay'},
+      {key:'assistant',icon:'forum',label:'Answered by ShipIT',accent:true,value:String(reach.handled),
+        foot:'customers you did not have to call',go:'/business/feed'},
+      {key:'needs',icon:todo.length?'warning':'check_circle',label:'Needs you',
+        value:todo.length?String(queue.length):'Nothing',danger:queue.length>0,quiet:queue.length===0,
+        missing:queue.length===0,
+        foot:queue.length?'ShipIT could not handle these':'everything is moving',
+        go:queue[0]?.go??'/business/packages'},
+    ]}
+    stages={[...stages.map((stage)=>({key:stage.key,icon:stage.icon,label:stage.label,n:stage.n,go:'/business/packages?filter='+stage.key})),
+      {key:'delivered',icon:'task_alt',label:'Delivered',n:data.bookings.filter((b)=>b.status==='delivered').length,go:'/business/packages?filter=delivered'},
+      {key:'rto',icon:'assignment_return',label:'Returned',n:data.bookings.filter((b)=>b.status==='rto').length,go:'/business/packages?filter=rto',alert:true}]}
+    journeyTotal={data.bookings.length}
+    series={shown} range={range} onRange={setRange} seriesCaption={busiest}
+    money={toPay.amount>0?{bars:buckets.map((b)=>({key:b.key,label:b.label.replace(/ old$/,''),full:b.label,
+      share:(b.value/peakBucket)*100,amount:fmtMoney(b.value)})),
+      caption:buckets[2]!.value>0
+        ?`${fmtMoney(buckets[2]!.value)} of ${fmtMoney(toPay.amount)} has been waiting more than a week.`
+        :'Everything owed is less than a week old.'}:null}
+    moneyFoot={toPay.amount>0?undefined:<p className="chart-caption">Every delivered parcel is paid. Nothing to chase.</p>}
+    value={{range:'this week',cells:[
+      {key:'reached',value:String(reach.people),label:'customers messaged on WhatsApp'},
+      {key:'answered',value:String(reach.handled),label:'questions answered without you'},
+      {key:'share',value:askedTotal>0?Math.round(reach.handled/askedTotal*100)+'%':'—',
+        label:askedTotal>0?`handled start to finish (${reach.handled} of ${askedTotal})`:'handled start to finish'},
+      {key:'hours',value:reach.handled>0?'≈ '+Math.max(1,Math.round(reach.handled*2.5/60))+' hrs':'—',
+        label:'of phone calls you did not take',
+        basis:`An estimate: ${reach.handled} answered questions at two and a half minutes of phone time each.`},
+      {key:'thanks',value:String(reach.thanks),label:'customers said thank you',tone:'happy'},
+      {key:'human',value:String(reach.needHuman),label:'passed to you to finish',tone:'warn'},
+    ]}}
+    todo={todo} todoTotal={queue.length} todoGo="/business/packages"
   />;
 }

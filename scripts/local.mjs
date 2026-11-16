@@ -25,15 +25,17 @@ export function loadLocalEnv(root, inherited = process.env, publicOnly = false) 
 }
 
 export function localCommand(service, root, env, extra = []) {
-  const node = (entry, cwd) => ({
+  const node = (entry, cwd, prefix = []) => ({
     command: process.execPath,
-    args: ['--experimental-strip-types', resolve(root, entry), ...extra],
+    args: ['--experimental-strip-types', resolve(root, entry), ...prefix, ...extra],
     cwd: resolve(root, cwd),
   });
   switch (service) {
     case 'api': return node('apps/api/src/index.ts', 'apps/api');
     case 'worker': return node('apps/api/src/outbox-index.ts', 'apps/api');
     case 'migrate': return node('packages/db/src/migrate-cli.ts', 'packages/db');
+    case 'doctor': return node('packages/db/src/runtime-access-cli.ts', 'packages/db', ['doctor']);
+    case 'access': return node('packages/db/src/runtime-access-cli.ts', 'packages/db', ['repair']);
     case 'web': return node('apps/web/node_modules/vite/bin/vite.js', 'apps/web');
     case 'db': {
       const container = env.LOCAL_DB_CONTAINER || 'shipit-postgres-local';
@@ -41,7 +43,7 @@ export function localCommand(service, root, env, extra = []) {
       if (extra.length) throw new Error('db:start does not accept extra arguments');
       return { command: 'docker', args: ['start', container], cwd: root };
     }
-    default: throw new Error('Use api, web, worker, migrate or db');
+    default: throw new Error('Use api, web, worker, migrate, doctor, access or db');
   }
 }
 
