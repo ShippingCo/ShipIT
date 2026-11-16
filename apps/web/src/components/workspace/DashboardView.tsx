@@ -19,8 +19,15 @@ import './dashboard-view.css';
  *    owner who reads a missing number as "nothing came in today" makes a decision on a number
  *    that does not exist.
  *  - Figures do not animate. A number counting up cannot be read until it stops, and this
- *    screen is read in three seconds or not at all.
+ *    screen is read in three seconds or not at all. (The 21st.dev Stats Band this layout is
+ *    adapted from counts up; that part was deliberately left out.)
  *  - Red is spent once, on "Needs you". A second red figure teaches the owner to ignore red.
+ *
+ * Layout adapted from two 21st.dev components: Stats Band (kuratlielia) for the hairline grid of
+ * figures and its trend line, and Revenue Bars Chart (olewandowski1) for the card header with
+ * a description, ruled gridlines and value labels sitting above slim bars. Both are drawn here
+ * in plain SVG and CSS on the app's tokens rather than through Recharts, which would add a
+ * dependency for a chart that needs no axis maths.
  */
 
 export interface DashboardTile {
@@ -53,6 +60,25 @@ export interface DashboardViewProps {
 const n=(value:number)=>value.toLocaleString('en-IN');
 
 /**
+ * The one shape every empty, waiting and failed panel on this screen takes: an icon in a quiet
+ * disc, one short line saying what is true, one line saying what happens next, and at most one
+ * action. Adapted from the 21st.dev empty and error states, without their illustrations.
+ */
+export function DashboardState({icon,title,body,action,tone='neutral',role}:{
+  icon:string;title:React.ReactNode;body?:React.ReactNode;action?:React.ReactNode;
+  tone?:'neutral'|'error';role?:'status'|'alert';
+}) {
+  return <div className={'board-state tone-'+tone} role={role}>
+    <span className="board-state-ico" aria-hidden="true"><Msym name={icon}/></span>
+    <div className="board-state-text">
+      <p className="board-state-title">{title}</p>
+      {body&&<p className="board-state-body">{body}</p>}
+    </div>
+    {action&&<div className="board-state-action">{action}</div>}
+  </div>;
+}
+
+/**
  * A seven-point trend, drawn once and never read on its own.
  *
  * It is hidden from assistive technology on purpose: the direction it shows is also written in
@@ -62,17 +88,26 @@ const n=(value:number)=>value.toLocaleString('en-IN');
 function Spark({points}:{points:number[]}) {
   if(points.length<2)return null;
   const high=Math.max(...points),low=Math.min(...points),span=high-low||1;
-  const path=points.map((value,index)=>
-    (index/(points.length-1)*96).toFixed(1)+','+(26-((value-low)/span)*22).toFixed(1)).join(' ');
-  return <svg className="kpi-spark" viewBox="0 0 96 28" width="96" height="28" aria-hidden="true" focusable="false">
-    <polyline points={path} fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
+  const xy=points.map((value,index)=>[index/(points.length-1)*100,34-((value-low)/span)*30] as const);
+  const line=xy.map(([x,y],index)=>(index?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join(' ');
+  const [endX,endY]=xy[xy.length-1]!;
+  return <span className="kpi-spark" aria-hidden="true"><span className="kpi-spark-plot">
+    <svg viewBox="0 0 100 36" preserveAspectRatio="none" focusable="false">
+      <path className="kpi-spark-area" d={line+' L100 36 L0 36 Z'}/>
+      <path className="kpi-spark-line" d={line} vectorEffect="non-scaling-stroke"/>
+    </svg>
+    <i className="kpi-spark-dot" style={{left:endX+'%',top:(endY/36*100)+'%'}}/>
+  </span></span>;
 }
 
 function Tile({tile}:{tile:DashboardTile}) {
   const className='kpi'+(tile.accent?' kpi-accent':'')+(tile.missing?' kpi-missing':'');
+  const live=!tile.loading&&!tile.missing;
   const body=<>
-    <span className="label"><Msym name={tile.icon} aria-hidden="true"/>{tile.label}</span>
+    <span className="kpi-top">
+      <span className="label"><span className="kpi-ico" aria-hidden="true"><Msym name={tile.icon}/></span>{tile.label}</span>
+      {live&&<span className="kpi-go" aria-hidden="true"><Msym name="arrow_forward"/></span>}
+    </span>
     {tile.loading
       ? <><span className="sk sk-value" aria-hidden="true"/><span className="sk sk-foot" aria-hidden="true"/></>
       : <>
@@ -83,69 +118,79 @@ function Tile({tile}:{tile:DashboardTile}) {
   </>;
   // A tile with no number behind it is not a link. Pressing through to a filtered list built
   // from a figure the screen could not read would be a second failure.
-  if(tile.loading||tile.missing)return <div className={className}>{body}</div>;
+  if(!live)return <div className={className}>{body}</div>;
   return <Link className={className} to={tile.go}>{body}</Link>;
 }
 
 /**
  * Where every parcel is right now, left to right in the order a parcel moves.
  *
- * The pipe between two stages thickens with the number standing at the next one, so the shape
- * carries the reading before any digit is read. It stays a line — between two and six pixels —
- * because a shape that grows into a block stops being comparable to the one beside it.
+ * Each stage carries a short meter scaled to the busiest stage, so the shape of the operation
+ * reads before any digit does. It is a hairline-thin bar, never a block, so neighbouring stages
+ * stay comparable.
  */
-function Journey({stages,total}:{stages:DashboardStage[]|null;total:number|null}) {
+function Journey({stages}:{stages:DashboardStage[]|null}) {
   if(!stages)return <div className="journey" aria-hidden="true">
-    {Array.from({length:6},(_,index)=><React.Fragment key={index}>
-      {index>0&&<span className="journey-pipe"><i style={{height:'2px'}}/></span>}
-      <span className="sk sk-stage"/>
-    </React.Fragment>)}
+    {Array.from({length:7},(_,index)=><span key={index} className="sk sk-stage"/>)}
   </div>;
   const peak=Math.max(...stages.map(stage=>stage.n),1);
-  return <>
-    <ol className="journey">
-      {stages.map((stage,index)=><li className="journey-cell" key={stage.key}>
-        {index>0&&<span className="journey-pipe" aria-hidden="true">
-          <i style={{height:Math.max(2,Math.min(6,Math.round(stage.n/peak*6)))+'px',opacity:stage.n?1:.4}}/>
-        </span>}
-        <Link className={'journey-stage'+(stage.alert&&stage.n>0?' alert':'')+(stage.n?'':' is-zero')} to={stage.go}
-          aria-label={n(stage.n)+' '+(stage.n===1?'parcel':'parcels')+' '+stage.label.toLowerCase()}>
+  return <ol className="journey">
+    {stages.map(stage=><li className="journey-cell" key={stage.key}>
+      <Link className={'journey-stage'+(stage.alert&&stage.n>0?' alert':'')+(stage.n?'':' is-zero')} to={stage.go}
+        aria-label={n(stage.n)+' '+(stage.n===1?'parcel':'parcels')+' '+stage.label.toLowerCase()}>
+        <span className="j-head">
           <span className="j-icon" aria-hidden="true"><Msym name={stage.icon}/></span>
-          <span className="j-n">{n(stage.n)}</span>
           <span className="j-label">{stage.label}</span>
-        </Link>
-      </li>)}
-    </ol>
-    {total!==null&&<p className="journey-total">{n(total)} {total===1?'parcel':'parcels'} in the network</p>}
-  </>;
+        </span>
+        <span className="j-n">{n(stage.n)}</span>
+        <span className="j-meter" aria-hidden="true"><i style={{width:(stage.n?Math.max(4,stage.n/peak*100):0)+'%'}}/></span>
+      </Link>
+    </li>)}
+  </ol>;
+}
+
+/** A round step above the peak, so the top gridline sits just over the tallest bar. */
+function niceCeiling(peak:number) {
+  if(peak<=4)return 4;
+  const magnitude=10**Math.floor(Math.log10(peak));
+  for(const step of [1,1.5,2,2.5,3,4,5,6,8,10]){const top=step*magnitude;if(top>=peak)return top;}
+  return peak;
 }
 
 /**
  * Bars, with the newest one in the accent colour carrying its own value.
  *
  * An owner reads "today against the rest" in one movement and never traces a bar back to an
- * axis, which is why there is no axis. The table underneath is the same numbers for a screen
- * reader; the picture is explicitly not the only copy of the data.
+ * axis, which is why the gridlines carry no numbers: every bar worth reading has its value
+ * printed above it. The table underneath is the same numbers for a screen reader; the picture
+ * is explicitly not the only copy of the data.
  */
-function Bars({points,caption,empty}:{points:DashboardSeriesPoint[]|null;caption:string;empty?:React.ReactNode}) {
+function Bars({points,empty}:{points:DashboardSeriesPoint[]|null;empty?:React.ReactNode}) {
   const table=useId();
   if(!points)return <div className="sk sk-chart" aria-hidden="true"/>;
   const peak=Math.max(...points.map(point=>point.n),0);
   if(peak===0&&empty)return <>{empty}</>;
-  const scale=Math.max(peak,1),last=points.length-1;
-  const every=points.length>14?7:points.length>7?2:1;
+  const top=niceCeiling(Math.max(peak,1)),last=points.length-1;
+  const dense=points.length>14;
+  const every=dense?7:points.length>7?2:1;
+  // Thirty labels over thirty slim bars is noise; at a month only today and the peak are named.
+  const labelled=(point:DashboardSeriesPoint,index:number)=>index===last||(point.n>0&&(!dense||point.n===peak));
   return <>
-    <div className="bars" role="img" aria-describedby={table}
+    <div className={'bars'+(dense?' is-dense':'')} role="img" aria-describedby={table}
       aria-label={'Parcels booked each day over '+points.length+' days, ending at '+n(points[last]!.n)+' today.'}>
-      {points.map((point,index)=><span key={point.day} className={'bar'+(index===last?' is-now':'')} title={point.full+': '+n(point.n)}>
-        <span className="bar-plot">
-          {index===last&&<b className="bar-value">{n(point.n)}</b>}
-          <i style={{height:Math.max(point.n/scale*100,point.n?4:1.5)+'%'}}/>
-        </span>
-        <span className="bar-day">{index===last?'Today':index%every===0?point.label:''}</span>
-      </span>)}
+      <div className="bars-grid" aria-hidden="true"><i/><i/><i/><i/></div>
+      <div className="bars-plot">
+        {points.map((point,index)=><span key={point.day} className={'bar'+(index===last?' is-now':'')}>
+          <span className="bar-plot">
+            <span className="bar-fill" style={{height:(point.n/top*100)+'%'}}>
+              {labelled(point,index)&&<b className="bar-value">{n(point.n)}</b>}
+            </span>
+            <span className="bar-tip" aria-hidden="true">{point.full}<b>{n(point.n)}</b></span>
+          </span>
+          <span className="bar-day">{index===last?'Today':index%every===0&&last-index>=(dense?4:every)?point.label:''}</span>
+        </span>)}
+      </div>
     </div>
-    <p className="chart-caption">{caption}</p>
     <table id={table} className="workspace-visually-hidden">
       <caption>Parcels booked each day</caption>
       <tbody>{points.map(point=><tr key={point.day}><th scope="row">{point.full}</th><td>{n(point.n)}</td></tr>)}</tbody>
@@ -153,33 +198,36 @@ function Bars({points,caption,empty}:{points:DashboardSeriesPoint[]|null;caption
   </>;
 }
 
-function MoneyBars({money,foot}:{money:{bars:DashboardMoneyBar[];caption:string}|null;foot?:React.ReactNode}) {
+/** How old the money is, as rows: a label, a bar that is the amount, and the amount itself. */
+function MoneyBars({money}:{money:{bars:DashboardMoneyBar[];caption:string}}) {
   const table=useId();
-  if(!money)return <>{foot}</>;
   return <>
-    <div className="bars is-money" role="img" aria-describedby={table}
+    <ul className="age-bars" role="img" aria-describedby={table}
       aria-label={'Money still to collect by age: '+money.bars.map(bar=>bar.full+' '+bar.amount).join(', ')+'.'}>
-      {money.bars.map(bar=><span key={bar.key} className="bar" title={bar.full+': '+bar.amount}>
-        <span className="bar-plot"><i style={{height:Math.max(bar.share,bar.share>0?4:1.5)+'%'}}/></span>
-        <span className="bar-day">{bar.label}</span>
-      </span>)}
-    </div>
-    <p className="chart-caption">{money.caption}</p>
+      {money.bars.map((bar,index)=><li key={bar.key} className={'age-row age-'+bar.key+(index===0?' is-fresh':'')}>
+        <span className="age-label">{bar.label}</span>
+        <span className="age-track"><i style={{width:Math.max(bar.share,bar.share>0?3:0)+'%'}}/></span>
+        <span className="age-amount">{bar.amount}</span>
+      </li>)}
+    </ul>
     <table id={table} className="workspace-visually-hidden">
       <caption>Money still to collect, by age</caption>
       <tbody>{money.bars.map(bar=><tr key={bar.key}><th scope="row">{bar.full}</th><td>{bar.amount}</td></tr>)}</tbody>
     </table>
-    {foot}
   </>;
 }
 
 export function DashboardView(p:DashboardViewProps) {
   const ranges:DashboardRange[]=[7,14,30];
+  const showCaption=Boolean(p.series&&p.series.some(point=>point.n>0)&&p.seriesCaption);
   return <div className="page board">
     <header className="board-head">
-      <div>
+      <div className="board-title">
         <h1 id="workspace-title" tabIndex={-1}>Dashboard</h1>
-        <p className="board-sub">{p.date}</p>
+        <p className="board-sub">
+          <span>{p.date}</span>
+          <span className="board-asof" aria-live="polite">{p.asOf?'Counted at '+p.asOf+' · '+p.branch:'Counting…'}</span>
+        </p>
       </div>
       <div className="board-head-side">
         {p.contextAction}
@@ -190,55 +238,74 @@ export function DashboardView(p:DashboardViewProps) {
     {/* One notice per surface that failed, each retrying only its own request. The sentence
         that matters is the second one: an owner who reads a dash as a zero acts on a number
         that was never there. */}
-    {p.notices.map(notice=><div className="notice notice-warning" key={notice.key}>
+    {p.notices.map(notice=><div className="notice notice-warning board-notice" key={notice.key}>
       <span className="ico" aria-hidden="true"><Msym name="error"/></span>
       <div className="body">
         <strong role="alert">{notice.title}</strong>
         <p>{notice.body} <b>These numbers are missing, not zero.</b>{notice.tries>1?' Tried '+(notice.tries===2?'twice':notice.tries+' times')+'.':''}</p>
-        {notice.retry&&<button className="btn btn-outlined" type="button" disabled={notice.busy} onClick={notice.retry}>
-          {notice.busy?'Trying…':'Try again'}</button>}
       </div>
+      {notice.retry&&<button className="btn btn-outlined" type="button" disabled={notice.busy} onClick={notice.retry}>
+        <Msym name="refresh" aria-hidden="true"/>{notice.busy?'Trying…':'Try again'}</button>}
     </div>)}
 
     <div className="kpi-row">{p.tiles.map(tile=><Tile key={tile.key} tile={tile}/>)}</div>
 
     <section className="card board-card" aria-labelledby="board-journey">
-      <header className="card-head"><h2 id="board-journey">Where every parcel is right now</h2></header>
-      <Journey stages={p.stages} total={p.journeyTotal}/>
+      <header className="card-head">
+        <div className="board-card-title">
+          <h2 id="board-journey">Where every parcel is right now</h2>
+          {p.journeyTotal!==null&&<p className="journey-total">{n(p.journeyTotal)} {p.journeyTotal===1?'parcel':'parcels'} in the network</p>}
+        </div>
+      </header>
+      <div className="board-body"><Journey stages={p.stages}/></div>
     </section>
 
     <div className="board-charts">
       <section className="card board-card" aria-labelledby="board-booked">
         <header className="card-head">
-          <h2 id="board-booked">Parcels booked</h2>
+          <div className="board-card-title">
+            <h2 id="board-booked">Parcels booked</h2>
+            {showCaption&&<p className="chart-caption">{p.seriesCaption}</p>}
+          </div>
           {/* The range moves the chart and nothing else. The figures above are always today. */}
-          <div className="segmented" role="group" aria-label="Chart range">
+          <div className="segmented board-range" role="group" aria-label="Chart range">
             {ranges.map(range=><button key={range} type="button" aria-pressed={p.range===range}
               onClick={()=>p.onRange(range)}>{range===30?'Month':range+' days'}</button>)}
           </div>
         </header>
-        <Bars points={p.series} caption={p.seriesCaption} empty={p.seriesEmpty}/>
+        <div className="board-body"><Bars points={p.series} empty={p.seriesEmpty}/></div>
       </section>
 
       <section className="card board-card" aria-labelledby="board-money">
-        <header className="card-head"><h2 id="board-money">Money still to collect</h2></header>
-        <MoneyBars money={p.money} foot={p.moneyFoot}/>
+        <header className="card-head">
+          <div className="board-card-title">
+            <h2 id="board-money">Money still to collect</h2>
+            {p.money&&<p className="chart-caption">{p.money.caption}</p>}
+          </div>
+        </header>
+        <div className="board-body board-body-money">
+          {p.money&&<MoneyBars money={p.money}/>}
+          {p.moneyFoot}
+        </div>
       </section>
     </div>
 
     {p.value
-      ? <section className="card value-card" aria-labelledby="board-value">
+      ? <section className="card board-card value-card" aria-labelledby="board-value">
         <header className="card-head">
-          <h2 id="board-value">What ShipIT did for you this week</h2>
+          <div className="board-card-title">
+            <h2 id="board-value">What ShipIT did for you this week</h2>
+            <p className="chart-caption">Counted from every customer conversation in the week.</p>
+          </div>
           <span className="pill pill-accent">{p.value.range}</span>
         </header>
-        <div className="value-grid">
+        <dl className="value-grid">
           {p.value.cells.map(cell=><div className="value-cell" key={cell.key}>
-            <span className={'v-n'+(cell.tone?' is-'+cell.tone:'')} title={cell.basis}>{cell.value}</span>
-            <span className="v-l">{cell.label}</span>
+            <dt className="v-l">{cell.label}</dt>
+            <dd><span className={'v-n'+(cell.tone?' is-'+cell.tone:'')} title={cell.basis}>{cell.value}</span></dd>
           </div>)}
-        </div>
-        {p.value.note&&<p className="value-note">{p.value.note}</p>}
+        </dl>
+        {p.value.note&&<p className="value-note"><Msym name="info" aria-hidden="true"/>{p.value.note}</p>}
       </section>
       : p.valueInstead}
 
@@ -246,18 +313,16 @@ export function DashboardView(p:DashboardViewProps) {
         is simply not here, and its absence is the message. */}
     {p.todo.length>0&&<section className="card board-card" aria-labelledby="board-todo">
       <header className="card-head">
-        <h2 id="board-todo">Needs you</h2>
+        <div className="board-card-title"><h2 id="board-todo">Needs you</h2></div>
         {p.todoTotal>p.todo.length&&<Link className="btn btn-text" to={p.todoGo}>See all {p.todoTotal}</Link>}
       </header>
       <div className="todo">
         {p.todo.map(row=><Link className={'todo-row tone-'+row.tone} key={row.key} to={row.go}>
           <span className="t-ico" aria-hidden="true"><Msym name={row.icon}/></span>
           <span className="t-body"><b>{row.title}</b><span>{row.detail}</span></span>
-          <span className="t-go" aria-hidden="true"><Msym name="arrow_forward"/></span>
+          <span className="t-go" aria-hidden="true"><Msym name="chevron_right"/></span>
         </Link>)}
       </div>
     </section>}
-
-    <p className="board-asof" aria-live="polite">{p.asOf?'Counted at '+p.asOf+' · '+p.branch:'Counting…'}</p>
   </div>;
 }
