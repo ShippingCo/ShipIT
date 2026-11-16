@@ -40,7 +40,9 @@ await test('receipt service persists split cash/UPI against a 50000 bill and rep
  assert.deepEqual(new Set([page.json().items[0].receipt_id,next.json().items[0].receipt_id]),new Set([first.receipt_id,second.receipt_id]));
  assert.ok(!/external_reference|receiver_id|SYNTHETIC-UPI-REF|key_digest|fingerprint/.test(page.body+next.body));
  const choices=await get('/api/v1/receiving-accounts',{...q,limit:'1'});assert.equal(choices.statusCode,200,choices.body);assert.equal(choices.json().items.length,1);assert.ok(choices.json().next_cursor);
- const bills=await get('/api/v1/money-receipt-bills',{...q,customer_id:s.source.id});assert.equal(bills.statusCode,200,bills.body);assert.deepEqual(bills.json().items,[{booking_id:s.bookingId,currency:'INR',gross_paise:50000,outstanding_paise:0,expected_payment_version:2}]);
+ const bills=await get('/api/v1/money-receipt-bills',{...q,customer_id:s.source.id});assert.equal(bills.statusCode,200,bills.body);// Each bill carries the booking's confirmation time so the counter can order and date it.
+ const [bill]=bills.json().items;assert.equal(bills.json().items.length,1);assert.match(bill.confirmed_at,/^\d{4}-\d{2}-\d{2}T/);
+ assert.deepEqual({...bill,confirmed_at:undefined},{booking_id:s.bookingId,currency:'INR',gross_paise:50000,outstanding_paise:0,expected_payment_version:2,confirmed_at:undefined});
  assert.equal((await get('/api/v1/money-receipts',{...q,customer_id:randomUUID()})).statusCode,404);
  assert.equal((await get('/api/v1/money-receipt-bills',{...q,franchise_id:B,customer_id:s.source.id},s.admin.token)).statusCode,404);
  assert.equal((await get('/api/v1/money-receipts',{...q,customer_id:s.source.id,limit:'101'})).statusCode,422);

@@ -128,3 +128,25 @@ await test('fresh agency creates empty lots and routes with exact retries and na
     (SELECT count(*)::int FROM shipit.bookings) bookings,(SELECT count(*)::int FROM shipit.pricing_versions) rates`)).rows[0],
     { lots: 1, routes: 1, events: 2, lot_audits: 1, route_audits: 1, bookings: 0, rates: 0 });
 });
+
+await test('booking creation access lets the counter write bookings and drafts and nothing broader', { timeout: 60000 }, async t => {
+  const db = await provisionDatabase(t); await db.migrate();
+  const runtime = db.runtimePool(), owner = db.ownerPool();
+  const target = { role: db.runtimeRole, database: db.database };
+  assert.equal((await checkRuntimeAccess(runtime, ['booking_creation'])).profiles.booking_creation!.status, 'blocked');
+  await repairRuntimeAccess(owner, target, ['booking_creation']);
+  assert.equal((await checkRuntimeAccess(runtime, ['booking_creation'])).profiles.booking_creation!.status, 'granted');
+  const can = async (table: string, privilege: string) => (await owner.query<{ allowed: boolean }>(
+    'SELECT has_table_privilege($1,$2,$3) AS allowed', [db.runtimeRole, 'shipit.' + table, privilege])).rows[0]!.allowed;
+  for (const table of ['bookings', 'parcels', 'booking_commands', 'booking_obligations', 'counter_bookings', 'counter_booking_events']) {
+    assert.equal(await can(table, 'INSERT'), true, table);
+    assert.equal(await can(table, 'DELETE'), false, table);
+  }
+  // Only the command outcome columns may change after insert; a booking or parcel never can.
+  for (const table of ['bookings', 'parcels', 'booking_obligations', 'counter_bookings']) assert.equal(await can(table, 'UPDATE'), false, table);
+  const column = async (name: string) => (await owner.query<{ allowed: boolean }>(
+    "SELECT has_column_privilege($1,'shipit.booking_commands',$2,'UPDATE') AS allowed", [db.runtimeRole, name])).rows[0]!.allowed;
+  assert.equal(await column('state'), true);
+  assert.equal(await column('organization_id'), false);
+});
+
