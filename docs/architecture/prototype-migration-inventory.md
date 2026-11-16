@@ -1411,7 +1411,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 
 | Test declaration | Decision | Group |
 | --- | --- | --- |
-| apps/web/src/test/counter.test.tsx: uses the original demo field order and controls without separate customer or pricing steps | preserve | booking |
 | apps/web/src/test/counter.test.tsx: looks up repeat customers on phone blur and only fills the selected customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: loads an explicitly selected customer through the current scope and never creates a replacement | preserve | seam |
 | apps/web/src/test/counter.test.tsx: does not request an invalid customer link or substitute a customer when it fails | preserve | seam |
@@ -1439,7 +1438,6 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: scope change cancels late %s and prevents private totals repaint | preserve | seam |
 | apps/web/src/test/counter.test.tsx: scope change cancels late receipt and drops its private snapshot | preserve | seam |
 | apps/web/src/test/counter.test.tsx: keeps the entered booking when leaving the draft is cancelled | preserve | booking |
-| apps/web/src/test/counter.test.tsx: adds and removes packages directly below the docket row before saving a customer | preserve | booking |
 | apps/web/src/test/counter.test.tsx: cancels an unsaved booking only after confirming discard and can keep editing | preserve | booking |
 | apps/web/src/test/counter.test.tsx: saves directly from the page without a billing confirmation popup or declaration checkbox | preserve | booking |
 | apps/web/src/test/counter.test.tsx: direct save retains the exact %s request after a lost acknowledgement | preserve | booking |
@@ -1533,17 +1531,18 @@ from the same branch's navigation, dispatch-creation and icon work.
 | Declaration | Disposition | Group |
 | --- | --- | --- |
 | apps/web/src/test/counter-draft-reason.test.tsx: names an unconfigured shop GST before the button is pressed, and does not promise a booking | preserve | booking |
-| apps/web/src/test/counter-draft-reason.test.tsx: names a docket the server has already used instead of a bare draft | preserve | booking |
 | apps/web/src/test/counter-draft-reason.test.tsx: names a refused tax calculation instead of a bare draft | preserve | booking |
 | apps/web/src/test/counter-draft-reason.test.tsx: still saves a deliberate draft with no alarm when the operator simply has less to type | preserve | booking |
 | apps/web/src/test/counter-draft-reason.test.tsx: a configured shop still completes the booking | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: keeps the form open on a docket the server has already used, pointing at the docket | preserve | booking |
+| apps/web/src/test/counter-draft-reason.test.tsx: books without a delivery address, which is optional at the counter | preserve | booking |
 | apps/web/src/test/counter.test.tsx: keeps a blank form as a named draft, never as a confirmed booking | preserve | booking |
 | apps/web/src/test/counter.test.tsx: asks which customer a reused phone belongs to instead of silently keeping a draft | preserve | booking |
 | apps/web/src/test/counter.test.tsx: can keep the typed name as a new customer instead | preserve | booking |
 | apps/web/src/test/counter.test.tsx: never lets the customer question end in another draft | preserve | booking |
 | apps/web/src/test/counter.test.tsx: does not ask about a saved customer whose name differs only by case or spacing | preserve | booking |
 | apps/web/src/test/counter.test.tsx: explicit save keeps a draft without requiring sender fields | preserve | booking |
-| apps/web/src/test/counter.test.tsx: names what is missing before the button is pressed, and stops naming it once supplied | preserve | booking |
+| apps/web/src/test/counter.test.tsx: marks every missing required field red when Save booking is pressed, and never saves a draft for it | preserve | booking |
 | apps/web/src/test/counter.test.tsx: books from the published rate card without a typed freight amount | preserve | booking |
 | apps/web/src/test/counter.test.tsx: offers a readable draft number and a way back into the same form | preserve | booking |
 | apps/web/src/test/dispatch-creation.test.tsx: creates an empty lot when saved data is %s | preserve | lots |
@@ -1653,6 +1652,13 @@ would replace this module without changing the screen.
 | apps/web/src/test/counter.test.tsx: works out the change, and names a shortfall without refusing the booking | replace | presentation |
 | apps/web/src/test/counter.test.tsx: asks for cash given only where cash is what is being taken | replace | presentation |
 | apps/web/src/test/counter.test.tsx: never sends counter arithmetic to the server | replace | presentation |
+| apps/web/src/test/counter.test.tsx: keeps one page in working order, sender then delivery then parcel then charges, with no separate steps | preserve | booking |
+| apps/web/src/test/counter.test.tsx: adds and removes packages at the end of the parcel section before saving a customer | preserve | booking |
+| apps/web/src/test/counter.test.tsx: says what is wrong with a field when the operator leaves it, and stays quiet about empty ones | preserve | booking |
+| apps/web/src/test/counter.test.tsx: saves with Ctrl+Enter from any field, and never on a bare Enter | preserve | booking |
+| apps/web/src/test/counter.test.tsx: states who pays and when beside the total | preserve | booking |
+| apps/web/src/test/counter.test.tsx: keeps one filled button, Save booking, and offers a draft only as a quiet second action | preserve | booking |
+| apps/web/src/test/counter.test.tsx: puts the destination and the delivery address in one section | preserve | booking |
 | apps/web/src/test/booking-units.test.tsx: accepts only published rate choices, keeping the prices it quotes from and nothing else | replace | presentation |
 | apps/web/src/test/dispatch-creation.test.tsx: starts an empty bag when saved data is %s | replace | presentation |
 | apps/web/src/test/lots-demo.test.tsx: starts a bag from its destination alone, pre-ticks that city and saves the staff note | replace | presentation |

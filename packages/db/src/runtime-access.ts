@@ -51,6 +51,16 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
     tables('bookings parcels counter_bookings counter_booking_events customers booking_obligations') },
   lots_routes: { description: 'Lot and route planning reads only', requirements:
     tables('lots lot_memberships lot_commands routes route_commands route_lots route_parcels route_manifests route_manifest_parcels route_manifest_sources domain_events') },
+  // The counter's own write path. Without it a local API can price and tax a booking but every
+  // save is refused by the database (reported to the operator as "Outcome uncertain"), and every
+  // counter draft is refused too. Mirrors the restricted-role grants in test/support.ts.
+  booking_creation: { description: 'Counter booking and draft creation; no cancellation, parcel-state or payment mutations', requirements: [
+    ...tables('bookings parcels booking_commands booking_obligations domain_events counter_bookings counter_booking_events'),
+    ...tables('bookings parcels booking_commands booking_obligations domain_events counter_bookings counter_booking_events', 'INSERT'),
+    ...updateColumns('booking_commands', 'state,http_status,result,committed_at,retain_until'),
+    // Spelled as Postgres reports argument types, not "timestamptz": the check matches text.
+    { kind: 'function', object: 'shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,uuid,timestamp with time zone)', privilege: 'EXECUTE' },
+  ] },
   dispatch_creation: { description: 'Empty lot and route creation; no parcel, journey, membership or provider mutations', requirements: [
     ...tables('lots lot_memberships lot_commands routes route_commands route_lots route_parcels route_manifests route_manifest_parcels route_manifest_sources domain_events counter_bookings'),
     ...tables('lots lot_commands routes route_commands route_manifests route_manifest_parcels route_manifest_sources domain_events', 'INSERT'),

@@ -16,7 +16,7 @@ export function failureMessage(error: unknown): string {
     QUOTE_STALE: 'Pricing expired or changed. Get a fresh price and tax calculation, review the totals, then confirm again.',
     TAX_STALE: 'Tax evidence expired or changed. Get a fresh price and tax calculation, review the totals, then confirm again.',
     VERSION_CONFLICT: 'The customer changed. Refresh the customer, review the latest record alongside your entered values, then confirm your choice.',
-    DOCKET_CONFLICT: 'That docket cannot be allocated. Enter another docket or leave it blank for server allocation.',
+    DOCKET_CONFLICT: 'This docket number is already used. Check your receipt book and enter the next unused number.',
     NO_RATE: 'No configured rate matches this destination, service and weight. Ask your franchise administrator to review the rate card.',
     TAX_POLICY_UNAVAILABLE: 'Choose the GST treatment in Settings, then retry this booking.',
     TAX_CONFLICT: 'Tax facts need authorized resolution. Check the service recipient and evidence with your franchise administrator.',

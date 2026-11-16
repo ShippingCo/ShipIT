@@ -11,8 +11,7 @@ import {retainAccountNavigation} from '../data-access/account-navigation';
 import {receipts} from '../data-access/receipts';
 import type {ScopeController} from '../operator/scope';
 import {createBookingWorkflow,TAX_SETUP_REASON} from './workflow';
-import {revealField} from '../components/workspace/FormErrors';
-import {totalWeight,emptyDraft,parcelErrors,additionalParcelErrors,draftCode,type Field} from './form';
+import {totalWeight,emptyDraft,validate,draftCode,type Field} from './form';
 import {BookingPayment} from './BookingPayment';
 import {BookingSaved} from './BookingSaved';
 import {ReceiptPanel} from './ReceiptPanel';
@@ -24,11 +23,11 @@ import {PhoneField} from './PhoneField';
 import {Msym} from '../components/m3/Icon';
 import {Card} from '../components/m3/Surface';
 import {Button,SegmentedControl} from '../components/m3/Button';
-import {StepTrack} from '../components/m3/StepTrack';
 import type {CustomerDto} from '@shippingco/shared';
 import {useBookingAttachments,BookingAttachments} from './BookingAttachments';
 import './counter.css';
 import './booking-modal.css';
+import './booking-form.css';
 import {ParcelEntry} from './ParcelEntry';
 import {WeightField,ParcelSize} from './WeightField';
 import {useBookingLotAssignment} from './BookingLotAssignment';
@@ -77,6 +76,12 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const printed=useRef(0);
   const [printMessage,setPrintMessage]=useState('');
   const heading=useRef<HTMLHeadingElement>(null);
+  // A field says what is wrong with it as soon as the operator leaves it, not after Save.
+  // Only fields that have been visited and hold something are judged: an empty field is
+  // "not filled in yet", which the summary's list already covers without nagging.
+  const [touched,setTouched]=useState<ReadonlySet<Field>>(()=>new Set());
+  const touch=(field:Field)=>setTouched(previous=>previous.has(field)?previous:new Set(previous).add(field));
+  const arrived=useRef(false);
   const linkedCustomer=useResource(requestedCustomer??'',signal=>{
     if(!requestedCustomer)return Promise.resolve(null);
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(requestedCustomer))return Promise.reject(new ApiFailure('VALIDATION_FAILED'));
@@ -130,7 +135,19 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     window.addEventListener('beforeunload',prevent);
     return()=>window.removeEventListener('beforeunload',prevent);
   },[busy,uncertain,dirty,state.booking,state.entry]);
-  useEffect(()=>{heading.current?.focus();},[state.booking,state.entry]);
+  // A new booking starts with the cursor in the first field, so the operator can type the
+  // phone number straight away. After a save the confirmation's heading takes focus instead,
+  // and it is brought into view because the page is usually scrolled far down by then.
+  useEffect(()=>{
+    const first=!arrived.current;arrived.current=true;
+    if(first&&!state.booking&&!state.entry&&!requestedCustomer&&!requestedDraft){
+      // One frame later, because on a cold load the shell moves focus to its own title in the
+      // same commit and would otherwise take the cursor back out of the field.
+      const field=()=>document.getElementById('counter-phone')?.focus({preventScroll:true});
+      field();const frame=requestAnimationFrame(field);return()=>cancelAnimationFrame(frame);
+    }
+    heading.current?.focus();if(state.booking||state.entry)heading.current?.scrollIntoView?.({block:'center'});
+  },[state.booking,state.entry,requestedCustomer,requestedDraft]);
   useEffect(()=>{
     const snapshot=workflow.snapshot();
     const first=(Object.keys(snapshot.errors) as Field[]).find(key=>!!snapshot.errors[key]);
@@ -184,7 +201,10 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   async function save(){
     if(busy)return;
     if(taxSetupMissing&&!workflow.entryPending()){await workflow.saveEntry(TAX_SETUP_REASON);return;}
-    if(workflow.entryPending()||workflow.requiresEntry()){await workflow.saveEntry();return;}
+    // Save booking always means a booking. With something required still missing it marks
+    // those fields and moves the cursor to the first one (validateEntry below); it no longer
+    // turns the press into a draft. Keeping a draft is its own, quieter action.
+    if(workflow.entryPending()){await workflow.saveEntry();return;}
     if(state.bookingPhase==='uncertain'){await workflow.save();if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);return;}
     if(!workflow.validateEntry())return;
     setPreparing(true);
@@ -204,21 +224,24 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
         }
       }
       if(workflow.snapshot().customerPhase!=='ready')await workflow.confirmCustomer();
-      if(workflow.snapshot().customerPhase!=='ready'){
-        if(workflow.snapshot().failureCode==='VALIDATION_FAILED')await workflow.saveEntry();
-        return;
-      }
+      // A refusal the operator can fix on this screen — a wrong phone, a used docket, a missing
+      // address, no published rate — stays on the form with the field highlighted. It used to be
+      // turned into a draft automatically, which cleared the highlight and left the operator on
+      // a "Draft saved" page with no idea which field to change.
+      if(workflow.snapshot().customerPhase!=='ready')return;
       workflow.recordTaxEntry();
       if(!workflow.snapshot().tax)await workflow.preview();
       if(workflow.snapshot().tax){
         await workflow.save();
         if(workflow.snapshot().booking&&d.paymentMode==='paid_counter')setPaymentOpen(true);
-        else if(['VALIDATION_FAILED','DOCKET_CONFLICT'].includes(workflow.snapshot().failureCode??''))await workflow.saveEntry();
       }
-      else if(Object.values(workflow.snapshot().errors).some(Boolean)||['NO_RATE','TAX_POLICY_UNAVAILABLE','TAX_CONFLICT','VALIDATION_FAILED'].includes(workflow.snapshot().failureCode??''))await workflow.saveEntry();
+      // Only a tax problem nobody at the counter can fix keeps the work as a draft, with the
+      // reason carried onto the draft page.
+      else if(['TAX_POLICY_UNAVAILABLE','TAX_CONFLICT'].includes(workflow.snapshot().failureCode??''))await workflow.saveEntry();
     }catch{setLookupError('Customer lookup could not finish. Retry before saving.');}
     finally{setPreparing(false);}
   }
+  async function saveDraft(){if(!busy)await workflow.saveEntry();}
   const parcelCount=1+state.additionalParcels.length;
   const packedWeight=displayUnits(totalWeight(d,state.additionalParcels),3);
   const serviceName=state.quote?.service_option?.name??selectedServiceLabel;
@@ -235,16 +258,19 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
     const given=Number(d.cashGiven);
     return given>=due?{paise:given-due,short:false}:{paise:due-given,short:true};
   })();
-  const parcelReady=!!serviceName&&!!packedWeight&&[parcelErrors(d),...additionalParcelErrors(d,state.additionalParcels)].every(errors=>Object.keys(errors).length===0);
-  const sectionReady=[!!d.name&&!!d.phone&&!!d.destination,parcelReady,!!state.quote];
+  const live=validate(d,'booking');
+  const shown=(field:Field)=>state.errors[field]??(touched.has(field)&&d[field]!==''?live[field]:undefined);
+  const sizeErrors={lengthCm:shown('lengthCm'),widthCm:shown('widthCm'),heightCm:shown('heightCm')};
   const formHasError=Object.values(state.errors).some(Boolean)||state.parcelErrors.some(errors=>Object.values(errors).some(Boolean));
   // The counter has two different saves. Which one the button will do must be visible before
   // it is pressed, never discovered afterwards from the wording of a confirmation.
   const needs=state.booking||state.entry?[]:workflow.needs();
- const needFields=state.booking||state.entry?[]:workflow.needFields();
   const savedNeeds=state.entry?workflow.needs():[];
   const retrying=uncertain||state.bookingPhase==='uncertain';
   const draftOnly=needs.length>0||taxSetupMissing;
+  // A price is on its way: either the request is out, or everything it needs has just been
+  // typed and the request is about to go. Saying so beats a dash that looks like "no price".
+  const pricing=!state.quote&&(state.pricingPhase==='loading'||needs.length===0&&state.pricingPhase==='editing'&&!state.booking);
   const statusError=formHasError||['error','uncertain','stale'].some(phase=>[state.customerPhase,state.pricingPhase,state.taxPhase,state.bookingPhase].some(value=>value===phase));
   if(state.recoveryBlocked)return <section className="counter-section"><h1>Booking recovery required</h1><p role="alert">An earlier request may have saved. Check Bookings and Receipts before creating a replacement.</p><Link to="/business/bookings">Open Bookings</Link><Link to="/business/receipts">Open Receipts</Link></section>;
   if(state.entry)return <section className="booking-saved counter-draft-saved">
@@ -288,7 +314,9 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
           toPay:d.paymentMode==='to_pay',
           ...(state.booking.account?{billedTo:{name:state.booking.account.debtor.name,due:state.booking.account.due_date}}:{}),
         }}
-        message={cancelled?'This booking is no longer available for intake or dispatch.':state.message}
+        /* The heading already says "Booking saved"; repeating the workflow's identical line under the
+           actions read as a second, weaker confirmation. Anything else it reports is still shown. */
+        message={cancelled?'This booking is no longer available for intake or dispatch.':state.message==='Booking saved.'?'':state.message}
         printState={printState}
         printMessage={printMessage}
         busy={busy||attachments.pending||uncertain}
@@ -303,108 +331,117 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
       <BookingAttachments queue={attachments}/>
       {paymentOpen&&!cancelled&&<BookingPayment controller={controller} booking={state.booking} onPendingChange={setPaymentPending}/>}
       <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id}/>
-    </div>:<div className="page"><form aria-label="New booking" aria-describedby="booking-optional-fields" noValidate onSubmit={event=>event.preventDefault()}>
+    </div>:<div className="page"><form aria-label="New booking" aria-describedby="booking-optional-fields" noValidate onSubmit={event=>event.preventDefault()}
+      onKeyDown={event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();void save();}}}>
       <div className="booking-layout">
-        <div><Card pad>
-          <div className="jrn-wrap"><StepTrack steps={['Customer','Parcel','Charges'].map((label,index)=>({key:label,label,icon:['person','inventory_2','currency_rupee'][index],done:sectionReady[index]}))}/></div>
-          <h2 className="form-sec-title">Customer</h2>
-          <div className="form-grid">
-            <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} error={state.errors.phone} onBlur={()=>void lookupCustomer()} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');keepTypedCustomer.current=false;}}/>
-            <TextField id="counter-name" label="Customer name" value={d.name} disabled={disabled} error={state.errors.name} autoComplete="name" onChange={value=>workflow.change('name',value)}/>
-            <TextField id="counter-recipientAddress" label="Delivery address" value={d.recipientAddress} disabled={disabled} error={state.errors.recipientAddress} autoComplete="street-address" className="span2" onChange={value=>workflow.change('recipientAddress',value)}/>
-          </div>
-          {repeat.map(customer=><button key={customer.id} type="button" className="recall" disabled={disabled} onClick={()=>{workflow.select(customer);workflow.useLatestCustomer();setRepeat([]);setLookupError('');}}><Msym name="history"/><span className="u-grow"><b>{customer.name}</b> · {customer.phone_display} — fill it in</span><Msym name="arrow_forward"/></button>)}
-          {lookupError&&<p role="alert">{lookupError} <button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void lookupCustomer()}>Retry customer lookup</button></p>}
-          {requestedCustomer&&linkedCustomer.phase==='error'&&<p role="alert">The selected customer could not be loaded. <button type="button" onClick={linkedCustomer.reload}>Retry selected customer</button></p>}
-          <hr className="divider form-rule"/>
-          <h2 className="form-sec-title">Parcel</h2>
-          <RateChoices compact workflow={workflow} onServiceLabel={setSelectedServiceLabel} disabled={disabled} destinationError={state.errors.destination} serviceError={state.errors.service} onChange={workflow.change}
-            beforeDestination={<TextField id="counter-docket" label="Docket number" value={d.docket} disabled={disabled} error={state.errors.docket} className="mono" maxLength={32} autoCapitalize="characters" autoCorrect="off" spellCheck={false} helper="Copy it from your paper receipt book" onChange={value=>workflow.change('docket',value.toUpperCase())}/>}
-            afterDestination={<div className="span2 booking-add-package"><Button type="button" variant="outlined" icon="add" disabled={disabled||parcelCount>=50} onClick={()=>workflow.addParcel()}>Add package</Button><span className="counter-help" role="status">{parcelCount} {parcelCount===1?'package':'packages'} in this booking{parcelCount>=50?' · Maximum reached':''}</span></div>}
-            beforeService={<>
-              <WeightField id="counter-weight" label="Weight" value={d.weight} unit={d.weightUnit} disabled={disabled} error={state.errors.weight}
+        <div className="bk-form">
+          <Card pad className="bk-section" role="group" aria-labelledby="bk-customer">
+            <h2 className="form-sec-title" id="bk-customer"><Msym name="person"/>Customer</h2>
+            <div className="form-grid">
+              <PhoneField compact helper="" id="counter-phone" label="WhatsApp number" value={d.phone} disabled={disabled} error={shown('phone')} placeholder="98765 43210" onBlur={()=>{touch('phone');void lookupCustomer();}} onChange={value=>{if(state.customer)workflow.newCustomer();workflow.change('phone',value);setRepeat([]);setLookupError('');keepTypedCustomer.current=false;}}/>
+              <TextField id="counter-name" label="Customer name" value={d.name} disabled={disabled} error={shown('name')} autoComplete="name" onBlur={()=>touch('name')} onChange={value=>workflow.change('name',value)}/>
+            </div>
+            {repeat.map(customer=><button key={customer.id} type="button" className="recall" disabled={disabled} onClick={()=>{workflow.select(customer);workflow.useLatestCustomer();setRepeat([]);setLookupError('');}}><Msym name="history"/><span className="u-grow"><b>{customer.name}</b> · {customer.phone_display} — fill it in</span><Msym name="arrow_forward"/></button>)}
+            {lookupError&&<p role="alert" className="bk-note is-error">{lookupError} <button type="button" className="btn btn-text" disabled={disabled} onClick={()=>void lookupCustomer()}>Retry customer lookup</button></p>}
+            {requestedCustomer&&linkedCustomer.phase==='error'&&<p role="alert" className="bk-note is-error">The selected customer could not be loaded. <button type="button" className="btn btn-text" onClick={linkedCustomer.reload}>Retry selected customer</button></p>}
+          </Card>
+          <RateChoices compact workflow={workflow} onServiceLabel={setSelectedServiceLabel} disabled={disabled} destinationError={shown('destination')} serviceError={state.errors.service} onChange={workflow.change} onDestinationBlur={()=>touch('destination')} render={rate=><>
+          <Card pad className="bk-section" role="group" aria-labelledby="bk-delivery">
+            <h2 className="form-sec-title" id="bk-delivery"><Msym name="pin_drop"/>Delivery</h2>
+            <div className="form-grid bk-grid-delivery">
+              {rate.destination}
+              <TextField id="counter-recipientAddress" label="Delivery address" className="is-optional" value={d.recipientAddress} disabled={disabled} error={shown('recipientAddress')} autoComplete="off" placeholder="Building, street and area" onBlur={()=>touch('recipientAddress')} onChange={value=>workflow.change('recipientAddress',value)}/>
+            </div>
+          </Card>
+          <Card pad className="bk-section" role="group" aria-labelledby="bk-parcel">
+            <h2 className="form-sec-title" id="bk-parcel"><Msym name="inventory_2"/>Parcel{parcelCount>1&&<span className="bk-count">1 of {parcelCount}</span>}</h2>
+            <div className="form-grid bk-grid-parcel">
+              <TextField id="counter-docket" label="Docket number" value={d.docket} disabled={disabled} error={shown('docket')} className="mono" maxLength={32} autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} helper="Copy it from your paper receipt book" onBlur={()=>touch('docket')} onChange={value=>workflow.change('docket',value.toUpperCase())}/>
+              <WeightField id="counter-weight" label="Weight" value={d.weight} unit={d.weightUnit} disabled={disabled} error={shown('weight')} onBlur={()=>touch('weight')}
                 onChange={value=>workflow.change('weight',value)} onUnit={value=>workflow.change('weightUnit',value)}/>
-              <ParcelSize parcel={d} disabled={disabled} errors={state.errors} idFor={field=>'counter-'+field} labelFor={side=>side}
-                onChange={(field,value)=>workflow.change(field,value)}/>
-            </>}
-            afterFields={<><UnitField id="counter-declaredValue" label="Declared goods value ₹" places={2} value={d.declaredValue} disabled={disabled} error={state.errors.declaredValue} helper={Number(d.declaredValue)>=5000000?'E-way bill likely needed':'Optional — used for e-way bill checks'} onChange={value=>workflow.change('declaredValue',value)}/>{lot.picker}</>}/>
-          {state.additionalParcels.map((parcel,index)=><ParcelEntry key={parcel.localKey} number={index+2} parcel={parcel} earlier={[d,...state.additionalParcels.slice(0,index)]} copyReceiver={sourceNumber=>workflow.copyReceiver(index,sourceNumber)} errors={state.parcelErrors[index]??{}} disabled={disabled} onRemove={()=>workflow.removeParcel(index)} onChange={(key,value)=>workflow.changeParcel(index,key,value)}/>)}
-          <div className="attach-slot"><span className="field-legend">Proof of parcel</span><BookingAttachments compact queue={attachments} disabled={disabled}/></div>
-          <hr className="divider form-rule"/>
-          <h2 className="form-sec-title">Charges</h2>
-          <div className="form-grid">
-            <UnitField id="counter-packing" label="Packing ₹" places={2} value={d.packing||(state.quote?String(state.quote.packing_paise):'')} disabled={disabled} error={state.errors.packing} onChange={value=>{const freight=d.override||(state.quote?String(state.quote.freight_paise):'');workflow.change('override',freight);workflow.change('packing',value);}}/>
-            <UnitField id="counter-override" label="Freight ₹" places={2} value={d.override||(state.quote?String(state.quote.freight_paise):'')} disabled={disabled} error={state.errors.override} onChange={value=>workflow.change('override',value)}/>
-          </div>
-          {state.quote?.rate_version_id&&d.override!==''&&Math.abs(Number(d.override)-state.quote.freight_suggestion_paise)>=1000&&<button type="button" className="recall" disabled={disabled} onClick={()=>{workflow.change('override','');workflow.change('packing','');}}><Msym name="auto_fix_high"/><span className="u-grow">Usual rate for {d.destination.replaceAll('_',' ')} at {packedWeight} kg is <b>{receiptMoney(state.quote.freight_suggestion_paise)}</b> — use it</span><Msym name="arrow_forward"/></button>}
-          {/* How the money arrived, not merely whether it did. The counter used to record
-              every paid booking as cash, because the method was fixed at load and never
-              asked for — so a UPI payment entered the cashbook as notes in the drawer and
-              the day would not reconcile. Three choices, because a booking is only ever
-              paid at the counter or collected on delivery. */}
-          <div className="pay-choice"><span className="field-legend" id="counter-pay-legend">Payment</span>
-            <SegmentedControl options={[{value:'cash',label:'Cash now'},{value:'upi',label:'UPI now'},{value:'to_pay',label:'To Pay'}]}
-              value={d.paymentMode==='to_pay'?'to_pay':d.method==='upi'?'upi':'cash'}
-              onChange={value=>{
-                if(disabled)return;
-                workflow.change('paymentMode',value==='to_pay'?'to_pay':'paid_counter');
-                if(value!=='to_pay')workflow.change('method',value);
-                if(value!=='cash')workflow.change('cashGiven','');
-              }}/>
-          </div>
-          {/* Optional, and never in the way. The most asked-for thing at the counter is the
-              arithmetic the operator does in their head while a customer waits with a note in
-              their hand. Short payment is legitimate — part payment happens — so a shortfall
-              is named rather than blocked. */}
-          {d.paymentMode==='paid_counter'&&d.method==='cash'&&due!==null&&<div className="pay-change">
-            <UnitField id="counter-cashGiven" label="Cash given ₹" places={2} value={d.cashGiven} disabled={disabled}
-              helper="Optional. Fill it in and the change is worked out for you."
-              onChange={value=>workflow.change('cashGiven',value)}/>
-            {changeLine&&<p className={'pay-change-out'+(changeLine.short?' is-short':'')} role="status" aria-live="polite">
-              {changeLine.short
-                ?<>Short by <b>{receiptMoney(changeLine.paise)}</b>. Saving is still allowed — record what was actually taken.</>
-                :<>Change to give back: <b>{receiptMoney(changeLine.paise)}</b></>}
-            </p>}
-          </div>}
-
-        </Card></div>
-        <aside className="booking-side" aria-label="Booking summary"><Card pad>
+              <ParcelSize parcel={d} disabled={disabled} errors={{...state.errors,...sizeErrors}} idFor={field=>'counter-'+field} labelFor={side=>side}
+                onBlur={()=>{touch('lengthCm');touch('widthCm');touch('heightCm');}} onChange={(field,value)=>workflow.change(field,value)}/>
+              <UnitField id="counter-declaredValue" label="Declared goods value ₹" places={2} value={d.declaredValue} disabled={disabled} error={shown('declaredValue')} className="is-optional" helper={Number(d.declaredValue)>=5000000?'E-way bill likely needed':undefined} onBlur={()=>touch('declaredValue')} onChange={value=>workflow.change('declaredValue',value)}/>
+              {lot.picker}
+            </div>
+            {state.additionalParcels.map((parcel,index)=><ParcelEntry key={parcel.localKey} number={index+2} parcel={parcel} earlier={[d,...state.additionalParcels.slice(0,index)]} copyReceiver={sourceNumber=>workflow.copyReceiver(index,sourceNumber)} errors={state.parcelErrors[index]??{}} disabled={disabled} onRemove={()=>workflow.removeParcel(index)} onChange={(key,value)=>workflow.changeParcel(index,key,value)}/>)}
+            <div className="attach-slot"><span className="field-legend is-optional">Proof of parcel</span><BookingAttachments compact queue={attachments} disabled={disabled}/></div>
+            <div className="booking-add-package"><Button type="button" variant="outlined" icon="add" disabled={disabled||parcelCount>=50} onClick={()=>workflow.addParcel()}>Add package</Button><span className="counter-help" role="status">{parcelCount} {parcelCount===1?'package':'packages'} in this booking{parcelCount>=50?' · Maximum reached':''}</span></div>
+          </Card>
+          <Card pad className="bk-section" role="group" aria-labelledby="bk-charges">
+            <h2 className="form-sec-title" id="bk-charges"><Msym name="currency_rupee"/>Charges</h2>
+            <div className="form-grid bk-service">{rate.service}</div>
+            {rate.prices}
+            {rate.notices}
+            <div className="form-grid">
+              <UnitField id="counter-override" label="Freight ₹" places={2} value={d.override||(state.quote?String(state.quote.freight_paise):'')} disabled={disabled} error={shown('override')} onBlur={()=>touch('override')} onChange={value=>workflow.change('override',value)}/>
+              <UnitField id="counter-packing" label="Packing ₹" className="is-optional" places={2} value={d.packing||(state.quote?String(state.quote.packing_paise):'')} disabled={disabled} error={shown('packing')} onBlur={()=>touch('packing')} onChange={value=>{const freight=d.override||(state.quote?String(state.quote.freight_paise):'');workflow.change('override',freight);workflow.change('packing',value);}}/>
+            </div>
+            {state.quote?.rate_version_id&&d.override===''&&<p className="bk-note"><Msym name="sell"/>From your rate card. Type over either amount to change it for this booking.</p>}
+            {state.quote?.rate_version_id&&d.override!==''&&Math.abs(Number(d.override)-state.quote.freight_suggestion_paise)>=1000&&<button type="button" className="recall" disabled={disabled} onClick={()=>{workflow.change('override','');workflow.change('packing','');}}><Msym name="auto_fix_high"/><span className="u-grow">Usual rate for {d.destination.replaceAll('_',' ')} at {packedWeight} kg is <b>{receiptMoney(state.quote.freight_suggestion_paise)}</b> — use it</span><Msym name="arrow_forward"/></button>}
+            {/* How the money arrived, not merely whether it did. The counter used to record
+                every paid booking as cash, because the method was fixed at load and never
+                asked for — so a UPI payment entered the cashbook as notes in the drawer and
+                the day would not reconcile. Three choices, because a booking is only ever
+                paid at the counter or collected on delivery. */}
+            <div className="pay-choice"><span className="field-legend" id="counter-pay-legend">Payment</span>
+              <SegmentedControl label="Payment" options={[{value:'cash',label:'Cash now'},{value:'upi',label:'UPI now'},{value:'to_pay',label:'To Pay'}]}
+                value={d.paymentMode==='to_pay'?'to_pay':d.method==='upi'?'upi':'cash'}
+                onChange={value=>{
+                  if(disabled)return;
+                  workflow.change('paymentMode',value==='to_pay'?'to_pay':'paid_counter');
+                  if(value!=='to_pay')workflow.change('method',value);
+                  if(value!=='cash')workflow.change('cashGiven','');
+                }}/>
+              <p className="counter-help">{d.paymentMode==='to_pay'?'The receiver pays when the parcel is delivered. Nothing is collected now.':d.method==='upi'?'The customer pays by UPI at the counter now.':'The customer pays in cash at the counter now.'}</p>
+            </div>
+            {/* Optional, and never in the way. The most asked-for thing at the counter is the
+                arithmetic the operator does in their head while a customer waits with a note in
+                their hand. Short payment is legitimate — part payment happens — so a shortfall
+                is named rather than blocked. */}
+            {d.paymentMode==='paid_counter'&&d.method==='cash'&&due!==null&&<div className="pay-change">
+              <UnitField id="counter-cashGiven" label="Cash given ₹" className="is-optional" places={2} value={d.cashGiven} disabled={disabled}
+                onChange={value=>workflow.change('cashGiven',value)}/>
+              {changeLine&&<p className={'pay-change-out'+(changeLine.short?' is-short':'')} role="status" aria-live="polite">
+                {changeLine.short
+                  ?<>Short by <b>{receiptMoney(changeLine.paise)}</b>. Saving is still allowed — record what was actually taken.</>
+                  :<>Change to give back: <b>{receiptMoney(changeLine.paise)}</b></>}
+              </p>}
+            </div>}
+          </Card>
+          </>}/>
+        </div>
+        <aside className="booking-side" aria-label="Booking summary"><Card pad className="bk-summary">
           <h2 className="sum-head">Booking summary</h2>
           <dl className="sum-list">
             <div><dt>Docket</dt><dd className="mono">{d.docket||'—'}</dd></div>
             <div><dt>To</dt><dd>{d.destination.replaceAll('_',' ')||'—'}</dd></div>
-            <div><dt>Service</dt><dd>{serviceName||'Standard'}</dd></div>
+            <div><dt>Service</dt><dd>{serviceName||'—'}</dd></div>
             {parcelCount>1&&<div><dt>Packages</dt><dd>{parcelCount}</dd></div>}
-            <div><dt>Packing</dt><dd>{state.quote?receiptMoney(state.quote.packing_paise):'—'}</dd></div>
+            {packedWeight&&<div><dt>Billed weight</dt><dd>{packedWeight} kg</dd></div>}
+          </dl>
+          <dl className="sum-list bk-money" aria-busy={pricing||undefined}>
             <div><dt>Freight</dt><dd>{state.quote?receiptMoney(state.quote.freight_paise):'—'}</dd></div>
+            <div><dt>Packing</dt><dd>{state.quote?receiptMoney(state.quote.packing_paise):'—'}</dd></div>
             <div><dt>Taxable</dt><dd>{displayTax?receiptMoney(displayTax.taxable_basis_paise):'—'}</dd></div>
             {displayTax?.components.map(component=><div key={component.id}><dt>{component.kind} {100*component.numerator/component.denominator}%</dt><dd>{receiptMoney(component.amount_paise)}</dd></div>)}
           </dl>
-          <div className="sum-total"><span>Total</span><strong>{displayTax?receiptMoney(displayTax.final_payable_paise):'—'}</strong></div>
-          <span className={'pill '+(d.paymentMode==='to_pay'?'pill-warn':'st-delivered')+' sum-pay'}>{d.paymentMode==='to_pay'?'Collect on delivery':'Paid now'}</span>
-          <Button type="button" icon={retrying?'check':draftOnly?'draft':'check'} size="lg" block loading={busy} disabled={busy} className="sum-cta" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':draftOnly?'Save as draft'
-            :d.paymentMode==='paid_counter'&&due!==null?'Save booking and collect '+receiptMoney(due):'Save booking'}</Button>
+          <div className="sum-total"><span>Total</span><strong>{displayTax?receiptMoney(displayTax.final_payable_paise):pricing?<span className="bk-calc">Calculating…</span>:'—'}</strong></div>
+          <p className={'bk-payline'+(d.paymentMode==='to_pay'?' is-later':'')}><Msym name={d.paymentMode==='to_pay'?'local_shipping':'payments'}/><span>{d.paymentMode==='to_pay'?'Receiver pays on delivery':d.method==='upi'?'Customer pays now by UPI':'Customer pays now in cash'}</span></p>
+          <div className="bk-action" data-total={displayTax?receiptMoney(displayTax.final_payable_paise):undefined}>
+            <Button type="button" icon={taxSetupMissing&&!retrying?'draft':'check'} size="lg" block loading={busy} disabled={busy} className="sum-cta" aria-keyshortcuts="Control+Enter Meta+Enter" onClick={()=>void save()}>{state.bookingPhase==='uncertain'?'Retry same booking':uncertain?'Retry booking request':taxSetupMissing?'Save as draft'
+              :d.paymentMode==='paid_counter'&&due!==null?'Save booking and collect '+receiptMoney(due):'Save booking'}</Button>
+          </div>
+          {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
           {taxSetupMissing&&!retrying&&<p className="booking-needs" id="booking-needs">
             <Msym name="info"/><span>No booking can be completed yet. <strong>{TAX_SETUP_REASON}</strong> Until then, saving keeps a draft — no docket is created. <Link to="/business/settings">Open Settings</Link></span>
           </p>}
-          {/* Each missing thing is a press that puts the cursor in the field it names. Reading
-              a list of names tells an operator what is wrong; it does not tell them where. */}
-          {draftOnly&&!taxSetupMissing&&!retrying&&<div className="booking-needs" id="booking-needs">
-            <Msym name="info"/>
-            <div>
-              <p><strong>This cannot be booked yet.</strong> Saving keeps a draft you can finish later — no docket is created.</p>
-              <ul className="booking-needs-list">
-                {needFields.map(need=><li key={need.label}>
-                  {need.field
-                    ?<button type="button" onClick={()=>revealField('counter-'+need.field)}>{need.label}</button>
-                    :<span>{need.label}</span>}
-                </li>)}
-              </ul>
-            </div>
-          </div>}
-          <Button type="button" variant="text" icon="close" block disabled={busy||uncertain} onClick={close}>Cancel booking</Button>
-
-          {state.message&&<p role={statusError?'alert':'status'} className="booking-status">{state.message}</p>}
+          <div className="bk-secondary">
+            {/* An unfinished booking can still be parked. It is a quiet second action, shown only
+                while something required is missing, so it never competes with Save booking. */}
+            {draftOnly&&!taxSetupMissing&&!retrying&&<Button type="button" variant="text" disabled={busy} onClick={()=>void saveDraft()}>Save as draft</Button>}
+            <Button type="button" variant="text" disabled={busy||uncertain} onClick={close}>Discard this draft</Button>
+          </div>
         </Card></aside>
       </div>
     </form></div>}

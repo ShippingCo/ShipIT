@@ -55,7 +55,7 @@ export function optionAmount(option:BookingServiceOption, grams:number):number|n
 export function PriceOptions({options,value,recommended,weighed,disabled,onChange,setupHref}:{
   options:readonly PriceOption[];
   value:string;
-  /** The option this shop sells most. Marked, never chosen on the operator's behalf. */
+  /** The option this shop sells most. Marked, and picked to start with; one tap changes it. */
   recommended:string;
   /** False until every parcel has a weight: an amount without a weight behind it is a guess. */
   weighed:boolean;
@@ -66,7 +66,7 @@ export function PriceOptions({options,value,recommended,weighed,disabled,onChang
   const base=options.find(option=>option.key===recommended)?.paise ?? null;
   return <div className="price-options">
     <p className="price-options-head" id="price-options-head">Price options
-      <span>{weighed?'Read the difference to the customer. Nothing is chosen until you choose it.':'Enter the weight to see what each service costs.'}</span></p>
+      <span>{weighed?options.length>1?'The usual service is picked. Tap another to change it.':'The only service for this destination.':'Enter the weight to see what each service costs.'}</span></p>
     <div className="price-option-list" role="radiogroup" aria-labelledby="price-options-head">
       {options.map(option=>{
         const selected=value===option.key;
@@ -83,7 +83,7 @@ export function PriceOptions({options,value,recommended,weighed,disabled,onChang
             <span className="po-diff">{
               !weighed?'Needs a weight'
               :option.paise===null?'No published rate for this weight'
-              :gap===null?'What the others are compared against'
+              :gap===null?(options.length>1?'What the others are compared against':'')
               :gap===0?'Same price'
               :receiptMoney(Math.abs(gap))+(gap>0?' more':' less')}</span>
           </span>

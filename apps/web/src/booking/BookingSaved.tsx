@@ -53,7 +53,7 @@ function DocketValue({docket}:{docket:string}) {
   return <div className="saved-docket-row">
     <span className="saved-docket-value">{docket}</span>
     <button type="button" className="btn btn-outlined btn-sm saved-docket-copy" onClick={copy}>
-      <Msym name={copied?'check':'content_copy'}/>{copied?'Copied':'Copy'}
+      {copied&&<Msym name="check"/>}{copied?'Copied':'Copy'}
     </button>
   </div>;
 }

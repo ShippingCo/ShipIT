@@ -200,8 +200,8 @@
       "apps/web/src/pages/business/ReportsPage.tsx": "34e225fdf550e99c508d548c188dfdfb1412afe5a0492da7bb3cf7272109c0cd",
       "apps/web/src/pages/business/RoutesPage.tsx": "1fd6aa2afd9cd6f34afcc1997f40df8867eabf14fa9579f370d5d17bf948e3c8",
       "apps/web/src/test/app.test.tsx": "d1f6f5b9b639b1e083ea7a95aab71685372449833f9b3227fdb95fc14ac253c2",
-      "apps/web/src/test/counter-draft-reason.test.tsx": "b338cc2d7065a5ffffbb53881ba12162888994f40345c55ee40945324207e771",
-      "apps/web/src/test/counter.test.tsx": "981ca12120501045ee8758d02dd98fb86cf701fac9842ca57cf784e69d9ba292",
+      "apps/web/src/test/counter-draft-reason.test.tsx": "3aa0444c3815a5f5c5759fa6bcc266c108eb3f0304925bf5c410d666c93da7d0",
+      "apps/web/src/test/counter.test.tsx": "4bc976741f38f465c7cc69d2ca532c831926ea6593177834d334f0bf9952a5e9",
       "apps/web/src/test/operator.test.tsx": "ca49fb501f47686dbd671ace447cce44ba7cc1eea0855c19a5f59fe50a18b15a",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -1679,7 +1679,12 @@
       },
       {
         "file": "apps/web/src/test/counter-draft-reason.test.tsx",
-        "name": "names a docket the server has already used instead of a bare draft",
+        "name": "keeps the form open on a docket the server has already used, pointing at the docket",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter-draft-reason.test.tsx",
+        "name": "books without a delivery address, which is optional at the counter",
         "cases": null
       },
       {
@@ -1714,7 +1719,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "uses the original demo field order and controls without separate customer or pricing steps",
+        "name": "keeps one page in working order, sender then delivery then parcel then charges, with no separate steps",
         "cases": null
       },
       {
@@ -1849,7 +1854,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "names what is missing before the button is pressed, and stops naming it once supplied",
+        "name": "marks every missing required field red when Save booking is pressed, and never saves a draft for it",
         "cases": null
       },
       {
@@ -1939,7 +1944,7 @@
       },
       {
         "file": "apps/web/src/test/counter.test.tsx",
-        "name": "adds and removes packages directly below the docket row before saving a customer",
+        "name": "adds and removes packages at the end of the parcel section before saving a customer",
         "cases": null
       },
       {
@@ -1985,6 +1990,31 @@
       {
         "file": "apps/web/src/test/counter.test.tsx",
         "name": "never sends counter arithmetic to the server",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "says what is wrong with a field when the operator leaves it, and stays quiet about empty ones",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "saves with Ctrl+Enter from any field, and never on a bare Enter",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "states who pays and when beside the total",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "keeps one filled button, Save booking, and offers a draft only as a quiet second action",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/counter.test.tsx",
+        "name": "puts the destination and the delivery address in one section",
         "cases": null
       },
       {
@@ -6159,11 +6189,19 @@
     },
     {
       "file": "apps/web/src/test/counter-draft-reason.test.tsx",
-      "name": "names a docket the server has already used instead of a bare draft",
+      "name": "keeps the form open on a docket the server has already used, pointing at the docket",
       "cases": null,
       "group": "booking",
       "disposition": "preserve",
-      "reason": "Reviewed draft-reason repair: a draft created because a booking was refused names the refusal — unconfigured shop GST, an already used docket, or a declined tax calculation — an unconfigured shop is told before the button is pressed, and a deliberate draft stays unalarmed."
+      "reason": "A used docket is corrected on the form with the field highlighted; it is no longer diverted to a draft."
+    },
+    {
+      "file": "apps/web/src/test/counter-draft-reason.test.tsx",
+      "name": "books without a delivery address, which is optional at the counter",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "The delivery address is optional at the counter; a booking saves without one."
     },
     {
       "file": "apps/web/src/test/counter-draft-reason.test.tsx",
@@ -6215,11 +6253,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "uses the original demo field order and controls without separate customer or pricing steps",
+      "name": "keeps one page in working order, sender then delivery then parcel then charges, with no separate steps",
       "cases": null,
       "group": "booking",
       "disposition": "preserve",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+      "reason": "The single-page counter keeps one working order (customer, delivery, parcel, charges) with no separate steps."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -6431,11 +6469,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "names what is missing before the button is pressed, and stops naming it once supplied",
+      "name": "marks every missing required field red when Save booking is pressed, and never saves a draft for it",
       "cases": null,
       "group": "booking",
       "disposition": "preserve",
-      "reason": "Reviewed counter repair: the button names which save it will perform before it is pressed, a reused phone is asked about instead of diverting to a draft, a saved draft carries a readable number back into the same form, and a published rate card prices a booking with no typed freight amount."
+      "reason": "Save booking marks missing required fields and moves to the first; it never falls back to a draft."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -6575,11 +6613,11 @@
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
-      "name": "adds and removes packages directly below the docket row before saving a customer",
+      "name": "adds and removes packages at the end of the parcel section before saving a customer",
       "cases": null,
       "group": "booking",
       "disposition": "preserve",
-      "reason": "The original demo form now uses scoped API customer lookup, audited pricing, reviewed tax and immutable booking commands; preserve the demonstrated live workflow and recovery boundary."
+      "reason": "Add package sits at the end of the parcel section, where the new parcel appears."
     },
     {
       "file": "apps/web/src/test/counter.test.tsx",
@@ -6652,6 +6690,46 @@
       "group": "presentation",
       "disposition": "replace",
       "reason": "Owner dashboard rebuilt against \"22 Owner Dashboard/PRD.md\": four fixed figures, the parcel journey, two charts and the weekly panel that states what the assistant handled. The read is unchanged in scope and permission - the summary query still runs under parcels.list with the same franchise predicates and only gained a fixed-width trailing series - and every earlier guarantee is re-asserted against the new screen."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "says what is wrong with a field when the operator leaves it, and stays quiet about empty ones",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Field errors appear when a filled field is left, not only after Save."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "saves with Ctrl+Enter from any field, and never on a bare Enter",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Keyboard save is explicit (Ctrl/Cmd+Enter); a bare Enter never confirms a booking."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "states who pays and when beside the total",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "The summary states payment responsibility next to the total."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "keeps one filled button, Save booking, and offers a draft only as a quiet second action",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Save booking is the single primary action; Save as draft is a secondary text action shown only while the form is incomplete."
+    },
+    {
+      "file": "apps/web/src/test/counter.test.tsx",
+      "name": "puts the destination and the delivery address in one section",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Destination city and delivery address are grouped in one Delivery section."
     },
     {
       "file": "apps/web/src/test/custody-actions.test.tsx",

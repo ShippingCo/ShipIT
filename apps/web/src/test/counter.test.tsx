@@ -58,8 +58,9 @@ function addPackage(number:number){fireEvent.click(screen.getByRole('button',{na
 describe('production counter API composition',{timeout:20000},()=>{
  it('keeps a blank form as a named draft, never as a confirmed booking',async()=>{
   await start();fill('Weight (kg)','');
+  // The main button always means a booking; keeping a draft is its own, quieter action.
+  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
   expect(screen.getByRole('button',{name:'Save as draft'})).toBeVisible();
-  expect(screen.queryByRole('button',{name:'Save booking'})).toBeNull();
   saveDraft();await screen.findByRole('heading',{name:'Draft saved'});
   expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);
   expect(body(posts('/api/v1/bookings/entries?')[0]).fields).toMatchObject({name:'',phone:'',docket:'',weight:'',override:'',packing:''});
@@ -79,11 +80,16 @@ describe('production counter API composition',{timeout:20000},()=>{
   fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry same booking'}));await screen.findByRole('heading',{name:'Draft saved'});
   const second=posts('/api/v1/bookings/entries?')[1];expect(key(second)).toBe(key(first));expect(body(second)).toEqual(body(first));expect(savedEntries).toHaveLength(1);
  });
- it('uses the original demo field order and controls without separate customer or pricing steps',async()=>{
+ it('keeps one page in working order, sender then delivery then parcel then charges, with no separate steps',async()=>{
+  // The order follows the conversation at the counter: who is sending, where it is going,
+  // what it is, what it costs. The city and the delivery address sit together because they
+  // answer the same question; freight leads packing because it is the larger figure.
   await start();
-  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Delivery address','Docket number','Destination city','Weight (kg)','Length (cm)','Width (cm)','Height (cm)','Service','Declared goods value ₹','Add to lot','Packing ₹','Freight ₹']);
-  for(const name of ['Customer','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
-  for(const name of ['Photo','Video','Voice note','Add package','Save as draft','Cancel booking'])expect(screen.getByRole('button',{name})).toBeVisible();
+  expect(Array.from(document.querySelectorAll('.booking-layout .tf-label')).filter(e=>!e.closest('details')).map(e=>e.textContent)).toEqual(['WhatsApp number','Customer name','Destination city','Delivery address','Docket number','Weight (kg)','Length (cm)','Width (cm)','Height (cm)','Declared goods value ₹','Add to lot','Service','Freight ₹','Packing ₹']);
+  for(const name of ['Customer','Delivery','Parcel','Charges','Booking summary'])expect(screen.getByRole('heading',{name})).toBeVisible();
+  // A new booking starts with the cursor in the first field.
+  expect(screen.getByLabelText('WhatsApp number')).toHaveFocus();
+  for(const name of ['Photo','Video','Voice note','Add package','Save as draft','Discard this draft'])expect(screen.getByRole('button',{name})).toBeVisible();
   expect(screen.queryByRole('button',{name:'Create customer'})).toBeNull();expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByLabelText('Weight (kg)')).toHaveValue('1');expect(screen.getByRole('button',{name:'Cash now'})).toHaveAttribute('aria-pressed','true');
  });
@@ -214,19 +220,26 @@ describe('production counter API composition',{timeout:20000},()=>{
  it('explicit save keeps a draft without requiring sender fields',async()=>{
   await start();saveDraft();await screen.findByRole('heading',{name:'Draft saved'});expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
- it('names what is missing before the button is pressed, and stops naming it once supplied',async()=>{
+ it('marks every missing required field red when Save booking is pressed, and never saves a draft for it',async()=>{
   await start();
-  // The banner is now a sentence plus a list of presses, one per missing field, so read the
- // whole block rather than the sentence that opens it.
- const needs=()=>document.getElementById('booking-needs')!.textContent!;
-  expect(needs()).toContain('docket number');expect(needs()).toContain('customer name');
-  // A price is never demanded up front: the published rate card is asked first.
-  expect(needs()).not.toContain('a price');
-  fill('Docket number','00123-A');expect(needs()).not.toContain('docket number');
-  // A complete form offers the booking, and the warning disappears with it.
+  const invalid=(label:string)=>expect(screen.getByLabelText(label,{exact:true})).toHaveAttribute('aria-invalid','true');
+  // Nothing is red before the press: an untouched form is not a form full of mistakes.
+  expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Save booking'}));
+  for(const label of ['WhatsApp number','Customer name','Destination city','Docket number'])invalid(label);
+  // The delivery address is optional, so it is never marked.
+  expect(screen.getByLabelText('Delivery address',{exact:true})).not.toHaveAttribute('aria-invalid');
+  expect(screen.getByLabelText('Customer name')).toHaveAccessibleDescription('Enter the customer name.');
+  // The cursor goes to the first one, and nothing was sent anywhere.
+  await waitFor(()=>expect(screen.getByLabelText('WhatsApp number')).toHaveFocus());
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  expect(screen.queryByRole('heading',{name:'Draft saved'})).toBeNull();
+  // Filling a field clears its own mark.
+  fill('Docket number','00123-A');expect(screen.getByLabelText('Docket number',{exact:true})).not.toHaveAttribute('aria-invalid');
+  // A complete form books, and the draft action is no longer offered.
   core();await calculate();
-  expect(screen.getByRole('button',{name:'Save booking'})).toBeVisible();
-  expect(screen.queryByText(/This cannot be booked yet/)).toBeNull();
+  expect(screen.queryByRole('button',{name:'Save as draft'})).toBeNull();
+  save();await screen.findByRole('heading',{name:'Booking saved'});
  });
  it('books from the published rate card without a typed freight amount',async()=>{
   // A shop that has published its prices must be able to complete a booking from them.
@@ -357,21 +370,27 @@ it('keeps the entered booking when leaving the draft is cancelled',async()=>{
  await start();fill('Customer name','Unsaved sender');fireEvent.click(within(screen.getByRole('navigation',{name:'Workspace navigation'})).getByRole('link',{name:'Receipts'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(posts('/api/v1/bookings?')).toHaveLength(0);
 });
 
-it('adds and removes packages directly below the docket row before saving a customer',async()=>{
+it('adds and removes packages at the end of the parcel section before saving a customer',async()=>{
+ // The button sits where the new parcel appears, after the first parcel's own fields and
+ // before the charges, so adding one never means hunting down the page for it.
  await start();
  const add=screen.getByRole('button',{name:'Add package'});
- expect(screen.getByLabelText('Docket number').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
- expect(add.compareDocumentPosition(screen.getByLabelText('Weight (kg)'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
- fireEvent.click(add);fill('Parcel 2 docket number','SECOND-001');fireEvent.click(add);
+ expect(screen.getByLabelText('Add to lot').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Photo'}).compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(add.compareDocumentPosition(screen.getByLabelText('Freight ₹'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ fireEvent.click(add);fill('Parcel 2 docket number','SECOND-001');
+ // A new parcel is added above the button, so the button is always the last thing in the section.
+ expect(screen.getByLabelText('Parcel 2 docket number').compareDocumentPosition(add)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ fireEvent.click(add);
  expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('SECOND-001');expect(screen.getByLabelText('Parcel 3 docket number')).toHaveValue('');expect(screen.getByText('3 packages in this booking')).toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'Remove package 3'}));expect(screen.queryByLabelText('Parcel 3 docket number')).toBeNull();expect(screen.getByText('2 packages in this booking')).toBeVisible();
  expect(posts(`/api/v1/organizations/${f.org}/franchises/${f.A}/customers`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(0);
 });
 it('cancels an unsaved booking only after confirming discard and can keep editing',async()=>{
  await start();fill('Customer name','Unsaved sender');fireEvent.click(screen.getByRole('button',{name:'Add package'}));fill('Parcel 2 docket number','KEEP-002');
- fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
+ fireEvent.click(screen.getByRole('button',{name:'Discard this draft'}));await screen.findByRole('dialog',{name:'Discard this booking draft?'});fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
  expect(screen.getByLabelText('Customer name')).toHaveValue('Unsaved sender');expect(screen.getByLabelText('Parcel 2 docket number')).toHaveValue('KEEP-002');
- fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
+ fireEvent.click(screen.getByRole('button',{name:'Discard this draft'}));fireEvent.click(screen.getByRole('button',{name:'Discard booking draft'}));await waitFor(()=>expect(window.location.hash).toBe('#/business/bookings'));
  expect(posts('/api/v1/bookings')).toHaveLength(0);
 });
 
@@ -457,5 +476,53 @@ describe('counter money controls',{timeout:20000},()=>{
   save();await screen.findByRole('heading',{name:'Booking saved'});
   expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('cashGiven');
   expect(JSON.stringify(body(posts('/api/v1/bookings?')[0]))).not.toContain('20000');
+ });
+});
+
+describe('counter working surface',{timeout:20000},()=>{
+ it('says what is wrong with a field when the operator leaves it, and stays quiet about empty ones',async()=>{
+  await start();
+  const docket=screen.getByLabelText('Docket number',{exact:true});
+  fireEvent.change(docket,{target:{value:'bad docket!'}});
+  // Nothing while typing: a half-typed value is not a mistake yet.
+  expect(docket).not.toHaveAttribute('aria-invalid');
+  fireEvent.blur(docket);
+  expect(docket).toHaveAttribute('aria-invalid','true');
+  expect(docket).toHaveAccessibleDescription(/letters, numbers or hyphens/);
+  // A field that was visited and left empty is "not filled in yet": the summary lists it.
+  const name=screen.getByLabelText('Customer name',{exact:true});
+  fireEvent.blur(name);expect(name).not.toHaveAttribute('aria-invalid');
+  // Correcting it clears the message without another blur.
+  fireEvent.change(docket,{target:{value:'00123-A'}});
+  expect(docket).not.toHaveAttribute('aria-invalid');
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+ });
+ it('saves with Ctrl+Enter from any field, and never on a bare Enter',async()=>{
+  await entered();
+  const field=screen.getByLabelText('Delivery address',{exact:true});
+  fireEvent.keyDown(field,{key:'Enter'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(0);
+  fireEvent.keyDown(field,{key:'Enter',ctrlKey:true});
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+ it('states who pays and when beside the total',async()=>{
+  await entered(true);
+  expect(summary().getByText('Customer pays now in cash')).toBeVisible();
+  payBy('UPI now');expect(summary().getByText('Customer pays now by UPI')).toBeVisible();
+  payBy('To Pay');expect(summary().getByText('Receiver pays on delivery')).toBeVisible();
+ });
+ it('keeps one filled button, Save booking, and offers a draft only as a quiet second action',async()=>{
+  await start();
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveClass('btn-filled');
+  expect(screen.getByRole('button',{name:'Save as draft'})).toHaveClass('btn-text');
+  core();await calculate();
+  expect(screen.getByRole('button',{name:'Save booking'})).toHaveClass('btn-filled');
+ });
+ it('puts the destination and the delivery address in one section',async()=>{
+  await start();
+  const delivery=screen.getByRole('group',{name:'Delivery'});
+  expect(within(delivery).getByLabelText('Destination city')).toBeVisible();
+  expect(within(delivery).getByLabelText('Delivery address')).toBeVisible();
  });
 });

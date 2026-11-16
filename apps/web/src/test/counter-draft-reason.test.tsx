@@ -61,12 +61,22 @@ describe('a draft always says why it is a draft',{timeout:20000},()=>{
   expect(screen.queryByRole('button',{name:'Finish this booking'})).toBeNull();
   expect(posts('/api/v1/bookings?')).toHaveLength(0);
  });
- it('names a docket the server has already used instead of a bare draft',async()=>{
+ it('keeps the form open on a docket the server has already used, pointing at the docket',async()=>{
+  // A used docket is fixed by typing the next number from the receipt book. Turning it into a
+  // draft sent the operator to another page and hid which field was wrong.
   override=c=>c.path.startsWith('/api/v1/bookings?')&&c.options.method==='POST'?Promise.resolve(f.json({error:{code:'DOCKET_CONFLICT'}},409)):undefined;
   await complete();press();
-  await screen.findByRole('heading',{name:'Draft saved'});
-  expect(screen.getByRole('alert').textContent).toMatch(/docket/i);
-  expect(posts('/api/v1/bookings/entries?')).toHaveLength(1);
+  await waitFor(()=>expect(screen.getByLabelText('Docket number',{exact:true})).toHaveAccessibleDescription(/already used/i));
+  expect(screen.queryByRole('heading',{name:'Draft saved'})).toBeNull();
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
+ });
+ it('books without a delivery address, which is optional at the counter',async()=>{
+  await start();core();fill('Delivery address','');
+  await waitFor(()=>expect(summary().getByText('₹151.04')).toBeVisible());
+  fireEvent.click(screen.getByRole('button',{name:/^Save booking/}));
+  await screen.findByRole('heading',{name:'Booking saved'});
+  expect(JSON.parse(posts('/api/v1/bookings?')[0].options.body as string).parcels[0].recipient).toEqual({address:''});
+  expect(posts('/api/v1/bookings/entries?')).toHaveLength(0);
  });
  it('names a refused tax calculation instead of a bare draft',async()=>{
   override=c=>c.path.startsWith('/api/v1/tax/intents')?Promise.resolve(f.json({error:{code:'TAX_POLICY_UNAVAILABLE'}},409)):undefined;

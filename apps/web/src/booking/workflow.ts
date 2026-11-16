@@ -56,7 +56,9 @@ export function createBookingWorkflow(controller: ScopeController) {
       if (error.code === 'DOCKET_CONFLICT') errors.docket = failureMessage(error);
       if (error.code.startsWith('TAX_') || error.details.some(d => d.field.startsWith('tax'))) errors.recipientRef = failureMessage(error);
       const mapping: Record<string, Field> = { destination_key: 'destination', weight_grams: 'weight', freight_paise: 'override', reason_code: 'reason', docket: 'docket', name: phase === 'customerPhase' ? 'name' : 'recipientName', phone: phase === 'customerPhase' ? 'phone' : 'recipientPhone', address: phase === 'customerPhase' ? 'address' : 'recipientAddress' };
-      for (const detail of error.details) { const field = mapping[detail.field]; if (field) errors[field] = 'Review this value against the server requirements.'; }
+      // Say what to do with the field, not that a server disagreed with it.
+      const plain: Partial<Record<Field, string>> = { recipientAddress: 'Enter the delivery address.', address: 'Enter the customer address.', docket: 'Check this docket number.', weight: 'Check the weight.', destination: 'Choose a destination from the list.', override: 'Check the freight amount.', name: 'Check the name.', recipientName: 'Check the receiver name.', phone: 'Check the phone number.', recipientPhone: 'Check the receiver phone number.' };
+      for (const detail of error.details) { const field = mapping[detail.field]; if (field && !errors[field]) errors[field] = plain[field] ?? 'Check this value.'; }
       if (['QUOTE_STALE', 'TAX_STALE'].includes(error.code)) { invalidateCommercial(); set({ pricingPhase: 'stale', taxPhase: 'stale' }); }
       if (error.code === 'VERSION_CONFLICT') set({ customerPhase: 'stale' });
     }

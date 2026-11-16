@@ -22,17 +22,17 @@ import {billedWeight,type Errors,type ParcelDraft} from './form';
 
 const units=[{value:'kg',label:'kg'},{value:'g',label:'g'}];
 
-export function WeightField({id,label,value,unit,disabled,error,onChange,onUnit}:{
+export function WeightField({id,label,value,unit,disabled,error,onChange,onUnit,onBlur}:{
   id:string; label:string; value:string; unit:string; disabled:boolean; error?:string;
-  onChange:(value:string)=>void; onUnit:(unit:string)=>void;
+  onChange:(value:string)=>void; onUnit:(unit:string)=>void; onBlur?:()=>void;
 }) {
   const grams=unit==='g';
   return <div className="parcel-weight">
     {grams
       ?<TextField id={id} label={label+' (g)'} value={/^[0-9]*$/.test(value)?value:value.replace(/^invalid-decimal:/,'')}
-        inputMode="numeric" disabled={disabled} error={error} placeholder="e.g. 350"
+        inputMode="numeric" disabled={disabled} error={error} placeholder="e.g. 350" onBlur={onBlur}
         onChange={text=>onChange(/^[0-9]+$/.test(text)||text===''?text:'invalid-decimal:'+text)}/>
-      :<UnitField id={id} label={label+' (kg)'} places={3} value={value} disabled={disabled} error={error} placeholder="e.g. 0.5"
+      :<UnitField id={id} label={label+' (kg)'} places={3} value={value} disabled={disabled} error={error} placeholder="e.g. 0.5" onBlur={onBlur}
         onChange={onChange}/>}
     <SegmentedControl radio className="seg-unit" label={label+' unit'} options={units} value={grams?'g':'kg'}
       onChange={next=>{if(!disabled)onUnit(next);}}/>
@@ -46,22 +46,22 @@ export function WeightField({id,label,value,unit,disabled,error,onChange,onUnit}
  * what the scale read. These three numbers exist so the price is right and so the operator
  * can say out loud why it is right.
  */
-export function ParcelSize({parcel,idFor,labelFor,disabled,errors,onChange}:{
+export function ParcelSize({parcel,idFor,labelFor,disabled,errors,onChange,onBlur}:{
   parcel:Pick<ParcelDraft,'weight'|'weightUnit'|'lengthCm'|'widthCm'|'heightCm'>;
   idFor:(field:'lengthCm'|'widthCm'|'heightCm')=>string;
   labelFor:(side:string)=>string;
-  disabled:boolean; errors:Errors; onChange:(field:'lengthCm'|'widthCm'|'heightCm',value:string)=>void;
+  disabled:boolean; errors:Errors; onChange:(field:'lengthCm'|'widthCm'|'heightCm',value:string)=>void; onBlur?:()=>void;
 }) {
   const sides=[['lengthCm','Length'],['widthCm','Width'],['heightCm','Height']] as const;
   const billed=billedWeight(parcel);
   const shown=(grams:string)=>displayUnits(grams,3)+' kg';
   return <div className="parcel-size booking-span">
-    <p className="parcel-size-head" id={idFor('lengthCm')+'-head'}>Parcel size <span>Optional — only needed for a large, light parcel</span></p>
+    <p className="parcel-size-head is-optional" id={idFor('lengthCm')+'-head'}>Parcel size</p>
     <div className="parcel-size-fields" role="group" aria-labelledby={idFor('lengthCm')+'-head'}>
       {sides.map(([field,name],index)=><div key={field} className="parcel-size-cell">
         {index>0&&<span className="parcel-size-x" aria-hidden="true">×</span>}
         <TextField id={idFor(field)} label={labelFor(name)+' (cm)'} value={parcel[field]} inputMode="numeric" maxLength={3}
-          disabled={disabled} error={errors[field]} onChange={text=>onChange(field,text.replace(/[^0-9]/g,''))}/>
+          disabled={disabled} error={errors[field]} onBlur={onBlur} onChange={text=>onChange(field,text.replace(/[^0-9]/g,''))}/>
       </div>)}
     </div>
     {billed&&billed.volumetric!==null&&<p className={'parcel-billed'+(billed.basis==='size'?' is-size':'')} role="status">

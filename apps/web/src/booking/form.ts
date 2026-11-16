@@ -30,8 +30,8 @@ const validText = (value: string, max: number, required: boolean) => (!required 
 export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking'): Errors {
   const e: Errors = {};
   if (section === 'customer' || section === 'booking') {
-    if (!validText(d.name, 120, true)) e.name = 'Enter a customer name, up to 120 characters.';
-    if (!validPhone(d.phone)) e.phone = 'Choose the country code and enter the phone number, or paste the full number with +.';
+    if (!validText(d.name, 120, true)) e.name = d.name.trim() ? 'Use a name up to 120 characters.' : 'Enter the customer name.';
+    if (!validPhone(d.phone)) e.phone = d.phone.trim() ? 'Enter a 10-digit number. For other countries, start with + and the country code.' : 'Enter the WhatsApp number.';
     if (!validText(d.address, 500, false)) e.address = 'Use a single-line address up to 500 characters.';
   }
   if (section === 'booking') {
@@ -52,7 +52,7 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
       const dims=[['lengthCm',d.lengthCm],['widthCm',d.widthCm],['heightCm',d.heightCm]] as const;
       if(dims.some(([,value])=>value!=='')){
         for(const [field,value] of dims){
-          if(!/^[1-9][0-9]{0,2}$/.test(value))e[field]='Enter all three sides in whole centimetres, 1 to 999.';
+          if(!/^[1-9][0-9]{0,2}$/.test(value))e[field]='Enter all three sides in whole centimetres, 1 to 999, or leave all three empty.';
         }
       }
     }
@@ -63,12 +63,12 @@ export function validate(d: Draft, section: 'customer' | 'commercial' | 'booking
     if (d.paymentMode === 'paid_counter' && !['cash', 'upi'].includes(d.method)) e.method = 'Select how the payment was received.';
   }
   if (section !== 'customer') {
-    if(!['standard','express','same_city'].includes(d.service))e.service='Choose a delivery service.';
-    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = 'Enter a destination city using letters, numbers or spaces.';
-    if (!/^[1-9][0-9]*$/.test(d.weight) || !Number.isSafeInteger(Number(d.weight))) e.weight = 'Enter a positive whole number of grams.';
-    if (d.packing && (!/^(0|[1-9][0-9]*)$/.test(d.packing) || !Number.isSafeInteger(Number(d.packing)))) e.packing = 'Enter zero or a positive packing amount.';
+    if(!['standard','express','same_city'].includes(d.service))e.service='Choose a service.';
+    if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(d.destination)) e.destination = d.destination ? 'Use letters, numbers or spaces for the city.' : 'Enter the destination city.';
+    if (!/^[1-9][0-9]*$/.test(d.weight) || !Number.isSafeInteger(Number(d.weight))) e.weight = 'Enter the weight, greater than zero.';
+    if (d.packing && (!/^(0|[1-9][0-9]*)$/.test(d.packing) || !Number.isSafeInteger(Number(d.packing)))) e.packing = 'Enter the packing charge in rupees, zero or more.';
     if(d.packing!==''&&d.override==='')e.override='Enter the freight amount as well as packing.';
-    if (d.override && (!/^(0|[1-9][0-9]*)$/.test(d.override) || !Number.isSafeInteger(Number(d.override)))) e.override = 'Enter whole paise, zero or greater.';
+    if (d.override && (!/^(0|[1-9][0-9]*)$/.test(d.override) || !Number.isSafeInteger(Number(d.override)))) e.override = 'Enter the freight in rupees, zero or more.';
     for (const key of ['recipientRef', 'evidenceRef'] as const) if (!/^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/.test(d[key])) e[key] = 'Enter the actual record reference (letters, digits, colon, underscore or hyphen).';
     if (d.registration === 'registered' && !d.recipientState) e.recipientState = 'Select the registered service recipient state.';
     if (d.registration === 'registered' && (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(d.gstin.trim().toUpperCase()) || !d.gstin.trim().startsWith(d.recipientState))) e.gstin = 'Enter a regular GSTIN matching that state. Server validation is required.';

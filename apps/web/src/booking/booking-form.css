@@ -1,0 +1,266 @@
+/* ============================================================================
+   New Booking — the counter's working surface
+   ============================================================================
+   Everything here is scoped to .booking-counter-page so the shared form classes
+   (.form-grid, .tf, .sum-*) keep their meaning on every other screen.
+
+   What this file decides, and why:
+   - Fields are 46px tall with 15px values. The shared .tf rule leaves them at
+     56px with a 14px value under a 15px label, so the label outweighed what was
+     typed and an empty form ran to two screens.
+   - One section per card. Four short cards scan faster than one 1500px card, and
+     each card's heading is the landmark the "what is missing" list sends you to.
+   - Helper text lines up with the field edge. It carried 16px of side padding,
+     so every hint sat visibly out of line with its own label.
+   - The summary is the receipt-in-progress: facts, money, one total, who pays,
+     one action. Below 1080px the action leaves the rail and stays at the bottom
+     of the screen, so Save is never three screens away.
+   Tokens only: no colour, radius or size below is invented here.
+   ============================================================================ */
+
+.booking-counter-page { --bk-field: 46px; --bk-gap: var(--space-4); }
+
+/* ---- page header -------------------------------------------------------- */
+.booking-counter-page .booking-page-heading { align-items: center; margin-bottom: var(--space-4); }
+.booking-counter-page .booking-page-heading h1 {
+  margin: 0; font-size: var(--text-xl); line-height: 32px; font-weight: 650; letter-spacing: var(--tracking-snug);
+}
+.booking-counter-page.booking-original > .page { padding-top: 0; }
+
+/* ---- sections ----------------------------------------------------------- */
+.booking-counter-page .bk-form { display: grid; gap: var(--space-4); min-width: 0; }
+.booking-counter-page .bk-section { padding: var(--space-5); min-width: 0; }
+.booking-counter-page .bk-section > :last-child { margin-bottom: 0; }
+.booking-counter-page h2.form-sec-title {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin: 0 0 var(--space-4); font-size: var(--text-md); line-height: 24px; font-weight: 650;
+}
+.booking-counter-page h2.form-sec-title > .msym { font-size: 20px; color: var(--text-secondary); }
+.booking-counter-page .bk-count {
+  margin-left: var(--space-1); padding: 1px var(--space-2); border-radius: var(--radius-xs);
+  background: var(--surface-sunken); color: var(--text-secondary);
+  font-size: var(--text-sm); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums;
+}
+
+/* ---- grid --------------------------------------------------------------- */
+.booking-counter-page .form-grid { gap: var(--bk-gap); align-items: start; }
+.booking-counter-page .form-grid > * { min-width: 0; }
+.booking-counter-page .form-grid + .form-grid,
+.booking-counter-page .price-options + .form-grid { margin-top: var(--bk-gap); }
+/* The city is short and the address is long: give the address the room. */
+.booking-counter-page .bk-grid-delivery { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.booking-counter-page .bk-service:empty { display: none; }
+
+/* ---- fields ------------------------------------------------------------- */
+.booking-counter-page .tf { gap: var(--space-1); }
+.booking-counter-page .tf .tf-label { font-size: var(--text-sm); line-height: 20px; font-weight: var(--weight-semibold); }
+.booking-counter-page .tf-box :is(input, select) {
+  height: var(--bk-field); min-height: var(--bk-field); padding: 0 14px;
+  font-size: var(--text-base); line-height: 22px; border-radius: var(--radius-md);
+}
+.booking-counter-page .tf-box select { padding-right: 40px; }
+.booking-counter-page .tf-box input::placeholder { color: var(--grey-500); }
+.booking-counter-page .tf .tf-help { padding: 0; margin: 2px 0 0; font-size: var(--text-sm); line-height: 20px; align-items: flex-start; }
+.booking-counter-page .tf .tf-help .msym { margin-top: 1px; }
+.booking-counter-page .tf.mono input { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.booking-counter-page .tf-box :is(input, select):focus-visible { outline: none; }
+/* Lot picker and other bare helpers that sit under a field. */
+.booking-counter-page .bk-section small { display: block; margin-top: var(--space-1); font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+
+/* ---- sentence-case legends (were tracked-out capitals) ------------------ */
+.booking-counter-page .field-legend {
+  font-size: var(--text-sm); line-height: 20px; font-weight: var(--weight-semibold);
+  letter-spacing: 0; text-transform: none; color: var(--text);
+}
+
+/* ---- weight + unit ------------------------------------------------------ */
+.booking-counter-page .parcel-weight { align-items: flex-end; gap: var(--space-2); }
+.booking-counter-page .parcel-weight .seg-unit { margin: 0; align-self: flex-start; margin-top: 24px; border-radius: var(--radius-md); }
+.booking-counter-page .parcel-weight:has(.tf.err) { align-items: flex-start; }
+.booking-counter-page .seg { border-color: var(--border-strong); border-radius: var(--radius-md); }
+.booking-counter-page .seg-btn { min-height: calc(var(--bk-field) - 2px); }
+
+/* ---- parcel size -------------------------------------------------------- */
+.booking-counter-page .parcel-size { gap: var(--space-2); }
+.booking-counter-page .parcel-size-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); font-size: var(--text-sm); }
+.booking-counter-page .parcel-size-fields { gap: var(--space-2); flex-wrap: nowrap; }
+.booking-counter-page .parcel-size-cell { flex: 1 1 0; gap: var(--space-2); align-items: flex-start; }
+.booking-counter-page .parcel-size-x { margin-top: 36px; font-size: var(--text-base); }
+.booking-counter-page .parcel-size .tf .tf-label { font-weight: var(--weight-medium); color: var(--text-secondary); }
+.booking-counter-page .parcel-billed { border-radius: var(--radius-md); }
+
+/* ---- add package / additional parcels ----------------------------------- */
+.booking-counter-page .booking-add-package {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--divider);
+}
+.booking-counter-page .booking-add-package .counter-help { margin: 0 !important; }
+.booking-counter-page .booking-parcel-entry {
+  margin: var(--space-5) 0 0; padding: var(--space-5) 0 0; border-top: 1px solid var(--divider);
+}
+.booking-counter-page .booking-parcel-entry + .booking-parcel-entry { padding-top: var(--space-5); border-top-color: var(--divider); }
+.booking-counter-page .booking-parcel-entry legend {
+  float: left; width: 100%; padding: 0; margin: 0 0 var(--space-4);
+  font-size: var(--text-md); line-height: 24px; font-weight: 650;
+}
+.booking-counter-page .booking-parcel-entry legend + * { clear: both; }
+.booking-counter-page .booking-parcel-entry legend > .msym { color: var(--text-secondary); font-size: 20px; }
+.booking-counter-page .booking-parcel-entry .counter-grid { gap: var(--bk-gap); margin: 0 0 var(--bk-gap); }
+.booking-counter-page .booking-parcel-entry h3 { margin: var(--space-5) 0 var(--space-3); font-size: var(--text-sm); line-height: 20px; }
+.booking-counter-page .booking-parcel-entry > .btn-text { color: var(--danger); padding-inline: 0; }
+
+/* ---- proof of parcel ---------------------------------------------------- */
+.booking-counter-page .attach-slot { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
+.booking-counter-page .attach-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.booking-counter-page .attach-btn {
+  display: inline-flex; align-items: center; gap: var(--space-2); height: 44px; padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface);
+  font: inherit; font-size: var(--text-base); font-weight: var(--weight-medium); color: var(--text); cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+.booking-counter-page .attach-btn .msym { font-size: 18px; color: var(--text-secondary); }
+.booking-counter-page .attach-btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--grey-500); }
+.booking-counter-page .attach-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.booking-counter-page .attach-btn:disabled { color: var(--text-disabled); cursor: not-allowed; }
+
+/* ---- inline notes ------------------------------------------------------- */
+.booking-counter-page .bk-note {
+  display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0;
+  font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary);
+}
+.booking-counter-page .bk-note .msym { flex: none; font-size: 18px; margin-top: 1px; }
+.booking-counter-page .bk-note.is-error { color: var(--danger-on-subtle); flex-wrap: wrap; align-items: center; }
+.booking-counter-page .recall { margin-top: var(--space-3); font-size: var(--text-base); min-height: 44px; border-radius: var(--radius-md); }
+
+/* ---- price options: the mark is drawn, not borrowed from a missing glyph - */
+.booking-counter-page .price-options { gap: var(--space-2); margin: 0; }
+.booking-counter-page .price-options-head { font-size: var(--text-sm); }
+.booking-counter-page .price-option-list { gap: var(--space-2); }
+.booking-counter-page .price-option { padding: 10px 14px; border-color: var(--border-strong); border-radius: var(--radius-md); }
+.booking-counter-page .price-option.is-on { box-shadow: inset 0 0 0 1px var(--accent); }
+.booking-counter-page .price-option:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.booking-counter-page .price-option .po-mark .msym { display: none; }
+.booking-counter-page .price-option .po-mark {
+  width: 20px; height: 20px; border-radius: var(--radius-full);
+  border: 2px solid var(--grey-500); background: var(--surface);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.booking-counter-page .price-option.is-on .po-mark { border-color: var(--accent); box-shadow: inset 0 0 0 4px var(--surface); background: var(--accent); }
+.booking-counter-page .price-option .po-name { font-size: var(--text-base); line-height: 22px; }
+.booking-counter-page .price-option .po-diff:empty { display: none; }
+.booking-counter-page .price-option .po-amount { font-size: var(--text-md); line-height: 24px; }
+.booking-counter-page .price-options-foot { gap: 0; font-size: var(--text-sm); }
+.booking-counter-page .po-setup { min-height: 32px; }
+
+/* ---- payment ------------------------------------------------------------ */
+.booking-counter-page .pay-choice { margin-top: var(--space-5); gap: var(--space-2); }
+.booking-counter-page .pay-choice .counter-help { margin: 0 !important; }
+.booking-counter-page .pay-change { margin-top: var(--space-4); max-width: 320px; gap: var(--space-2); }
+.booking-counter-page .pay-change-out {
+  margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+  background: var(--success-subtle); color: var(--success-on-subtle); font-size: var(--text-base);
+}
+.booking-counter-page .pay-change-out b { font-size: var(--text-md); font-weight: var(--weight-bold); }
+.booking-counter-page .pay-change-out.is-short { background: var(--danger-subtle); color: var(--danger-on-subtle); }
+.booking-counter-page .pay-change-out.is-short b { color: var(--danger-on-subtle); }
+
+/* ---- summary rail ------------------------------------------------------- */
+.booking-counter-page .booking-layout { grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-5); }
+.booking-counter-page .booking-side { top: calc(var(--topbar-h) + var(--space-4)); max-height: calc(100vh - var(--topbar-h) - var(--space-8)); overflow-y: auto; border-radius: var(--radius-lg); }
+.booking-counter-page .bk-summary { padding: var(--space-5); }
+.booking-counter-page .sum-head { margin: 0 0 var(--space-3); font-size: var(--text-md); }
+.booking-counter-page .sum-list { gap: var(--space-2); margin: 0; }
+.booking-counter-page .sum-list > div { font-size: var(--text-base); line-height: 22px; }
+.booking-counter-page .sum-list dd { margin: 0; font-family: var(--font-sans); letter-spacing: 0; font-weight: var(--weight-medium); overflow-wrap: anywhere; text-align: right; }
+.booking-counter-page .sum-list dd.mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.booking-counter-page .bk-money { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--divider); }
+.booking-counter-page .bk-money[aria-busy="true"] dd { color: var(--text-disabled); }
+.booking-counter-page .sum-total { align-items: center; margin-top: var(--space-3); padding-top: var(--space-3); font-size: var(--text-base); color: var(--text); font-weight: var(--weight-semibold); }
+.booking-counter-page .sum-total strong { font-size: var(--text-xl); line-height: 32px; font-weight: var(--weight-bold); }
+.booking-counter-page .bk-calc { font-size: var(--text-base); font-weight: var(--weight-medium); color: var(--text-secondary); letter-spacing: 0; }
+.booking-counter-page .bk-payline {
+  display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 0;
+  font-size: var(--text-sm); line-height: 20px; color: var(--success-on-subtle);
+}
+.booking-counter-page .bk-payline .msym { font-size: 18px; flex: none; }
+.booking-counter-page .bk-payline.is-later { color: var(--warning-on-subtle); }
+.booking-counter-page .bk-action { margin-top: var(--space-4); }
+.booking-counter-page .bk-action .sum-cta { margin: 0; min-height: var(--control-lg); white-space: normal; text-align: center; line-height: 20px; }
+.booking-counter-page .booking-status { margin: var(--space-3) 0 0; font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+.booking-counter-page .booking-status[role="alert"] { color: var(--danger-on-subtle); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--danger-subtle); }
+/* ---- what is still missing: one line under the button ------------------ */
+/* The GST-setup notice is rare and needs its link, so it keeps a plain bordered note. */
+.booking-counter-page .booking-needs { margin: var(--space-3) 0 0; font-size: var(--text-sm); line-height: 20px; border-radius: var(--radius-md); }
+.booking-counter-page .bk-secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-2); margin-top: var(--space-2); }
+.booking-counter-page .bk-secondary .btn-text { color: var(--text-secondary); font-weight: var(--weight-medium); }
+/* A required field left empty: the whole box goes red, not just a line of text under it. */
+.booking-counter-page .tf.err .tf-box :is(input, select) { border-color: var(--danger); background: var(--danger-subtle); }
+.booking-counter-page .tf.err .tf-box :is(input, select):focus { background: var(--surface); }
+
+/* ---- narrow layouts ----------------------------------------------------- */
+@media (max-width: 1080px) {
+  .booking-counter-page .booking-layout { grid-template-columns: minmax(0, 1fr); }
+  .booking-counter-page .booking-side { position: static; max-height: none; overflow: visible; }
+  /* Save stays in reach: the action leaves the summary and holds the bottom edge. */
+  .booking-counter-page > .page { padding-bottom: 104px; }
+  .booking-counter-page .bk-action {
+    position: fixed; z-index: var(--z-sticky); left: var(--drawer-w, 0px); right: 0; bottom: 0; margin: 0;
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--page-gutter) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -4px 16px -8px rgba(0, 0, 0, 0.16);
+  }
+  .booking-counter-page .bk-action[data-total]::before {
+    content: attr(data-total); flex: none; font-size: var(--text-lg); font-weight: var(--weight-bold);
+    font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-snug);
+  }
+  .booking-counter-page .bk-action .sum-cta { flex: 1 1 auto; min-height: var(--control-md); }
+}
+@media (max-width: 1020px) { .booking-counter-page .bk-action { left: 0; } }
+@media (max-width: 600px) {
+  .booking-counter-page .bk-section, .booking-counter-page .bk-summary { padding: var(--space-4); }
+  .booking-counter-page .form-grid, .booking-counter-page .bk-grid-delivery { grid-template-columns: minmax(0, 1fr); }
+  .booking-counter-page .tf-box :is(input, select) { font-size: 16px; }
+  .booking-counter-page .parcel-size-x { display: none; }
+  .booking-counter-page .attach-btn { flex: 1 1 auto; justify-content: center; }
+}
+@media print { .booking-counter-page .bk-action { position: static; } }
+
+/* ---- after saving: one column, one alignment ---------------------------- */
+.booking-counter-page .booking-saved-content { max-width: 560px; margin-inline: auto; gap: var(--space-5); }
+.booking-counter-page .booking-saved-content > * { width: 100%; min-width: 0; }
+.booking-counter-page .booking-saved-content .booking-saved { max-width: none; padding: 0; }
+.booking-counter-page .booking-saved-content > section:not(.booking-saved) {
+  padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: none;
+}
+.booking-counter-page .booking-saved-content .booking-draft-attachments:not(:has(li, p, button)) { display: none; }
+.booking-counter-page .booking-saved-content h2, .booking-counter-page .booking-saved-content h3 { margin: 0 0 var(--space-2); font-size: var(--text-md); line-height: 24px; font-weight: 650; }
+.booking-counter-page .booking-saved-content section p { margin: 0 0 var(--space-3); font-size: var(--text-base); line-height: 22px; color: var(--text-secondary); }
+.booking-counter-page .saved-docket-copy .msym { font-size: 18px; }
+.booking-counter-page .booking-saved-content > section:not(.booking-saved) :is(h2, h3, p, div, section):first-child { margin-top: 0; padding-top: 0; }
+.booking-counter-page .booking-saved-content > section:not(.booking-saved) > :last-child { margin-bottom: 0; }
+
+/* ---- optional fields: one mark, one place ------------------------------- */
+/* Every optional field carries the same small tag after its label. Not a helper under the
+   box on one field, a note beside the heading on another and a sentence on a third. */
+.booking-counter-page .tf.is-optional .tf-label::after,
+.booking-counter-page .parcel-size-head.is-optional::after,
+.booking-counter-page .field-legend.is-optional::after {
+  content: 'Optional'; margin-left: var(--space-2);
+  font-size: var(--text-xs); line-height: 18px; font-weight: var(--weight-regular); color: var(--text-secondary);
+}
+.booking-counter-page .tf.err.is-optional .tf-label::after { color: var(--text-secondary); }
+
+/* ---- parcel section: what it is, how big, where it rides ----------------- */
+/* Two even columns like every other section. Row one is docket and weight; row two is the
+   size (three short boxes, a side is at most three digits) beside the declared value; the lot
+   follows. Proof stays with the parcel; adding another parcel comes last. */
+.booking-counter-page .bk-grid-parcel .parcel-size { grid-column: auto; }
+.booking-counter-page .bk-grid-parcel .parcel-size-fields { flex-wrap: nowrap; }
+.booking-counter-page .bk-grid-parcel .parcel-size-cell { flex: 1 1 0; }
+.booking-counter-page .bk-grid-parcel .parcel-size { gap: var(--space-1); }
+.booking-counter-page .bk-grid-parcel .parcel-size-head { line-height: 20px; }
+.booking-counter-page .bk-grid-parcel .parcel-size .tf .tf-label { font-size: var(--text-xs); line-height: 18px; }
+.booking-counter-page .bk-grid-parcel .parcel-size-x { margin-top: 34px; }
+.booking-counter-page .bk-grid-parcel .parcel-billed { grid-column: 1 / -1; }
+.booking-counter-page .attach-slot { margin-top: var(--space-4); }
+.booking-counter-page .booking-add-package { margin-top: var(--space-4); }

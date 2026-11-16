@@ -6,7 +6,11 @@ import {scopedQuery,assertTenantAccess,type TenantAccess} from '../security/scop
 import {digest,keyDigest} from '../pricing/idempotency.ts';
 import {idempotencyKey,selection} from './validation.ts';
 
-const fields=['name','phone','address','recipientName','recipientPhone','recipientAddress','serviceOptionId','recipientCountry','recipientPin','recipientCity','recipientRegion','contentsType','contentsDescription','liquidQuantity','declaredValue','destination','weight','service','docket','override','packing','reason','registration','recipientState','gstin','handoverState','recipientRef','evidenceRef','specialCase','paymentMode','method'] as const;
+const fields=['name','phone','address','recipientName','recipientPhone','recipientAddress','serviceOptionId','recipientCountry','recipientPin','recipientCity','recipientRegion','contentsType','contentsDescription','liquidQuantity','declaredValue','destination','weight','service','docket','override','packing','reason','registration','recipientState','gstin','handoverState','recipientRef','evidenceRef','specialCase','paymentMode','method',
+  // Counter-only values the booking screen keeps with every draft (parcel size, the unit the
+  // weight was typed in, and the cash the customer handed over). Leaving them out of this list
+  // made the server refuse every draft the counter sent.
+  'lengthCm','widthCm','heightCm','weightUnit','cashGiven'] as const;
 export function counterEntryInput(input:unknown) {
   if(!input||typeof input!=='object'||Array.isArray(input))throw new FieldValidationError('$','INVALID_TYPE');
   const b=input as Record<string,unknown>;
