@@ -2,7 +2,7 @@ import React,{useMemo,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {canAdminister,type OperatorRole} from '@shippingco/shared';
 import type {ScopeController} from '../operator/scope';
-import {DashboardView,type DashboardRange,type DashboardStage,type DashboardTile,type DashboardTodoRow,type DashboardValueCell} from '../components/workspace/DashboardView';
+import {DashboardState,DashboardView,type DashboardRange,type DashboardStage,type DashboardTile,type DashboardTodoRow,type DashboardValueCell} from '../components/workspace/DashboardView';
 import {Msym} from '../components/m3/Icon';
 import {scopedApi} from '../data-access/scoped-api';
 import {operationalDashboard} from '../data-access/operational-dashboard';
@@ -226,50 +226,56 @@ export default function OperationsDashboard({controller,roles,workspaceName}:{co
     journeyTotal={summary?journeyStages.reduce((sum,stage)=>sum+summary.stages[stage.key],0):null}
     series={series} range={range} onRange={setRange}
     seriesCaption={summary?seriesCaption(window):''}
-    seriesEmpty={<div className="chart-blank" role="status">
-      <Msym name="analytics" aria-hidden="true"/>
-      <p>Your first booking will appear here.</p>
-      {newBooking&&<Link className="btn btn-filled" to={newBooking}>New booking</Link>}
-    </div>}
+    seriesEmpty={<div className="chart-blank"><DashboardState icon="analytics" role="status"
+      title="No bookings in this period yet"
+      body="Your first booking will appear here as a bar for the day it was made."
+      action={newBooking&&<Link className="btn btn-filled" to={newBooking}>New booking</Link>}/></div>}
     money={moneyBars}
-    moneyFoot={<div className="money-foot">
-      {!canFinance
-        ? <p className="chart-caption">Payment totals need the owner or accounting role.</p>
-        : money.error
-          ? <p className="chart-caption" role="alert">Payment balances could not be loaded. No paid or unpaid total is assumed.</p>
-          : snapshot&&!moneyBars
-            ? <p className="chart-caption">Nothing is outstanding on delivered bookings right now.</p>
-            : !snapshot&&<p className="chart-caption">Payment balances are not loaded yet.</p>}
-      {canFinance&&<>
-        {snapshot&&<p className="board-fineprint">Counted at {formatKolkata(snapshot.as_of)}</p>}
-        <button className="btn btn-outlined" type="button" disabled={money.busy} onClick={money.reload}>
-          {money.error?'Retry payment balances':snapshot?'Refresh payment balances':'Load payment balances'}</button>
-      </>}
-    </div>}
+    moneyFoot={!canFinance
+      ? <DashboardState icon="lock" title="Payment totals are private"
+        body="They need the owner or accounting role."/>
+      : money.error
+        ? <DashboardState icon="error" tone="error" role="alert"
+          title="Payment balances could not be loaded"
+          body="No paid or unpaid total is assumed."
+          action={<button className="btn btn-outlined" type="button" disabled={money.busy} onClick={money.reload}>
+            <Msym name="refresh" aria-hidden="true"/>Retry payment balances</button>}/>
+        : !snapshot
+          ? <DashboardState icon="account_balance_wallet" role="status"
+            title={money.busy?'Counting what is owed…':'Payment balances are not loaded yet'}
+            action={<button className="btn btn-outlined" type="button" disabled={money.busy} onClick={money.reload}>Load payment balances</button>}/>
+          : <>
+            {!moneyBars&&<DashboardState icon="check_circle" title="Nothing to collect"
+              body="Nothing is outstanding on delivered bookings right now."/>}
+            <div className="money-foot">
+              <p className="board-fineprint">Counted at {formatKolkata(snapshot.as_of)}</p>
+              <button className="btn btn-text" type="button" disabled={money.busy} onClick={money.reload}>
+                <Msym name="refresh" aria-hidden="true"/>Refresh payment balances</button>
+            </div>
+          </>}
     value={canSupport&&outcomes.phase!=='error'&&outcomes.value&&!nothingHandled
       ?{range:weekFrom+' – '+weekTo,cells:valueCells,
         note:suppressed?'Where fewer than five customers sit behind a figure it is hidden rather than shown, so no single customer can be identified from it.':undefined}
       :null}
-    valueInstead={!canSupport
-      ?<section className="card value-card is-off" aria-labelledby="board-value-off">
-        <h2 id="board-value-off">What ShipIT did for you this week</h2>
-        <p>This panel counts the customers ShipIT answered for you — the questions it finished on
-          its own, the thanks it collected, and what it passed back to a person. It needs the
-          owner or counter role to read.</p>
-      </section>
-      :outcomes.phase==='loading'
-        ?<section className="card value-card" aria-labelledby="board-value-wait">
-          <h2 id="board-value-wait">What ShipIT did for you this week</h2>
-          <p role="status">Counting what the assistant handled…</p>
-        </section>
-        :nothingHandled
-          ?<section className="card value-card is-off" aria-labelledby="board-value-none">
-            <h2 id="board-value-none">What ShipIT did for you this week</h2>
-            <p>Nothing yet in the week of {weekFrom}. Once customers start messaging your shop,
-              this panel counts the questions ShipIT answered without you, the hours of calls it
-              saved, the customers who said thank you, and what it passed back to a person.</p>
-            <Link className="btn btn-outlined" to="/business/automation">Open conversations</Link>
-          </section>
-          :undefined}
+    // When the outcomes failed, the notice above says so and retries them; a second panel
+    // repeating the failure would only be a second place to press the same button.
+    valueInstead={canSupport&&outcomes.phase==='error'?undefined:<section className="card board-card value-card" aria-labelledby="board-value-instead">
+      <header className="card-head">
+        <div className="board-card-title">
+          <h2 id="board-value-instead">What ShipIT did for you this week</h2>
+          <p className="chart-caption">Week of {weekFrom} – {weekTo}</p>
+        </div>
+      </header>
+      <div className="board-body">
+        {!canSupport
+          ? <DashboardState icon="lock" title="Needs the owner or counter role"
+            body="This panel counts the questions ShipIT finished on its own, the thanks it collected, and what it passed back to a person."/>
+          : outcomes.phase==='loading'
+            ? <DashboardState icon="forum" role="status" title="Counting what the assistant handled…"/>
+            : <DashboardState icon="forum" title="No customer conversations yet"
+              body="Once customers start messaging your shop, this panel counts what ShipIT answered without you and the calls it saved."
+              action={<Link className="btn btn-outlined" to="/business/automation">Open conversations</Link>}/>}
+      </div>
+    </section>}
     todo={rows.slice(0,3)} todoTotal={rows.length} todoGo="/business/packages"/>;
 }
