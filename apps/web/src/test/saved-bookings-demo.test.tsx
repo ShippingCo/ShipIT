@@ -88,3 +88,33 @@ it('shows the server planning lot on an incomplete saved booking without fabrica
  }));
  await start();expect(await screen.findByText(lot.code)).toBeVisible();
 });
+
+it('keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done',async()=>{
+ // The sheet used to read its parcels live from the list. The list reloads as soon as a
+ // check-in succeeds, the parcel is then "at hub", and the sheet threw away its own success
+ // and said none of the chosen parcels was waiting to be checked in.
+ const parcel={...f.booking.parcels[0],booking_id:f.bookingId,version:1,custody:'awaiting_intake',confirmed_at:f.now,sender:{source_customer_id:f.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
+ let current={...parcel,status:'booked'};
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>{
+  if(path.startsWith('/api/v1/bookings/entries?'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/parcels?'))return f.json({items:[current],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/lot-membership'))return f.json(null);
+  if(path.startsWith('/api/v1/lots?'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/payments'))return f.json(f.balance);
+  throw Error('Unexpected read');
+ }));
+ const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
+ render(<MemoryRouter><SavedBookings controller={controller} roles={['org_admin']} operationalDetail={()=>null}
+  operationalBulk={(rows,action,_busy,refresh,done)=><><p>Sheet holds {rows.map(row=>row.docket+' '+row.status).join(', ')} for {action}</p>
+   <button onClick={refresh}>Reload synthetic list</button><button onClick={done}>Finish synthetic sheet</button></>}/></MemoryRouter>);
+ // The next step sits on the parcel's own row, so one parcel needs no ticking.
+ fireEvent.click(await screen.findByRole('button',{name:'Check in SYN-33'}));
+ expect(screen.getByText('Sheet holds SYN-33 booked for check_in')).toBeVisible();
+ current={...parcel,status:'checked_in',version:2};
+ fireEvent.click(screen.getByRole('button',{name:'Reload synthetic list'}));
+ // The open sheet hides the list from assistive technology, so the row is found as hidden.
+ await screen.findByRole('button',{name:'Send out SYN-33',hidden:true});
+ expect(screen.getByText('Sheet holds SYN-33 booked for check_in')).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'Finish synthetic sheet'}));
+ await waitFor(()=>expect(screen.queryByText(/Sheet holds/)).toBeNull());
+});

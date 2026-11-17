@@ -1,0 +1,225 @@
+/* Packages — the list a counter works from all day, and the check-in sheet.
+   ---------------------------------------------------------------------------
+   Patterns adapted from 21st.dev: "Tabs with Count Badges" for the stage tabs,
+   the "Data Table Toolbar" animated bulk bar (here docked to the bottom of the
+   viewport), and the "Success Alert" for a finished check-in. All of it is drawn
+   on the app's tokens; nothing new is installed.
+
+   Rules for this screen:
+   - the next action for a parcel sits on that parcel's row;
+   - today's two jobs (check in, send out) are counted above the list;
+   - a sheet that is acting on parcels never changes which parcels under the
+     operator's feet. */
+
+.pkg-page { display: flex; flex-direction: column; gap: var(--space-4); padding-bottom: 120px; }
+.pkg-page .page-header, .pkg-page > header { margin-bottom: 0; }
+
+/* ---- today's two jobs ------------------------------------------------- */
+.pkg-jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
+.pkg-job {
+  appearance: none; font: inherit; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: var(--space-3); min-height: 64px;
+  padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--text);
+  transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+.pkg-job:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.pkg-job:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pkg-job.is-on { border-color: var(--accent); background: var(--accent-subtle); }
+.pkg-job-ico {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: var(--radius-md); background: var(--accent-subtle); color: var(--accent);
+}
+.pkg-job-ico .msym { font-size: 22px; }
+.pkg-job.is-on .pkg-job-ico { background: var(--surface); }
+.pkg-job-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.pkg-job-text b { font-size: var(--text-xl); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; line-height: 1; }
+.pkg-job-text span { font-size: var(--text-sm); color: var(--text-secondary); }
+.pkg-job-go { color: var(--text-secondary); font-size: 20px; }
+
+/* ---- search and stage tabs ------------------------------------------- */
+.pkg-toolbar { margin: 0; }
+/* Line tabs with a count badge each: the whole row reads as one control, and the
+   active stage is marked by an accent underline rather than a filled pill. */
+.chips-row.pkg-tabs {
+  flex-wrap: nowrap; gap: 0; margin: 0; overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.chips-row.pkg-tabs::-webkit-scrollbar { display: none; }
+.pkg-tabs .fchip {
+  flex: none; height: auto; min-height: var(--touch-min); padding: 0 var(--space-4);
+  border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px;
+  background: none; color: var(--text-secondary); font-size: var(--text-sm); font-weight: var(--weight-medium);
+  display: inline-flex; align-items: center; gap: var(--space-2);
+}
+.pkg-tabs .fchip:hover { background: var(--surface-hover); color: var(--text); }
+.pkg-tabs .fchip:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+.pkg-tabs .fchip.on { color: var(--text); font-weight: var(--weight-semibold); border-bottom-color: var(--accent); background: none; }
+.pkg-tabs .fchip-n {
+  min-width: 24px; padding: 1px 7px; border: 1px solid var(--border); border-radius: var(--radius-full);
+  font-size: var(--text-xs); line-height: 18px; text-align: center; opacity: 1; color: var(--text-secondary); background: var(--surface);
+}
+.pkg-tabs .fchip.on .fchip-n { border-color: var(--blue-200); background: var(--accent-subtle); color: var(--accent-on-subtle); }
+
+/* ---- the list ---------------------------------------------------------- */
+.pkg-card { overflow: hidden; }
+.pkg-table th { background: var(--surface-sunken); }
+.pkg-table td { font-size: var(--text-sm); }
+.pkg-table .cell-main { font-weight: var(--weight-semibold); color: var(--text); }
+.pkg-table .cell-sub { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
+.pkg-table tbody tr:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+.pkg-table tbody tr.is-picked { background: var(--accent-subtle); }
+.pkg-amount { font-weight: var(--weight-semibold); white-space: nowrap; }
+.pkg-status { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.pkg-next-h { width: 1%; }
+.pkg-next { width: 1%; white-space: nowrap; text-align: right; cursor: default; }
+.pkg-next-btn {
+  appearance: none; font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--space-3);
+  border: 1px solid var(--blue-200); border-radius: var(--radius-full);
+  background: var(--accent-subtle); color: var(--accent-on-subtle);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+.pkg-next-btn .msym { font-size: 18px; }
+.pkg-next-btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.pkg-next-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pkg-next-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pkg-next-btn.is-quiet { background: var(--surface); border-color: var(--border); color: var(--text); }
+.pkg-next-btn.is-quiet:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-strong); }
+/* The row is the touch target on a phone; the button inside keeps its own 44px. */
+@media (pointer: coarse) { .pkg-next-btn { min-height: var(--touch-min); } }
+
+/* Phone and tablet: each row becomes a card. Docket and status on top, who and where
+   in the middle, money and the next step at the bottom. */
+.pkg-table .mono.cell-main { white-space: nowrap; }
+@media (max-width: 960px) {
+  .pkg-card .tbl-wrap { overflow: visible; }
+  .pkg-table, .pkg-table tbody { display: block; }
+  .pkg-table thead tr { display: flex; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface-sunken); }
+  .pkg-table thead th.tbl-check { gap: var(--space-2); background: none; }
+  .pkg-table thead th { display: none; border: 0; }
+  .pkg-table thead th.tbl-check { display: flex; align-items: center; width: auto; padding: 4px 12px !important; }
+  .pkg-table thead th.tbl-check::after { content: "Select all shown"; font-size: var(--text-sm); text-transform: none; letter-spacing: 0; font-weight: var(--weight-medium); color: var(--text-secondary); }
+  .pkg-table tbody tr {
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "check docket status"
+      "check who    who"
+      "check to     lot"
+      "check pay    amount"
+      "check next   next";
+    gap: 4px var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .pkg-table tbody tr:last-child { border-bottom: 0; }
+  .pkg-table tbody td { display: block; padding: 0; border: 0; }
+  .pkg-table tbody td:nth-child(1) { grid-area: check; }
+  .pkg-table tbody td:nth-child(2) { grid-area: docket; }
+  .pkg-table tbody td:nth-child(3) { grid-area: who; }
+  .pkg-table tbody td:nth-child(4) { grid-area: to; color: var(--text-secondary); }
+  .pkg-table tbody td:nth-child(4)::before { content: "To "; }
+  .pkg-table tbody td:nth-child(5) { grid-area: lot; text-align: right; }
+  .pkg-table tbody td:nth-child(6) { grid-area: amount; text-align: right; }
+  .pkg-table tbody td:nth-child(7) { grid-area: pay; }
+  .pkg-table tbody td:nth-child(8) { grid-area: status; justify-self: end; }
+  .pkg-table tbody td:nth-child(9) { grid-area: next; text-align: left; width: auto; }
+  .pkg-table tbody td:nth-child(9):empty { display: none; }
+  .pkg-next-btn { min-height: var(--touch-min); width: 100%; justify-content: center; margin-top: var(--space-2); }
+  .pkg-table .mono.cell-main { white-space: normal; overflow-wrap: anywhere; }
+  .pkg-table tbody td.tbl-check { width: 44px; }
+}
+
+/* ---- the chosen-parcels bar, docked ----------------------------------- */
+.pkg-bulk-dock {
+  position: sticky; bottom: var(--space-4); z-index: var(--z-sticky, 10);
+  display: flex; justify-content: center; pointer-events: none; margin-top: calc(-1 * var(--space-2));
+}
+.pkg-bulk-dock .bulkbar {
+  pointer-events: auto; width: min(100%, 860px); margin: 0;
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  background: var(--grey-900); color: var(--grey-0); border: 0; border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal, var(--shadow-raised));
+  animation: pkg-dock-in var(--duration-base, 200ms) var(--ease-out) both;
+}
+.pkg-bulk-dock .bulkbar-head { display: flex; flex-direction: column; gap: 0; }
+.pkg-bulk-dock .bulkbar-n { font-size: var(--text-base); }
+.pkg-bulk-dock .bulkbar-hidden { font-size: var(--text-xs); color: var(--grey-300); opacity: 1; }
+.pkg-bulk-dock .bulkbar-actions { justify-content: flex-end; }
+.pkg-bulk-dock .bulkbar-actions .btn { height: var(--touch-min); font-size: var(--text-sm); }
+.pkg-bulk-dock .bulkbar-actions .btn-outlined { background: transparent; color: var(--grey-0); border-color: var(--grey-600); }
+.pkg-bulk-dock .bulkbar-actions .btn-outlined:disabled { color: var(--grey-400); }
+.pkg-bulk-dock .bulkbar-actions .btn-filled:disabled { background: var(--grey-700); color: var(--grey-400); opacity: 1; }
+.pkg-bulk-dock .bulkbar-clear { margin-left: 0; color: var(--grey-200); }
+.pkg-bulk-dock .bulkbar-clear:focus-visible, .pkg-bulk-dock .btn:focus-visible { outline: 2px solid var(--blue-300); outline-offset: 2px; }
+.pkg-bulk-dock .bulkbar-why { grid-column: 1 / -1; color: var(--grey-300); font-size: var(--text-sm); }
+@media (max-width: 720px) {
+  .pkg-bulk-dock { bottom: var(--space-3); }
+  .pkg-bulk-dock .bulkbar { grid-template-columns: 1fr; padding: var(--space-3) var(--space-4); }
+  .pkg-bulk-dock .bulkbar-actions { justify-content: stretch; }
+  .pkg-bulk-dock .bulkbar-actions .btn { flex: 1 1 auto; }
+}
+@keyframes pkg-dock-in { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- the check-in sheet ----------------------------------------------- */
+.hub-sheet { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-3) 0 0; }
+.hub-step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--space-3); }
+.hub-step-n {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-full);
+  background: var(--accent-subtle); color: var(--accent-on-subtle);
+  font-size: var(--text-sm); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums;
+}
+.hub-step + .hub-step { padding-top: var(--space-5); border-top: 1px solid var(--border); }
+.hub-step-body { min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.hub-step-wait { margin: 0; padding: var(--space-4); border: 1px dashed var(--border); border-radius: var(--radius-md); color: var(--text-secondary); background: var(--surface-sunken); }
+.hub-sheet .hub-picker-label { line-height: 28px; }
+
+.hub-sheet-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-2); padding: var(--space-6) var(--space-4); }
+.hub-sheet-empty p { margin: 0; color: var(--text-secondary); }
+.hub-sheet-empty p b { color: var(--text); font-weight: var(--weight-semibold); }
+.hub-sheet-empty-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--surface-sunken); color: var(--text-secondary); margin-bottom: var(--space-2); }
+.hub-sheet-empty .btn { margin-top: var(--space-3); min-height: var(--touch-min); }
+
+/* The run itself: flat, no card inside the dialog's card. */
+.hub-sheet .bulk-run { padding: 0; gap: var(--space-4); border: 0; background: none; }
+.bulk-run-status {
+  display: flex; align-items: center; gap: var(--space-2); margin: 0;
+  font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--text); font-variant-numeric: tabular-nums;
+}
+.bulk-run-status .msym { font-size: 20px; color: var(--accent); }
+.bulk-run-status:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.bulk-run.is-done .bulk-run-status .msym { color: var(--success); }
+/* When everything is done the green box says it; the status line stays for screen
+   readers and focus, but shrinks to a quiet caption so the sentence is not said twice. */
+.bulk-run-status.is-quiet { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); }
+.bulk-run-finished { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; }
+.bulk-run-tick { width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--success); color: var(--grey-0); }
+.bulk-run-tick .msym { font-size: 16px; }
+.bulk-run .bulk-run-row.is-done { flex-wrap: nowrap; }
+.bulk-run-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); }
+.bulk-run .bulk-run-row {
+  min-height: var(--touch-min); padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
+}
+.bulk-run .bulk-run-row.is-done { border-color: #cfe9d9; }
+.bulk-run .bulk-run-row.is-failed { border-color: #f2e0bf; grid-column: 1 / -1; }
+.bulk-run-docket { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-sm); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.bulk-run .bulk-run-outcome { display: inline-flex; align-items: center; gap: 4px; }
+.bulk-run .bulk-run-outcome .msym { font-size: 16px; }
+.bulk-run-done {
+  display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4);
+  border: 1px solid #cfe9d9; border-radius: var(--radius-md); background: var(--success-subtle); color: var(--success-on-subtle);
+}
+.bulk-run-done-ico { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--success); color: var(--grey-0); }
+.bulk-run-done-ico .msym { font-size: 20px; }
+.bulk-run-done-title { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.bulk-run-done-body { margin: 2px 0 0; font-size: var(--text-sm); }
+.bulk-run .bulk-run-actions { padding-top: var(--space-2); }
+.bulk-run .bulk-run-actions .btn { min-height: var(--touch-min); }
+.bulk-run .ops-uncertain, .bulk-run .ops-alert { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pkg-job, .pkg-next-btn { transition: none; }
+  .pkg-bulk-dock .bulkbar { animation: none; }
+}

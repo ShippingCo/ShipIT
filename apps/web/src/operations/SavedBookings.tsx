@@ -23,8 +23,12 @@ import {Dialog} from '../components/m3/Dialog';
 import {Journey} from '../components/m3/Journey';
 import {PageHeader} from '../components/workspace/Workspace';
 import type {ParcelStatus as JourneyStatus} from '../data/types';
+import './packages.css';
 
-const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
+// The two stages a counter works every day — parcels waiting to be checked in, and parcels
+// at the hub waiting to go out — are tabs of their own, so the morning's work is one press
+// away instead of a scan down "Active".
+const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'booked',label:'Booked'},{value:'checked_in',label:'At hub'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
 const stageLabels:Record<string,string>={booked:'Booked',checked_in:'At hub',dispatched:'Dispatched',in_transit:'On the way',out_for_delivery:'Out for delivery'};
 export interface SavedBookingRow{
  id:string;docket:string;name:string;phone:string;city:string;address:string;service:string;weight:number|null;amount:number|null;payment:'paid'|'topay'|'unknown';status:string;createdAt:number;lotId:string|null;lotCode:string;entry?:CounterEntry;parcel?:ParcelRead;
@@ -51,7 +55,7 @@ const time=(ts:number)=>new Date(ts).toLocaleString('en-IN',{day:'numeric',month
 const statusPill=(row:SavedBookingRow)=><StatusPill status={row.status as JourneyStatus} labelOverride={row.status==='held_at_office'?'At office':row.status==='cancelled'?'Cancelled':row.status==='draft'?'Draft — not booked':undefined}/>;
 const payChip=(row:SavedBookingRow)=><span className={'pill '+(row.payment==='paid'?'st-delivered':row.payment==='topay'?'pill-warn':'')}>{row.payment==='paid'?'Paid':row.payment==='topay'?'To Pay':'Not recorded'}</span>;
 
-export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void)=>React.ReactNode}){
+export function SavedBookings({controller,roles,operationalDetail,operationalBulk}:{controller:ScopeController;roles:readonly OperatorRole[];operationalDetail:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void,done:()=>void)=>React.ReactNode}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),entrySource=useMemo(()=>bookingEntries(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const [params,setParams]=useSearchParams();
  const canCreate=roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)),canMoney=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
@@ -74,13 +78,17 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
   const planningLots=new Map((lotPage.value?.items??[]).filter(l=>l.state==='active').flatMap(l=>(l.planning_entry_ids??[]).map(id=>[id,l] as const)));
   return [...(entries.value?.items??[]).map(entry=>{const row=counterBookingRow(entry),lot=planningLots.get(entry.id);return {...row,lotId:lot?.id??null,lotCode:lot?.code??''};}),...shipmentRows];
  },[page.items,entries.value,metadata.value,lotPage.value]);
- const [bulkAction,setBulkAction]=useState<'check_in'|'dispatch'|null>(null),[bulkBusy,setBulkBusy]=useState(false);
+ // The parcels a check-in or send-out acts on are fixed when the sheet opens. They used to be
+ // read live from the list, so the list's own refresh after a successful check-in changed
+ // them under the sheet: the parcels were now "at hub", none were "waiting to be checked
+ // in", and the sheet threw away its own success and said there was nothing to do.
+ const [bulk,setBulk]=useState<{action:'check_in'|'dispatch';rows:ParcelRead[]}|null>(null),[bulkBusy,setBulkBusy]=useState(false);
  const [q,setQ]=useState(''),[filter,setFilter]=useState(params.get('filter')||'all'),[range,setRange]=useState<DatePreset>(params.get('booked')==='today'?'today':'all'),[custom,setCustom]=useState<CustomRange>({from:'',to:''});
  const [sort,setSort]=useState<{key:'createdAt'|'docket'|'amount';dir:1|-1}>({key:'createdAt',dir:-1}),[picked,setPicked]=useState<Record<string,boolean>>({});
  const selected=params.get('open')||params.get('parcel');
  const [openId,setOpenId]=useState<string|null>(selected?(selected.startsWith('entry:')||selected.startsWith('parcel:')?selected:'parcel:'+selected):null);
  const searched=useMemo(()=>{const text=q.trim().toLowerCase(),[from,to]=dateWindow(range,custom);return allRows.filter(r=>r.createdAt>=from&&r.createdAt<=to&&(!text||(r.docket+' '+r.name+' '+r.phone+' '+r.city).toLowerCase().includes(text)));},[allRows,q,range,custom]);
- const chipOptions=stageLabels[filter]?[...filters,{value:filter,label:stageLabels[filter]}]:filters;
+ const chipOptions=stageLabels[filter]&&!filters.some(f=>f.value===filter)?[...filters,{value:filter,label:stageLabels[filter]}]:filters;
  const counts=Object.fromEntries(chipOptions.map(f=>[f.value,filterSavedBookings(searched,f.value).length]));
  const list=useMemo(()=>[...filterSavedBookings(searched,filter)].sort((a,b)=>{
   if(sort.key==='amount'){if(a.amount===null)return b.amount===null?0:1;if(b.amount===null)return -1;return (a.amount-b.amount)*sort.dir;}
@@ -93,31 +101,62 @@ export function SavedBookings({controller,roles,operationalDetail,operationalBul
  const canBulk=!!operationalBulk&&selectedParcels.length===pickedIds.length&&selectedParcels.length>0;
  const open=allRows.find(r=>r.id===openId),refresh=()=>{page.reload();entries.reload();metadata.reload();lotPage.reload();};
  const close=()=>{setOpenId(null);if(selected){const next=new URLSearchParams(params);next.delete('open');next.delete('parcel');setParams(next,{replace:true});}};
- return <div className="page saved-bookings-demo" aria-label="Saved bookings">
+ const finishBulk=()=>{setBulk(null);setPicked({});refresh();};
+ const openBulk=(action:'check_in'|'dispatch',rows:ParcelRead[])=>{if(!bulkBusy&&operationalBulk&&rows.length)setBulk({action,rows});};
+ const waiting=counts.booked??0,atHub=counts.checked_in??0;
+ return <div className="page saved-bookings-demo pkg-page" aria-label="Saved bookings">
   <PageHeader title="Packages"
    actions={<DataRefresh resource={{phase:[page,entries,metadata,lotPage].some(r=>r.phase==='loading')?'loading':'ready',reload:refresh}}/>}/>
-  <div className="toolbar"><SearchBar value={q} onChange={setQ} autoFocus placeholder="Search docket, name, phone or city" label="Search packages"/><DateFilter preset={range} onPreset={setRange} custom={custom} onCustom={setCustom}/></div>
-  <FilterChips options={chipOptions} value={filter} onChange={setFilter} counts={counts}/>
-  {pickedIds.length>0&&<BulkBar chosen={pickedIds.length} drafts={pickedIds.length-selectedParcels.length}
-   hidden={pickedIds.filter(id=>!list.some(row=>row.id===id)).length}
-   notBooked={selectedParcels.filter(p=>p.status!=='booked').length}
-   notAtHub={selectedParcels.filter(p=>p.status!=='checked_in').length}
-   enabled={canBulk&&!bulkBusy} busy={bulkBusy}
-   act={action=>setBulkAction(action)} clear={()=>setPicked({})}/>}
+  {/* Today's two jobs, before anything else on the page: what is waiting at the counter
+      to be checked in, and what is at the hub waiting to go out. Each is one press to
+      the filtered list. */}
+  {operationalBulk&&(waiting>0||atHub>0)&&<div className="pkg-jobs" role="group" aria-label="Waiting on you">
+   {waiting>0&&<button type="button" className={'pkg-job'+(filter==='booked'?' is-on':'')} onClick={()=>setFilter('booked')}>
+    <span className="pkg-job-ico" aria-hidden="true"><Msym name="warehouse"/></span>
+    <span className="pkg-job-text"><b>{waiting}</b><span>{waiting===1?'parcel waits':'parcels wait'} to be checked in</span></span>
+    <Msym name="chevron_right" className="pkg-job-go"/>
+   </button>}
+   {atHub>0&&<button type="button" className={'pkg-job'+(filter==='checked_in'?' is-on':'')} onClick={()=>setFilter('checked_in')}>
+    <span className="pkg-job-ico" aria-hidden="true"><Msym name="local_shipping"/></span>
+    <span className="pkg-job-text"><b>{atHub}</b><span>at the hub, ready to send out</span></span>
+    <Msym name="chevron_right" className="pkg-job-go"/>
+   </button>}
+  </div>}
+  <div className="toolbar pkg-toolbar"><SearchBar value={q} onChange={setQ} autoFocus placeholder="Search docket, name, phone or city" label="Search packages"/><DateFilter preset={range} onPreset={setRange} custom={custom} onCustom={setCustom}/></div>
+  <FilterChips className="pkg-tabs" options={chipOptions} value={filter} onChange={setFilter} counts={counts}/>
   {page.phase==='error'&&<Failure retry={page.reload} label="Shipment bookings could not be loaded."/>}
   {entries.phase==='error'&&<Failure retry={entries.reload} label="Saved bookings could not be loaded."/>}
-  <Card><div className="tbl-wrap"><table className="tbl" aria-label="Packages"><thead><tr>
+  <Card className="pkg-card"><div className="tbl-wrap"><table className="tbl pkg-table" aria-label="Packages"><thead><tr>
    <th className="tbl-check"><Checkbox checked={allShown} onChange={v=>{if(bulkBusy)return;setPicked(v?Object.fromEntries(list.map(r=>[r.id,true])):{});}} ariaLabel="Select all shown bookings"/></th>
    <th><button type="button" className="th-sort" onClick={()=>toggleSort('docket')}>Docket <Msym name={sortIcon('docket')}/></button></th><th>Customer</th><th>To</th><th>Lot</th>
    <th className="ta-r"><button type="button" className="th-sort is-r" onClick={()=>toggleSort('amount')}>Amount <Msym name={sortIcon('amount')}/></button></th><th>Payment</th><th>Status</th>
+   {operationalBulk&&<th className="pkg-next-h"><span className="workspace-visually-hidden">Next step</span></th>}
   </tr></thead><tbody>{list.map(r=><tr key={r.id} tabIndex={0} className={picked[r.id]?'is-picked':undefined} onClick={()=>setOpenId(r.id)} onKeyDown={event=>{if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();setOpenId(r.id);}}}>
    <td className="tbl-check" onClick={e=>e.stopPropagation()}><Checkbox checked={!!picked[r.id]} onChange={v=>{if(!bulkBusy)setPicked(p=>({...p,[r.id]:v}));}} ariaLabel={'Select '+r.docket}/></td>
-   <td className="mono cell-main">{r.docket}</td><td><div className="cell-main">{r.name}</div><div className="cell-sub">{r.phone||'—'}</div></td><td>{r.city||'—'}</td><td className="muted t-body-sm">{r.lotCode||'—'}</td><td className="ta-r" title={r.entry?'Entered charges; tax not assessed':undefined}>{money(r.amount)}</td><td>{payChip(r)}</td><td><span style={{display:'inline-flex',gap:6}}>{statusPill(r)}{r.status==='failed_attempt'&&<StatusPill status={'delayed' as JourneyStatus} labelOverride="Delayed"/>}</span></td>
+   <td><div className="mono cell-main">{r.docket}</div><div className="cell-sub">{Number.isFinite(r.createdAt)?time(r.createdAt):''}</div></td><td><div className="cell-main">{r.name}</div><div className="cell-sub">{r.phone||'—'}</div></td><td>{r.city||'—'}</td><td className="muted t-body-sm">{r.lotCode||'—'}</td><td className="ta-r pkg-amount" title={r.entry?'Entered charges; tax not assessed':undefined}>{money(r.amount)}</td><td>{payChip(r)}</td><td><span className="pkg-status">{statusPill(r)}{r.status==='failed_attempt'&&<StatusPill status={'delayed' as JourneyStatus} labelOverride="Delayed"/>}</span></td>
+   {operationalBulk&&<td className="pkg-next" onClick={e=>e.stopPropagation()}>{
+    // The next thing this parcel needs, on its own row. Ticking a box and finding the
+    // bar above the table was the only way to check in a single parcel.
+    r.parcel&&r.status==='booked'
+     ? <button type="button" className="pkg-next-btn" disabled={bulkBusy} onClick={()=>openBulk('check_in',[r.parcel!])} aria-label={'Check in '+r.docket}><Msym name="warehouse"/>Check in</button>
+     : r.parcel&&r.status==='checked_in'
+      ? <button type="button" className="pkg-next-btn" disabled={bulkBusy} onClick={()=>openBulk('dispatch',[r.parcel!])} aria-label={'Send out '+r.docket}><Msym name="local_shipping"/>Send out</button>
+      : r.entry
+       ? <button type="button" className="pkg-next-btn is-quiet" onClick={()=>{window.location.hash='#/business/new-booking?draft='+r.entry!.id;}} aria-label={'Finish draft '+r.docket}><Msym name="edit"/>Finish</button>
+       : null}</td>}
   </tr>)}</tbody></table>
   {(page.phase==='loading'||entries.phase==='loading')&&!list.length?<Loading label="Loading bookings…"/>:!list.length&&<EmptyState icon={q?'search_off':'inventory_2'} title={q?'Nothing matches that search':'No packages here'} sub={q?'Try a docket number, name or phone.':'Parcels appear here as soon as they are booked.'} action={q?<Button variant="outlined" style={{marginTop:12}} onClick={()=>setQ('')}>Clear search</Button>:undefined}/>}
   </div></Card>
   {page.page.has_more&&<Button variant="outlined" onClick={page.loadMore} disabled={page.phase==='more'}>Load more bookings</Button>}
-  {bulkAction&&operationalBulk&&<Dialog open size="lg" title={bulkAction==='check_in'?'Check in at the hub':'Send out for delivery'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulkAction(null);}}>{operationalBulk(selectedParcels,bulkAction,setBulkBusy,refresh)}</Dialog>}
+  {/* The chosen-parcels bar floats over the bottom of the list, where the thumb already
+      is, instead of pushing the table down the moment a box is ticked. */}
+  {pickedIds.length>0&&<div className="pkg-bulk-dock"><BulkBar chosen={pickedIds.length} drafts={pickedIds.length-selectedParcels.length}
+   hidden={pickedIds.filter(id=>!list.some(row=>row.id===id)).length}
+   notBooked={selectedParcels.filter(p=>p.status!=='booked').length}
+   notAtHub={selectedParcels.filter(p=>p.status!=='checked_in').length}
+   enabled={canBulk&&!bulkBusy} busy={bulkBusy}
+   act={action=>openBulk(action,selectedParcels)} clear={()=>setPicked({})}/></div>}
+  {bulk&&operationalBulk&&<Dialog open size="lg" title={bulk.action==='check_in'?'Check in at the hub':'Send out for delivery'} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulk(null);}}>{operationalBulk(bulk.rows,bulk.action,setBulkBusy,refresh,finishBulk)}</Dialog>}
   {open&&<SavedBookingDialog key={open.id} row={open} api={api} lots={lotPage.value?.items??[]} close={close} refresh={refresh} operationalDetail={operationalDetail}/>}
  </div>;
 }

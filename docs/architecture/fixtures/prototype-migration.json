@@ -3343,6 +3343,11 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/segmented-payment.test.tsx",
         "name": "chooses a payment segment without submitting its surrounding booking form",
         "cases": null
@@ -8850,6 +8855,14 @@
       "group": "lots",
       "disposition": "preserve",
       "reason": "Keep the saved booking lot display consistent with audited planning assignments."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "A check-in or send-out sheet acts on the parcels it opened with; the list reloading after a confirmed update cannot discard the confirmation or change which parcels the run covers."
     },
     {
       "file": "apps/web/src/test/segmented-payment.test.tsx",

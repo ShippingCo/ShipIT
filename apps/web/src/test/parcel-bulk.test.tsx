@@ -62,8 +62,8 @@ it('keyboard-reachable selection/action/retry, disabled pending state and live t
   await waitFor(()=>expect(action).toBeDisabled());expect(boxes[0]).toBeDisabled();expect(screen.getByRole('status')).toHaveTextContent('Processing');
   await act(async()=>{finish(json(mixed));});
   expect(document.activeElement).toBe(screen.getByRole('status'));
-  expect(screen.getByRole('status')).toHaveTextContent('2 selected · 1 completed · 2 need attention');
-  expect(boxes[0]).not.toBeChecked();expect(boxes[1]).toBeChecked();expect(screen.getByText('Someone else changed this parcel. Reload and try it again.')).toBeVisible();
+  expect(screen.getByRole('status')).toHaveTextContent('1 checked in · 2 need attention');
+  expect(boxes[0]).not.toBeInTheDocument();expect(boxes[1]).toBeChecked();expect(screen.getByText('Someone else changed this parcel. Reload and try it again.')).toBeVisible();
   const retry=screen.getByRole('button',{name:'Try the ones that failed'});retry.focus();expect(document.activeElement).toBe(retry);expect(retry).toBeEnabled();
   fireEvent.click(retry);await waitFor(()=>expect(s.calls).toHaveLength(2));
   expect((JSON.parse(String(s.calls[1].options.body)) as BulkParcelRequest).items.map(item=>item.parcel_id)).toEqual([id(2),id(3)]);
