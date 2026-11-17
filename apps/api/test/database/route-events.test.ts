@@ -35,10 +35,10 @@ async function setup(t:Parameters<typeof bookingSetup>[0],overlap=false) {
   for(const id of ids)await mutate('parcels',{parcel_id:id});await mutate('finalize',{});
   for(const id of ids){const r=await request('POST',`parcels/${id}/dispatch`,{expected_version:2,manifest_id:route.current_manifest_id,evidence_ref:randomUUID()});assert.equal(r.statusCode,200,r.body);}
   const input={kind:'departure',expected_version:route.version,manifest_id:route.current_manifest_id,manifest_version:route.version,
-    effective_at:'2099-01-01T04:00:00Z',evidence_ref:randomUUID(),base_eta_at:'2099-01-01T12:00:00Z'};
+    effective_at:'2099-01-01T04:00:00Z',evidence_ref:randomUUID(),base_eta_at:'2099-01-01T12:00:00Z',note:'Left Pune hub.'};
   const post=(body:unknown=input,actor:Actor=dispatcher,key=randomUUID())=>request('POST',`routes/${route.id}/events`,body,actor,key);
   const delay=(version:number,minutes=120)=>({kind:'delay',expected_version:version,manifest_id:route.current_manifest_id,manifest_version:route.version,
-    effective_at:'2099-01-01T05:00:00Z',evidence_ref:randomUUID(),total_delay_minutes:minutes});
+    effective_at:'2099-01-01T05:00:00Z',evidence_ref:randomUUID(),total_delay_minutes:minutes,note:'Stuck at the toll.'});
   const counts=async()=>(await s.db.adminQuery(`SELECT (SELECT count(*)::int FROM shipit.route_commands) commands,
     (SELECT count(*)::int FROM shipit.route_parcel_effects) effects,(SELECT count(*)::int FROM shipit.domain_events) events,
     (SELECT count(*)::int FROM shipit.parcel_transitions) transitions,(SELECT count(*)::int FROM shipit.route_audit_events) audits`)).rows[0];
@@ -49,6 +49,8 @@ await test('route departure and duplicate absolute delay atomically deduplicate 
   const departed=await s.post(s.input,s.dispatcher,key);assert.equal(departed.statusCode,200,departed.body);
   const result=departed.json<RouteEventResult>();assert.equal(result.updated_count,2);assert.equal(result.skipped_count,0);
   assert.equal(result.eta.revised_at,'2099-01-01T12:00:00Z');
+  // The console always sends a team note; it is stored with the event, not rejected by the input check.
+  assert.equal((await s.db.adminQuery("SELECT input->>'note' AS note FROM shipit.route_commands WHERE operation_id='api.v1.routes.departure'")).rows[0]!.note,'Left Pune hub.');
   const statuses=(await s.db.adminQuery('SELECT status,version FROM shipit.parcels')).rows;assert.ok(statuses.every(p=>p.status==='in_transit'&&p.version===4));
   const before=await s.counts();assert.deepEqual((await s.post(s.input,s.dispatcher,key)).json(),result);assert.deepEqual(await s.counts(),before);
   const d=s.delay(result.version),dk=randomUUID();const delayed=await s.post(d,s.operator,dk);assert.equal(delayed.statusCode,200,delayed.body);

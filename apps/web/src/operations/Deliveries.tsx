@@ -141,7 +141,9 @@ function DeliveryDetail({parcelId,roles,source,api,controller,close,refreshQueue
  const due=useResource(context?.booking?'due-'+context.booking:'',signal=>
    context?.booking?payments(api,context.booking).read(signal).then(b=>Number(b.outstanding_paise)):Promise.resolve(null));
  useEffect(()=>{if(detail.phase==='ready')document.getElementById('delivery-detail-title')?.focus();},[detail.phase]);
- if(detail.phase==='loading')return <Loading label="Loading this delivery…"/>;
+ // Keep the delivery on screen while it re-reads after an action, so the confirmation the
+ // agent just got is not replaced by a loading line and then lost.
+ if(detail.phase==='loading'&&!detail.value)return <Loading label="Loading this delivery…"/>;
  if(detail.phase==='error')return <Failure retry={detail.reload} label="This delivery is no longer available."/>;
  const current=detail.value!,hasPhone=current.proof_channel_available!==false;
  const refresh=()=>{detail.reload();refreshQueue();};
@@ -230,6 +232,11 @@ function AtTheDoor({current,source,api,controller,roles,owed,phone,booking,hasPh
   return <p className="ops-note">Only the agent carrying this parcel can record what happened at the door.</p>;
  }
 
+ // A delivery whose code has been used is finished. Showing the code form again made a
+ // completed handover look as if it had not gone through, and invited a second try.
+ if(current.proof_method!==null||current.status==='consumed')return <>
+  <p className="delivery-done" role="status"><Msym name="check_circle"/><span>{done||'Delivered. Nothing more to do for this parcel.'}</span></p>
+ </>;
  return <>
   {done&&<p className="delivery-done" role="status"><Msym name="check_circle"/><span>{done}</span></p>}
 
@@ -282,7 +289,7 @@ function AtTheDoor({current,source,api,controller,roles,owed,phone,booking,hasPh
          <span className="field-legend">A photo of the handover</span>
          {/* R-13: why, not just what. */}
          <p className="ops-note">This is required. It is the only proof that replaces the code.</p>
-         <BookingAttachments queue={photos} disabled={locked||pending}/>
+         <BookingAttachments queue={photos} disabled={locked||pending} compact/>
         </div>
         {/* R-14: what happens next, before the press. */}
         <p className="delivery-before" role="status">
@@ -307,7 +314,7 @@ function AtTheDoor({current,source,api,controller,roles,owed,phone,booking,hasPh
    <div className="delivery-photo">
     <span className="field-legend">A photo of where you are</span>
     <p className="ops-note">This is what shows the attempt really happened.</p>
-    <BookingAttachments queue={photos} disabled={locked||pending}/>
+    <BookingAttachments queue={photos} disabled={locked||pending} compact/>
    </div>
    {/* R-20: what is left, and what happens when it runs out, in the sender's words. */}
    <p className="delivery-before" role="status">

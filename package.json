@@ -45,7 +45,8 @@
     "demo:reconciliation": "node --experimental-strip-types scripts/test-report-reconciliation.mjs",
     "demo:reports": "node --experimental-strip-types scripts/test-reports.mjs",
     "test:attachments": "node scripts/with-test-object-store.mjs",
-    "preview:workflow": "pnpm db:local exec node scripts/workflow-preview.mjs"
+    "preview:workflow": "pnpm db:local exec node scripts/workflow-preview.mjs",
+    "preview:seeded": "SHIPIT_PREVIEW_SEED=rich pnpm preview:workflow"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
