@@ -1475,6 +1475,7 @@ Journey now owns its pure stage list and no longer imports the fictional store. 
 | apps/web/src/test/service-parity.test.tsx: uses exclusive IST day boundaries and native custom-range constraints | preserve | receipts |
 
 | apps/web/src/test/saved-bookings-demo.test.tsx: keeps the saved-booking popup open while an embedded shipment command is pending or uncertain | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done | preserve | booking |
 
 Lots parity preserves the operational command view while using the demo card and destination-first dialog composition for the default screen. Incomplete counter entries remain planning records.
 

@@ -16,6 +16,7 @@ import { payments } from '../data-access/payments';
 import { deliveries } from '../data-access/deliveries';
 import { createParcelBulkController } from '../data-access/parcel-bulk-controller';
 import { BulkParcelPanel } from '../parcels/BulkParcelPanel';
+import './packages.css';
 import { useCommand,usePagedResource,useResource } from './hooks';
 import { CommandNotice,DataRefresh,Empty,Failure,Loading } from './AsyncState';
 import { formatKolkata,formatMoney } from './format';
@@ -86,7 +87,7 @@ export function OperationalPackages({controller,roles}:{controller:ScopeControll
  </div>;
 }
 
-function PackageBulk({controller,source,rows,reload,initialAction='check_in',onBusyChange}:{controller:ScopeController;source:ReturnType<typeof parcels>;rows:ParcelRead[];reload:()=>void;initialAction?:BulkParcelAction;onBusyChange?:(busy:boolean)=>void}){
+function PackageBulk({controller,source,rows,reload,initialAction='check_in',onBusyChange,onDone}:{controller:ScopeController;source:ReturnType<typeof parcels>;rows:ParcelRead[];reload:()=>void;initialAction?:BulkParcelAction;onBusyChange?:(busy:boolean)=>void;onDone?:()=>void}){
  const [action]=useState<BulkParcelAction>(initialAction);
  // Checking a parcel in needs a hub and a reference for the event. The hub is chosen
  // by name (see hub-places.ts); the reference is minted here, because it identifies
@@ -116,43 +117,63 @@ function PackageBulk({controller,source,rows,reload,initialAction='check_in',onB
  useEffect(()=>{setEvidence(mintEventRef());},[action]);
  const checkIn=action==='check_in';
  const inDialog=Boolean(onBusyChange);
- return <section className="ops-detail logistics-bulk"
+ // Once anything in this run has been saved, the hub is part of the record: changing it
+ // now would mint a different request for the parcels still to go, and the operator
+ // would not be able to tell which hub the finished ones went to.
+ const started=state.phase!=='idle'||Boolean(state.result);
+ const refreshFailed=async(items:readonly BulkParcelItem[],signal:AbortSignal)=>{const refreshed=await Promise.all(items.map(async item=>{try{const row=await source.read(item.parcel_id,signal);const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};return {parcel_id:row.id,idempotency_key:item.idempotency_key,command} as BulkParcelItem;}catch{return null;}}));return refreshed.filter((item):item is BulkParcelItem=>item!==null);};
+ return <section className="ops-detail logistics-bulk hub-sheet"
    {...(inDialog?{'aria-label':checkIn?'Check in at the hub':'Send out for delivery'}:{'aria-labelledby':'bulk-title'})}>
-  <div className="card ops-card hub-confirm">
-   {/* The dialog that opens this panel already carries the heading, so the panel
-       does not add a second one — hiding it visually would still leave a screen
-       reader hearing the same heading twice. Inside the disclosure on the
-       operations view there is no dialog, so the panel supplies it. */}
-   {!inDialog&&<h2 id="bulk-title" className="t-title-lg">{checkIn?'Check in at the hub':'Send out for delivery'}</h2>}
-   {/* What is being acted on, before anything else. An operator who pressed the
-       button on the wrong rows finds out here rather than afterwards. */}
-   {candidates.length>0
-     ? <p className="hub-confirm-count">{candidates.length} {candidates.length===1?'parcel':'parcels'} · {
-         // Enough dockets to recognise the batch, then a count. A van-load would
-         // otherwise put forty numbers above the thing the operator came to press.
-         candidates.slice(0,3).map(candidate=>candidate.label.split(' · ')[0]).join(', ')
-       }{candidates.length>3?` and ${candidates.length-3} more`:''}</p>
-     : <p role="status" className="hub-confirm-count">None of the chosen parcels {checkIn?'is waiting to be checked in':'has been checked in yet'}.</p>}
-   {checkIn
-     ? <HubPlacePicker value={place} onChange={setPlace} disabled={busyNow}/>
-     : /* A manifest is a real record created on the Routes screen, so unlike a hub it
-          cannot be invented here. The field says where to get it instead of naming its
-          format. */
-       <div className="hub-picker">
-         <p className="hub-picker-label">Which dispatch list are these parcels on?</p>
-         <TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36}
-           label="Dispatch list number" value={manifest} onChange={setManifest} disabled={busyNow}
-           error={manifest&&!uuid.test(manifest)?'That is not a dispatch list number.':undefined}/>
-         <p className="hub-confirm-ref">Copy it from the dispatch list on <Link to="/business/routes">Routes</Link>.</p>
-       </div>}
-   {/* Exactly one line of consequence. There is no definition of a hub, no
-       definition of checking in, and — deliberately — no record number: the
-       operator never needs it, and showing it only invited "what is that?". */}
-   {valid&&<p className="hub-confirm-ref">{checkIn
-     ? <>Records that {candidates.length===1?'this parcel':'these parcels'} reached <b>{place?.name}</b>.</>
-     : <>Records that {candidates.length===1?'this parcel':'these parcels'} left on this dispatch list.</>}</p>}
-  </div>
-  {valid?<BulkParcelPanel controller={bulk} action={action} candidates={candidates} refreshFailed={async(items,signal)=>{const refreshed=await Promise.all(items.map(async item=>{try{const row=await source.read(item.parcel_id,signal);const command=action==='check_in'?{expected_version:row.version,evidence_ref:evidence,location_ref:context}:{expected_version:row.version,evidence_ref:evidence,manifest_id:context};return {parcel_id:row.id,idempotency_key:item.idempotency_key,command} as BulkParcelItem;}catch{return null;}}));return refreshed.filter((item):item is BulkParcelItem=>item!==null);}}/>:<p className="card ops-card" role="status">{action==='check_in'?'Choose the hub these parcels are at.':'Enter the dispatch list number these parcels are on.'}</p>}
+  {/* The dialog that opens this panel already carries the heading, so the panel
+      does not add a second one — hiding it visually would still leave a screen
+      reader hearing the same heading twice. Inside the disclosure on the
+      operations view there is no dialog, so the panel supplies it. */}
+  {!inDialog&&<h2 id="bulk-title" className="t-title-lg">{checkIn?'Check in at the hub':'Send out for delivery'}</h2>}
+  {candidates.length===0
+    ? <div className="hub-sheet-empty" role="status">
+      <span className="hub-sheet-empty-ico" aria-hidden="true"><Msym name="inventory_2"/></span>
+      <p><b>None of the chosen parcels {checkIn?'is waiting to be checked in':'has been checked in yet'}.</b></p>
+      <p>{checkIn?'Only parcels still at the counter can be checked in at a hub.':'Check parcels in at a hub before sending them out.'}</p>
+      {onDone&&<button type="button" className="btn btn-outlined" onClick={onDone}>Close</button>}
+    </div>
+    : <>
+      {/* Step one: where. Answered for the operator when they only ever use one hub. */}
+      <div className="hub-step">
+        <span className="hub-step-n" aria-hidden="true">1</span>
+        <div className="hub-step-body">
+          {checkIn
+            ? <HubPlacePicker value={place} onChange={setPlace} disabled={busyNow||started} label="Which hub are they at?"/>
+            : /* A manifest is a real record created on the Routes screen, so unlike a hub it
+                 cannot be invented here. The field says where to get it instead of naming its
+                 format. */
+              <div className="hub-picker">
+                <p className="hub-picker-label">Which dispatch list are these parcels on?</p>
+                <TextField autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={36}
+                  label="Dispatch list number" value={manifest} onChange={setManifest} disabled={busyNow||started}
+                  error={manifest&&!uuid.test(manifest)?'That is not a dispatch list number.':undefined}/>
+                <p className="hub-confirm-ref">Copy it from the dispatch list on <Link to="/business/routes">Routes</Link>.</p>
+              </div>}
+        </div>
+      </div>
+      {/* Step two: which parcels, and the one button. */}
+      <div className="hub-step">
+        <span className="hub-step-n" aria-hidden="true">2</span>
+        <div className="hub-step-body">
+          {valid
+            ? <>
+              {/* Exactly one line of consequence. There is no definition of a hub, no
+                  definition of checking in, and no record number: the operator never
+                  needs it, and showing it only invited "what is that?". */}
+              {!started&&<p className="hub-confirm-ref">{checkIn
+                ? <>Records that {candidates.length===1?'this parcel':'these parcels'} reached <b>{place?.name}</b>.</>
+                : <>Records that {candidates.length===1?'this parcel':'these parcels'} left on this dispatch list.</>}</p>}
+              <BulkParcelPanel controller={bulk} action={action} candidates={candidates} refreshFailed={refreshFailed}
+                place={checkIn?place?.name:undefined} onDone={onDone}/>
+            </>
+            : <p className="hub-step-wait" role="status">{checkIn?'Choose the hub these parcels are at.':'Enter the dispatch list number these parcels are on.'}</p>}
+        </div>
+      </div>
+    </>}
  </section>;
 }
 
@@ -262,5 +283,5 @@ export default function Packages({controller,roles}:{controller:ScopeController;
  const [params]=useSearchParams();
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]);
  if(params.get('view')==='operations')return <OperationalPackages controller={controller} roles={roles}/>;
- return <SavedBookings operationalBulk={(rows,action,busy,refresh)=><PackageBulk controller={controller} source={source} rows={rows} reload={refresh} initialAction={action} onBusyChange={busy}/>} controller={controller} roles={roles} operationalDetail={(id,close,refresh,busy)=><PackageDetail onBusyChange={busy} controller={controller} roles={roles} parcelId={id} close={close} refreshed={refresh} embedded/>}/>;
+ return <SavedBookings operationalBulk={(rows,action,busy,refresh,done)=><PackageBulk controller={controller} source={source} rows={rows} reload={refresh} initialAction={action} onBusyChange={busy} onDone={done}/>} controller={controller} roles={roles} operationalDetail={(id,close,refresh,busy)=><PackageDetail onBusyChange={busy} controller={controller} roles={roles} parcelId={id} close={close} refreshed={refresh} embedded/>}/>;
 }
