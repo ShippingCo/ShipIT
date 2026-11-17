@@ -106,8 +106,10 @@ describe('production operational screens',()=>{
   const retry=await screen.findByRole('button',{name:'Check if it saved'});
   expect(screen.getByRole('button',{name:'All deliveries'})).toBeDisabled();
   fireEvent.click(retry);await waitFor(()=>expect(writes).toBe(2));await waitFor(()=>expect(reads).toBeGreaterThanOrEqual(2));
-  // R-7: the boxes are cleared, and nothing about this delivery is kept on the device.
-  expect(screen.getByLabelText('The 6 digits they read out')).toHaveValue('');
+  // R-7: a finished delivery says so and offers no code boxes to fill in a second time, and
+  // nothing about this delivery is kept on the device.
+  expect(await screen.findByText(/^Delivered\./)).toBeVisible();
+  expect(screen.queryByLabelText('The 6 digits they read out')).toBeNull();
   expect(localStorage.length).toBe(0);expect(sessionStorage.length).toBe(0);
  });
  it('round-trips Asia/Kolkata route inputs independently of the browser timezone and across a date boundary',()=>{

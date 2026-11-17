@@ -7,7 +7,7 @@ export function workflowPreviewCommands(root, env) {
   if (env.NODE_ENV !== 'test' || env.TEST_DATABASE_IDENTITY !== 'db_test' || !env.TEST_DATABASE_URL) throw new Error('WORKFLOW_PREVIEW_REQUIRES_DISPOSABLE_DATABASE');
   const common = Object.fromEntries(['PATH','HOME','USER','TMPDIR','LANG','TERM'].filter(key => env[key] !== undefined).map(key => [key,env[key]]));
   return [
-    {name:'fixture API',args:['--experimental-strip-types',resolve(root,'apps/api/test/counter-demo.ts')],cwd:root,env:{...common,NODE_ENV:'test',TEST_DATABASE_IDENTITY:'db_test',TEST_DATABASE_URL:env.TEST_DATABASE_URL,SHIPIT_COUNTER_PREVIEW_ORIGIN:'http://localhost:5174'}},
+    {name:'fixture API',args:['--experimental-strip-types',resolve(root,'apps/api/test/counter-demo.ts')],cwd:root,env:{...common,NODE_ENV:'test',TEST_DATABASE_IDENTITY:'db_test',TEST_DATABASE_URL:env.TEST_DATABASE_URL,SHIPIT_COUNTER_PREVIEW_ORIGIN:'http://localhost:5174',...(env.SHIPIT_PREVIEW_SEED?{SHIPIT_PREVIEW_SEED:env.SHIPIT_PREVIEW_SEED}:{}),...(env.SHIPIT_FIXTURE_LOG_LEVEL?{SHIPIT_FIXTURE_LOG_LEVEL:env.SHIPIT_FIXTURE_LOG_LEVEL}:{})}},
     {name:'operator UI',args:[resolve(root,'apps/web/node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','5174','--strictPort'],cwd:resolve(root,'apps/web'),env:{...common,VITE_DATA_MODE:'production',VITE_API_BASE_URL:'',SHIPIT_API_PROXY:'http://127.0.0.1:3033'}},
   ];
 }

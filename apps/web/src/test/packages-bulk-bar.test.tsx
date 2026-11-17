@@ -42,7 +42,7 @@ describe('packages bulk bar', () => {
 
   it('names the reason an action cannot be pressed, on the screen rather than in a tooltip', () => {
     bar({ chosen: 3, notAtHub: 2, notBooked: 0 });
-    const why = screen.getByText(/Cannot send out/);
+    const why = screen.getByText(/Cannot add to a trip/);
     expect(why).toBeInTheDocument();
     expect(why).toHaveTextContent('2 of the 3 are not at a hub yet');
   });
@@ -54,7 +54,7 @@ describe('packages bulk bar', () => {
 
   it('keeps a blocked action visible and disabled rather than removing it', () => {
     bar({ chosen: 2, notAtHub: 2 });
-    const send = screen.getByRole('button', { name: /Send out for delivery/ });
+    const send = screen.getByRole('button', { name: /Add to a trip/ });
     expect(send).toBeVisible();
     expect(send).toBeDisabled();
   });
@@ -83,7 +83,7 @@ describe('packages bulk bar', () => {
   it('disables everything while an update is running, so a second press cannot start one', () => {
     bar({ enabled: false, busy: true, notAtHub: 0, notBooked: 0 });
     expect(screen.getByRole('button', { name: /Check in at hub/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Send out for delivery/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Add to a trip/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();
   });
 });

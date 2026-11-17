@@ -297,7 +297,7 @@ function LeftTheShop({source,parcelSource,record,roles,close,saved}:{
  const canTransit=roles.some(role=>['org_admin','franchise_admin','dispatcher'].includes(role));
  const blocker=!planningOnly&&!canTransit?'Only a dispatcher can record that a loaded vehicle has left.'
   :!planningOnly&&r.state==='planning'?'Seal the dispatch list first — the sheet has to exist before the vehicle goes.'
-  :!planningOnly&&(record.rows.length!==record.manifest.parcel_count||record.rows.some(p=>p.status!=='checked_in'))?'Check in every parcel at the hub before recording that the vehicle left.'
+  :!planningOnly&&(record.rows.length!==record.manifest.parcel_count||record.rows.some(p=>p.status!=='checked_in'&&p.status!=='dispatched'))?'Check in every parcel at the hub before recording that the vehicle left.'
   :null;
  async function submit(event:React.FormEvent){
   event.preventDefault();

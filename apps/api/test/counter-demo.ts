@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type { TestContext } from 'node:test';
 import { cleanupRegisteredResources } from '../../../packages/db/test/support.ts';
 import { attachmentSetup } from './attachment-support.ts';
+import { deliveryProofConfiguration,testDeliveryCode } from './delivery-support.ts';
 import { org,A,B } from './audit-support.ts';
 import { buildServer } from '../src/server.ts';
 import { parseEnvironment } from '../src/env.ts';
@@ -26,15 +27,23 @@ try {
  // These grants affect only this disposable fixture role; application authorization still applies.
  await s.db.prepareSettings();await s.db.prepareCustomerAccounts();await s.db.prepareCustody();
  await s.db.prepareShipmentCosts();await s.db.prepareOwnerReports();await s.db.preparePickups();
- const actor=await s.grant('operator',[A,B]);
+ // Delivery codes use the synthetic test keys, so parcels can be handed to the fictional agent below.
+ await s.db.prepareDeliveries();
+ const actor=await s.grant('operator',[A,B]);const deliveryAgent=await s.grant('delivery_agent',[A]);
  const invite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'franchise_admin',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:invite.acceptance_token});
  const dispatchInvite=await s.memberships.createInvitation(s.admin.token,{organization_id:org,invitee_user_id:actor.id,role:'dispatcher',franchise_ids:[A]});await s.memberships.acceptInvitation(actor.token,{token:dispatchInvite.acceptance_token});
  await createTaxService(s.pool,()=>new Date('2099-01-01T00:00:00Z')).configure(actor.token,org,A,randomUUID(),{mode:'courier18',supplier_state:'27',supplier_gstin:'27ABCDE1234F1Z5',expected_version:1},randomUUID());
- const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:'silent',ALLOWED_ORIGINS:previewOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
+ const config=parseEnvironment({NODE_ENV:'development',HOST:'127.0.0.1',PORT:'3033',LOG_LEVEL:process.env.SHIPIT_FIXTURE_LOG_LEVEL==='error'?'error':'silent',ALLOWED_ORIGINS:previewOrigin,TRUSTED_PROXY_HOPS:'0',DATABASE_SECRET_REF:'local:database',DATABASE_TLS_MODE:'disable'});
  const whatsapp={configuration:{graph_version:'v24.0',bindings:[]},provider:{validate:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},template:async()=>{throw new Error('SYNTHETIC_PROVIDER_UNAVAILABLE');},send:async()=>({kind:'unavailable' as const,reason:'synthetic_provider_disabled'})}};
- const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps,whatsapp});cleanup.push(()=>app.close());
+ const app=buildServer({config,database:s.pool,auth:{keys:s.keys,delivery:{},webhook:undefined},pricingClock:()=>new Date('2099-01-01T00:00:00Z'),attachments:s.deps,whatsapp,deliveryProof:deliveryProofConfiguration});cleanup.push(()=>app.close());
  app.addHook('onRequest',async request=>{if(request.url.includes('/customers?')&&request.url.includes('/'+A+'/'))await new Promise(resolve=>setTimeout(resolve,2500));});
  app.get('/_fixture/session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${actor.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(previewOrigin+'/#/business/new-booking');});
+ // The fictional delivery agent's side of the handover, and the code a customer would get on
+ // WhatsApp (the fixture sends no messages). Synthetic fixture only; never part of the product.
+ app.get('/_fixture/agent-session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${deliveryAgent.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(previewOrigin+'/#/business/deliveries');});
+ app.get<{Params:{parcel_id:string}}>('/_fixture/delivery-code/:parcel_id',async(request,reply)=>{try{return {code:await testDeliveryCode(s,request.params.parcel_id)};}catch{return reply.code(404).send({error:'No active delivery for that parcel.'});}});
+ // Opt-in richer fictional data set (pnpm preview:seeded). Reported as counts only.
+ if(process.env.SHIPIT_PREVIEW_SEED==='rich'){const {seedPreview}=await import('./preview-seed.ts');try{console.log('Seeded preview:',JSON.stringify(await seedPreview(app,s,actor)));}catch(error){console.error('PREVIEW_SEED_FAILED',error instanceof Error?error.message:'unknown');throw error;}}
  await app.listen({host:'127.0.0.1',port:3033});
  console.log('Synthetic #33/#34 fixture: http://localhost:3033/_fixture/session (Vite proxy port 3033). Actor has operator in A/B plus franchise_admin and dispatcher in A. Rate SYN_DEST / standard / 999g; unregistered handover 27; references SYN_BUYER / SYN_HANDOVER. Create multiple parcels, then use Packages/Lots/Routes/E-way for the documented #34 walkthrough. A customer searches wait 2.5 seconds for scope-race verification.');
  await stop;
