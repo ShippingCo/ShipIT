@@ -28,6 +28,7 @@ describe('saved bookings use the demo composition',()=>{
   // The saved entry is a draft, so it is counted as one and never as work in motion.
   expect(screen.getByRole('button',{name:'Drafts 1'})).toBeVisible();
   expect(screen.getByRole('button',{name:'Active 0'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'Cancelled 0'})).toBeVisible();
   expect(screen.getByText('Draft — not booked')).toBeVisible();
   expect(screen.getByText('Mumbai')).toBeVisible();expect(screen.getByText('₹59')).toBeVisible();
   expect(screen.queryByRole('heading',{name:'Confirmed counter bookings'})).toBeNull();
@@ -59,6 +60,9 @@ describe('saved bookings use the demo composition',()=>{
   expect(filterSavedBookings([row],'topay')).toHaveLength(0);
   expect(filterSavedBookings([row],'active')).toHaveLength(0);
   expect(filterSavedBookings([row],'drafts')).toHaveLength(1);
+  // A cancelled booking is listed under Cancelled only; it owes nothing, so it is never To Pay.
+  const cancelled={...row,status:'cancelled',payment:'topay' as const};
+  expect(filterSavedBookings([cancelled],'cancelled')).toHaveLength(1);expect(filterSavedBookings([cancelled],'topay')).toHaveLength(0);expect(filterSavedBookings([cancelled],'active')).toHaveLength(0);
  });
 });
 it('keeps the saved-booking popup open while an embedded shipment command is pending or uncertain',async()=>{
@@ -128,4 +132,81 @@ it('keeps the parcels a check-in sheet opened with while the list behind it relo
  expect(screen.getByText('Sheet holds SYN-33 booked for check_in')).toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'Finish synthetic sheet'}));
  await waitFor(()=>expect(screen.queryByText(/Sheet holds/)).toBeNull());
+});
+it("cancels a booked parcel's booking from its sheet and offers no cancel once the parcel has left on a trip",async()=>{
+ const base={...f.booking.parcels[0],booking_id:f.bookingId,version:1,custody:'awaiting_intake',confirmed_at:f.now,sender:{source_customer_id:f.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
+ const onTrip={...base,id:f.id(401),docket:'SYN-TRIP',status:'dispatched'};
+ const posts:RequestInit[]=[];let cancelled=false;
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
+  if(path==='/auth/bootstrap')return f.json({csrf_token:'synthetic-csrf'});
+  if(path.includes('/cancellation?')){
+   if(options.method==='POST'){posts.push(options);cancelled=true;return f.json({id:f.id(402),booking_id:f.bookingId,parcel_count:1,outstanding_paise:'0',reversed_paise:'15000',refunded_paise:'15000',refunds:[{method:'upi',amount_paise:'15000'}],cancelled_at:f.now});}
+   return f.json({booking_id:f.bookingId,parcel_count:1,outstanding_paise:'0',reversed_paise:'15000',refund_paise:'15000',refunds:[{method:'upi',amount_paise:'15000'}],financial_version:1,payment_version:1,blocked_reason:null});
+  }
+  if(path.startsWith('/api/v1/bookings/entries?'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/parcels?'))return f.json({items:[{...base,status:cancelled?'cancelled':'booked'},onTrip],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/lot-membership'))return f.json(null);
+  if(path.includes('/timeline'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/lots?'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/payments'))return f.json(f.balance);
+  throw Error('Unexpected read');
+ }));
+ const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
+ render(<MemoryRouter><SavedBookings controller={controller} roles={['operator']}/></MemoryRouter>);
+ // A parcel already on a trip has left; its sheet offers no cancel.
+ fireEvent.click(await screen.findByText('SYN-TRIP'));await screen.findByRole('dialog');
+ expect(screen.queryByRole('button',{name:'Cancel booking'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Close'}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+ // A booked parcel can be cancelled: the sheet gives way to the confirmation, which says what
+ // happens to the money and needs a reason before the red button works.
+ fireEvent.click(screen.getByText('SYN-33'));
+ fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));
+ const dialog=await screen.findByRole('dialog');await within(dialog).findByText('₹150.00');
+ const confirm=within(dialog).getByRole('button',{name:'Cancel booking'});
+ fireEvent.click(within(dialog).getByRole('button',{name:'Booked by mistake'}));
+ fireEvent.click(confirm);
+ fireEvent.click(await within(dialog).findByRole('button',{name:'Yes, cancel booking'}));
+ expect(await screen.findByText('1 parcel cancelled.')).toBeVisible();expect(screen.getByText('₹150.00 by UPI')).toBeVisible();
+ expect(posts).toHaveLength(1);expect(JSON.parse(String(posts[0]!.body))).toEqual({reason:'Booked by mistake',expected_financial_version:1,expected_payment_version:1});
+ fireEvent.click(screen.getByRole('button',{name:'Done'}));
+ await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+});
+it("cancels several bookings at once from the chosen-parcel bar and skips one that cannot be cancelled",async()=>{
+ const base={...f.booking.parcels[0],version:1,custody:'awaiting_intake',confirmed_at:f.now,sender:{source_customer_id:f.customerId,source_customer_version:1,name:'Saved sender',phone:'+12025550100',phone_display:'+1 202-555-0100',address:'Saved address'},recipient:{name:null,phone_normalized:null,phone_display:null,address:'Saved destination'}};
+ const items=[{...base,id:f.id(511),docket:'SYN-A',booking_id:f.id(501),status:'booked'},{...base,id:f.id(512),docket:'SYN-B',booking_id:f.id(502),status:'checked_in'},{...base,id:f.id(513),docket:'SYN-C',booking_id:f.id(503),status:'booked'}];
+ const posts:{path:string;init:RequestInit}[]=[];
+ vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
+  if(path==='/auth/bootstrap')return f.json({csrf_token:'synthetic-csrf'});
+  const booking=/bookings\/([0-9a-f-]{36})\/cancellation/.exec(path)?.[1];
+  if(booking){
+   if(options.method==='POST'){posts.push({path,init:options});return f.json({id:f.id(520+posts.length),booking_id:booking,parcel_count:1,outstanding_paise:'0',reversed_paise:'10000',refunded_paise:'10000',refunds:[{method:'cash',amount_paise:'10000'}],cancelled_at:f.now});}
+   return f.json({booking_id:booking,parcel_count:1,outstanding_paise:'0',reversed_paise:'10000',refund_paise:'10000',refunds:[{method:'cash',amount_paise:'10000'}],financial_version:1,payment_version:1,blocked_reason:booking===f.id(503)?'account_billed':null,in_bag:booking===f.id(502)});
+  }
+  if(path.startsWith('/api/v1/bookings/entries?'))return f.json({items:[]});
+  if(path.startsWith('/api/v1/parcels?'))return f.json({items,page:{has_more:false,next_cursor:null}});
+  if(path.startsWith('/api/v1/lots?'))return f.json({items:[],page:{has_more:false,next_cursor:null}});
+  if(path.includes('/payments'))return f.json(f.balance);
+  throw Error('Unexpected read '+path);
+ }));
+ const controller=createScopeController({loadContext:vi.fn().mockResolvedValue(f.context)} as unknown as OperatorDataSource);await controller.load();
+ render(<MemoryRouter><SavedBookings controller={controller} roles={['operator']}/></MemoryRouter>);
+ await screen.findByText('SYN-A');
+ for(const d of ['SYN-A','SYN-B','SYN-C'])fireEvent.click(screen.getByRole('checkbox',{name:'Select '+d}));
+ fireEvent.click(screen.getByRole('button',{name:'Cancel booking'}));
+ const dialog=await screen.findByRole('dialog',{name:'Cancel these bookings?'});
+ await within(dialog).findByText(/in 2 bookings will be cancelled right away/);
+ expect(within(dialog).getByText('Already on a monthly account statement.')).toBeVisible();
+ // A parcel in a bag is no obstacle: it is taken out as part of the cancel, and the window says so.
+ expect(within(dialog).getByText('1 booking is in a bag and will be taken out of it.')).toBeVisible();expect(within(dialog).getByText('Comes out of its bag')).toBeVisible();
+ expect(within(dialog).getByText('₹200.00')).toBeVisible();
+ // The reason is optional: cancelling without one records that none was given.
+ fireEvent.click(within(dialog).getByRole('button',{name:'Cancel 2 bookings'}));
+ // A second, explicit yes is needed; going back sends nothing.
+ expect(within(dialog).getByText(/Cancel 2 bookings and refund ₹200.00\?/)).toBeVisible();fireEvent.click(within(dialog).getByRole('button',{name:'Go back'}));expect(posts).toHaveLength(0);
+ fireEvent.click(within(dialog).getByRole('button',{name:'Cancel 2 bookings'}));fireEvent.click(within(dialog).getByRole('button',{name:'Yes, cancel 2 bookings'}));
+ expect(await within(dialog).findByText('2 parcels cancelled.')).toBeVisible();expect(within(dialog).getByText('₹200.00 by cash')).toBeVisible();
+ // One request per booking, each with its own retry identity; the skipped booking is never sent.
+ expect(posts.map(p=>p.path.includes(f.id(503)))).toEqual([false,false]);
+ const keys=posts.map(p=>new Headers(p.init.headers).get('idempotency-key'));expect(new Set(keys).size).toBe(2);
+ expect(posts.map(p=>JSON.parse(String(p.init.body)).reason)).toEqual(['No reason given','No reason given']);
 });

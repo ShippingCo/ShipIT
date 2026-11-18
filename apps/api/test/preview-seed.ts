@@ -74,7 +74,7 @@ export async function seedPreview(app: FastifyInstance, s: Setup, actor: Actor) 
   // owner's commercial override, and a booking's parcels split the quoted weight.
   type Parcel = { id: string; version: number; booking: string; gross: number };
   const parcels: Parcel[] = [];
-  const bookings: { id: string; gross: number }[] = [];
+  const bookings: { id: string; gross: number; customer: string }[] = [];
   const freights = [8500, 12000, 15500, 22000, 9900, 31000, 13400, 18800, 26500, 11200, 45000, 7600];
   const total = 40;
   for (let i = 0; i < total; i += 1) {
@@ -92,7 +92,7 @@ export async function seedPreview(app: FastifyInstance, s: Setup, actor: Actor) 
       parcels: split.map((weight, n) => ({ weight_grams: weight, recipient: { name: recipient[0], phone: phone(50 + ((i + n) % 40)), address: recipient[1] } })),
     });
     const gross = booked.payment_obligation?.total_paise ?? 0;
-    bookings.push({ id: booked.id, gross });
+    bookings.push({ id: booked.id, gross, customer: customer.id });
     for (const parcel of booked.parcels ?? []) parcels.push({ id: parcel.id, version: parcel.version ?? 1, booking: booked.id, gross });
   }
 
@@ -150,13 +150,25 @@ export async function seedPreview(app: FastifyInstance, s: Setup, actor: Actor) 
   }
 
   // ---- money: some paid in full, some part-paid, the rest owed ---------------------
+  // Recorded the way the counter records it: a money receipt into a receiving account,
+  // received and held by the signed-in operator. That keeps every rupee traceable to an
+  // account and a cash drawer, which is what lets a cancelled booking be refunded.
+  const accounts = {
+    cash: await post('/api/v1/receiving-accounts', { name: 'Counter cash', methods: ['cash'], other_method_name: null, active: true, expected_version: 0 }),
+    upi: await post('/api/v1/receiving-accounts', { name: 'Shop UPI', methods: ['upi'], other_method_name: null, active: true, expected_version: 0 }),
+  };
   let paid = 0, partly = 0;
   for (const [index, booking] of bookings.entries()) {
     if (!booking.gross) continue;
     const amount = index % 3 === 0 ? booking.gross : index % 5 === 1 ? Math.floor(booking.gross / 2) : 0;
     if (!amount) continue;
+    const method = index % 2 ? 'upi' : 'cash', account = accounts[method];
     try {
-      await post(`/api/v1/bookings/${booking.id}/payments`, { amount_paise: amount, currency: 'INR', context: 'to_pay', method: index % 2 ? 'upi' : 'cash', collection_reference: randomUUID() }, s.local.token);
+      await post('/api/v1/money-receipts', {
+        customer_id: booking.customer, account_id: account.id, expected_account_version: account.version, method, amount_paise: amount, currency: 'INR',
+        receiver_id: actor.id, custodian_id: actor.id, occurred_at: new Date(Date.now() - 60_000).toISOString(), external_reference: null,
+        allocations: [{ booking_id: booking.id, amount_paise: amount, context: 'to_pay', expected_payment_version: 0 }],
+      });
       if (amount === booking.gross) paid += 1; else partly += 1;
     } catch { /* a booking that cannot take a payment yet stays owed */ }
   }

@@ -353,14 +353,15 @@ GRANT EXECUTE ON FUNCTION shipit.append_booking_audit(uuid,uuid,uuid,uuid,uuid,u
   TO runtime_role;
 ```
 
-For operational booking cancellations, grant the API role access to the cancellation record and scoped preview after applying the cancellation migration.
+For operational booking cancellations, grant the API role access to the cancellation record and scoped preview after applying the cancellation migrations. `1794243600000-instant-booking-cancellations` replaces the three-argument preview with one that also takes the cancelling actor (whose cash drawer pays cash refunds); re-grant it after that migration.
 
 ```sql
 GRANT SELECT, INSERT ON shipit.booking_cancellations TO runtime_role;
-GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(uuid,uuid,uuid) TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(uuid,uuid,uuid,uuid) TO runtime_role;
+GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_lot_memberships(uuid,uuid,uuid) TO runtime_role;
 ```
 
-The immutable record stores the actor, reason, request identity, source financial versions and outstanding amount. Its trigger moves the booking and its complete parcel set to the terminal cancelled state in one transaction. Financial adjustments use their existing approval workflow. The runtime role requires no UPDATE grant on bookings for cancellation.
+The immutable record stores the actor, reason, request identity, source financial versions, the outstanding amount and the reversed and refunded amounts. Its trigger, in one transaction, moves the booking and its complete parcel set (all `booked`, or `checked_in` at the hub and not on a route, carrier docket, e-way record or active lot) to the terminal cancelled state, reverses the remaining charge with one `cancellation` financial change, and records every rupee still held as refunded by the way it came in: one `refund` change with refund evidence (`cancellation_id`, no review request) per receiving account and method. Cash refunds leave the canceller's own cash location and must fit its recorded balance. Receipt allocations are not released, so collected totals, the cashbook, reports and customer balances count the money once; later collections, reversals and allocation releases on a cancelled booking are rejected. Only these cancellation-written finance rows skip the review workflow; every other financial adjustment keeps its approval workflow. The runtime role requires no UPDATE grant on bookings and no finance grants for cancellation.
 
 Retain existing Customer/pricing/tax/auth/membership/tenancy and audit_history grants.
 `prepareBookings` provisions the exact test runtime privileges. The allocator and integrity

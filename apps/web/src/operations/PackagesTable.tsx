@@ -25,7 +25,10 @@ const statusLabel:Record<string,string>={draft:'Draft — not booked',booked:'Bo
 function Badge({tone,dot,children}:{tone:Tone;dot?:boolean;children:React.ReactNode}){
   return <span className={'pkg-badge tone-'+tone}>{dot&&<i aria-hidden="true"/>}{children}</span>;
 }
-export const paymentBadge=(row:SavedBookingRow)=>row.payment==='paid'
+// A cancelled booking's charges are reversed and anything paid was refunded, so "Paid"
+// would misread as money still held for it.
+export const paymentBadge=(row:SavedBookingRow)=>row.status==='cancelled'?<Badge tone="neutral">Settled</Badge>
+  :row.payment==='paid'
   ?<Badge tone="success">Paid</Badge>
   :row.payment==='topay'?<Badge tone="warning">To Pay</Badge>:<Badge tone="neutral">Not recorded</Badge>;
 export const statusBadge=(row:SavedBookingRow)=><Badge tone={statusTone[row.status]??'neutral'} dot>{statusLabel[row.status]??row.status.replaceAll('_',' ')}</Badge>;
@@ -42,11 +45,13 @@ const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleSt
 // Business times are always India time, whatever the browser's own clock says.
 const when=(ts:number)=>Number.isFinite(ts)?new Date(ts).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true}):'';
 
-export function PackagesTable({rows,picked,onPick,allShown,onPickAll,busy,sortIcon,onSort,onOpen,onAction,actions}:{
+export function PackagesTable({rows,picked,onPick,allShown,onPickAll,busy,sortIcon,onSort,onOpen,onAction,onCancel,actions}:{
   rows:SavedBookingRow[];picked:Record<string,boolean>;onPick:(id:string,value:boolean)=>void;
   allShown:boolean;onPickAll:(value:boolean)=>void;busy:boolean;
   sortIcon:(key:string)=>string;onSort:(key:'docket'|'amount')=>void;
   onOpen:(id:string)=>void;onAction:(row:SavedBookingRow,action:RowAction)=>void;
+  /** Pressable until the parcel leaves on a trip (shown greyed with the reason after); the dialog asks the server too. */
+  onCancel?:(row:SavedBookingRow)=>void;
   /** False where the screen has no operational sheet to open, so rows carry no action. */
   actions:boolean;
 }){
@@ -94,6 +99,10 @@ export function PackagesTable({rows,picked,onPick,allShown,onPickAll,busy,sortIc
                   {action&&<DropdownMenuItem disabled={busy&&action.kind!=='finish'} onSelect={()=>onAction(row,action)}><Msym name={action.icon}/>{action.label}</DropdownMenuItem>}
                   <DropdownMenuSeparator/>
                   <DropdownMenuItem onSelect={()=>{void navigator.clipboard?.writeText(row.docket).catch(()=>{});}}><Msym name="tag"/>Copy docket</DropdownMenuItem>
+                  {onCancel&&row.parcel&&!['cancelled','delivered','rto'].includes(row.status)&&<><DropdownMenuSeparator/>
+                    {row.status==='booked'||row.status==='checked_in'
+                      ? <DropdownMenuItem className="is-danger" disabled={busy} onSelect={()=>onCancel(row)}><Msym name="cancel"/>Cancel booking</DropdownMenuItem>
+                      : <DropdownMenuItem disabled className="has-note"><Msym name="cancel"/><span>Cancel booking<small>Only before it leaves on a trip</small></span></DropdownMenuItem>}</>}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

@@ -73,23 +73,27 @@ it('cancels the whole booking from a docket and preserves retry identity after a
  vi.stubGlobal('fetch',vi.fn(async(path:string,options:RequestInit={})=>{
   if(path==='/auth/bootstrap')return json({csrf_token:'synthetic-csrf'});
   if(path.includes('/cancellation?')){
-   if(options.method==='POST'){writes.push(options);if(writes.length===1)throw new TypeError('Synthetic lost acknowledgement');cancelled=true;return json({id:id(15),booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'12000',cancelled_at:now});}
-   return json({booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'12000',financial_version:1,payment_version:0,blocked_reason:null});
+   if(options.method==='POST'){writes.push(options);if(writes.length===1)throw new TypeError('Synthetic lost acknowledgement');cancelled=true;
+    return json({id:id(15),booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'0',reversed_paise:'12000',refunded_paise:'12000',refunds:[{method:'cash',amount_paise:'12000'}],cancelled_at:now});}
+   return json({booking_id:parcel.booking_id,parcel_count:2,outstanding_paise:'0',reversed_paise:'12000',refund_paise:'12000',refunds:[{method:'cash',amount_paise:'12000'}],financial_version:1,payment_version:1,blocked_reason:null});
   }
   return json(page([{...parcel,status:cancelled?'cancelled':'booked'}]));
  }));
  render(<MemoryRouter><Packages controller={controller()} roles={['operator']}/></MemoryRouter>);
  fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));const dialog=await screen.findByRole('dialog');
- expect(await within(dialog).findByText('₹120.00')).toBeVisible();expect(within(dialog).getByRole('button',{name:'Confirm cancellation'})).toBeDisabled();
- fill('Reason for cancellation','Sender withdrew both parcels');fireEvent.click(within(dialog).getByRole('button',{name:'Confirm cancellation'}));
- const retry=await within(dialog).findByRole('button',{name:'Retry same cancellation'});fireEvent.keyDown(document,{key:'Escape'});expect(dialog).toBeVisible();fireEvent.click(retry);
- expect(await within(dialog).findByText('Cancelled 2 parcels in this booking.')).toBeVisible();expect(writes).toHaveLength(2);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(writes[0]!.body).toBe(writes[1]!.body);
- expect(JSON.parse(String(writes[0]!.body))).toEqual({reason:'Sender withdrew both parcels',expected_financial_version:1,expected_payment_version:0});
- fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));expect(screen.queryByRole('button',{name:'Cancel booking'})).not.toBeInTheDocument();
+ expect(await within(dialog).findByText('₹120.00')).toBeVisible();const confirm=within(dialog).getByRole('button',{name:'Cancel booking'});
+ fireEvent.click(within(dialog).getByRole('button',{name:'Customer changed their mind'}));fireEvent.click(confirm);fireEvent.click(within(dialog).getByRole('button',{name:'Yes, cancel booking'}));
+ const retry=await within(dialog).findByRole('button',{name:'Try again'});expect(within(dialog).getByText(/No reply from the server/)).toBeVisible();
+ fireEvent.keyDown(document,{key:'Escape'});expect(dialog).toBeVisible();fireEvent.click(retry);
+ expect(await within(dialog).findByText('2 parcels cancelled.')).toBeVisible();expect(within(dialog).getByText('₹120.00 by cash')).toBeVisible();
+ expect(writes).toHaveLength(2);expect(writes[0]!.headers).toEqual(writes[1]!.headers);expect(writes[0]!.body).toBe(writes[1]!.body);
+ expect(JSON.parse(String(writes[0]!.body))).toEqual({reason:'Customer changed their mind',expected_financial_version:1,expected_payment_version:1});
+ fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));await waitFor(()=>expect(screen.queryByRole('button',{name:'Cancel booking'})).not.toBeInTheDocument());
 });
-it('explains a payment block before offering any cancellation write',async()=>{
- vi.stubGlobal('fetch',vi.fn(async(path:string)=>path.includes('/cancellation?')?json({booking_id:parcel.booking_id,parcel_count:1,outstanding_paise:'0',financial_version:2,payment_version:1,blocked_reason:'money_recorded'}):json(page([parcel]))));
+it('explains why a booking cannot be cancelled before offering any cancellation write',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async(path:string)=>path.includes('/cancellation?')?json({booking_id:parcel.booking_id,parcel_count:1,outstanding_paise:'0',reversed_paise:'0',refund_paise:'0',refunds:[],financial_version:2,payment_version:1,blocked_reason:'operational_commitment'}):json(page([parcel]))));
  render(<MemoryRouter><Packages controller={controller()} roles={['operator']}/></MemoryRouter>);
- fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));expect(await screen.findByText(/Money has already been recorded/)).toBeVisible();
- expect(screen.queryByRole('button',{name:'Confirm cancellation'})).not.toBeInTheDocument();expect(screen.queryByLabelText('Reason for cancellation')).not.toBeInTheDocument();
+ fireEvent.click(await screen.findByRole('button',{name:'Cancel booking'}));const dialog=await screen.findByRole('dialog');
+ expect(await within(dialog).findByText('This booking cannot be cancelled.')).toBeVisible();expect(within(dialog).getByText(/Use a return instead/)).toBeVisible();
+ expect(within(dialog).queryByRole('button',{name:'Cancel booking'})).not.toBeInTheDocument();expect(within(dialog).queryByText('Why is it being cancelled?')).not.toBeInTheDocument();
 });

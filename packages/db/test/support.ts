@@ -371,7 +371,10 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       try {
         if ((await owner.query("SELECT to_regclass('shipit.booking_cancellations') AS present")).rows[0]?.present) {
           await owner.query(`GRANT SELECT,INSERT ON shipit.booking_cancellations TO ${identifier(resource.runtimeRole)}`);
-          await owner.query(`GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
+          const preview=(await owner.query("SELECT to_regprocedure('shipit.booking_cancellation_preview(uuid,uuid,uuid,uuid)') IS NOT NULL AS actor")).rows[0]?.actor?'uuid,uuid,uuid,uuid':'uuid,uuid,uuid';
+          await owner.query(`GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_preview(${preview}) TO ${identifier(resource.runtimeRole)}`);
+          if((await owner.query("SELECT to_regprocedure('shipit.booking_cancellation_lot_memberships(uuid,uuid,uuid)') IS NOT NULL AS present")).rows[0]?.present)
+            await owner.query(`GRANT EXECUTE ON FUNCTION shipit.booking_cancellation_lot_memberships(uuid,uuid,uuid) TO ${identifier(resource.runtimeRole)}`);
         }
         if((await owner.query("SELECT to_regclass('shipit.counter_bookings') AS present")).rows[0]?.present)await owner.query(`GRANT SELECT,INSERT ON shipit.counter_bookings,shipit.counter_booking_events TO ${identifier(resource.runtimeRole)}`);
         await owner.query(`GRANT SELECT,INSERT ON shipit.bookings,shipit.parcels,shipit.booking_commands,shipit.booking_obligations,shipit.domain_events TO ${identifier(resource.runtimeRole)}`);

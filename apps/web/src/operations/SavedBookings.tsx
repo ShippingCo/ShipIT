@@ -21,8 +21,10 @@ import {PageHeader} from '../components/workspace/Workspace';
 import './packages.css';
 import {PackagesTable} from './PackagesTable';
 import {ParcelSheet,TripPicker} from './ParcelSheet';
+import {CancelBookings,type CancelTarget} from './CancelBookings';
+import {canAdminister} from '@shippingco/shared';
 
-const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'}];
+const filters=[{value:'all',label:'All'},{value:'drafts',label:'Drafts'},{value:'active',label:'Active'},{value:'delayed',label:'Delayed'},{value:'delivered',label:'Delivered'},{value:'topay',label:'To Pay'},{value:'cancelled',label:'Cancelled'}];
 // The journey strip above the list: every stage a parcel passes through, in order, with
 // how many are standing at each one. Pressing a stage filters the list to it.
 const journey=[
@@ -51,7 +53,8 @@ export function filterSavedBookings(rows:SavedBookingRow[],filter:string){
  if(filter==='active')return rows.filter(r=>!['delivered','rto','cancelled','draft'].includes(r.status));
  if(filter==='delayed')return rows.filter(r=>r.status==='failed_attempt');
  if(filter==='delivered')return rows.filter(r=>r.status==='delivered');
- if(filter==='topay')return rows.filter(r=>r.payment==='topay');
+ if(filter==='topay')return rows.filter(r=>r.payment==='topay'&&r.status!=='cancelled');
+ if(filter==='cancelled')return rows.filter(r=>r.status==='cancelled');
  return stageLabels[filter]?rows.filter(r=>r.status===filter):rows;
 }
 const money=(paise:number|null)=>paise===null?'—':'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -61,6 +64,8 @@ export function SavedBookings({controller,roles,operationalBulk}:{controller:Sco
  operationalDetail?:(id:string,close:()=>void,refresh:()=>void,busy:(value:boolean)=>void)=>React.ReactNode;operationalBulk?:(rows:ParcelRead[],action:'check_in'|'dispatch',busy:(value:boolean)=>void,refresh:()=>void,done:()=>void)=>React.ReactNode}){
  const api=useMemo(()=>scopedApi(controller),[controller]),source=useMemo(()=>parcels(api),[api]),entrySource=useMemo(()=>bookingEntries(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
  const [params,setParams]=useSearchParams();
+ const canCancel=roles.includes('operator')||canAdminister(roles,'bookings.cancel');
+ const [cancelling,setCancelling]=useState<CancelTarget[]|null>(null);
  const canCreate=roles.some(r=>['org_admin','franchise_admin','operator'].includes(r)),canMoney=roles.some(r=>['org_admin','franchise_admin','accountant'].includes(r));
  const page=usePagedResource(api.franchise+'saved-bookings',(cursor,signal)=>source.list({limit:50,cursor},signal));
  const entries=useResource(api.franchise+'saved-entries',signal=>canCreate?entrySource.list(signal):Promise.resolve({items:[]}));
@@ -131,6 +136,7 @@ export function SavedBookings({controller,roles,operationalBulk}:{controller:Sco
   <PackagesTable rows={list} picked={picked} busy={bulkBusy} allShown={allShown} actions={!!operationalBulk}
    onPick={(id,value)=>setPicked(p=>({...p,[id]:value}))} onPickAll={value=>setPicked(value?Object.fromEntries(list.map(r=>[r.id,true])):{})}
    sortIcon={sortIcon} onSort={toggleSort} onOpen={setOpenId}
+   onCancel={canCancel?row=>setCancelling(cancelTargets([row])):undefined}
    onAction={(row,action)=>{if(action.kind==='finish'){window.location.hash='#/business/new-booking?draft='+row.entry!.id;return;}if(row.parcel)openBulk(action.kind,[row.parcel]);}}/>
   {(page.phase==='loading'||entries.phase==='loading')&&!list.length?<Loading label="Loading bookings…"/>:!list.length&&<EmptyState icon={q?'search_off':'inventory_2'} title={q?'Nothing matches that search':'No packages here'} sub={q?'Try a docket number, name or phone.':'Parcels appear here as soon as they are booked.'} action={q?<Button variant="outlined" style={{marginTop:12}} onClick={()=>setQ('')}>Clear search</Button>:undefined}/>}
   </Card>
@@ -142,14 +148,22 @@ export function SavedBookings({controller,roles,operationalBulk}:{controller:Sco
    notBooked={selectedParcels.filter(p=>p.status!=='booked').length}
    notAtHub={selectedParcels.filter(p=>p.status!=='checked_in').length}
    enabled={canBulk&&!bulkBusy} busy={bulkBusy}
-   act={action=>openBulk(action,selectedParcels)} clear={()=>setPicked({})}/></div>}
+   act={action=>openBulk(action,selectedParcels)} clear={()=>setPicked({})}
+   cancel={canCancel?{
+    // Always on the bar so it can be found. Any number of bookings can go at once, as long
+    // as none of the chosen parcels has left on a trip yet.
+    why:selectedParcels.length!==pickedIds.length||selectedParcels.some(p=>!cancellable(p.status))
+     ?(pickedIds.length===1?'only a parcel that has not left on a trip can be cancelled.':'only parcels that have not left on a trip can be cancelled.'):null,
+    run:()=>setCancelling(cancelTargets(allRows.filter(r=>picked[r.id]&&r.parcel)))}:undefined}/></div>}
   {bulk&&operationalBulk&&bulk.action==='check_in'&&<Dialog open size="lg" title="Check in at the hub" hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulk(null);}}>{operationalBulk(bulk.rows,bulk.action,setBulkBusy,refresh,finishBulk)}</Dialog>}
   {/* Sending parcels out means putting them on a trip; the trip itself dispatches them
       when it leaves. The old sheet asked for a dispatch-list id here instead. */}
   {bulk&&bulk.action==='dispatch'&&<Dialog open size="lg" title={bulk.rows.length===1?'Put it on a trip':`Put ${bulk.rows.length} parcels on a trip`} hideClose={bulkBusy} onClose={()=>{if(!bulkBusy)setBulk(null);}}>
    <TripPicker api={api} parcelIds={bulk.rows.map(row=>row.id)} busy={setBulkBusy} done={()=>{setPicked({});refresh();}} compact/>
   </Dialog>}
-  {open&&<ParcelSheet key={open.id} row={open} api={api} roles={roles} lots={lotPage.value?.items??[]} close={close} refresh={refresh}/>}
+  {open&&<ParcelSheet key={open.id} row={open} api={api} roles={roles} lots={lotPage.value?.items??[]} close={close} refresh={refresh}
+   onCancel={canCancel?()=>{setCancelling(cancelTargets([open]));close();}:undefined}/>}
+  {cancelling&&<CancelBookings api={api} targets={cancelling} close={()=>setCancelling(null)} onCancelled={()=>{setPicked({});refresh();}}/>}
  </div>;
 }
 
@@ -167,9 +181,11 @@ export function SavedBookings({controller,roles,operationalBulk}:{controller:Sco
  *  - Ticking a parcel and then changing the filter hid it while keeping it chosen,
  *    so the count disagreed with the table and nothing said why.
  */
-export function BulkBar({chosen,drafts,hidden,notBooked,notAtHub,enabled,busy,act,clear}:{
+export function BulkBar({chosen,drafts,hidden,notBooked,notAtHub,enabled,busy,act,clear,cancel}:{
  chosen:number;drafts:number;hidden:number;notBooked:number;notAtHub:number;
  enabled:boolean;busy:boolean;act:(action:'check_in'|'dispatch')=>void;clear:()=>void;
+ /** Present when the operator may cancel bookings; `why` says why it cannot be pressed for these parcels. */
+ cancel?:{why:string|null;run:()=>void};
 }){
  const parcels=chosen===1?'parcel':'parcels';
  const blocked=(n:number,state:string)=>{
@@ -190,12 +206,23 @@ export function BulkBar({chosen,drafts,hidden,notBooked,notAtHub,enabled,busy,ac
   <div className="bulkbar-actions">
    <Button size="sm" variant="filled" icon="warehouse" disabled={!enabled||!!checkInWhy} onClick={()=>act('check_in')}>Check in at hub</Button>
    <Button size="sm" variant="outlined" icon="local_shipping" disabled={!enabled||!!dispatchWhy} onClick={()=>act('dispatch')}>Add to a trip</Button>
+   {cancel&&<button type="button" className="bulkbar-cancel" disabled={busy||!!cancel.why} onClick={cancel.run}>Cancel booking</button>}
    <button type="button" className="bulkbar-clear" disabled={busy} onClick={clear}>Clear</button>
   </div>
-  {(checkInWhy||dispatchWhy)&&<p className="bulkbar-why">{checkInWhy&&dispatchWhy&&checkInWhy===dispatchWhy?checkInWhy
+  {(checkInWhy||dispatchWhy||cancel?.why)&&<p className="bulkbar-why">{[checkInWhy&&dispatchWhy&&checkInWhy===dispatchWhy?checkInWhy
    :[checkInWhy&&`Cannot check in — ${checkInWhy.charAt(0).toLowerCase()+checkInWhy.slice(1)}`,
-     dispatchWhy&&`Cannot add to a trip — ${dispatchWhy.charAt(0).toLowerCase()+dispatchWhy.slice(1)}`].filter(Boolean).join(' ')}</p>}
+     dispatchWhy&&`Cannot add to a trip — ${dispatchWhy.charAt(0).toLowerCase()+dispatchWhy.slice(1)}`].filter(Boolean).join(' '),
+   cancel?.why&&`Cannot cancel — ${cancel.why}`].filter(Boolean).join(' ')}</p>}
  </div>;
+}
+
+/** A booking can be cancelled until its parcels leave on a trip. */
+export const cancellable=(status:string)=>status==='booked'||status==='checked_in';
+/** One entry per booking: ticking two parcels of the same booking cancels it once. */
+function cancelTargets(rows:SavedBookingRow[]):CancelTarget[]{
+ const seen=new Map<string,CancelTarget>();
+ for(const row of rows)if(row.parcel&&!seen.has(row.parcel.booking_id))seen.set(row.parcel.booking_id,{bookingId:row.parcel.booking_id,docket:row.docket,customer:row.name||null});
+ return [...seen.values()];
 }
 
 export async function printCounterRecord(row:SavedBookingRow,api:ReturnType<typeof scopedApi>){

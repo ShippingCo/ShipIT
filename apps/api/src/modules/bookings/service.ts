@@ -26,7 +26,7 @@ export function createBookingService(database: DatabasePool, cursorKey:Buffer, c
   const codec=parcelCursorCodec(cursorKey);
   return {
     ...counterEntries(database),
-    ...bookingCancellations(database),
+    ...bookingCancellations(database,cursorKey),
     async dashboard(session:string,input:unknown,correlation:string) {
       const selected=selection(input);
       return withShipmentReadScope(database,session,selected.organizationId,selected.franchiseId,'parcels.list',correlation,scope=>operationalDashboard(scope,clock?.()));

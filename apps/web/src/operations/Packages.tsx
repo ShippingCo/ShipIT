@@ -75,7 +75,7 @@ export function OperationalPackages({controller,roles}:{controller:ScopeControll
      {key:'status',label:'Status',cell:item=><StatusBadge tone={parcelTones[item.status]}>{item.status.replaceAll('_',' ')}</StatusBadge>},
      {key:'weight',label:'Weight',align:'right',cell:item=>item.weight_grams.toLocaleString('en-IN')+' g'},
      {key:'confirmed',label:'Confirmed',cell:item=>formatKolkata(item.confirmed_at)},
-     {key:'actions',label:'Actions',className:'record-actions',cell:item=><><button className="btn btn-text" onClick={()=>select(item.id)}>Open</button>{canCancel&&item.status==='booked'&&<button type="button" className="btn btn-text" onClick={()=>setCancelling(item)}>Cancel booking</button>}</>},
+     {key:'actions',label:'Actions',className:'record-actions',cell:item=><><button className="btn btn-text" onClick={()=>select(item.id)}>Open</button>{canCancel&&(item.status==='booked'||item.status==='checked_in')&&<button type="button" className="btn btn-text" onClick={()=>setCancelling(item)}>Cancel booking</button>}</>},
     ]}/>
     {page.page.has_more&&<button className="btn btn-outlined" disabled={page.phase==='more'} onClick={()=>page.loadMore()}>{page.phase==='more'?'Loading…':'Load next page'}</button>}
     <p className="ops-note">Open a parcel for its lot, timeline, booking balance and available actions.</p>
