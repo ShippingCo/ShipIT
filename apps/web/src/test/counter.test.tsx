@@ -211,8 +211,49 @@ describe('production counter API composition',{timeout:20000},()=>{
  it.each([1280,375])('discards late franchise A search at viewport %i through real scope generation',async width=>{
   Object.defineProperty(window,'innerWidth',{configurable:true,value:width});await start();const slow=f.deferred<Response>();override=c=>c.path.includes('/customers?')?slow.promise:undefined;fill('WhatsApp number',f.customer.phone_display);fireEvent.blur(screen.getByLabelText('WhatsApp number'));await waitFor(()=>expect(calls.some(c=>c.path.includes('/customers?'))).toBe(true));const prior=calls.find(c=>c.path.includes('/customers?'))!;fill('Franchise',f.B);await waitFor(()=>expect(screen.getByLabelText('Franchise')).toHaveValue(f.B));await act(async()=>slow.resolve(f.json({items:[f.customer],page:{next_cursor:null,has_more:false}})));expect(prior.options.signal?.aborted).toBe(true);expect(screen.getByLabelText('WhatsApp number')).toHaveValue('');expect(document.body.textContent).not.toContain(f.customer.address);
  });
- it('Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write',async()=>{
-  await entered(true);save();await screen.findByRole('heading',{name:'Booking saved'});await screen.findByRole('region',{name:'Record this booking payment'});expect(screen.getByRole('link',{name:'Open payments / apply advance'})).toHaveAttribute('href',expect.stringContaining('context=paid_counter'));expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ // The counter says how the customer paid before saving. Asking again after the save was a
+ // second entry of the same fact, so the receipt is recorded from that first answer.
+ const drawer=(n:number,methods:string[])=>({id:f.id(400+n),revision_id:f.id(410+n),version:3,name:'Account '+n,methods,other_method_name:null,active:true,recorded_at:f.now});
+ const moneyServer=(accounts:unknown[]):NonNullable<typeof override>=>c=>{
+  if(c.path.startsWith('/api/v1/receiving-accounts'))return Promise.resolve(f.json({items:accounts,next_cursor:null}));
+  if(c.path.startsWith('/api/v1/money-receipt-bills'))return Promise.resolve(f.json({items:[{booking_id:f.bookingId,currency:'INR',gross_paise:13400,outstanding_paise:13400,expected_payment_version:0,confirmed_at:f.now}],next_cursor:null}));
+  if(c.path.startsWith('/api/v1/money-receipt-receivers'))return Promise.resolve(f.json({items:[{id:f.context.user_id,label:'Synthetic Operator'}],next_cursor:null}));
+  if(c.path.startsWith('/api/v1/money-receipts')&&c.options.method==='POST'){const sent=body(c);return Promise.resolve(f.json({receipt_id:f.id(420),customer_id:sent.customer_id,version:1,currency:'INR',received_paise:sent.amount_paise,allocated_paise:sent.amount_paise,unallocated_paise:0,allocations:[{id:f.id(421),booking_id:f.bookingId,payment_entry_id:f.id(422),kind:'allocation',amount_paise:sent.amount_paise,release_of:null}]},201));}
+  return undefined;
+ };
+ it('Cash now records the full payment on save, into the one cash drawer, without asking again',async()=>{
+  await entered(true);override=moneyServer([drawer(1,['cash']),drawer(2,['upi'])]);save();await screen.findByRole('heading',{name:'Booking saved'});
+  await screen.findByText('₹134.00 received by cash has been recorded.');
+  const sent=posts('/api/v1/money-receipts');expect(sent).toHaveLength(1);
+  expect(body(sent[0]!)).toMatchObject({customer_id:f.customerId,account_id:f.id(401),expected_account_version:3,method:'cash',amount_paise:13400,currency:'INR',receiver_id:f.context.user_id,custodian_id:f.context.user_id,external_reference:null,
+   allocations:[{booking_id:f.bookingId,amount_paise:13400,context:'paid_counter',expected_payment_version:0}]});
+  expect(Date.parse(body(sent[0]!).occurred_at)).toBeLessThanOrEqual(Date.now());
+  expect(screen.getByText('Collected')).toBeVisible();expect(screen.queryByRole('button',{name:/^Record .* received$/})).toBeNull();
+  expect(screen.queryByRole('form',{name:'Record money received'})).toBeNull();
+  expect(posts(`/api/v1/bookings/${f.bookingId}/payments`)).toHaveLength(0);expect(posts('/api/v1/bookings?')).toHaveLength(1);
+ });
+ it('UPI now records the payment into the UPI account',async()=>{
+  await entered(true);fireEvent.click(screen.getByRole('button',{name:'UPI now'}));await calculate();override=moneyServer([drawer(1,['cash']),drawer(2,['upi'])]);save();
+  await screen.findByText('₹134.00 received by UPI has been recorded.');
+  expect(body(posts('/api/v1/money-receipts')[0]!)).toMatchObject({account_id:f.id(402),method:'upi',amount_paise:13400});
+ });
+ it('says why nothing was recorded when no account takes the method, and records nothing',async()=>{
+  await entered(true);override=moneyServer([drawer(2,['upi'])]);save();await screen.findByRole('heading',{name:'Booking saved'});
+  await screen.findByText(/No receiving account takes cash yet/);
+  expect(posts('/api/v1/money-receipts')).toHaveLength(0);expect(screen.getByText('To collect now')).toBeVisible();
+ });
+ it('asks where the money went when two accounts take the method, instead of guessing',async()=>{
+  await entered(true);override=moneyServer([drawer(1,['cash']),drawer(3,['cash'])]);save();await screen.findByRole('heading',{name:'Booking saved'});
+  await screen.findByText('More than one account takes cash. Choose where this money went.');
+  expect(await screen.findByRole('form',{name:'Record money received'})).toBeVisible();expect(posts('/api/v1/money-receipts')).toHaveLength(0);
+ });
+ it('a refused automatic payment keeps the booking and offers the form, never a second silent try',async()=>{
+  await entered(true);const money=moneyServer([drawer(1,['cash'])]);
+  override=c=>c.path.startsWith('/api/v1/money-receipts?')&&c.options.method==='POST'?Promise.resolve(f.json({error:{code:'VERSION_CONFLICT'}},409)):money(c);
+  save();await screen.findByRole('heading',{name:'Booking saved'});
+  await screen.findByText('₹134.00 was not recorded automatically. Record it below.');
+  expect(await screen.findByRole('form',{name:'Record money received'})).toBeVisible();
+  expect(posts('/api/v1/money-receipts')).toHaveLength(1);expect(screen.getByText('To collect now')).toBeVisible();
  });
  it('receipt outage has an independent retry and retains booking',async()=>{
   await entered();save();await screen.findByRole('heading',{name:'Booking saved'});let fail=true;override=c=>c.path.includes('/receipt')&&fail?Promise.resolve(f.json({error:{code:'TEMPORARILY_UNAVAILABLE'}},503)):undefined;fireEvent.click(screen.getByRole('button',{name:'Load receipt'}));await screen.findByRole('button',{name:'Retry receipt'});fail=false;fireEvent.click(screen.getByRole('button',{name:'Retry receipt'}));await screen.findByRole('button',{name:'Print receipt'});expect(posts('/api/v1/bookings?')).toHaveLength(1);
