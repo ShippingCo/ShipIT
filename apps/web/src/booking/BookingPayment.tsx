@@ -36,7 +36,10 @@ export function BookingPayment({controller,booking,onPendingChange,auto,onRecord
  const [autoSent,setAutoSent]=useState<number|null>(null),[autoNote,setAutoNote]=useState('');
  const bill=bills.items.find(b=>b.booking_id===booking.id);
  const settled=accountList.phase!=='loading'&&accountList.phase!=='error'&&bills.phase!=='loading'&&bills.phase!=='error';
- useEffect(()=>{
+ // Held in a ref so the effect below depends only on what decides when to try: the chosen
+ // method, and the accounts and the bill having arrived.
+ const attempt=useRef(()=>{});
+ attempt.current=()=>{
   if(!auto||attempted.current||!settled||!bill)return;
   attempted.current=true;
   if(bill.outstanding_paise<=0)return;
@@ -49,8 +52,8 @@ export function BookingPayment({controller,booking,onPendingChange,auto,onRecord
   void run(source.record({customer_id:customer.id,account_id:account.id,expected_account_version:account.version,method:auto.method,amount_paise:bill.outstanding_paise,currency:'INR',
    receiver_id:self,custodian_id:self,occurred_at:new Date(Date.now()-2000).toISOString(),external_reference:null,
    allocations:[{booking_id:booking.id,amount_paise:bill.outstanding_paise,context:'paid_counter',expected_payment_version:bill.expected_payment_version}]})).catch(()=>{/* the notice below reports it */});
- // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, when the accounts and the bill have both arrived
- },[auto,settled,bill]);
+ };
+ useEffect(()=>{attempt.current();},[auto,settled,bill]);
  const autoBusy=autoSent!==null&&locked;
  return <section className="booking-payment" aria-label="Record this booking payment">
  <CommandNotice phase={command.phase} code={command.error?.code}

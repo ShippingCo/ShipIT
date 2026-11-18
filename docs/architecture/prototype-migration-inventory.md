@@ -1424,7 +1424,11 @@ The 2026-11-03 approved screenshot supersedes the separate customer-create and p
 | apps/web/src/test/counter.test.tsx: network outage preserves draft and never fabricates a receipt or local booking | preserve | seam |
 | apps/web/src/test/counter.test.tsx: rejects stale/forged commercial state, keeps edits and requires fresh reviewed evidence and new command identity | preserve | seam |
 | apps/web/src/test/counter.test.tsx: discards late franchise A search at viewport %i through real scope generation | preserve | seam |
-| apps/web/src/test/counter.test.tsx: Paid Now preserves the saved booking and directs actual collection to owned receipt evidence without a legacy write | preserve | seam |
+| apps/web/src/test/counter.test.tsx: Cash now records the full payment on save, into the one cash drawer, without asking again | preserve | seam |
+| apps/web/src/test/counter.test.tsx: UPI now records the payment into the UPI account | preserve | seam |
+| apps/web/src/test/counter.test.tsx: says why nothing was recorded when no account takes the method, and records nothing | preserve | seam |
+| apps/web/src/test/counter.test.tsx: asks where the money went when two accounts take the method, instead of guessing | preserve | seam |
+| apps/web/src/test/counter.test.tsx: a refused automatic payment keeps the booking and offers the form, never a second silent try | preserve | seam |
 | apps/web/src/test/counter.test.tsx: receipt outage has an independent retry and retains booking | preserve | seam |
 | apps/web/src/test/counter.test.tsx: handles safe %s without losing the draft or claiming success | preserve | seam |
 | apps/web/src/test/counter.test.tsx: malformed committed response is uncertain and retry uses its original identity | preserve | seam |
