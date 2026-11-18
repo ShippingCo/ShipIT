@@ -150,3 +150,28 @@ await test('booking creation access lets the counter write bookings and drafts a
   assert.equal(await column('organization_id'), false);
 });
 
+
+await test('booking cancellation access records cancellations and takes parcels out of bags, and nothing broader', { timeout: 60000 }, async t => {
+  const db = await provisionDatabase(t); await db.migrate();
+  const runtime = db.runtimePool(), owner = db.ownerPool();
+  const target = { role: db.runtimeRole, database: db.database };
+  assert.equal((await checkRuntimeAccess(runtime, ['booking_cancellation'])).profiles.booking_cancellation!.status, 'blocked');
+  await repairRuntimeAccess(owner, target, ['booking_cancellation']);
+  assert.equal((await checkRuntimeAccess(runtime, ['booking_cancellation'])).profiles.booking_cancellation!.status, 'granted');
+  const can = async (table: string, privilege: string) => (await owner.query<{ allowed: boolean }>(
+    'SELECT has_table_privilege($1,$2,$3) AS allowed', [db.runtimeRole, 'shipit.' + table, privilege])).rows[0]!.allowed;
+  const runs = async (fn: string) => (await owner.query<{ allowed: boolean }>(
+    "SELECT has_function_privilege($1,$2,'EXECUTE') AS allowed", [db.runtimeRole, fn])).rows[0]!.allowed;
+  assert.equal(await can('booking_cancellations', 'INSERT'), true);
+  assert.equal(await runs('shipit.booking_cancellation_preview(uuid,uuid,uuid,uuid)'), true);
+  assert.equal(await runs('shipit.booking_cancellation_lot_memberships(uuid,uuid,uuid)'), true);
+  // Money moves only inside the cancellation trigger; the runtime role never writes it directly,
+  // and it cannot rewrite or remove a cancellation, a booking or a parcel.
+  for (const table of ['financial_changes', 'financial_refund_evidence', 'payment_entries', 'money_receipts', 'parcels', 'bookings']) {
+    assert.equal(await can(table, 'INSERT'), false, table);
+  }
+  for (const table of ['booking_cancellations', 'bookings', 'parcels']) {
+    assert.equal(await can(table, 'UPDATE'), false, table);
+    assert.equal(await can(table, 'DELETE'), false, table);
+  }
+});

@@ -69,6 +69,20 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
     { kind: 'function', object: 'shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
     { kind: 'function', object: 'shipit.append_route_audit(uuid,uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
   ] },
+  // Instant cancellation. The charge reversal, refunds and parcel state change happen inside the
+  // SECURITY DEFINER cancellation trigger, so the runtime role only records the cancellation and
+  // runs its preview; a parcel in a bag is first taken out through the ordinary lot command.
+  // Mirrors prepareBookings/prepareLots in test/support.ts.
+  booking_cancellation: { description: 'Instant booking cancellation, including taking parcels out of their bag; money changes run as the trigger owner', requirements: [
+    ...tables('bookings parcels booking_cancellations lots lot_memberships lot_commands routes route_lots route_parcels domain_events'),
+    ...tables('booking_cancellations lot_commands domain_events', 'INSERT'),
+    ...updateColumns('lots', 'version,updated_at,last_command_id'),
+    ...updateColumns('lot_memberships', 'ended_at,end_command_id,end_reason'),
+    ...updateColumns('lot_commands', 'state,http_status,result,committed_at,retain_until'),
+    { kind: 'function', object: 'shipit.booking_cancellation_preview(uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
+    { kind: 'function', object: 'shipit.booking_cancellation_lot_memberships(uuid,uuid,uuid)', privilege: 'EXECUTE' },
+    { kind: 'function', object: 'shipit.append_lot_audit(uuid,uuid,uuid,uuid,uuid)', privilege: 'EXECUTE' },
+  ] },
   reconciliation: { description: 'Reconciliation read dependencies only', requirements:
     tables('reconciliation_commands reconciliation_config_versions reconciliation_mapping_versions reconciliation_imports reconciliation_transactions reconciliation_row_outcomes reconciliation_batches reconciliation_matches reconciliation_match_transactions reconciliation_match_sources reconciliation_unmatches reconciliation_classifications reconciliation_review_revisions reconciliation_access_events reconciliation_recorded_sources receiving_accounts receiving_account_revisions cashbook_source_facts') },
   custody: { description: 'Custody reads and required read-access audit inserts; no custody commands', requirements: [
