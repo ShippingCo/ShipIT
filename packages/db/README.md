@@ -901,6 +901,10 @@ Keep `MONEY_RECEIPTS_ENABLED=false` while migrating/provisioning and validating 
 restricted role. Migration creates no receiving accounts or synthetic legacy receipt
 sources. An authorized local admin must configure named accounts/drawers before use.
 Then deploy compatible readers and explicitly enable the flag after rollout approval.
+
+Locally, `pnpm db:access --apply money_receipt_writes receiving_accounts` grants the receipt
+writes above together with receiving-account setup; run it without `--apply` first to review
+the list. The flag still has to be set to `true` separately.
 For rollback disable the flag: current authorized reads and completed exact-key replays
 continue; new receipt/allocation/correction/account-revision commands stop. Preserve
 compatible ledger and schema-v2 issued-receipt readers; repair the schema forward.

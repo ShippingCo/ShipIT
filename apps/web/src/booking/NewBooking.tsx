@@ -70,6 +70,8 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
   const canCancel=roles.includes('operator')||canAdminister(roles,'bookings.cancel');
   const [paymentOpen,setPaymentOpen]=useState(false);
   const [paymentPending,setPaymentPending]=useState(false);
+  // Paise recorded against this booking from this screen, so the confirmation can say "Collected".
+  const [paidPaise,setPaidPaise]=useState(0);
   const [printState,setPrintState]=useState<'idle'|'loading'|'error'>('idle');
   // How many copies of this booking's receipt have left this screen. The first is the
   // original; every one after it is marked on the document itself, with no way to suppress it.
@@ -309,8 +311,8 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
         figures={{
           dockets:state.booking.parcels.map(parcel=>parcel.docket),
           total:receiptMoney(state.booking.charges.tax.final_payable_paise),
-          outstanding:receiptMoney(state.booking.payment_obligation.outstanding_paise),
-          settled:state.booking.payment_obligation.outstanding_paise<=0,
+          outstanding:receiptMoney(Math.max(0,state.booking.payment_obligation.outstanding_paise-paidPaise)),
+          settled:state.booking.payment_obligation.outstanding_paise-paidPaise<=0,
           toPay:d.paymentMode==='to_pay',
           ...(state.booking.account?{billedTo:{name:state.booking.account.debtor.name,due:state.booking.account.due_date}}:{}),
         }}
@@ -329,7 +331,9 @@ function BookingForm({controller,startAnother}:{controller:ScopeController;start
         paymentsHref={'/business/money-receipts?'+new URLSearchParams({customer_id:state.booking.account?.debtor.source_customer_id??state.booking.customer.source_customer_id,booking_id:state.booking.id,context:d.paymentMode})}/>
       {lot.result}
       <BookingAttachments queue={attachments}/>
-      {paymentOpen&&!cancelled&&<BookingPayment controller={controller} booking={state.booking} onPendingChange={setPaymentPending}/>}
+      {paymentOpen&&!cancelled&&<BookingPayment controller={controller} booking={state.booking} onPendingChange={setPaymentPending}
+        onRecorded={applied=>setPaidPaise(value=>value+applied)}
+        {...(d.paymentMode==='paid_counter'&&!state.booking.account&&(d.method==='cash'||d.method==='upi')?{auto:{method:d.method}}:{})}/>}
       <ReceiptPanel controller={controller} api={workflow.api} bookingId={state.booking.id}/>
     </div>:<div className="page"><form aria-label="New booking" aria-describedby="booking-optional-fields" noValidate onSubmit={event=>event.preventDefault()}
       onKeyDown={event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();void save();}}}>

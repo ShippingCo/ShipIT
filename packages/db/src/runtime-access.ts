@@ -33,6 +33,19 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
     ...insertColumns('receiving_account_revisions', 'id,organization_id,franchise_id,account_id,version,name,methods,other_method_name,active,actor_id,correlation_id,key_digest,fingerprint'),
     { kind: 'function', object: 'shipit.valid_receiving_methods(text[])', privilege: 'EXECUTE' },
   ] },
+  // Recording money received (and so marking a counter booking paid). MONEY_RECEIPTS_ENABLED only
+  // lets the API try; without these grants every receipt is refused by the database. Kept apart
+  // from the read-only money_receipts profile so turning writes on stays a deliberate step.
+  // Mirrors prepareMoneyReceipts in test/support.ts.
+  money_receipt_writes: { description: 'Recording money receipts and applying them to bookings; needs receiving_accounts for setup', requirements: [
+    ...tables('money_receipts money_receipt_commands money_receipt_allocations customer_account_bookings cod_receipt_allocations cod_receipt_positions advance_refund_commands'),
+    ...tables('money_receipt_allocations advance_refund_commands', 'INSERT'),
+    ...insertColumns('money_receipt_commands', 'id,organization_id,franchise_id,receipt_id,principal_id,operation_id,version,key_digest,fingerprint,input,correlation_id'),
+    ...insertColumns('money_receipts', 'id,organization_id,franchise_id,command_id,customer_id,account_id,account_revision_id,amount_paise,currency,method,receiver_id,initial_custodian_id,occurred_at,external_reference'),
+    ...updateColumns('money_receipt_commands', 'state,result,committed_at'),
+    ...updateColumns('money_receipts', 'id'),
+    { kind: 'function', object: 'shipit.money_receipt_result(uuid,uuid,uuid)', privilege: 'EXECUTE' },
+  ] },
   customer_accounts: { description: 'Customer account read dependencies only', requirements:
     tables('customer_accounts customer_account_revisions customer_account_rates customer_account_bookings customer_account_customer_links customer_account_audit_events customer_credit_approvals customer_credit_requests cod_receipt_positions') },
   cashbook: { description: 'Cashbook read dependencies only', requirements:
