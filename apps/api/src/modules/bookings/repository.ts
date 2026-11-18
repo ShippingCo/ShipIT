@@ -88,7 +88,7 @@ export async function parcelTimeline(scope:TenantAccess,id:string) {
     FROM shipit.domain_events e JOIN shipit.parcels p
       ON p.organization_id=e.organization_id AND p.franchise_id=e.franchise_id AND p.booking_id=e.booking_id AND p.id=e.parcel_id
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.parcel_id=$1
-    UNION ALL SELECT c.id AS event_id,'booking.cancelled' AS event_type,2 AS aggregate_sequence,c.cancelled_at AS occurred_at
+    UNION ALL SELECT c.id AS event_id,'booking.cancelled' AS event_type,p.version AS aggregate_sequence,c.cancelled_at AS occurred_at
     FROM shipit.booking_cancellations c JOIN shipit.parcels p ON p.organization_id=c.organization_id AND p.franchise_id=c.franchise_id AND p.booking_id=c.booking_id
     WHERE {{franchise:c.organization_id:c.franchise_id}} AND p.id=$1
     ORDER BY aggregate_sequence ASC,occurred_at ASC,event_id ASC`,[id])).rows;

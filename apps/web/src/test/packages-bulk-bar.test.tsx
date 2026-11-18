@@ -86,4 +86,29 @@ describe('packages bulk bar', () => {
     expect(screen.getByRole('button', { name: /Add to a trip/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();
   });
+
+  it('offers Cancel booking for booked parcels from one booking and says why when they span several', () => {
+    const run = vi.fn();
+    const { unmount } = bar({ chosen: 2, notAtHub: 2, cancel: { why: null, run } });
+    const cancel = screen.getByRole('button', { name: 'Cancel booking' });
+    expect(cancel).toBeEnabled();
+    cancel.click();
+    expect(run).toHaveBeenCalledTimes(1);
+    unmount();
+    bar({ chosen: 2, notAtHub: 2, cancel: { why: 'they belong to different bookings. Choose parcels from one booking.', run } });
+    expect(screen.getByRole('button', { name: 'Cancel booking' })).toBeDisabled();
+    expect(screen.getByText(/Cannot cancel — they belong to different bookings/)).toBeInTheDocument();
+  });
+
+  it('keeps Cancel booking on the bar, greyed with its reason, when a chosen parcel is past booking', () => {
+    bar({ chosen: 1, notBooked: 1, notAtHub: 1, cancel: { why: 'only a parcel that is still booked can be cancelled.', run: () => {} } });
+    expect(screen.getByRole('button', { name: 'Cancel booking' })).toBeDisabled();
+    expect(screen.getByText(/Cannot cancel — only a parcel that is still booked can be cancelled\./)).toBeInTheDocument();
+  });
+
+  it('shows no Cancel booking when the screen has not offered one', () => {
+    bar({ chosen: 2, notAtHub: 2 });
+    expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cannot cancel/)).not.toBeInTheDocument();
+  });
 });

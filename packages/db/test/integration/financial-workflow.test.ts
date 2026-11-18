@@ -54,6 +54,8 @@ await test('financial requests preserve scoped source, policy and distinct appro
   await assert.rejects(s.pool.query(`SELECT * FROM shipit.${table}`));
  }
  assert.equal((await owner.query('SELECT count(*)::int n FROM shipit.financial_changes')).rows[0]!.n,1);
+ // Refund evidence names exactly one source: a reviewed request or the booking cancellation that wrote it.
+ assert.equal((await owner.query("SELECT pg_get_constraintdef(oid) d FROM pg_constraint WHERE conname='financial_refund_evidence_source'")).rows[0]!.d,'CHECK ((num_nonnulls(request_id, cancellation_id) = 1))');
 });
 await test('populated pre-139 upgrade preserves original financial evidence without seeded policies or synthetic requests',{timeout:60000},async t=>{
  const db=await provisionDatabase(t);assert.deepEqual(await db.migrate({count:44}),{applied:44});
@@ -66,6 +68,6 @@ await test('populated pre-139 upgrade preserves original financial evidence with
  VALUES($1,$2,$3,$4,$5,$6,$7,1,1,'discount','customer_agreement','SYN_PRE_UPGRADE',100,100,$8)`,[randomUUID(),org,A,booking,s.local.id,digest(),digest(),randomUUID()]));
  const snapshot=async()=>({bookings:(await db.adminQuery('SELECT * FROM shipit.bookings ORDER BY id')).rows,obligations:(await db.adminQuery('SELECT * FROM shipit.booking_obligations ORDER BY id')).rows,
   changes:(await db.adminQuery("SELECT to_jsonb(c)-'refund_correction_of' AS original FROM shipit.financial_changes c ORDER BY id")).rows,entries:(await db.adminQuery('SELECT * FROM shipit.payment_entries ORDER BY id')).rows});
- const before=await snapshot();assert.equal(before.changes.length,1);assert.equal(before.entries.length,1);db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:27});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);assert.equal((await db.adminQuery('SELECT refund_correction_of FROM shipit.financial_changes')).rows[0]!.refund_correction_of,null);
+ const before=await snapshot();assert.equal(before.changes.length,1);assert.equal(before.entries.length,1);db.migrate=migrate;assert.deepEqual(await db.migrate(),{applied:28});assert.deepEqual(await db.migrate(),{applied:0});assert.deepEqual(await snapshot(),before);assert.equal((await db.adminQuery('SELECT refund_correction_of FROM shipit.financial_changes')).rows[0]!.refund_correction_of,null);
  for(const table of ['financial_policy_revisions','financial_adjustment_requests','financial_request_decisions','financial_refund_evidence','financial_deletion_denials','financial_document_links'])assert.equal((await db.adminQuery(`SELECT count(*)::int n FROM shipit.${table}`)).rows[0]!.n,0);
 });

@@ -238,7 +238,7 @@ function NextStep({row,api,roles,attempts,failures,refresh,busy,finish}:{row:Sav
   }
 }
 
-export function ParcelSheet({row,api,roles,lots:lotList,close,refresh}:{row:SavedBookingRow;api:ScopedApi;roles:readonly OperatorRole[];lots:LotDto[];close:()=>void;refresh:()=>void}){
+export function ParcelSheet({row,api,roles,lots:lotList,close,refresh,onCancel}:{row:SavedBookingRow;api:ScopedApi;roles:readonly OperatorRole[];lots:LotDto[];close:()=>void;refresh:()=>void;onCancel?:()=>void}){
   const source=useMemo(()=>parcels(api),[api]),lotSource=useMemo(()=>lots(api),[api]);
   const parcel=row.parcel;
   const timeline=useResource(row.id+'-'+(parcel?.version??0)+'-timeline',signal=>parcel?source.timeline(parcel.id,signal):Promise.resolve({items:[]}));
@@ -321,6 +321,7 @@ export function ParcelSheet({row,api,roles,lots:lotList,close,refresh}:{row:Save
           {row.entry
             ? <button type="button" className="ps-secondary" onClick={()=>void printDraft(row,api)}><Msym name="print"/>Print receipt</button>
             : <button type="button" className="ps-secondary" disabled={printing} onClick={()=>void print()}><Msym name="print"/>{printing?'Opening…':'Print receipt'}</button>}
+          {onCancel&&parcel&&(row.status==='booked'||row.status==='checked_in')&&<button type="button" className="ps-cancel" disabled={busy} onClick={onCancel}>Cancel booking</button>}
           {printProblem&&<p role="alert" className="ps-problem">{printProblem}</p>}
         </footer>
       </SheetPrimitive.Content>

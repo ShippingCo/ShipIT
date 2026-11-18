@@ -96,7 +96,7 @@ export async function timeline(scope:TenantAccess,id:string) {
     WHERE {{franchise:e.organization_id:e.franchise_id}} AND e.parcel_id=$1 AND e.event_type IN
     ('parcel.booked','parcel.checked_in','parcel.dispatched','parcel.in_transit','delivery.attempt_started','delivery.retry_started','delivery.attempt_failed',
      'parcel.held_at_office','delivery.completed','delivery.collected','delivery.reversed','parcel.rto_approved')
-    UNION ALL SELECT 'booking.cancelled',c.cancelled_at,2,c.id FROM shipit.booking_cancellations c JOIN shipit.parcels p
+    UNION ALL SELECT 'booking.cancelled',c.cancelled_at,p.version,c.id FROM shipit.booking_cancellations c JOIN shipit.parcels p
      ON p.organization_id=c.organization_id AND p.franchise_id=c.franchise_id AND p.booking_id=c.booking_id
      WHERE {{franchise:c.organization_id:c.franchise_id}} AND p.id=$1) events
      ORDER BY aggregate_sequence DESC,event_id DESC LIMIT 20`,[id])).rows;

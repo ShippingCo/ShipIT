@@ -201,7 +201,7 @@
       "apps/web/src/pages/business/RoutesPage.tsx": "1fd6aa2afd9cd6f34afcc1997f40df8867eabf14fa9579f370d5d17bf948e3c8",
       "apps/web/src/test/app.test.tsx": "d1f6f5b9b639b1e083ea7a95aab71685372449833f9b3227fdb95fc14ac253c2",
       "apps/web/src/test/counter-draft-reason.test.tsx": "3aa0444c3815a5f5c5759fa6bcc266c108eb3f0304925bf5c410d666c93da7d0",
-      "apps/web/src/test/counter.test.tsx": "4bc976741f38f465c7cc69d2ca532c831926ea6593177834d334f0bf9952a5e9",
+      "apps/web/src/test/counter.test.tsx": "688f2b244dc673c929d677bf740e33573bc9951a0f2561ab846b0a551770d3c1",
       "apps/web/src/test/operator.test.tsx": "ca49fb501f47686dbd671ace447cce44ba7cc1eea0855c19a5f59fe50a18b15a",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
@@ -2539,7 +2539,7 @@
       },
       {
         "file": "apps/web/src/test/logistics-parity.test.tsx",
-        "name": "explains a payment block before offering any cancellation write",
+        "name": "explains why a booking cannot be cancelled before offering any cancellation write",
         "cases": null
       },
       {
@@ -3063,6 +3063,21 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+        "name": "offers Cancel booking for booked parcels from one booking and says why when they span several",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+        "name": "keeps Cancel booking on the bar, greyed with its reason, when a chosen parcel is past booking",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+        "name": "shows no Cancel booking when the screen has not offered one",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/parcel-bulk.test.tsx",
         "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
         "cases": null
@@ -3345,6 +3360,16 @@
       {
         "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
         "name": "keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "cancels a booked parcel's booking from its sheet and offers no cancel once the parcel has left on a trip",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+        "name": "cancels several bookings at once from the chosen-parcel bar and skips one that cannot be cancelled",
         "cases": null
       },
       {
@@ -3994,7 +4019,7 @@
         "kind": "document.addEventListener"
       },
       {
-        "file": "apps/web/src/operations/CancelBooking.tsx",
+        "file": "apps/web/src/operations/CancelBookings.tsx",
         "kind": "window.addEventListener"
       },
       {
@@ -7570,7 +7595,7 @@
     },
     {
       "file": "apps/web/src/test/logistics-parity.test.tsx",
-      "name": "explains a payment block before offering any cancellation write",
+      "name": "explains why a booking cannot be cancelled before offering any cancellation write",
       "cases": null,
       "group": "booking",
       "disposition": "preserve",
@@ -8409,6 +8434,30 @@
       "reason": "Issue #34 bulk parcel flow: the chosen-parcel bar counts parcels rather than selections, names on screen why an action cannot be pressed, discloses rows the active filter hides, and offers no control that can never be pressed. Selection and transition behaviour is unchanged."
     },
     {
+      "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+      "name": "offers Cancel booking for booked parcels from one booking and says why when they span several",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "The chosen-parcel bar offers Cancel booking only while every chosen parcel is still booked, cancels one booking at a time, and says on screen why it cannot when the parcels span several bookings."
+    },
+    {
+      "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+      "name": "keeps Cancel booking on the bar, greyed with its reason, when a chosen parcel is past booking",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "Cancel booking stays visible on the chosen-parcel bar so operators can find it; when a chosen parcel is past booking it is disabled and the reason is on screen."
+    },
+    {
+      "file": "apps/web/src/test/packages-bulk-bar.test.tsx",
+      "name": "shows no Cancel booking when the screen has not offered one",
+      "cases": null,
+      "group": "parcels",
+      "disposition": "preserve",
+      "reason": "The chosen-parcel bar offers Cancel booking only while every chosen parcel is still booked, cancels one booking at a time, and says on screen why it cannot when the parcels span several bookings."
+    },
+    {
       "file": "apps/web/src/test/parcel-bulk.test.tsx",
       "name": "retains only unsuccessful selection, refreshes before retry, sends B/C only and preserves A success",
       "cases": null,
@@ -8863,6 +8912,22 @@
       "group": "booking",
       "disposition": "preserve",
       "reason": "A check-in or send-out sheet acts on the parcels it opened with; the list reloading after a confirmed update cannot discard the confirmation or change which parcels the run covers."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "cancels a booked parcel's booking from its sheet and offers no cancel once the parcel has left on a trip",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Cancelling from Packages is offered only while a parcel is still booked, asks the server whether it is allowed, needs a reason, and sends the reviewed versions."
+    },
+    {
+      "file": "apps/web/src/test/saved-bookings-demo.test.tsx",
+      "name": "cancels several bookings at once from the chosen-parcel bar and skips one that cannot be cancelled",
+      "cases": null,
+      "group": "booking",
+      "disposition": "preserve",
+      "reason": "Several bookings from different customers can be cancelled in one action; each is its own request with its own retry identity, and a booking that cannot be cancelled is shown with its reason and never sent."
     },
     {
       "file": "apps/web/src/test/segmented-payment.test.tsx",

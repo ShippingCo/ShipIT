@@ -1403,7 +1403,7 @@ The counter fingerprint changes for visible section navigation, exact per-parcel
 | Regression | Decision | Group |
 | --- | --- | --- |
 | apps/web/src/test/logistics-parity.test.tsx: cancels the whole booking from a docket and preserves retry identity after a lost acknowledgement | preserve | booking |
-| apps/web/src/test/logistics-parity.test.tsx: explains a payment block before offering any cancellation write | preserve | booking |
+| apps/web/src/test/logistics-parity.test.tsx: explains why a booking cannot be cancelled before offering any cancellation write | preserve | booking |
 
 ### Original counter form: production workflow regression evidence
 
@@ -1476,6 +1476,8 @@ Journey now owns its pure stage list and no longer imports the fictional store. 
 
 | apps/web/src/test/saved-bookings-demo.test.tsx: keeps the saved-booking popup open while an embedded shipment command is pending or uncertain | preserve | booking |
 | apps/web/src/test/saved-bookings-demo.test.tsx: keeps the parcels a check-in sheet opened with while the list behind it reloads, and closes it on done | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: cancels a booked parcel's booking from its sheet and offers no cancel once the parcel has left on a trip | preserve | booking |
+| apps/web/src/test/saved-bookings-demo.test.tsx: cancels several bookings at once from the chosen-parcel bar and skips one that cannot be cancelled | preserve | booking |
 
 Lots parity preserves the operational command view while using the demo card and destination-first dialog composition for the default screen. Incomplete counter entries remain planning records.
 
@@ -1638,6 +1640,9 @@ would replace this module without changing the screen.
 | apps/web/src/test/packages-bulk-bar.test.tsx: shows no reason line at all when every chosen parcel is eligible for everything | replace | parcels |
 | apps/web/src/test/packages-bulk-bar.test.tsx: offers no action that can never be pressed | replace | parcels |
 | apps/web/src/test/packages-bulk-bar.test.tsx: disables everything while an update is running, so a second press cannot start one | replace | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: offers Cancel booking for booked parcels from one booking and says why when they span several | preserve | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: keeps Cancel booking on the bar, greyed with its reason, when a chosen parcel is past booking | preserve | parcels |
+| apps/web/src/test/packages-bulk-bar.test.tsx: shows no Cancel booking when the screen has not offered one | preserve | parcels |
 | apps/web/src/test/app.test.tsx: renders the four figures, the journey and what the assistant did | replace | presentation |
 | apps/web/src/test/operational-dashboard.test.tsx: shows labels before figures, keeps every request inside the scope, and asks for no money data it may not read | replace | presentation |
 | apps/web/src/test/operational-dashboard.test.tsx: compares today against the same weekday last week, not yesterday | replace | presentation |
