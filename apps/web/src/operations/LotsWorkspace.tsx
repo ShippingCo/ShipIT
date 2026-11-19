@@ -165,7 +165,7 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
     const added=value.lastAdded.get(lot.id);
     return <Card key={lot.id} className="bag-card">
      <div className="bag-head">
-      <span className="bag-icon"><Msym name="inventory_2" size={28}/></span>
+      <span className="bag-icon"><Msym name="inventory_2"/></span>
       <div className="u-grow">
        <div className="bag-city">{cityName(lot.destination_key)}</div>
        <div className="bag-code mono">{lot.code}</div>
@@ -173,13 +173,13 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
       {/* A nudge, never a block: an old bag is usually a forgotten bag. */}
       {stale&&<span className="bag-stale">Open {since(lot.created_at).replace(' ago','')}</span>}
      </div>
+     <p className="bag-foot">{added?'Last parcel added '+since(added)+'.':'Nothing has been put in this bag yet.'}</p>
      <div className="bag-figs">
       <div><span className="bag-fig">{parcelRows.length}</span><span className="bag-fig-l">{parcelRows.length===1?'parcel':'parcels'}</span></div>
       <div><span className="bag-fig">{knownWeight?weight.toFixed(1):'—'}</span><span className="bag-fig-l">kg</span></div>
       <div><span className="bag-fig">{since(lot.created_at).replace(' ago','')}</span><span className="bag-fig-l">open</span></div>
      </div>
      {planned.length>0&&<p className="t-body-sm muted">{planned.length} planned, not booked yet</p>}
-     <p className="bag-foot">{added?'Last parcel added '+since(added)+'.':'Nothing has been put in this bag yet.'}</p>
      {lot.note&&<p className="t-body-sm muted">{lot.note}</p>}
      <div className="bag-actions">
       {write&&<Button size="sm" variant="outlined" icon="playlist_add" onClick={()=>setAdd({lot,preselect:[]})}>Add parcels</Button>}
@@ -200,7 +200,7 @@ export default function LotsWorkspace({controller,roles}:{controller:ScopeContro
     const knownWeight=rows.every(r=>r.weight!==null),weight=rows.reduce((sum,r)=>sum+(r.weight??0),0);
     return <Card key={lot.id} className="bag-card is-sent">
      <div className="bag-head">
-      <span className="bag-icon"><Msym name="local_shipping" size={28}/></span>
+      <span className="bag-icon"><Msym name="local_shipping"/></span>
       <div className="u-grow">
        <div className="bag-city">{cityName(lot.destination_key)}</div>
        <div className="bag-code mono">{lot.code}</div>
