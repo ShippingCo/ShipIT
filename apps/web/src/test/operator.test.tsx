@@ -75,12 +75,11 @@ describe('production operator flow',()=>{
     const nav=screen.getByRole('navigation',{name:'Workspace navigation'});
     expect(within(nav).getByRole('link',{name:'New Booking'})).toHaveAttribute('href','#/business/new-booking');
     expect(within(nav).getByRole('link',{name:'Settings'})).toHaveAttribute('href','#/business/settings');
-    // Delivery destinations are listed directly now; the hub is no longer a step on the way.
-    expect(within(nav).getByRole('link',{name:'Deliveries'})).toHaveAttribute('href','#/business/deliveries');
-    expect(within(nav).getByRole('link',{name:'Pickups'})).toHaveAttribute('href','#/business/pickups');
-    expect(within(nav).getByRole('link',{name:'Who is holding what'})).toHaveAttribute('href','#/business/custody');
-    expect(within(nav).queryByRole('link',{name:'Delivery work'})).not.toBeInTheDocument();
-    fireEvent.click(within(nav).getByRole('link',{name:'Deliveries'}));
+    // Pickups, Deliveries and Who is holding what are features the shop is not using yet: they
+    // are left out of the list, and their screens still open by address.
+    for(const name of ['Deliveries','Pickups','Who is holding what','Delivery work'])expect(within(nav).queryByRole('link',{name})).not.toBeInTheDocument();
+    expect(within(nav).getByRole('link',{name:'E-way bills'})).toHaveAttribute('href','#/business/eway');
+    await act(async()=>{window.location.hash='/business/deliveries';window.dispatchEvent(new HashChangeEvent('hashchange'));});
     await screen.findByRole('heading',{name:'Deliveries'});
     expect(context.franchises[0]!.roles).toEqual([role]);
   });

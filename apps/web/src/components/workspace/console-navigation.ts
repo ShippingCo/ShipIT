@@ -54,12 +54,19 @@ export const consoleTasks:readonly ConsoleLink[] = [
 export const consoleGroups:readonly {label:string;areas:readonly string[]}[] = [
   {label:'Counter',areas:['workspace','packages','receipts','customers']},
   {label:'Dispatch',areas:['lots','routes','eway','pickups','deliveries','custody']},
-  {label:'Money',areas:['money-receipts','cashbook','customer-accounts','agent-settlements','financials','reconciliation']},
   {label:'Business',areas:['reports','automation','support','settings']},
+  {label:'Money',areas:['money-receipts','cashbook','customer-accounts','agent-settlements','financials','reconciliation']},
 ];
 
 /** Hub screens stay routable but are never listed beside the children they contain. */
 export const consoleHubAreas:readonly string[] = ['delivery','money'];
+
+/**
+ * Features the shop is not using yet. Their screens still open by address and keep their
+ * permissions; they are only left out of the sidebar and of search, so the list shows what
+ * is in use. To bring one back, remove it from this list.
+ */
+export const consoleHiddenAreas:readonly string[] = ['pickups','deliveries','custody'];
 
 /** An adapter supplies only the destination and its address; presentation is shared. */
 export interface ConsoleDestination {area:string;to:string;badge?:string|number}
@@ -69,7 +76,7 @@ export function consoleLinks(links:readonly ConsoleDestination[]):ConsoleLink[] 
   const ordered = ['booking',...consoleGroups.flatMap(group=>group.areas)];
   const rank = (area:string) => { const at = ordered.indexOf(area); return at === -1 ? ordered.length : at; };
   return links
-    .filter(link=>!consoleHubAreas.includes(link.area))
+    .filter(link=>!consoleHubAreas.includes(link.area)&&!consoleHiddenAreas.includes(link.area))
     .map(link=>present(link.area,link.to,link.badge))
     .sort((a,b)=>rank(a.area)-rank(b.area));
 }
