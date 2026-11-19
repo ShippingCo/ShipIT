@@ -202,7 +202,7 @@
       "apps/web/src/test/app.test.tsx": "d1f6f5b9b639b1e083ea7a95aab71685372449833f9b3227fdb95fc14ac253c2",
       "apps/web/src/test/counter-draft-reason.test.tsx": "3aa0444c3815a5f5c5759fa6bcc266c108eb3f0304925bf5c410d666c93da7d0",
       "apps/web/src/test/counter.test.tsx": "4845f22c6d562d34460469fedfe26f2d8d31e547d8aeffe83ef68f98531e07aa",
-      "apps/web/src/test/operator.test.tsx": "ca49fb501f47686dbd671ace447cce44ba7cc1eea0855c19a5f59fe50a18b15a",
+      "apps/web/src/test/operator.test.tsx": "dedc0a5b02910fb8f20d6dab56ba103912f257d3786782f1c6357b8e8b448667",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
