@@ -207,7 +207,7 @@ function TripCard({record,write,data,load,seal,leave,happened,printed}:{
 
  return <Card className="trip-card">
   <div className="trip-head">
-   <span className="trip-icon"><Msym name={modeIcons[r.mode]} size={28}/></span>
+   <span className="trip-icon"><Msym name={modeIcons[r.mode]}/></span>
    <div className="u-grow">
     <div className="trip-vehicle">{vehicleOf(r)}</div>
     <div className="trip-where">{r.origin} → {r.destination}</div>

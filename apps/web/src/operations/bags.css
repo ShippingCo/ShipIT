@@ -31,39 +31,64 @@
 .bag-chip b { font-variant-numeric: tabular-nums; }
 
 /* ---- a bag ----------------------------------------------------------- */
-.bag-card { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
-.bag-card > * { width: 100%; }
-.bag-head { display: flex; align-items: flex-start; gap: 12px; }
-.bag-icon { flex: none; color: var(--md-on-surface-variant); line-height: 1; }
-.bag-city { font-size: 19px; line-height: 25px; font-weight: 650; }
-.bag-code { font-size: 15px; color: var(--md-on-surface-variant); overflow-wrap: anywhere; }
+/* Every bag card has the same four bands in the same order — where it is going, what
+   it is doing, what is in it, what you can do — so a row of them reads across. The
+   card pads itself: <Card> has no padding of its own, and without it every line sat
+   against the border. */
+.bags .grid3 { align-items: stretch; gap: 16px; }
+.bag-card { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 16px; min-width: 0; }
+.bag-card > * { min-width: 0; }
+.bag-head { display: flex; align-items: center; gap: 12px; }
+.bag-icon {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: var(--md-primary-container); color: var(--md-on-primary-container); line-height: 1;
+}
+.bag-icon .msym { font-size: 22px; }
+.bag-head > .u-grow { min-width: 0; }
+.bag-city { font-size: 17px; line-height: 23px; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.bag-code { font-size: 13px; line-height: 18px; color: var(--md-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* A bag left open overnight is a forgotten bag. Amber and a plain age, never a block. */
 .bag-stale {
-  flex: none; padding: 4px 10px; border-radius: 999px; font-size: 15px; font-weight: 600;
+  flex: none; padding: 3px 10px; border-radius: 999px; font-size: 13px; line-height: 18px; font-weight: 600;
   border: 1px solid #f2e0bf; background: var(--md-warning-container, #fdf4e3); color: var(--md-warning-on-subtle, #7a5300);
 }
 
-.bag-figs { display: flex; gap: 24px; flex-wrap: wrap; }
+/* One line under the heading saying what the bag is doing: what was last put in it, or
+   the trip it left on. The same place on every card, so open and sent bags line up. */
+.bag-foot, .bag-trip { margin: 0; font-size: 14px; line-height: 20px; color: var(--md-on-surface-variant); }
+.bag-trip { display: flex; align-items: flex-start; gap: 6px; }
+.bag-trip .msym { flex: none; font-size: 18px; line-height: 20px; }
+.bag-trip b { color: var(--md-on-surface); font-weight: 600; }
+.bag-card > .t-body-sm { margin: 0; font-size: 14px; line-height: 20px; }
+
+/* The count is what the operator checks against the sack, so it is the largest thing in
+   the band — but a band, with a rule either side, not three headlines. */
+.bag-figs {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px;
+  padding: 12px 0; border-block: 1px solid var(--md-outline-variant);
+}
 .bag-figs > div { display: flex; flex-direction: column; min-width: 0; }
-.bag-fig { font-size: 24px; line-height: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.bag-fig-l { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
+.bag-fig { font-size: 20px; line-height: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; }
+.bag-fig-l { font-size: 13px; line-height: 18px; color: var(--md-on-surface-variant); }
 
-.bag-foot { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
-.bag-trip { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); }
-.bag-trip .msym { flex: none; font-size: 19px; }
-
-.bag-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+/* Actions sit on the card's bottom edge whatever is above them, so the buttons of one
+   row of cards share a line. Secondary actions split the width; sealing spans it. */
+.bag-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: auto; }
+.bag-actions > .btn { width: 100%; justify-content: center; }
+.bag-actions > .btn:only-child, .bag-actions > .btn-filled { grid-column: 1 / -1; }
 /* Deleting a bag is a text link under the actions, never a button beside them. */
 .bag-delete {
-  background: none; border: 0; padding: 10px 0; font: inherit; font-size: 15px;
+  align-self: center; background: none; border: 0; padding: 4px 8px; margin: -4px 0 -6px; font: inherit; font-size: 14px;
   color: var(--md-on-surface-variant); text-decoration: underline; text-underline-offset: 3px;
-  cursor: pointer; min-height: var(--touch-min, 44px); text-align: left; width: auto;
+  cursor: pointer; min-height: 36px;
 }
 .bag-delete:hover { color: var(--md-error); }
 .bag-delete:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; border-radius: 4px; }
 
-.bag-card.is-sent { background: var(--md-surface-container-low, var(--grey-100)); }
+/* A sent bag is finished work: same card, quieter mark. Greying the whole card made a
+   screen of them look disabled. */
+.bag-card.is-sent .bag-icon { background: var(--md-surface-container, var(--grey-100)); color: var(--md-on-surface-variant); }
 
 /* ---- choosing parcels ------------------------------------------------ */
 .bagpick { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
@@ -92,5 +117,5 @@
 
 @media (max-width: 600px) {
   .bagpick-list li { flex-wrap: wrap; }
-  .bag-figs { gap: 18px; }
+  .bag-card { padding: 16px; }
 }
