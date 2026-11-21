@@ -1213,6 +1213,8 @@ The only added inventoried effect is `RateChoices.tsx` subscribing through the e
 | apps/web/src/test/logistics-design.test.tsx: keeps drafted filters separate from applied filters and rejects a reversed date range before a read | preserve | seam |
 | apps/web/src/test/studio-workspace.test.tsx: builds complete weekly evidence at IST boundaries and rejects partial, duplicate and mismatched totals | preserve | reports |
 | apps/web/src/test/studio-workspace.test.tsx: searches real scoped customers only after valid input and links the selected record into booking | preserve | customers |
+| apps/web/src/test/studio-workspace.test.tsx: shows matching customers while typing, without pressing Search | preserve | customers |
+| apps/web/src/test/studio-workspace.test.tsx: shows nothing owed for a customer missing from a loaded unpaid-balance snapshot | preserve | customers |
 | apps/web/src/test/weekly-business.test.tsx: waits for every saved page before displaying complete counts and exact paise totals | preserve | reports |
 | apps/web/src/test/weekly-business.test.tsx: recovers a failed next page using the same saved report without another capture | preserve | reports |
 | apps/web/src/test/weekly-business.test.tsx: offers a fresh capture after saved evidence expires and rejects inconsistent page identity | preserve | reports |

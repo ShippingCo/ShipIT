@@ -47,7 +47,7 @@ const dialCodes=[{value:'91',label:'India (+91)'},{value:'1',label:'US / Canada 
 function Figure({label,value,tone,foot}:{label:string;value:string;tone?:'owed'|'quiet';foot?:string}) {
   return <div className="cust-figure">
     <p className="cf-label">{label}</p>
-    <p className={'cf-value'+(tone==='owed'?' is-owed':tone==='quiet'?' is-quiet':'')}>{value}</p>
+    <p className={'cf-value t-figure'+(tone==='owed'?' is-owed':tone==='quiet'?' is-quiet':'')}>{value}</p>
     {foot&&<p className="cf-foot">{foot}</p>}
   </div>;
 }
@@ -87,6 +87,36 @@ export default function Customers({controller,canReadAccounts,canBook}:{controll
   useEffect(()=>{setLimited(resource.phase==='error'&&resource.error?.code==='RATE_LIMITED');},[resource.phase,resource.error]);
 
   /**
+   * Results arrive as the operator types.
+   *
+   * The search runs once typing pauses for a moment, not on every key: the API allows thirty
+   * customer searches a minute, and a name typed at the counter is three or four pauses at
+   * most. It waits for the same minimum the Search button does (three letters, or a whole
+   * phone number), stops while the limiter is engaged, and the hook cancels a search that a
+   * newer one has overtaken, so a slow answer never replaces a fresher one.
+   */
+  const liveBy:'name'|'phone'=phone?'phone':'name';
+  const liveQuery=enough&&[...typed].length<=(phone?40:120)?full:'';
+  const empty=!typed;
+  useEffect(()=>{
+    if(empty){setApplied(null);return;}
+    if(!liveQuery||limited)return;
+    const timer=window.setTimeout(()=>setApplied(current=>
+      current?.by===liveBy&&current.query===liveQuery?current:{by:liveBy,query:liveQuery}),350);
+    return()=>window.clearTimeout(timer);
+  },[empty,liveBy,liveQuery,limited]);
+
+  // While the next answer loads, the last one stays on screen, dimmed, instead of the list
+  // blinking out on every pause in typing.
+  const [shown,setShown]=useState<CustomerDto[]>([]);
+  useEffect(()=>{
+    if(!applied)setShown([]);
+    else if(resource.phase==='ready'||resource.phase==='empty')setShown(resource.items);
+  },[applied,resource.phase,resource.items]);
+  const refreshing=!!applied&&resource.phase==='loading'&&shown.length>0;
+  const rows=refreshing?shown:resource.items;
+
+  /**
    * Owed, for everyone on screen at once.
    *
    * One ageing snapshot carries a per-customer total, so the figure costs a single report
@@ -99,9 +129,15 @@ export default function Customers({controller,canReadAccounts,canBook}:{controll
     const page=await ageing(api).execute(ageing(api).intent({anchor:'booking',status:null,customer_id:null,balances:'outstanding'}));
     return page.snapshot;
   });
-  const owedFor=(id:string)=>{
-    const row=owed.value?.customers.find(entry=>entry.customer_id===id);
-    return row?Number(row.totals.outstanding):null;
+  /**
+   * The snapshot lists every booking with something still to pay, and fails outright rather
+   * than returning part of the list, so once it has loaded a customer missing from it owes
+   * nothing. Only a snapshot that could not be read leaves the figure unknown.
+   */
+  const owedFor=(id:string):number|null|'loading'=>{
+    if(!owed.value)return owed.phase==='loading'?'loading':null;
+    const row=owed.value.customers.find(entry=>entry.customer_id===id);
+    return row?Number(row.totals.outstanding):0;
   };
 
   function search(event:React.FormEvent){
@@ -124,61 +160,103 @@ export default function Customers({controller,canReadAccounts,canBook}:{controll
     canReadAccounts={canReadAccounts} owed={owedFor(selected.id)} onBack={()=>setSelected(null)}
     onSaved={next=>setSelected(next)}/>;
 
+  const clear=()=>{setApplied(null);setSelected(null);setQuery('');setError('');document.getElementById(searchId)?.focus();};
+
   return <section className="ops-page customers-workspace">
     <PageHeader title="Customers" eyebrow="Your business"
+      description="Look someone up by name or phone, then book straight from their profile."
       actions={canBook&&<Link className="btn btn-filled" to="/business/new-booking"><Msym name="add"/>Book for a new customer</Link>}/>
 
-    <section aria-labelledby="customer-find-heading">
-      <h2 id="customer-find-heading" className="t-title-sec">Find your customer</h2>
+    {/* The search card. Adapted from the 21st.dev command palette: one raised surface holds
+        the field and everything it finds, so the answer appears where the eye already is. */}
+    <section className="customer-finder" aria-labelledby="customer-find-heading">
+      <div className="cfd-head">
+        <span className="cfd-mark" aria-hidden="true"><Msym name="person_search"/></span>
+        <div>
+          <h2 id="customer-find-heading">Find your customer</h2>
+          <p>Search everyone saved at this branch.</p>
+        </div>
+      </div>
       <form className="customer-find" aria-label="Find a customer" onSubmit={search}>
         {phone&&!typed.startsWith('+')&&<SelectField label="Country code" aria-label="Phone number country code"
           value={dial} options={dialCodes} onChange={setDial}/>}
         <SearchField id={searchId} label="Phone number or name" value={query}
           onChange={value=>{setQuery(value);setSelected(null);setError('');}} error={error} maxLength={phone?40:120} autoFocus
-          helper={phone?'Enter the whole number. The country code beside it is added for you.':'Type a name, or a phone number. Capital letters do not matter.'}/>
-        <Button type="submit" disabled={resource.phase==='loading'&&!!applied}>Search</Button>
-        {(applied||query)&&<Button type="button" variant="text" onClick={()=>{setApplied(null);setSelected(null);setQuery('');setError('');document.getElementById(searchId)?.focus();}}>Clear search</Button>}
+          helper={phone?'Enter the whole number. The country code beside it is added for you.':'Results appear as you type. Capital letters do not matter.'}/>
+        <div className="cfd-actions">
+          <Button type="submit">Search</Button>
+          {(applied||query)&&<Button type="button" variant="text" onClick={clear}>Clear search</Button>}
+        </div>
       </form>
+
+      {limited&&<p className="customer-limited" role="alert"><Msym name="schedule"/>Too many searches. Wait a moment, then search again.</p>}
+
+      <div className="cfd-results">
+        {!applied?<div className="customer-idle">
+            <p className="ci-title">Who is at the counter?</p>
+            <ul className="ci-tips" aria-label="Ways to search">
+              <li><Msym name="badge"/><span><b>A name</b>The first three letters are enough</span></li>
+              <li><Msym name="call"/><span><b>A phone number</b>The whole number, any format</span></li>
+              <li><Msym name="add_circle"/><span><b>Someone new</b>Book them and they are saved</span></li>
+            </ul>
+          </div>
+          :resource.phase==='loading'&&!refreshing?<Loading label="Finding customers…"/>
+          :resource.phase==='error'&&!limited?<div className="customer-search-failed">
+            <Failure retry={resource.reload} label="Customers could not be searched."/>
+            {/* R-7: lookup being down never closes the way to a booking. */}
+            {canBook&&<Link className="btn btn-outlined" to="/business/new-booking">Book for a new customer</Link>}
+          </div>
+          :resource.phase==='error'?null
+          :rows.length===0?<div className="customer-none">
+            <span className="cn-mark" aria-hidden="true"><Msym name="person_off"/></span>
+            <p>No one saved matches <strong>{applied.query}</strong>.</p>
+            <p className="cn-sub">Check the spelling or try the phone number. If they are new, book them now and they are saved.</p>
+            {canBook&&<Link className="btn btn-filled" to={'/business/new-booking?'+new URLSearchParams({name:applied.by==='name'?applied.query:'',phone:applied.by==='phone'?applied.query:''})}><Msym name="add"/>Book for a new customer</Link>}
+          </div>
+          :<>
+            <p className="cfd-count" role="status">{refreshing
+              ?<>Searching for <b>{applied.query}</b>…</>
+              :<>{rows.length} {rows.length===1?'customer':'customers'} matching <b>{applied.query}</b>{resource.page.has_more?' · more to load':''}</>}</p>
+            {/* Adapted from the 21st.dev item list: avatar, title, one line of description and a
+                trailing figure, ruled apart by hairlines inside the card. */}
+            <ul className={'customer-results'+(refreshing?' is-refreshing':'')} aria-busy={refreshing||undefined}>
+              {rows.map(row=>{
+                const due=owedFor(row.id);
+                return <li key={row.id}>
+                  <button type="button" className="customer-row" onClick={()=>setSelected(row)} aria-label={row.name}>
+                    <Avatar name={row.name}/>
+                    <span className="cr-body">
+                      <span className="cr-name">{row.name}</span>
+                      <span className="cr-meta">
+                        <span className="cr-phone">{row.phone_display}</span>
+                        {area(row.address)&&<span className="cr-area"><Msym name="place"/>{area(row.address)}</span>}
+                      </span>
+                    </span>
+                    {/* Only a debt earns a tag. The snapshot lists outstanding balances, so a
+                        customer missing from it shows nothing rather than an empty pill. */}
+                    {canReadAccounts&&typeof due==='number'&&due>0&&<span className="cr-owed is-owed">{receiptMoney(due)} owed</span>}
+                    <Msym name="chevron_right"/>
+                  </button>
+                </li>;
+              })}
+            </ul>
+            {!refreshing&&resource.page.has_more&&<div className="cfd-more"><Button variant="outlined" disabled={resource.phase==='more'} onClick={resource.loadMore}>
+              {resource.phase==='more'?'Loading…':'Load more customers'}</Button></div>}
+          </>}
+      </div>
     </section>
-
-    {limited&&<p className="customer-limited" role="alert">Too many searches. Wait a moment, then search again.</p>}
-
-    {!applied?null
-      :resource.phase==='loading'?<Loading label="Finding customers…"/>
-      :resource.phase==='error'&&!limited?<div className="customer-search-failed">
-        <Failure retry={resource.reload} label="Customers could not be searched."/>
-        {/* R-7: lookup being down never closes the way to a booking. */}
-        {canBook&&<Link className="btn btn-outlined" to="/business/new-booking">Book for a new customer</Link>}
-      </div>
-      :resource.items.length===0?<div className="customer-none">
-        <Msym name="person_search"/>
-        <p>No one saved matches <strong>{applied.query}</strong>.</p>
-        {canBook&&<Link className="btn btn-filled" to={'/business/new-booking?'+new URLSearchParams({name:applied.by==='name'?applied.query:'',phone:applied.by==='phone'?applied.query:''})}>Book for a new customer</Link>}
-      </div>
-      :<>
-        <p className="ops-note" role="status">{resource.items.length} {resource.items.length===1?'customer':'customers'} matching {applied.query}{resource.page.has_more?' · more to load':''}</p>
-        <ul className="customer-results">
-          {resource.items.map(row=>{
-            const due=owedFor(row.id);
-            return <li key={row.id}>
-              <button type="button" className="customer-row" onClick={()=>setSelected(row)} aria-label={row.name}>
-                <span className="cr-initials" aria-hidden="true">{initials(row.name)}</span>
-                <span className="cr-body">
-                  <span className="cr-name">{row.name}</span>
-                  <span className="cr-meta">{row.phone_display}{area(row.address)?' · '+area(row.address):''}</span>
-                </span>
-                {canReadAccounts&&<span className={'cr-owed'+(due?' is-owed':'')}>
-                  {owed.phase==='loading'?'…':due===null?'—':due?receiptMoney(due)+' owed':'Nothing owed'}
-                </span>}
-                <Msym name="chevron_right"/>
-              </button>
-            </li>;
-          })}
-        </ul>
-        {resource.page.has_more&&<Button variant="outlined" disabled={resource.phase==='more'} onClick={resource.loadMore}>
-          {resource.phase==='more'?'Loading…':'Load more customers'}</Button>}
-      </>}
   </section>;
+}
+
+/** Four quiet tones, picked from the name, so two people side by side do not look alike. */
+const tones=['blue','green','amber','slate'] as const;
+function toneFor(name:string){
+  let hash=0;
+  for(const ch of name)hash=(hash*31+(ch.codePointAt(0)??0))>>>0;
+  return tones[hash%tones.length];
+}
+function Avatar({name,size='md'}:{name:string;size?:'md'|'lg'}){
+  return <span className={'cust-avatar tone-'+toneFor(name)+(size==='lg'?' is-lg':'')} aria-hidden="true">{initials(name)}</span>;
 }
 
 /**
@@ -187,7 +265,7 @@ export default function Customers({controller,canReadAccounts,canBook}:{controll
  */
 function CustomerProfile({customer,api,controller,canBook,canReadAccounts,owed,onBack,onSaved}:{
   customer:CustomerDto; api:ReturnType<typeof scopedApi>; controller:ScopeController;
-  canBook:boolean; canReadAccounts:boolean; owed:number|null; onBack:()=>void; onSaved:(next:CustomerDto)=>void;
+  canBook:boolean; canReadAccounts:boolean; owed:number|null|'loading'; onBack:()=>void; onSaved:(next:CustomerDto)=>void;
 }) {
   const [editing,setEditing]=useState(false);
   const sent=useResource(api.franchise+':parcels:'+customer.id,signal=>parcels(api).list({customer_id:customer.id,limit:50,sort:'created_at_desc'},signal));
@@ -209,18 +287,26 @@ function CustomerProfile({customer,api,controller,canBook,canReadAccounts,owed,o
 
   return <section className="ops-page customer-profile">
     <Button variant="text" icon="arrow_back" onClick={onBack}>All customers</Button>
-    <PageHeader title={customer.name} eyebrow="Customer"
-      actions={canBook&&<Link className="btn btn-filled" to={bookHref()}><Msym name="add"/>Book a parcel</Link>}/>
-
-    <p className="customer-contact">{customer.phone_display}{customer.address?' · '+customer.address:''}</p>
+    <header className="customer-hero">
+      <Avatar name={customer.name} size="lg"/>
+      <div className="ch-body">
+        <p className="ch-eyebrow">Customer</p>
+        <h1 id="workspace-title" tabIndex={-1}>{customer.name}</h1>
+        <p className="customer-contact">
+          <span><Msym name="call"/>{customer.phone_display}</span>
+          {customer.address&&<span><Msym name="place"/>{customer.address}</span>}
+        </p>
+      </div>
+      {canBook&&<Link className="btn btn-filled ch-book" to={bookHref()}><Msym name="add"/>Book a parcel</Link>}
+    </header>
 
     <div className="customer-figures">
       <Figure label="Parcels sent" value={sent.phase==='error'?'—':String(rows.length)+(sent.value?.page.has_more?'+':'')}
         foot={sent.phase==='error'?'Could not be loaded.':undefined}/>
       <Figure label="Owed now"
-        value={!canReadAccounts?'Not shown':owed===null?'—':owed?receiptMoney(owed):'Nothing'}
-        tone={owed?'owed':'quiet'}
-        foot={!canReadAccounts?'Your role does not include money figures.':owed===null?'This figure could not be read. It is missing, not zero.':owed?'Unsettled bookings, oldest first in Reports.':'Everything booked has been settled.'}/>
+        value={!canReadAccounts?'Not shown':owed==='loading'?'…':owed===null?'—':owed?receiptMoney(owed):'Nothing'}
+        tone={typeof owed==='number'&&owed>0?'owed':'quiet'}
+        foot={!canReadAccounts?'Your role does not include money figures.':owed==='loading'?'Checking unpaid bookings…':owed===null?'This figure could not be read. It is missing, not zero.':owed?'Unsettled bookings, oldest first in Reports.':'Everything booked has been settled.'}/>
       <Figure label="Moving now" value={sent.phase==='error'?'—':String(moving)} tone={moving?undefined:'quiet'}
         foot={moving?'Still on the way or at a hub.':'Nothing of theirs is in transit.'}/>
     </div>

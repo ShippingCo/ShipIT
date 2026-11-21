@@ -3718,6 +3718,16 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "name": "shows matching customers while typing, without pressing Search",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "name": "shows nothing owed for a customer missing from a loaded unpaid-balance snapshot",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/support.test.tsx",
         "name": "gives the support dialog an accessible name, handles Escape and restores keyboard focus",
         "cases": null
@@ -4113,6 +4123,10 @@
       {
         "file": "apps/web/src/operations/CustomerAccounts.tsx",
         "kind": "document.addEventListener"
+      },
+      {
+        "file": "apps/web/src/operations/Customers.tsx",
+        "kind": "window.setTimeout"
       },
       {
         "file": "apps/web/src/operations/Customers.tsx",
@@ -4545,6 +4559,10 @@
       {
         "file": "apps/web/src/test/setup.ts",
         "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/studio-workspace.test.tsx",
+        "kind": "setTimeout"
       },
       {
         "file": "apps/web/src/utils/image.ts",
@@ -9500,6 +9518,22 @@
       "group": "customers",
       "disposition": "preserve",
       "reason": "Preserve bounded explicit customer search, scoped identity navigation and cleared private selection."
+    },
+    {
+      "file": "apps/web/src/test/studio-workspace.test.tsx",
+      "name": "shows matching customers while typing, without pressing Search",
+      "cases": null,
+      "group": "customers",
+      "disposition": "preserve",
+      "reason": "Preserve search-as-you-type above the minimum, one request per pause and a cleared list when the field empties."
+    },
+    {
+      "file": "apps/web/src/test/studio-workspace.test.tsx",
+      "name": "shows nothing owed for a customer missing from a loaded unpaid-balance snapshot",
+      "cases": null,
+      "group": "customers",
+      "disposition": "preserve",
+      "reason": "Preserve that a complete outstanding-balance snapshot without the customer means nothing owed, not an unreadable figure."
     },
     {
       "file": "apps/web/src/test/support.test.tsx",
