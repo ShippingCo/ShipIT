@@ -7,61 +7,174 @@
    taller; a row of three parts — mark, name, figure — holds its height whatever
    is in it, and truncates the one part that can afford to be truncated. */
 
-.customer-find { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.customer-find > .tf, .customer-find > .counter-phone-field { flex: 1 1 320px; min-width: 0; max-width: 520px; }
-.customer-find > .btn { margin-top: 6px; }
+/* ---- the search card ------------------------------------------------ */
+/* Adapted from the 21st.dev command palette: one raised surface with the field on top and
+   whatever it finds underneath, ruled apart by a hairline. Nothing jumps to a new place on
+   the page when a search comes back.
+
+   One spacing rhythm throughout: the card's inner edge is --pad (24px, 16px on a phone),
+   blocks are --space-5 apart, items inside a block --space-3 apart. The header above and the
+   card below share the full workspace width, like every other page, so the page's primary
+   action lines up with the card's edge. */
+.customers-workspace { --pad: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); width: 100%; }
+.customer-finder {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-rest); overflow: hidden;
+}
+.cfd-head { display: flex; align-items: center; gap: var(--space-4); padding: var(--pad) var(--pad) 0; }
+.cfd-head h2 { margin: 0; font-size: var(--text-lg); line-height: 26px; letter-spacing: var(--tracking-snug); font-weight: var(--weight-semibold); }
+.cfd-head p { margin: 2px 0 0; font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+.cfd-mark {
+  flex: none; width: 48px; height: 48px; border-radius: var(--radius-md); display: grid; place-items: center;
+  background: var(--accent-subtle); color: var(--accent);
+}
+.cfd-mark .msym { font-size: 24px; }
+
+/* The field's label is 21px tall with 6px under it, so the buttons start 27px down and match
+   the 56px field: the row reads as one control, not three things at different heights. */
+.customer-find { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-5) var(--pad) var(--pad); }
+.customer-find > .tf { flex: 0 0 180px; }
+.customer-find > .workspace-search-field { flex: 1 1 auto; min-width: 0; }
+.customer-find .tf-help { padding-left: 0; }
+.cfd-actions { flex: none; display: flex; align-items: center; gap: var(--space-2); margin-top: 27px; }
+.cfd-actions .btn { min-height: 56px; padding-inline: var(--space-6); }
+.cfd-actions .btn-text { padding-inline: var(--space-3); }
 
 .customer-limited {
-  margin: 0 0 16px; padding: 12px 16px; border-radius: 10px;
-  border: 1px solid var(--md-outline-variant); background: var(--md-warning-container, var(--grey-100));
-  color: var(--md-on-surface); font-size: 15px; line-height: 21px;
+  display: flex; align-items: center; gap: var(--space-2);
+  margin: calc(var(--space-2) - var(--pad)) var(--pad) var(--pad); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+  background: var(--warning-subtle); color: var(--warning-on-subtle); font-size: var(--text-sm); line-height: 21px;
 }
+.customer-limited .msym { flex: none; font-size: 19px; }
 
-.customer-results { list-style: none; margin: 12px 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* The results well owns its padding; nothing inside it carries an outer margin, so the grey
+   always reaches the card's bottom edge and every state sits at the same inset. */
+.cfd-results { border-top: 1px solid var(--divider); background: var(--surface-sunken); padding: var(--space-5) var(--pad) var(--pad); }
+.cfd-results > [role=status]:not(.cfd-count) { padding: var(--space-3) 0; }
 
+/* Before anything is searched: what the field accepts, said once, as three short lines. */
+.ci-title { margin: 0 0 var(--space-3); font-size: var(--text-xs); line-height: 18px; font-weight: var(--weight-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .08em; }
+.ci-tips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.ci-tips li {
+  display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary);
+}
+.ci-tips b { display: block; margin-bottom: 2px; color: var(--text); font-weight: var(--weight-semibold); }
+.ci-tips .msym { flex: none; font-size: 20px; color: var(--accent); }
+
+.cfd-count { margin: 0 0 var(--space-3); font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+.cfd-count b { color: var(--text); font-weight: var(--weight-semibold); }
+
+/* Adapted from the 21st.dev item list: avatar, title, one line of description and a
+   trailing figure, ruled apart by hairlines in one white group. */
+.customer-results {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.customer-results.is-refreshing { opacity: .55; }
+.customer-results > li + li { border-top: 1px solid var(--divider); }
 .customer-row {
-  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px;
-  padding: 12px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer;
-  border: 1px solid var(--md-outline-variant); border-radius: 12px; background: var(--md-surface);
-  transition: border-color 120ms ease, background-color 120ms ease;
+  display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: 72px;
+  padding: var(--space-3) var(--space-5); text-align: left; font: inherit; color: inherit; cursor: pointer;
+  border: 0; background: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
-.customer-row:hover { border-color: var(--md-outline); background: var(--state-hover); }
-.customer-row:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.customer-row:hover { background: var(--surface-hover); }
+.customer-row:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+.customer-row > .msym { flex: none; color: var(--text-disabled); transition: transform var(--duration-fast) var(--ease-out), color var(--duration-fast); }
+.customer-row:hover > .msym { color: var(--accent); transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) {
+  .customer-row > .msym, .customer-results { transition: none; }
+  .customer-row:hover > .msym { transform: none; }
+}
 
 /* Initials, not a photograph and not an icon: two letters tell the operator they have the
-   right person at a glance, and the product has no picture of anyone to show. */
-.cr-initials {
-  flex: none; width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
-  background: var(--md-primary-container); color: var(--md-on-primary-container);
-  font-size: 15px; font-weight: 650; letter-spacing: 0.02em;
+   right person at a glance, and the product has no picture of anyone to show. The tone
+   comes from the name, so two people listed together do not look alike. */
+.cust-avatar {
+  flex: none; width: 44px; height: 44px; border-radius: var(--radius-full); display: grid; place-items: center;
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); letter-spacing: .02em;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05);
 }
+.cust-avatar.is-lg { width: 72px; height: 72px; font-size: 26px; letter-spacing: 0; }
+.cust-avatar.tone-blue { background: var(--blue-100); color: var(--blue-800); }
+.cust-avatar.tone-green { background: var(--green-100); color: var(--green-900); }
+.cust-avatar.tone-amber { background: var(--amber-100); color: var(--amber-900); }
+.cust-avatar.tone-slate { background: var(--grey-100); color: var(--grey-800); }
+
 .cr-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.cr-name { font-size: 17px; line-height: 23px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cr-meta { font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Owed is coloured only when there is something owed. A grey zero is a fact; a red zero is a scare. */
-.cr-owed { flex: none; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--md-on-surface-variant); }
-.cr-owed.is-owed { color: var(--md-error); font-weight: 650; }
-.customer-row .msym { flex: none; color: var(--md-on-surface-variant); }
+.cr-name { font-size: var(--text-md); line-height: 24px; font-weight: var(--weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-meta { display: flex; align-items: center; gap: var(--space-3); min-width: 0; font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+.cr-phone { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cr-area { display: inline-flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-area .msym { font-size: 16px; }
+/* Only a debt gets a tag. A grey zero is a fact; a red zero is a scare. */
+.cr-owed {
+  flex: none; padding: 4px 10px; border-radius: var(--radius-full);
+  font-size: var(--text-sm); line-height: 20px; font-variant-numeric: tabular-nums;
+}
+.cr-owed.is-owed { background: var(--danger-subtle); color: var(--danger-on-subtle); font-weight: var(--weight-semibold); }
+.cfd-more { padding-top: var(--space-4); }
 
 .customer-none, .customer-search-failed {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
-  padding: 24px 0;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3);
+  padding: var(--space-5) 0;
 }
-.customer-none .msym { font-size: 32px; color: var(--md-on-surface-variant); }
-.customer-none p { margin: 0; font-size: 17px; }
+.cn-mark {
+  width: 56px; height: 56px; border-radius: var(--radius-full); display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+}
+.cn-mark .msym { font-size: 28px; }
+.customer-none p { margin: 0; font-size: var(--text-md); line-height: 24px; }
+.customer-none .cn-sub { max-width: 46ch; font-size: var(--text-sm); line-height: 20px; color: var(--text-secondary); }
+.customer-none .btn { margin-top: var(--space-2); }
+
+@media (max-width: 860px) {
+  .ci-tips { grid-template-columns: 1fr; }
+  .customer-find { flex-wrap: wrap; }
+  .customer-find > .workspace-search-field { flex-basis: 100%; }
+  .customer-find > .tf { flex: 1 1 100%; }
+  .cfd-actions { margin-top: 0; }
+  .cfd-actions .btn { min-height: var(--control-md); }
+}
+@media (max-width: 560px) {
+  .customers-workspace { --pad: var(--space-4); }
+  .customer-row { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
+  .cr-meta { flex-wrap: wrap; gap: 0 var(--space-3); }
+}
 
 /* ---- one customer ---------------------------------------------------- */
 
-.customer-profile { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+.customer-profile { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; width: 100%; }
 .customer-profile > * { width: 100%; }
-.customer-profile > .btn { width: auto; }
-.customer-contact { margin: 0; font-size: 17px; line-height: 24px; color: var(--md-on-surface-variant); }
+.customer-profile > .btn { width: auto; align-self: flex-start; justify-self: start; }
+.customer-profile > .btn { margin-bottom: calc(var(--space-4) * -1); }
 
-.customer-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+/* The profile opens on the person: a large avatar, the name and how to reach them, with the
+   one action this screen exists for beside them. */
+.customer-hero {
+  display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap;
+  padding: var(--space-6); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-rest);
+}
+.ch-body { flex: 1 1 280px; min-width: 0; }
+.ch-eyebrow { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); }
+.customer-hero h1 { margin: 2px 0 var(--space-2); font-size: 28px; line-height: var(--leading-tight); letter-spacing: -.03em; font-weight: 650; overflow-wrap: anywhere; }
+.customer-hero h1:focus { outline: none; }
+.customer-contact { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; font-size: var(--text-base); line-height: 22px; color: var(--text-secondary); }
+.customer-contact span { display: inline-flex; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.customer-contact .msym { font-size: 18px; margin-top: 2px; color: var(--text-disabled); }
+.ch-book { min-height: var(--control-md); }
+
+.customer-figures {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+  background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+}
 @media (max-width: 760px) { .customer-figures { grid-template-columns: 1fr; } }
 .cust-figure {
-  padding: 18px 20px; border: 1px solid var(--md-outline-variant); border-radius: 14px;
-  background: var(--md-surface); display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  padding: var(--space-5); background: var(--surface); display: flex; flex-direction: column; gap: 4px; min-width: 0;
 }
 .cf-label { margin: 0; font-size: 15px; line-height: 20px; color: var(--md-on-surface-variant); }
 .cf-value {
@@ -118,3 +231,10 @@ a.customer-chip:focus-visible { outline: 2px solid var(--md-primary); outline-of
 .customer-clash .msym { flex: none; font-size: 19px; }
 /* The sentence that makes this form usable: what it changes, and what it leaves alone. */
 .customer-blast { margin: 0; font-size: 15px; line-height: 21px; color: var(--md-on-surface-variant); max-width: 70ch; }
+
+/* The figures and the back link sit inside .ops-page, whose paragraph and button rules
+   would otherwise shrink the numbers and stretch the buttons. */
+.customer-profile .customer-figures .cf-value { margin: var(--space-1) 0 0; font-size: 30px; line-height: 36px; font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); }
+.customer-profile .customer-figures .cf-value.is-quiet { font-size: 22px; line-height: 30px; font-weight: var(--weight-semibold); }
+.customer-profile .customer-figures .cf-label { font-weight: var(--weight-medium); }
+.customer-profile > .btn-outlined, .customer-profile > button.btn { width: auto; align-self: flex-start; justify-self: start; }

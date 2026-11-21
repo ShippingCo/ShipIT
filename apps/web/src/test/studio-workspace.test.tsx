@@ -2,7 +2,7 @@ import React from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
 import {act,fireEvent,render,screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
-import type {ReportPage} from '@shippingco/shared';
+import {ageingBuckets,ageingMeasures,type AgeingPage,type ReportPage} from '@shippingco/shared';
 import {weeklyDays,weeklySeries} from '../operations/WeeklyBusiness';
 import Customers from '../operations/Customers';
 import {createScopeController} from '../operator/scope';
@@ -50,4 +50,41 @@ it('searches real scoped customers only after valid input and links the selected
  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'All customers'}));});
  expect(screen.getByRole('button',{name:f.customer.name})).toBeVisible();
  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Clear search'}));});expect(screen.queryByRole('button',{name:f.customer.name})).not.toBeInTheDocument();
+});
+it('shows matching customers while typing, without pressing Search',async()=>{
+ const controller=createScopeController();controller.runtime.bind({userId:f.id(6),organizationId:f.org,franchiseId:f.A,permissions:'operator'});
+ const fetcher=vi.fn(async(_path:string)=>f.json({items:[f.customer],page:{has_more:false,next_cursor:null}}));vi.stubGlobal('fetch',fetcher);
+ render(<MemoryRouter><Customers canBook controller={controller} canReadAccounts={false}/></MemoryRouter>);
+ const field=()=>screen.getByRole('searchbox',{name:'Phone number or name'});
+ // Below the minimum, typing never reaches the rate-limited search.
+ fireEvent.change(field(),{target:{value:'Sy'}});
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,500));});
+ expect(fetcher).not.toHaveBeenCalled();
+ // A pause after three letters searches on its own; the row appears with no button pressed.
+ fireEvent.change(field(),{target:{value:'Syn'}});
+ expect(await screen.findByRole('button',{name:f.customer.name})).toBeVisible();
+ expect(fetcher).toHaveBeenCalledTimes(1);
+ expect(new URL(fetcher.mock.calls[0]![0],'https://example.test').searchParams.get('q')).toBe('Syn');
+ // Emptying the field clears the list instead of leaving a stale answer.
+ fireEvent.change(field(),{target:{value:''}});
+ expect(screen.queryByRole('button',{name:f.customer.name})).not.toBeInTheDocument();
+});
+it('shows nothing owed for a customer missing from a loaded unpaid-balance snapshot',async()=>{
+ const controller=createScopeController();controller.runtime.bind({userId:f.id(6),organizationId:f.org,franchiseId:f.A,permissions:'operator'});
+ const zero=Object.fromEntries(ageingMeasures.map(k=>[k,'0'])) as AgeingPage['snapshot']['totals'];
+ // The snapshot only lists bookings with something still to pay, and this customer has none.
+ const report:AgeingPage={snapshot:{id:f.id(40),schema_version:1,definition:'to_pay_ageing_v1',timezone:'Asia/Kolkata',organization_id:f.org,franchise_id:f.A,filter:{anchor:'booking',status:null,customer_id:null,balances:'outstanding'},as_of:'2099-01-01T00:00:00.000Z',expires_at:'2099-01-02T00:00:00.000Z',count:0,totals:zero,buckets:Object.fromEntries(ageingBuckets.map(k=>[k,'0'])) as AgeingPage['snapshot']['buckets'],customers:[],due_date_source:'unavailable',advance_source:'unavailable'},rows:[],next_offset:null};
+ const empty={items:[],page:{has_more:false,next_cursor:null}};
+ const fetcher=vi.fn(async(path:string)=>path==='/auth/bootstrap'?f.json({csrf_token:'synthetic_csrf'}):path.includes('/reports/ageing')?f.json(report)
+  :path.includes('/customers?')?f.json({items:[f.customer],page:{has_more:false,next_cursor:null}}):f.json(empty));
+ vi.stubGlobal('fetch',fetcher);
+ render(<MemoryRouter><Customers canBook controller={controller} canReadAccounts/></MemoryRouter>);
+ fireEvent.change(screen.getByRole('searchbox',{name:'Phone number or name'}),{target:{value:'Synthetic'}});
+ fireEvent.click(screen.getByRole('button',{name:'Search'}));
+ const row=await screen.findByRole('button',{name:f.customer.name});
+ // No debt, so no tag on the row, and the profile says so instead of calling the figure unreadable.
+ expect(row).not.toHaveTextContent('owed');
+ fireEvent.click(row);
+ expect(await screen.findByText('Everything booked has been settled.')).toBeVisible();
+ expect(screen.queryByText(/could not be read/)).not.toBeInTheDocument();
 });

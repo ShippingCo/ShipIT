@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {Msym} from '../components/m3/Icon';
 import {receiptMoney} from '../utils/receipt-view';
 import type {BookingServiceOption} from '../data-access/booking-services';
@@ -93,7 +94,7 @@ export function PriceOptions({options,value,recommended,weighed,disabled,onChang
     </div>
     <div className="price-options-foot">
       <p><Msym name="schedule"/><span>Delivery times are not set up for this branch, so no arrival date can be promised.</span></p>
-      <a className="po-setup" href={setupHref} target="_blank" rel="noopener noreferrer">Open booking setup · new tab</a>
+      <Link className="po-setup" to={setupHref} target="_blank" rel="noopener noreferrer">Open booking setup · new tab</Link>
     </div>
   </div>;
 }
