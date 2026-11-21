@@ -1,4 +1,5 @@
 import {registerReconciliation} from './modules/reconciliation/routes.ts';
+import { configureRoleChecks } from './modules/memberships/role-checks.ts';
 import {createReconciliationService} from './modules/reconciliation/service.ts';
 import {createReconciliationReportService} from './modules/reconciliation/report-service.ts';
 import {registerCustomerAccounts} from './modules/customer-accounts/routes.ts';
@@ -129,6 +130,8 @@ export function buildServer({ config, database, logSink, auth, securityTelemetry
     keepAliveTimeout: 5000, maxRequestsPerSocket: 1000, forceCloseConnections: 'idle',
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false, allErrors: false } },
   });
+  configureRoleChecks(config.rbacEnabled!==false);
+  if(config.rbacEnabled===false)app.log.warn({event:'rbac_disabled'},'Role checks are off (RBAC_ENABLED=false, development only). Every signed-in member gets every role in their own organization.');
   registerErrors(app);
   registerRequestLogging(app);
   registerJson(app);

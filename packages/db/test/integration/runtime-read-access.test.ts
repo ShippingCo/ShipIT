@@ -13,7 +13,13 @@ import { createParcelCustodyService } from '../../../../apps/api/src/modules/cus
 await test('declared read profiles repair actual SELECT access without granting domain mutations', { timeout: 60000 }, async t => {
   const db = await provisionDatabase(t); await db.migrate();
   const runtime = db.runtimePool(), owner = db.ownerPool();
-  const names = Object.keys(runtimeAccessProfiles).filter(name => !['settings', 'receiving_accounts', 'dispatch_creation', 'booking_creation', 'booking_cancellation', 'money_receipt_writes'].includes(name));
+  // Read profiles only: any profile declaring a write (other than the custody read-audit insert)
+  // is a write profile and is covered by its own workflow tests and the application test below.
+  const readOnly = (name: string) => runtimeAccessProfiles[name]!.requirements.every(r =>
+    r.privilege === 'SELECT' || (r.object === 'shipit.custody_access_events' && r.privilege === 'INSERT'));
+  const names = Object.keys(runtimeAccessProfiles).filter(readOnly);
+  for (const name of ['settings', 'receiving_accounts', 'dispatch_creation', 'booking_creation', 'booking_cancellation', 'money_receipt_writes', 'reports', 'application'])
+    assert.equal(names.includes(name), false, name);
   const target = { role: db.runtimeRole, database: db.database };
   assert.ok(Object.values((await checkRuntimeAccess(runtime, names)).profiles).every(profile => profile.status === 'blocked'));
   await repairRuntimeAccess(owner, target, names);
@@ -30,6 +36,22 @@ await test('declared read profiles repair actual SELECT access without granting 
     assert.equal(privileges.delete, false, object);
     assert.equal(privileges.insert, object === 'shipit.custody_access_events', object);
   }
+});
+
+await test('the application profile repairs a fresh database in one step and keeps the runtime role unprivileged', { timeout: 60000 }, async t => {
+  const db = await provisionDatabase(t); await db.migrate();
+  const runtime = db.runtimePool(), owner = db.ownerPool();
+  const before = await checkRuntimeAccess(runtime, ['application', 'reports']);
+  assert.equal(before.profiles.application!.status, 'blocked');
+  assert.ok(before.profiles.reports!.checks.some(c => c.object === 'shipit.report_snapshots' && c.privilege === 'INSERT' && c.status === 'missing_privilege'));
+  const repaired = await repairRuntimeAccess(owner, { role: db.runtimeRole, database: db.database }, ['application']);
+  assert.equal(repaired.role_safe, true);
+  const after = await checkRuntimeAccess(runtime);
+  assert.ok(Object.values(after.profiles).every(profile => profile.status === 'granted'));
+  assert.equal(after.role_safe, true);
+  await runtime.query('SELECT 1 FROM shipit.report_snapshots LIMIT 0');
+  // No DDL or ownership: the runtime role still cannot create objects in the schema.
+  await assert.rejects(runtime.query('CREATE TABLE shipit.runtime_must_not_create(id int)'));
 });
 
 await test('support and pickup lists recover through real owner services without provider calls or write grants', { timeout: 60000 }, async t => {

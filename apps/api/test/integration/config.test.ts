@@ -23,6 +23,10 @@ describe('fail-closed runtime configuration', () => {
     expect(config.financialWorkflowWritesEnabled).toBe(false);expect(parseEnvironment({...syntheticEnv,FINANCIAL_WORKFLOW_ENABLED:'true'}).financialWorkflowWritesEnabled).toBe(true);
     for(const value of ['','1','TRUE','yes'])expect(()=>parseEnvironment({...syntheticEnv,FINANCIAL_WORKFLOW_ENABLED:value})).toThrow(ConfigurationError);
     expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:'demo',FINANCIAL_WORKFLOW_ENABLED:'true'})).toThrow(ConfigurationError);
+    expect(config.rbacEnabled).toBeUndefined();expect(parseEnvironment({...syntheticEnv,RBAC_ENABLED:'true'}).rbacEnabled).toBeUndefined();
+    expect(parseEnvironment({...syntheticEnv,RBAC_ENABLED:'false'}).rbacEnabled).toBe(false);
+    for(const value of ['','0','FALSE','no'])expect(()=>parseEnvironment({...syntheticEnv,RBAC_ENABLED:value})).toThrow(ConfigurationError);
+    for(const mode of ['demo','staging','production'])expect(()=>parseEnvironment({...syntheticEnv,NODE_ENV:mode,RBAC_ENABLED:'false'})).toThrow(ConfigurationError);
     expect(Object.isFrozen(config.allowedOrigins)).toBe(true);
     for (const mode of ['demo', 'staging', 'production']) {
       expect(parseEnvironment({ ...syntheticEnv, NODE_ENV: mode, STORAGE_CREDENTIAL_REF: 'managed/storage/version-1', DATABASE_SECRET_REF: 'managed/db/version-1',
