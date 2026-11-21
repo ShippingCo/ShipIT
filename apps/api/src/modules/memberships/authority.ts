@@ -1,7 +1,8 @@
 import { assertActiveTransaction, type QueryExecutor, type TransactionExecutor } from '@shippingco/db';
-import type { Invitation, InvitationState, Membership, MembershipLifecycle, Role } from './types.ts';
+import { roles, type Invitation, type InvitationState, type Membership, type MembershipLifecycle, type Role } from './types.ts';
 import { assertTenantAccess, type TenantAccess } from '../security/scope.ts';
 import { HttpError } from '../../plugins/errors.ts';
+import { roleChecksEnabled } from './role-checks.ts';
 
 export async function beginReportCapture(tx:TransactionExecutor,precise=false) {
  assertActiveTransaction(tx);await tx.query(precise?'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE':'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
@@ -56,7 +57,11 @@ export async function activeMemberships(db:QueryExecutor,userId:string,organizat
   const result=await db.query<MembershipRow>(`SELECT ${membershipColumns} FROM shipit.memberships m
     LEFT JOIN shipit.membership_franchise_scopes s ON s.membership_id=m.id AND s.organization_id=m.organization_id
     WHERE m.user_id=$1 AND m.organization_id=$2 AND m.lifecycle='active' GROUP BY ${membershipGroup} ORDER BY m.id`,[userId,organizationId]);
-  return result.rows.map(membership);
+  const real=result.rows.map(membership);
+  // RBAC_ENABLED=false (development only): see role-checks.ts.
+  if(roleChecksEnabled()||!real.length)return real;
+  const franchiseIds=await organizationFranchiseIds(db,organizationId);
+  return [...real,...roles.map((role):Membership=>({...real[0]!,id:'rbac-disabled:'+role,role,version:0,franchiseIds:[...franchiseIds]}))];
 }
 export async function organizationFranchiseIds(db:QueryExecutor,organizationId:string) {
   return (await db.query<{id:string}>('SELECT id FROM shipit.franchises WHERE organization_id=$1 ORDER BY id',[organizationId])).rows.map(row=>row.id);

@@ -29,6 +29,8 @@ export interface RuntimeConfig {
     readonly ownerSummariesEnabled?: boolean;
   readonly custodyWritesEnabled?: boolean;
   readonly agentMoneyWritesEnabled?: boolean;
+  /** Present (false) only when RBAC_ENABLED=false in NODE_ENV=development; see modules/memberships/authority.ts. */
+  readonly rbacEnabled?: false;
   readonly interpreter?: import('./modules/conversations/interpreter.ts').InterpreterConfiguration;
 }
 export interface ConfigurationIssue { field: string; code: 'REQUIRED' | 'INVALID_FORMAT' | 'OUT_OF_RANGE' | 'INCONSISTENT' }
@@ -154,6 +156,11 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
   const moneyReceiptWritesEnabled=env.MONEY_RECEIPTS_ENABLED==='true';
   if(env.MONEY_RECEIPTS_ENABLED!==undefined&&!['true','false'].includes(env.MONEY_RECEIPTS_ENABLED))issue('MONEY_RECEIPTS_ENABLED','INVALID_FORMAT');
   if(moneyReceiptWritesEnabled&&environment==='demo')issue('MONEY_RECEIPTS_ENABLED','INCONSISTENT');
+  // Development-phase switch. Role checks stay on unless RBAC_ENABLED is exactly 'false',
+  // and turning them off is refused outside NODE_ENV=development.
+  const rbacEnabled=env.RBAC_ENABLED!=='false';
+  if(env.RBAC_ENABLED!==undefined&&!['true','false'].includes(env.RBAC_ENABLED))issue('RBAC_ENABLED','INVALID_FORMAT');
+  if(!rbacEnabled&&environment!=='developer')issue('RBAC_ENABLED','INCONSISTENT');
   const llmEnabled=env.LLM_ENABLED==='true';
   if(env.LLM_ENABLED!==undefined&&!['true','false',''].includes(env.LLM_ENABLED))issue('LLM_ENABLED','INVALID_FORMAT');
   if(env.LLM_MODEL!==undefined&&env.LLM_MODEL!==''&&env.LLM_MODEL!==MODEL)issue('LLM_MODEL','INVALID_FORMAT');
@@ -178,6 +185,7 @@ export function parseEnvironment(env: Readonly<Record<string, string | undefined
     shipmentCostWritesEnabled,settingsWritesEnabled,ownerSummariesEnabled,
     custodyWritesEnabled,
     agentMoneyWritesEnabled,
+    ...(rbacEnabled?{}:{rbacEnabled:false as const}),
     interpreter:Object.freeze({enabled:llmEnabled,privacyPolicyRef,credential:()=>apiKey}),
   });
 }

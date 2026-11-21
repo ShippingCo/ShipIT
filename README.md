@@ -98,6 +98,29 @@ are guarded to the local developer target and never run on API/worker startup.
 They do not enable features or create business records. Re-run the doctor after
 repair; a current schema alone does not establish that the runtime role has access.
 
+`pnpm db:access --apply application` grants every runtime privilege the test suite
+gives the application (all profiles together, including report snapshots, writes and
+the worker), still without superuser, ownership, DDL or access to other databases.
+`pnpm db:access --apply reports` repairs just the reports. The profiles live in
+`packages/db/src/runtime-access.ts`; when a migration adds a table or a test
+`prepare*` function adds a grant, add it to the matching profile so the doctor sees it.
+
+### Role checks during development (`RBAC_ENABLED`)
+
+For the current development phase the local `.env` may set `RBAC_ENABLED=false`.
+The API then treats every signed-in user who has at least one active membership in an
+organization as holding every role across that organization's own franchises, so the
+operator console shows every page and action. Only the role check changes: sign-in,
+organization isolation, tenant-scoped queries, business rules, audit records,
+database grants and database triggers all stay on, and nothing is written to the
+membership tables. The API logs `rbac_disabled` at startup and refuses to start with
+`RBAC_ENABLED=false` unless `NODE_ENV=development`.
+
+To turn role checks back on, delete the line (or set `RBAC_ENABLED=true`) and restart
+`pnpm api`. The switch is `apps/api/src/modules/memberships/role-checks.ts`, applied in
+`activeMemberships` (`authority.ts`); role definitions and per-feature rules are unchanged.
+Before any staging or production deployment, confirm the variable is absent there.
+
 The doctor uses the runtime credential to inspect declared access and, when
 provided, the matching migration credential to read migration history. It returns
 nonzero for blocked access, unsafe runtime roles, invalid flags, or unverified/
