@@ -1,0 +1,202 @@
+/* Money pages
+   ---------------------------------------------------------------------------
+   Money received, Cash and expenses, Customer accounts, Agent settlements and Approvals
+   and refunds share the Customers language: a raised header card with a tinted icon mark,
+   then one raised card per task. Reconciliation keeps its own layout for now.
+
+   Scoped to main.money-workspace (set by BusinessShell for those five areas), so the
+   shared finance classes keep their look everywhere else. One spacing rhythm: the card's
+   inner edge is --pad (24px, 16px on a phone), blocks are --space-5 apart, items inside a
+   block --space-3 apart. Every button in a row is the same 44px height. */
+
+main.money-workspace { --pad: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+main.money-workspace > .ops-page { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; }
+
+/* ---- header card ---------------------------------------------------- */
+main.money-workspace .finance-workspace-intro {
+  display: flex; flex-direction: column; gap: var(--space-5);
+  padding: var(--pad); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-rest);
+}
+main.money-workspace .finance-workspace-intro > .workspace-page-header { margin: 0; padding: 0; align-items: center; }
+main.money-workspace .finance-workspace-intro > :empty { display: none; }
+.workspace-page-header.has-mark { justify-content: flex-start; align-items: center; gap: var(--space-4); }
+.workspace-page-header.has-mark > .workspace-page-heading { flex: 1 1 auto; }
+.workspace-page-header.has-mark > .workspace-header-actions { padding-top: 0; }
+.workspace-page-mark {
+  flex: none; width: 48px; height: 48px; border-radius: var(--radius-md); display: grid; place-items: center;
+  background: var(--accent-subtle); color: var(--accent);
+}
+.workspace-page-mark .msym { font-size: 24px; }
+main.money-workspace .workspace-page-header h1 { margin: 0; font-size: 24px; line-height: 32px; }
+main.money-workspace .workspace-page-description { margin: 2px 0 0; font-size: 15px; line-height: 21px; color: var(--text-secondary); }
+main.money-workspace .finance-workspace-intro > .ops-note { margin: 0; }
+
+/* ---- task cards ----------------------------------------------------- */
+main.money-workspace .card.ops-card,
+main.money-workspace .finance-composer.card {
+  display: flex; flex-direction: column; gap: var(--space-4); min-width: 0;
+  margin: 0; padding: var(--pad); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-rest);
+}
+main.money-workspace .card.ops-card > *,
+main.money-workspace .finance-composer.card > * { margin-block: 0; }
+main.money-workspace .card.ops-card > h2,
+main.money-workspace .card.ops-card > .workspace-section-header h2,
+main.money-workspace .card.ops-card > .t-title-lg {
+  margin: 0; font-size: var(--text-lg); line-height: 26px; font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug);
+}
+main.money-workspace .workspace-section-header { margin: 0; align-items: center; }
+main.money-workspace .card.ops-card h3 { margin: 0; font-size: var(--text-md); line-height: 24px; font-weight: var(--weight-semibold); }
+main.money-workspace .card .card.ops-card { box-shadow: none; }
+
+/* ---- forms and buttons ---------------------------------------------- */
+main.money-workspace .finance-grouped-form { gap: var(--space-4) var(--space-5); }
+main.money-workspace .finance-grouped-form > fieldset { padding-top: var(--space-5); }
+main.money-workspace .tf-help { padding-left: 0; }
+main.money-workspace .btn { min-height: var(--control-md); }
+main.money-workspace .btn-filled, main.money-workspace .btn-outlined { padding-inline: var(--space-5); }
+main.money-workspace .finance-section-actions,
+main.money-workspace .ops-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0; }
+main.money-workspace .finance-grouped-form > .btn,
+main.money-workspace .card.ops-card > .btn,
+main.money-workspace .finance-workspace-intro > .btn { justify-self: start; align-self: flex-start; }
+
+/* A filter strip is a quiet well inside its card, like the Customers results area. */
+main.money-workspace .finance-filter-panel {
+  margin: 0; padding: var(--space-4); gap: var(--space-3) var(--space-4);
+  background: var(--surface-sunken); border: 1px solid var(--divider); border-radius: var(--radius-lg);
+}
+
+/* Figures sit in one hairline band, like a customer's profile figures. */
+main.money-workspace .finance-summary {
+  margin: 0; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+}
+main.money-workspace .finance-summary > div,
+main.money-workspace .finance-summary > div:first-child,
+main.money-workspace .finance-summary > div:last-child { padding: var(--space-4) var(--space-5); background: var(--surface); border: 0; }
+
+/* Lists of records read as one white group with hairline rows. */
+main.money-workspace .card.ops-card > .ops-list,
+main.money-workspace .finance-workspace-intro .ops-list {
+  list-style: none; margin: 0; padding: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+}
+main.money-workspace .card.ops-card > .ops-list > li,
+main.money-workspace .finance-workspace-intro .ops-list > li { margin: 0; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--divider); }
+main.money-workspace .card.ops-card > .ops-list > li:first-child,
+main.money-workspace .finance-workspace-intro .ops-list > li:first-child { border-top: 0; }
+
+/* Empty and loading states sit centred in a sunken well instead of floating on the page. */
+main.money-workspace .card.ops-card > .ops-state,
+main.money-workspace .card.ops-card > .empty-state { margin: 0; border-radius: var(--radius-lg); background: var(--surface-sunken); }
+
+@media (max-width: 560px) {
+  main.money-workspace { --pad: var(--space-4); gap: var(--space-4); }
+  main.money-workspace > .ops-page { gap: var(--space-4); }
+  .workspace-page-mark { width: 40px; height: 40px; }
+  .workspace-page-mark .msym { font-size: 20px; }
+  main.money-workspace .workspace-page-header h1 { font-size: 22px; line-height: 28px; }
+}
+
+/* ---- header row: refresh sits beside the page's own actions ------------ */
+main.money-workspace .finance-workspace-intro { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); }
+main.money-workspace .finance-workspace-intro > * { grid-column: 1 / -1; min-width: 0; }
+main.money-workspace .finance-workspace-intro > .workspace-page-header { grid-column: 1; grid-row: 1; }
+main.money-workspace .finance-workspace-intro > .data-refresh { grid-column: 2; grid-row: 1; align-self: center; display: flex; align-items: center; gap: var(--space-2); }
+main.money-workspace .data-refresh .btn { min-height: var(--control-md); }
+
+/* A lookup is one row: the field, then its buttons at the field's height (label 21px + 6px gap). */
+main.money-workspace .finance-inline-form { display: flex; align-items: flex-start; gap: var(--space-3); }
+main.money-workspace .finance-inline-form > .tf { flex: 0 1 420px; min-width: 0; }
+main.money-workspace .finance-inline-form > .btn { margin-top: 27px; min-height: 56px; flex: none; }
+
+/* ---- Cash and expenses: figures, tabs and the day's close ------------- */
+main.money-workspace .cash-held {
+  display: flex; flex-wrap: wrap; gap: 1px; margin: 0; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-rest);
+}
+main.money-workspace .cash-held > div { flex: 1 1 180px; max-width: none; padding: var(--space-4) var(--space-5); background: var(--surface); }
+main.money-workspace .cash-held .ch-total { padding-left: var(--space-5); border-left: 0; background: var(--accent-subtle); }
+main.money-workspace .cash-elsewhere {
+  display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: var(--space-1);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-rest);
+}
+main.money-workspace .cash-tab {
+  min-height: 40px; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-md); background: transparent;
+  color: var(--text-secondary); font-weight: var(--weight-medium);
+}
+main.money-workspace .cash-tab:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+main.money-workspace .cash-tab.on { background: var(--accent-subtle); color: var(--accent); }
+main.money-workspace .cash-close-foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin: 0;
+  padding: var(--space-4) var(--pad); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-rest); color: var(--text-secondary);
+}
+
+/* ---- collapsible extras (e.g. where money is received) ---------------- */
+main.money-workspace details.logistics-secondary {
+  margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-rest); overflow: hidden;
+}
+main.money-workspace details.logistics-secondary > summary {
+  display: flex; align-items: center; gap: var(--space-2); min-height: 56px; padding: 0 var(--pad);
+  font-weight: var(--weight-semibold); cursor: pointer; list-style: none;
+}
+main.money-workspace details.logistics-secondary > summary::-webkit-details-marker { display: none; }
+main.money-workspace details.logistics-secondary > summary::after {
+  content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg); transition: transform .15s; color: var(--text-secondary);
+}
+main.money-workspace details.logistics-secondary[open] > summary::after { transform: rotate(-135deg); }
+main.money-workspace details.logistics-secondary[open] > summary { border-bottom: 1px solid var(--divider); }
+main.money-workspace details.logistics-secondary > :not(summary) { margin: var(--pad); }
+main.money-workspace details.logistics-secondary .card.ops-card { margin: 0; padding: 0; border: 0; box-shadow: none; }
+
+@media (max-width: 560px) {
+  main.money-workspace .finance-workspace-intro { grid-template-columns: minmax(0, 1fr); }
+  main.money-workspace .finance-workspace-intro > .data-refresh { grid-column: 1; grid-row: auto; }
+  main.money-workspace .finance-inline-form { flex-direction: column; align-items: stretch; }
+  main.money-workspace .finance-inline-form > .tf { flex: none; }
+  main.money-workspace .finance-inline-form > .btn { margin-top: 0; }
+}
+
+/* readability.css fixes buttons at 44px; the lookup's buttons match the 56px field instead. */
+main.money-workspace .finance-inline-form > .btn { height: 56px; }
+main.money-workspace .card.ops-card .ops-state,
+main.money-workspace .card.ops-card .empty-state { max-width: none; width: 100%; box-sizing: border-box; }
+
+/* studio.css flattens cards sitting directly in a page with a five-class selector; money pages keep them raised. */
+main.operator-workspace.money-workspace .ops-page > .card.ops-card:not(.ops-state):not(.logistics-help),
+main.operator-workspace.money-workspace > .card.ops-card:not(.ops-state):not(.logistics-help) {
+  padding: var(--pad); border: 1px solid var(--border); border-radius: var(--radius-xl);
+}
+
+/* Parcel lookup (approvals): the button lines up with the 56px field, not its helper text. */
+main.money-workspace .logistics-lookup-search { align-items: flex-start; }
+main.money-workspace .logistics-lookup-search > div { flex: 0 1 420px; }
+main.money-workspace .logistics-lookup-search > .btn { margin: 27px 0 0; height: 56px; min-height: 56px; }
+main.money-workspace .finance-workspace-intro > .finance-account-create { grid-column: 2; grid-row: 1; align-self: center; margin: 0; }
+
+/* ---- Money received: chosen customer, what they owe, the payment form -- */
+main.money-workspace .finance-customer-selection {
+  margin: 0; padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-lg); background: var(--surface-sunken);
+}
+main.money-workspace .receipt-figures,
+main.money-workspace .credit-figures {
+  display: flex; flex-wrap: wrap; gap: 1px; margin: 0; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-rest);
+}
+main.money-workspace .receipt-figures > *,
+main.money-workspace .credit-figures > * { flex: 1 1 180px; min-width: 0; padding: var(--space-4) var(--space-5); background: var(--surface); }
+/* Form sections are titled groups, not boxes: a heading, then the fields. */
+main.money-workspace .finance-grouped-form > fieldset,
+main.money-workspace .finance-receipt-entry > fieldset { border: 0; border-radius: 0; padding: 0; margin: 0; }
+main.money-workspace .finance-grouped-form legend,
+main.money-workspace .finance-receipt-entry legend {
+  float: left; width: 100%; padding: 0 0 var(--space-3); margin: 0;
+  font-size: var(--text-sm); line-height: 20px; font-weight: var(--weight-semibold); color: var(--text-secondary);
+}
+main.money-workspace .finance-grouped-form legend + *,
+main.money-workspace .finance-receipt-entry legend + * { clear: both; }
+main.money-workspace table td, main.money-workspace table th { vertical-align: middle; }

@@ -69,7 +69,7 @@ function AccountWorkspace({controller,roles}:{controller:ScopeController;roles:r
  const overLimit=list.items.filter(a=>(usageOf(a)??0)>1).length;
  useEffect(()=>{if(selected&&!editing)document.getElementById('customer-accounts-title')?.focus();},[selected,editing]);
  const saved=(account:CustomerAccountDto)=>{setSelected(account);setAccountView('overview');setEditing(false);list.reload();setRevision(n=>n+1);};
- return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader id="customer-accounts-title" title={selected&&!editing?selected.name:"Customer accounts"} eyebrow="Money · Customer dues"/>
+ return <div className="ops-page customer-accounts-workspace"><section className="finance-workspace-intro"><PageHeader id="customer-accounts-title" title={selected&&!editing?selected.name:"Customer accounts"} eyebrow="Money · Customer dues" mark="account_balance" description={selected&&!editing?undefined:"Customers who pay by monthly bill: their limits, rates and statements."}/>
   {!editing&&!selected&&<>{admin&&<button className="btn btn-filled finance-account-create" disabled={locked} onClick={()=>{setSelected(null);setEditing(true);}}>New account</button>}
   {/* R-1: three figures, and only the one that needs acting on is coloured. */}
   {list.phase==='ready'&&list.items.length>0&&<section className="credit-figures" aria-label="Customers on credit">

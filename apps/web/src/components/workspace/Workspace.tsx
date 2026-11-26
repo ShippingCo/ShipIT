@@ -1,10 +1,13 @@
 import React from 'react';
 import {SelectField} from '../m3/Input';
+import {Msym} from '../m3/Icon';
 
-export function PageHeader({title,description,actions,id='workspace-title'}:{
+export function PageHeader({title,description,actions,id='workspace-title',mark}:{
   title:React.ReactNode;description?:React.ReactNode;eyebrow?:string;actions?:React.ReactNode;id?:string;
+  /** Optional icon shown in a tinted square before the title (money pages, Customers style). */
+  mark?:string;
 }){
-  return <div className="workspace-page-header"><div className="workspace-page-heading">
+  return <div className={'workspace-page-header'+(mark?' has-mark':'')}>{mark&&<span className="workspace-page-mark" aria-hidden="true"><Msym name={mark}/></span>}<div className="workspace-page-heading">
     <h1 id={id} tabIndex={-1}>{title}</h1>
     {description&&<p className="workspace-page-description">{description}</p>}
   </div>{actions&&<div className="workspace-header-actions">{actions}</div>}</div>;
