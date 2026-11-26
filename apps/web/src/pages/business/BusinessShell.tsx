@@ -1,3 +1,4 @@
+import '../../operations/money-pages.css'; // the five money pages' clean card layout (scoped to main.money-workspace)
 import {canAdminister,operatorRoleLabels} from '@shippingco/shared';
 import Reconciliation from '../../operations/Reconciliation';
 import CustomerAccounts from '../../operations/CustomerAccounts';
@@ -11,6 +12,7 @@ import Settings from '../../operations/Settings';
 import {OperatorDisplayPreference} from '../../operations/SettingsPreferences';
 import Support from '../../operations/Support';
 import Pickups from '../../operations/Pickups';
+import './../../operations/money-pages.css';
 import React from 'react';
 import type { OperatorContext,OperatorRole } from '@shippingco/shared';
 import { Link,useLocation } from 'react-router-dom';
@@ -35,6 +37,8 @@ import {useCommandPalette} from '../../components/workspace/use-command-palette'
 import '../../operations/operations.css';
 
 type Area='delivery'|'money'|'customers'|'reconciliation'|'customer-accounts'|'agent-settlements'|'custody'|'cashbook'|'financials'|'money-receipts'|'reports'|'support'|'pickups'|'automation'|'workspace'|'packages'|'deliveries'|'lots'|'routes'|'eway'|'booking'|'receipts'|'settings';
+// Money pages share the clean card layout in operations/money-pages.css (reconciliation keeps its own).
+const moneyAreas:readonly string[]=['money-receipts','cashbook','customer-accounts','agent-settlements','financials'];
 const can=(roles:readonly OperatorRole[],allowed:readonly OperatorRole[])=>roles.some(role=>allowed.includes(role));
 export default function BusinessShell({context,select,controller,profile}:{controller:ScopeController;context:OperatorContext;select:(id:string)=>void;profile?:React.ReactNode}){
  const [searchOpen,setSearchOpen]=useCommandPalette();
@@ -80,7 +84,7 @@ export default function BusinessShell({context,select,controller,profile}:{contr
    scopeSelector={context.franchises.length>1
      ? <SelectField label="Franchise" aria-label="Franchise" value={current.id} onChange={select} options={context.franchises.map(franchise=>({value:franchise.id,label:`${franchise.organization.display_name} · ${franchise.display_name}`}))}/>
      : <p className="console-scope-single">{current.display_name}</p>}>
-   <main id="workspace-content" tabIndex={-1} className="operator-workspace ops-workspace" style={['packages','receipts','lots','routes','eway','reports','automation','settings'].includes(area)?{padding:0,maxWidth:'none'}:undefined} key={current.id}>
+   <main id="workspace-content" tabIndex={-1} className={'operator-workspace ops-workspace'+(moneyAreas.includes(area)?' money-workspace':'')} style={['packages','receipts','lots','routes','eway','reports','automation','settings'].includes(area)?{padding:0,maxWidth:'none'}:undefined} key={current.id}>
      <OperatorDisplayPreference controller={controller} roles={roles}/>{content}
    </main>
    {searchOpen&&<OperatorSearch key={current.id} controller={controller} links={links} close={()=>setSearchOpen(false)}/>}
