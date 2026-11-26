@@ -122,10 +122,16 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
       VALUES($1,$2,$3,$4,'opened','human_requested',1,'service','fixture65',$5,'2026-03-08T06:00:00Z')`,[randomUUID(),org,A,id,randomUUID()]);
   }
   const read=(hours:import('../../src/modules/support/rules.ts').SupportHours)=>withMessagingReportScope(s.pool,s.admin.token,org,A,randomUUID(),scope=>captureEffectiveness(scope,monday,new Date(monday.getTime()+7*86400000),hours));
+  // Every anchor and as_of here is a whole millisecond, so exact elapsed time is
+  // an integer millisecond count. PostgreSQL rounds numeric minutes before avg()
+  // and float8, while JavaScript rounds each division and sum differently, so the
+  // two floats can differ in the last bit whenever the cutoff is mid-window.
+  // Compare exact milliseconds; any real difference of 1 ms or more still fails.
+  const elapsedMs=(minutes:number|null|undefined)=>{assert.equal(typeof minutes,'number');return Math.round(minutes!*60000);};
   // All-day staffing makes the partial-current-hour cutoff check independent of
   // which weekday/time the suite runs; use the exposed source cutoff exactly.
   const continuous=await read({franchise_id:A,timezone:'UTC',weekdays:[0,1,2,3,4,5,6],start_minute:0,end_minute:1440,staffed:true});
-  assert.equal(continuous.queue.find(r=>r.category==='all_active')?.business_minutes,(continuous.as_of.getTime()-Date.parse('2026-03-08T06:00:00Z'))/60000);
+  assert.equal(elapsedMs(continuous.queue.find(r=>r.category==='all_active')?.business_minutes),continuous.as_of.getTime()-Date.parse('2026-03-08T06:00:00Z'));
   const ny={franchise_id:A,timezone:'America/New_York',weekdays:[0],start_minute:60,end_minute:240,staffed:true};
   const spring=await read(ny);
   // Independent Intl projection counts elapsed UTC hours, including DST's skipped
@@ -134,9 +140,9 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
   let expected=0;
   for(let instant=new Date('2026-03-08T06:00:00Z');instant<spring.as_of;instant=new Date(instant.getTime()+3600000)){
     const parts=local.formatToParts(instant),day=parts.find(p=>p.type==='weekday')!.value,hour=Number(parts.find(p=>p.type==='hour')!.value);
-    if(day==='Sun'&&hour>=1&&hour<4)expected+=Math.min(3600000,spring.as_of.getTime()-instant.getTime())/60000;
+    if(day==='Sun'&&hour>=1&&hour<4)expected+=Math.min(3600000,spring.as_of.getTime()-instant.getTime());
   }
-  assert.equal(spring.queue.find(r=>r.category==='all_active')?.business_minutes,expected);
+  assert.equal(elapsedMs(spring.queue.find(r=>r.category==='all_active')?.business_minutes),expected);
   const reopened=new Date(monday.getTime()+12*3600000);
   for(const id of cases){
     for(const [state,version,assigned] of [['claimed',2,s.admin.id],['resolved',3,s.admin.id],['open',4,null]] as const)await s.db.adminQuery('UPDATE shipit.support_cases SET state=$2,version=$3,assigned_staff_id=$4,updated_at=clock_timestamp() WHERE id=$1',[id,state,version,assigned]);
@@ -144,23 +150,23 @@ await test('populated weekly snapshots separate thanks from tool failures and pr
     await s.db.adminQuery(`INSERT INTO shipit.support_events(id,organization_id,franchise_id,case_id,event_type,reason,version,actor_type,actor_id,correlation_id) VALUES($1,$2,$3,$4,'noted','operational_review',5,'user',$5,$6)`,[randomUUID(),org,A,id,s.admin.id,randomUUID()]);
   }
   const hours={franchise_id:A,timezone:'Asia/Kolkata',weekdays:[1,2,3,4,5],start_minute:540,end_minute:1080,staffed:true};
-  const expectedMinutes=(cutoff:Date)=>{
-    let minutes=0;
+  const expectedMs=(cutoff:Date)=>{
+    let elapsed=0;
     for(let day=new Date(monday);day<cutoff;day=new Date(day.getTime()+86400000))if([1,2,3,4,5].includes(day.getUTCDay())){
       const start=day.getTime()+3.5*3600000,end=day.getTime()+12.5*3600000;
-      minutes+=Math.max(0,Math.min(cutoff.getTime(),end)-Math.max(reopened.getTime(),start))/60000;
+      elapsed+=Math.max(0,Math.min(cutoff.getTime(),end)-Math.max(reopened.getTime(),start));
     }
-    return minutes;
+    return elapsed;
   };
-  const source=await read(hours),minutes=expectedMinutes(source.as_of);
-  assert.equal(source.queue.find(r=>r.category==='all_active')?.business_minutes,minutes);
+  const source=await read(hours);
+  assert.equal(elapsedMs(source.queue.find(r=>r.category==='all_active')?.business_minutes),expectedMs(source.as_of));
   assert.equal((await read({...hours,staffed:false})).queue.find(r=>r.category==='age_unknown')?.n,5);
   const service=createEffectivenessService(s.pool,[hours]),query={organization_id:org,franchise_id:A},key=randomUUID();
   const saved=await service.create(s.admin.token,query,key,['idempotency-key',key],{week:monday.toISOString().slice(0,10)},randomUUID());
   const cell=(section:string,category:string)=>saved.items.find(r=>r.section===section&&r.category===category)!;
   assert.equal(cell('assistant','failure').count,5);assert.equal(cell('assistant','thanks').count,5);assert.equal(cell('assistant','success').count,0);
   assert.equal(cell('assistant','failure').denominator,10);assert.equal(cell('assistant','case_resolved').count,5);assert.equal(cell('assistant','case_reopened').count,5);
-  assert.equal(cell('queue','all_active').count,5);assert.equal(cell('queue','all_active').business_minutes,expectedMinutes(new Date(saved.snapshot.as_of)));
+  assert.equal(cell('queue','all_active').count,5);assert.equal(elapsedMs(cell('queue','all_active').business_minutes),expectedMs(new Date(saved.snapshot.as_of)));
   assert.equal(saved.snapshot.staffing.timezone,'Asia/Kolkata');
   await s.db.adminQuery(`UPDATE shipit.support_cases SET updated_at=clock_timestamp() WHERE id=ANY($1::uuid[])`,[cases]);
   assert.deepEqual(await service.read(s.admin.token,saved.snapshot.id,query,randomUUID()),saved);
