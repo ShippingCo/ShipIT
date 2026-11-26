@@ -271,6 +271,11 @@ export const runtimeAccessProfiles: Readonly<Record<string, AccessProfile>> = {
     ...updateColumns('owner_report_runs', 'payload'),
     ...functions('owner_report_delivery_scope(uuid,uuid)', 'owner_report_next(boolean)', 'owner_report_purge(uuid,uuid)', 'owner_report_schedule_scope(uuid)'),
   ] },
+  // Approvals and refunds: proposing, deciding and applying a financial request. The tests grant
+  // these inline (financial-workflow.test.ts, account-statements.test.ts), not in a prepare* step.
+  financial_writes: { description: 'Financial adjustment and refund requests, decisions, evidence and document links', requirements: [
+    ...tables('financial_adjustment_requests financial_request_decisions financial_document_links financial_refund_evidence financial_deletion_denials', 'INSERT'),
+  ] },
 };
 // Everything above in one profile: `pnpm db:access --apply application` repairs a local
 // database in one step, and db:doctor reports `application` blocked if anything is missing.

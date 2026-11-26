@@ -36,6 +36,7 @@ export function localCommand(service, root, env, extra = []) {
     case 'migrate': return node('packages/db/src/migrate-cli.ts', 'packages/db');
     case 'doctor': return node('packages/db/src/runtime-access-cli.ts', 'packages/db', ['doctor']);
     case 'access': return node('packages/db/src/runtime-access-cli.ts', 'packages/db', ['repair']);
+    case 'demo': return node('apps/api/scripts/demo-branch.ts', 'apps/api');
     case 'web': return node('apps/web/node_modules/vite/bin/vite.js', 'apps/web');
     case 'db': {
       const container = env.LOCAL_DB_CONTAINER || 'shipit-postgres-local';

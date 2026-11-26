@@ -105,6 +105,23 @@ the worker), still without superuser, ownership, DDL or access to other database
 `packages/db/src/runtime-access.ts`; when a migration adds a table or a test
 `prepare*` function adds a grant, add it to the matching profile so the doctor sees it.
 
+### Demo branch for local testing (`pnpm demo:seed`, `pnpm demo:remove`)
+
+`pnpm demo:seed` adds a fictional "Demo branch" to your local organization so every
+screen has records to open: customers, bookings with paid, part-paid and owed balances,
+checked-in and dispatched parcels, bags and trips, customer accounts on credit, a price
+list, cashbook requests (approved, waiting and rejected), agent fee terms and statements,
+approval requests, an advance with a refund, and shipment costs. Pick "Demo branch" in the
+Franchise picker to use it. It needs `pnpm api` running, the local database grants
+(`pnpm db:access --apply application`) and the money feature switches in `.env`.
+
+Everything goes through the running API like the browser does, apart from creating the
+branch and its fictional staff (who have no phone or e-mail and cannot sign in).
+Pickups and support cases only arrive through WhatsApp, and completed deliveries need the
+customer's code, so those screens stay empty. `pnpm demo:remove` deletes the branch and
+everything in it from the local database in one transaction. It only ever runs against
+the local developer database; deploying never copies local data.
+
 ### Role checks during development (`RBAC_ENABLED`)
 
 For the current development phase the local `.env` may set `RBAC_ENABLED=false`.

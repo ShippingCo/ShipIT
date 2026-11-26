@@ -21,6 +21,8 @@
     "db:start": "node scripts/local.mjs db",
     "db:doctor": "node scripts/local.mjs doctor",
     "db:access": "node scripts/local.mjs access",
+    "demo:seed": "node scripts/local.mjs demo seed",
+    "demo:remove": "node scripts/local.mjs demo remove",
     "build": "pnpm --filter @shippingco/api build && pnpm --filter @shippingco/web build",
     "preview": "pnpm --filter @shippingco/web preview",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:web && pnpm test:attachments",
