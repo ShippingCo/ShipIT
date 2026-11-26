@@ -60,14 +60,22 @@ export function guardTestConnectionString(connectionString: string) {
 }
 const guard = guardTestConnectionString;
 
-async function withAdmin<T>(operation: (client: pg.Client) => Promise<T>, connectionString?: string): Promise<T> {
+// Fixture assertions and lookups through adminQuery keep the short bound.
+const fixtureTimeouts = { statementTimeoutMs: 4000, queryTimeoutMs: 5000 };
+// CREATE DATABASE and DROP DATABASE each request an immediate checkpoint and wait
+// for it. That flushes every dirty buffer on the server, including the writes of
+// the other test file running concurrently. Under load a per-test drop exceeded 4 s
+// and failed whichever test was tearing down (DB_TEST_CLEANUP_FAILED). Resource
+// lifecycle DDL gets a bound sized for a checkpoint, not for a fixture query.
+const resourceTimeouts = { statementTimeoutMs: 30_000, queryTimeoutMs: 35_000 };
+async function withAdmin<T>(operation: (client: pg.Client) => Promise<T>, connectionString?: string,
+  timeouts: { statementTimeoutMs: number; queryTimeoutMs: number } = fixtureTimeouts): Promise<T> {
   const target = connectionString ?? bootstrapConfiguration().connectionString;
   guard(target);
   let client: pg.Client;
   try {
     client = new pg.Client(pgOptions(createDatabaseConfig({ connectionString: target, environment: 'test',
-      tls: { mode: 'disable' }, connectionTimeoutMs: 2000, statementTimeoutMs: 4000,
-      queryTimeoutMs: 5000, applicationName: 'shipit_test_bootstrap' })));
+      tls: { mode: 'disable' }, connectionTimeoutMs: 2000, ...timeouts, applicationName: 'shipit_test_bootstrap' })));
   } catch { throw new Error('DB_TEST_CONFIG_INVALID'); }
   // pg emits an error on an idle connection after an outage. The awaited operation
   // still rejects; raw driver errors must never become unhandled error telemetry.
@@ -142,7 +150,7 @@ async function cleanupResource(resource: Resource): Promise<void> {
         + (SELECT count(*) FROM pg_roles WHERE rolname = ANY($2::text[])) AS count`,
       [resource.database, [resource.migrationRole, resource.runtimeRole]]);
     if (remaining.rows[0]?.count !== '0') throw new Error('DB_TEST_CLEANUP_INCOMPLETE');
-  });
+  }, undefined, resourceTimeouts);
 }
 
 export async function cleanupRegisteredResources(registryPath: string): Promise<void> {
@@ -797,7 +805,7 @@ export async function provisionDatabase(t: TestContext): Promise<DisposableDatab
       validate();
       await client.query(`REVOKE ALL ON DATABASE ${identifier(resource.database)} FROM PUBLIC`);
       await client.query(`GRANT CONNECT ON DATABASE ${identifier(resource.database)} TO ${identifier(resource.runtimeRole)}`);
-    });
+    }, undefined, resourceTimeouts);
     await handle.adminQuery('REVOKE ALL ON SCHEMA public FROM PUBLIC');
     return handle;
   } catch {
