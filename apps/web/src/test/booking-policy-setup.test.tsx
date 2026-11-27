@@ -32,7 +32,7 @@ it('requires review before publication and retries the same uncertain draft with
  for(const [label,value] of [['Effective from','2099-01-01T00:00'],['Effective until','2099-02-01T00:00'],['Approval reference','REVIEW_1'],['Source reference','SHEET_1'],['Destination key','MUMBAI'],['Freight (₹)','125.51'],['Packing (₹)','2.49']])fireEvent.change(ui.getByLabelText(label),{target:{value}});
  fireEvent.click(ui.getByRole('button',{name:'Continue to prices'}));fireEvent.click(ui.getByRole('button',{name:'Save rate card draft'}));await ui.findByRole('button',{name:'Check if it saved'});
  expect(fireEvent.click(screen.getByRole('link',{name:'Leave setup'}))).toBe(false);expect(calls).toHaveLength(1);
- fireEvent.click(ui.getByRole('button',{name:'Check if it saved'}));await ui.findByRole('heading',{name:'Review saved rate card'});expect(ui.getByRole('heading',{name:'Review saved rate card'})).toHaveFocus();
+ fireEvent.click(ui.getByRole('button',{name:'Check if it saved'}));const review=await ui.findByRole('heading',{name:'Review saved rate card'});await waitFor(()=>expect(review).toHaveFocus());
  expect(calls).toHaveLength(2);expect(calls[1]!.options.body).toBe(calls[0]!.options.body);expect((calls[1]!.options.headers as Record<string,string>)['Idempotency-Key']).toBe((calls[0]!.options.headers as Record<string,string>)['Idempotency-Key']);
  expect(JSON.parse(String(calls[0]!.options.body))).toMatchObject({approval_ref:'REVIEW_1',source_ref:'SHEET_1'});
  expect(ui.getByRole('button',{name:'Publish rate card'})).toBeDisabled();fireEvent.click(ui.getByRole('checkbox',{name:'I reviewed the dates, rules and approval references.'}));fireEvent.click(ui.getByRole('button',{name:'Publish rate card'}));
