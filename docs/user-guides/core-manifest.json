@@ -13,7 +13,7 @@
     "summary": "Open your shop securely and leave it safely.",
     "sources": [
       "apps/web/src/operator/SignIn.tsx",
-      "apps/web/src/operator/Onboarding.tsx",
+      "apps/web/src/operator/IndividualSetup.tsx",
       "apps/web/src/operator/OperatorApp.tsx"
     ]
   },

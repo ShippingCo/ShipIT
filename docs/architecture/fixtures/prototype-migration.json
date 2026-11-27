@@ -175,6 +175,7 @@
       "apps/web/src/test/counter-draft-reason.test.tsx",
       "apps/web/src/test/counter.test.tsx",
       "apps/web/src/test/operator.test.tsx",
+      "apps/web/src/test/public-site.test.tsx",
       "apps/web/src/utils/demo-receipt.ts"
     ],
     "fingerprints": {
@@ -202,7 +203,8 @@
       "apps/web/src/test/app.test.tsx": "d1f6f5b9b639b1e083ea7a95aab71685372449833f9b3227fdb95fc14ac253c2",
       "apps/web/src/test/counter-draft-reason.test.tsx": "3aa0444c3815a5f5c5759fa6bcc266c108eb3f0304925bf5c410d666c93da7d0",
       "apps/web/src/test/counter.test.tsx": "4845f22c6d562d34460469fedfe26f2d8d31e547d8aeffe83ef68f98531e07aa",
-      "apps/web/src/test/operator.test.tsx": "dedc0a5b02910fb8f20d6dab56ba103912f257d3786782f1c6357b8e8b448667",
+      "apps/web/src/test/operator.test.tsx": "459887797d6b513949206fb421776c9a34cd06b1db7c43cb7dea704c4f6d9a3b",
+      "apps/web/src/test/public-site.test.tsx": "67e884222b4d61bac098fb934059bb72317aabf354b96fec4f2dc71809d4cbf2",
       "apps/web/src/utils/demo-receipt.ts": "fecddfd36b1c0d29bf7cfef06389850fd5c7399aededbcb8adeef3a306dae40e",
       "apps/web/src/utils/image.ts": "9a6466e17d0539a37425bf29d8e731f0459e3d0fd3d0561e0bcd648e7eb29408"
     },
@@ -865,6 +867,12 @@
         {
           "target": "apps/web/src/data-access/errors.ts",
           "syntax": "import { ApiFailure as OperatorError } from '../data-access/errors';"
+        }
+      ],
+      "apps/web/src/test/public-site.test.tsx": [
+        {
+          "target": "apps/web/src/App.tsx",
+          "syntax": "import App from '../App';"
         }
       ],
       "apps/web/src/utils/demo-receipt.ts": [
@@ -3203,6 +3211,26 @@
         "cases": null
       },
       {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "name": "shows a visitor what ShippingCo does, with Individual available and Franchise not configured",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "name": "starts Individual setup with the plan in view and verifies a contact before the shop step",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "name": "keeps shop answers on this device, resumes them, and clears them once the shop is confirmed",
+        "cases": null
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "name": "sends a signed-in owner to the shop they already have instead of a second setup",
+        "cases": null
+      },
+      {
         "file": "apps/web/src/test/receipt.test.tsx",
         "name": "renders booked paise and saved rounding without settlement or a moving ETA",
         "cases": null
@@ -4257,32 +4285,12 @@
         "kind": "window.setInterval"
       },
       {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.getItem"
+        "file": "apps/web/src/operator/IndividualSetup.tsx",
+        "kind": "window.setTimeout"
       },
       {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.removeItem"
-      },
-      {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.getItem"
-      },
-      {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.setItem"
-      },
-      {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "setTimeout"
-      },
-      {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.setItem"
-      },
-      {
-        "file": "apps/web/src/operator/Onboarding.tsx",
-        "kind": "sessionStorage.removeItem"
+        "file": "apps/web/src/operator/IndividualSetup.tsx",
+        "kind": "window.setTimeout"
       },
       {
         "file": "apps/web/src/operator/OperatorApp.tsx",
@@ -4307,6 +4315,30 @@
       {
         "file": "apps/web/src/operator/SignIn.tsx",
         "kind": "window.setInterval"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "window.localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "window.localStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "window.localStorage.removeItem"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "sessionStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "sessionStorage.setItem"
+      },
+      {
+        "file": "apps/web/src/operator/setup-state.ts",
+        "kind": "sessionStorage.removeItem"
       },
       {
         "file": "apps/web/src/pages/CustomerWhatsApp.tsx",
@@ -4543,6 +4575,18 @@
       {
         "file": "apps/web/src/test/operator.test.tsx",
         "kind": "localStorage.getItem"
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "kind": "sessionStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "kind": "localStorage.clear"
+      },
+      {
+        "file": "apps/web/src/test/public-site.test.tsx",
+        "kind": "expect(JSON.stringify(localStorage)).not.toContain"
       },
       {
         "file": "apps/web/src/test/reconciliation.test.tsx",
@@ -5089,17 +5133,20 @@
       "reports",
       "eway"
     ],
+    "apps/web/src/test/counter-draft-reason.test.tsx": [
+      "seam"
+    ],
     "apps/web/src/test/counter.test.tsx": [
       "seam"
     ],
     "apps/web/src/test/operator.test.tsx": [
       "seam"
     ],
+    "apps/web/src/test/public-site.test.tsx": [
+      "seam"
+    ],
     "apps/web/src/utils/demo-receipt.ts": [
       "receipts"
-    ],
-    "apps/web/src/test/counter-draft-reason.test.tsx": [
-      "seam"
     ]
   },
   "regressions": [
@@ -8694,6 +8741,38 @@
       "group": "presentation",
       "disposition": "replace",
       "reason": "Wave 2 of \"D:\\\\ShipIT Design and PRDs\" built against its PRDs: the booking counter gained a weight unit, an optional parcel size that decides the chargeable weight, and price option cards with nothing pre-selected; Receipts became one document rendered once for screen and paper, with rated tax rows and a duplicate mark; Customers became one search field and a profile. Reads are unchanged in scope and permission, no write path or idempotency key moved, and every earlier guarantee is re-asserted against the rebuilt screens."
+    },
+    {
+      "file": "apps/web/src/test/public-site.test.tsx",
+      "name": "shows a visitor what ShippingCo does, with Individual available and Franchise not configured",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Public website: product copy is the project’s own; Individual is the one supported setup path with no configured price; Franchise is shown as not configured and offers nothing to choose or buy."
+    },
+    {
+      "file": "apps/web/src/test/public-site.test.tsx",
+      "name": "starts Individual setup with the plan in view and verifies a contact before the shop step",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Individual setup keeps the selected plan visible and verifies the contact through the unchanged OTP challenge routes before any shop request, so the contact signs in next time."
+    },
+    {
+      "file": "apps/web/src/test/public-site.test.tsx",
+      "name": "keeps shop answers on this device, resumes them, and clears them once the shop is confirmed",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "Save and resume is device-only because the backend has no draft endpoint; answers are shop configuration keyed by the verified user and removed once the server confirms the shop, with exactly one onboarding request."
+    },
+    {
+      "file": "apps/web/src/test/public-site.test.tsx",
+      "name": "sends a signed-in owner to the shop they already have instead of a second setup",
+      "cases": null,
+      "group": "seam",
+      "disposition": "preserve",
+      "reason": "A signed-in owner who already has a shop is sent to its dashboard; setup never sends a second onboarding request."
     },
     {
       "file": "apps/web/src/test/receipt.test.tsx",

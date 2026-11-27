@@ -11,6 +11,7 @@ import { deliveryProofConfiguration,testDeliveryCode } from './delivery-support.
 import { org,A,B } from './audit-support.ts';
 import { buildServer } from '../src/server.ts';
 import { parseEnvironment } from '../src/env.ts';
+import { unseal } from '../src/modules/auth/crypto.ts';
 if(process.env.NODE_ENV!=='test'||process.env.TEST_DATABASE_IDENTITY!=='db_test')throw new Error('SYNTHETIC_FIXTURE_ONLY');
 // Keep a reference demo running while reviewing the real API UI on another port.
 const previewOrigin=process.env.SHIPIT_COUNTER_PREVIEW_ORIGIN??'http://localhost:5173';
@@ -42,10 +43,20 @@ try {
  // WhatsApp (the fixture sends no messages). Synthetic fixture only; never part of the product.
  app.get('/_fixture/agent-session',async(_request,reply)=>{reply.header('Set-Cookie',`shipit_session=${deliveryAgent.token}; HttpOnly; SameSite=Strict; Path=/`);return reply.redirect(previewOrigin+'/#/business/deliveries');});
  app.get<{Params:{parcel_id:string}}>('/_fixture/delivery-code/:parcel_id',async(request,reply)=>{try{return {code:await testDeliveryCode(s,request.params.parcel_id)};}catch{return reply.code(404).send({error:'No active delivery for that parcel.'});}});
+ // Individual setup walkthrough: two fictional contacts enrolled with no shop yet, and the code the
+ // server would have sent them (the fixture sends nothing). Synthetic fixture only; never part of the product.
+ const newOwners=['+15555550100','new-owner@example.test'];
+ await s.auth.provision('whatsapp',newOwners[0]!);await s.auth.provision('email',newOwners[1]!);
+ app.get<{Querystring:{address?:string}}>('/_fixture/sign-in-code',async(request,reply)=>{
+  const address=request.query.address??'';
+  if(!newOwners.includes(address))return reply.code(404).send({error:'Only the fictional new-owner contacts have a readable code.'});
+  const row=(await s.pool.query<{id:string;payload:string}>('SELECT id,payload FROM shipit.auth_challenges WHERE address=$1 AND payload IS NOT NULL AND consumed_at IS NULL ORDER BY last_sent_at DESC LIMIT 1',[address])).rows[0];
+  return row?{code:unseal(s.keys,row.id,row.payload)}:reply.code(404).send({error:'No open code for that contact.'});
+ });
  // Opt-in richer fictional data set (pnpm preview:seeded). Reported as counts only.
  if(process.env.SHIPIT_PREVIEW_SEED==='rich'){const {seedPreview}=await import('./preview-seed.ts');try{console.log('Seeded preview:',JSON.stringify(await seedPreview(app,s,actor)));}catch(error){console.error('PREVIEW_SEED_FAILED',error instanceof Error?error.message:'unknown');throw error;}}
  await app.listen({host:'127.0.0.1',port:3033});
- console.log('Synthetic #33/#34 fixture: http://localhost:3033/_fixture/session (Vite proxy port 3033). Actor has operator in A/B plus franchise_admin and dispatcher in A. Rate SYN_DEST / standard / 999g; unregistered handover 27; references SYN_BUYER / SYN_HANDOVER. Create multiple parcels, then use Packages/Lots/Routes/E-way for the documented #34 walkthrough. A customer searches wait 2.5 seconds for scope-race verification.');
+ console.log('Synthetic #33/#34 fixture: http://localhost:3033/_fixture/session (Vite proxy port 3033). Actor has operator in A/B plus franchise_admin and dispatcher in A. Rate SYN_DEST / standard / 999g; unregistered handover 27; references SYN_BUYER / SYN_HANDOVER. Create multiple parcels, then use Packages/Lots/Routes/E-way for the documented #34 walkthrough. A customer searches wait 2.5 seconds for scope-race verification. Individual setup: sign in as +1 555 555 0100 or new-owner@example.test (no shop yet); read the code at /_fixture/sign-in-code?address=….');
  await stop;
 } catch {console.error('SYNTHETIC_COUNTER_FIXTURE_FAILED');process.exitCode=1;}
 finally {for(const close of cleanup.reverse())try{await close();}catch{process.exitCode=1;}try{await cleanupRegisteredResources(registry);}catch{process.exitCode=1;}await rm(temp,{recursive:true,force:true});}

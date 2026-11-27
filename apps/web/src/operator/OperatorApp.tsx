@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TextField } from '../components/m3/Input';
 import BusinessShell from '../pages/business/BusinessShell';
 import {SettingsNavigationGuard} from './SettingsNavigationGuard';
 import {settingsDeparture} from '../data-access/settings-session';
 import SignIn from './SignIn';
 import {AccessLayout} from './AccessLayout';
-import Onboarding, { clearPending } from './Onboarding';
+import IndividualSetup from './IndividualSetup';
+import { clearDraft, clearPending } from './setup-state';
+import PublicSite, { siteSection, type Visitor } from '../public/PublicSite';
 import { connectInvalidation } from '../data-access/invalidation';
 import { ApiFailure } from '../data-access/errors';
 import { createScopeController } from './scope';
@@ -63,6 +65,16 @@ export default function OperatorApp() {
     return () => { crossTab.current?.close(); };
   }, [controller]);
   const [invitation, setInvitation] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState(''),[profileOpen,setProfileOpen]=useState(false);
+  // The person whose shop this session has just opened: the setup flow keeps the screen until
+  // they choose where to go, instead of the dashboard replacing the confirmation.
+  const [opened,setOpened]=useState<string|null>(null);
+  // A visitor who has never been signed in on this screen sees the website at `/`; anyone whose
+  // session ended here is asked to sign in again instead.
+  const wasInside=useRef(false),seenKey=useRef(location.key);
+  if(state.status==='loaded')wasInside.current=true;
+  // Choosing to go somewhere after signing out (the brand link, say) is a visit again.
+  else if(state.status==='signed_out'&&seenKey.current!==location.key)wasInside.current=false;
+  seenKey.current=location.key;
   const refresh = (resetSelection=false) => {if(!settingsDeparture(controller.runtime.ticket()))return Promise.resolve();if(resetSelection)selected.current=undefined;return controller.load(selected.current, latestPath.current);};
   useEffect(() => {
     latestPath.current = location.pathname;
@@ -76,17 +88,30 @@ export default function OperatorApp() {
   useEffect(() => {
     if (state.context?.state === 'ready') {
       selected.current = state.context.active_franchise_id ?? undefined;
-      clearPending(state.context.user_id);
+      clearPending(state.context.user_id); clearDraft(state.context.user_id);
       document.getElementById('workspace-title')?.focus();
     }
   }, [state.context]);
   useEffect(() => {
     if (state.status === 'signed_out') {
-      selected.current = undefined; setInvitation(''); setProfileOpen(false);
+      selected.current = undefined; setInvitation(''); setProfileOpen(false); setOpened(null);
       document.getElementById('signin-title')?.focus();
     }
   }, [state.status]);
+  const path = location.pathname;
+  const section = siteSection(path) ?? (path === '/' && state.status === 'signed_out' && !wasInside.current ? 'home' : null);
+  // Setup is its own page at /start/individual, and also wherever a signed-in person without a
+  // shop lands, so a deep link or an invitation still resolves at the address it was opened on.
+  const justOpened = !!opened && state.context?.state === 'ready' && state.context.user_id === opened;
+  const settingUp = path === '/start/individual' || justOpened || state.context?.state === 'onboarding_required' && path !== '/sign-in';
+  const publicPage = !signOutPending && (!!section || settingUp);
   useEffect(() => {
+    // The website and the setup flow name their own pages and move their own focus.
+    if (publicPage) {
+      if (section) document.title = section === 'pricing' ? 'Pricing · ShippingCo' : section === 'home' ? 'ShippingCo · Courier counter software with WhatsApp updates'
+        : (section === 'features' ? 'What it does' : 'How it works') + ' · ShippingCo';
+      return;
+    }
     const checking = state.status === 'loading' || state.status !== 'signed_out' && state.path !== location.pathname;
     let title: string;
     if (signOutPending) title = busy ? 'Signing out' : 'Finish signing out';
@@ -98,7 +123,7 @@ export default function OperatorApp() {
     else title = 'No shop yet';
     document.title = `${title} · ShippingCo`;
     if (!checking && state.context?.state !== 'ready') document.getElementById(state.context?.state === 'onboarding_required' ? 'onboarding-title' : 'access-title')?.focus();
-  }, [state.status, state.reason, state.path, state.context, location.pathname, signOutPending, busy]);
+  }, [state.status, state.reason, state.path, state.context, location.pathname, signOutPending, busy, publicPage, section]);
   async function accept(event: React.FormEvent) {
     event.preventDefault(); if (busy||!settingsDeparture(controller.runtime.ticket())) return; setBusy(true); setMessage('');
     const token = invitation; setInvitation(''); controller.clear();
@@ -139,24 +164,38 @@ export default function OperatorApp() {
       <div className="operator-profile-session"><button className="btn btn-text" disabled={busy} onClick={()=>{void logout();}}><Msym name="logout"/>Sign out</button></div>
     </div>
   </details>;
-  return <div className="operator-root"><SettingsNavigationGuard controller={controller}/>
-    {signOutPending ? <main className="operator-center"><section className="card operator-card operator-auth-card" aria-labelledby="access-title"><span className="workspace-auth-mark"><Msym name="logout"/></span><h1 id="access-title" tabIndex={-1}>{busy?'Signing out…':'Finish signing out'}</h1><p role={busy?'status':'alert'}>{busy?'Closing your session. Private workspace data has been cleared.':'The connection was interrupted. Private workspace data is hidden, but your session may still be active.'}</p>{!busy&&<button className="btn btn-filled" onClick={()=>{void logout();}}>Retry sign out</button>}</section></main> : loading ? <main className="operator-center" role="status">Checking workspace access…</main> : state.status === 'signed_out' ?
-      <AccessLayout><SignIn source={controller.source} complete={async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); }} /></AccessLayout> :
-      state.status === 'error' ? <main className="operator-center"><section className="card operator-card">
+  const signedIn = async () => { selected.current = undefined; crossTab.current?.publish(); await refresh(); };
+  const visitor: Visitor = context?.state === 'ready' ? 'signed_in' : context?.state === 'onboarding_required' ? 'setup' : state.status === 'loading' ? 'checking' : 'signed_out';
+  const signInPage = <AccessLayout after={path === '/sign-in' ? <p className="access-after">New to ShippingCo? <Link to="/pricing">See plans</Link></p> : undefined}>
+    <SignIn source={controller.source} complete={signedIn}/>
+  </AccessLayout>;
+  let page: React.ReactNode;
+  if (signOutPending) page = <main className="operator-center"><section className="card operator-card operator-auth-card" aria-labelledby="access-title"><span className="workspace-auth-mark"><Msym name="logout"/></span><h1 id="access-title" tabIndex={-1}>{busy?'Signing out…':'Finish signing out'}</h1><p role={busy?'status':'alert'}>{busy?'Closing your session. Private workspace data has been cleared.':'The connection was interrupted. Private workspace data is hidden, but your session may still be active.'}</p>{!busy&&<button className="btn btn-filled" onClick={()=>{void logout();}}>Retry sign out</button>}</section></main>;
+  // The website never waits for, or depends on, a workspace check.
+  else if (section) page = <PublicSite visitor={visitor} section={section}/>;
+  else if (settingUp) page = <IndividualSetup controller={controller} state={state} opened={!!opened && (!context || context.user_id === opened)}
+    signedIn={signedIn} retry={() => refresh(true)} signOut={() => { void logout(); }}
+    markOpened={() => setOpened(context?.user_id ?? null)} finish={to => { setOpened(null); navigate(to); }}/>;
+  else if (loading) page = <main className="operator-center" role="status">Checking workspace access…</main>;
+  else if (state.status === 'signed_out') page = signInPage;
+  else if (state.status === 'error') page = <main className="operator-center"><section className="card operator-card">
         <span className="workspace-state-icon"><Msym name={state.reason === 'unreachable' ? 'wifi_off' : 'lock_reset'}/></span>
         <h1 id="access-title" tabIndex={-1} className="t-headline-sm">{state.reason === 'unreachable' ? 'Cannot reach the server' : 'Workspace access unavailable'}</h1>
         <p role="alert">{state.reason === 'unreachable'
           ? 'Your shop is still signed in. The internet or the server did not answer, so nothing could be loaded yet.'
           : 'Your session or access may have changed. Private workspace data has been cleared.'}</p>
         <button className="btn btn-filled" disabled={busy} onClick={() => { void refresh(true); }}>Try again</button>
-      </section></main> : context?.state === 'ready' ? <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
+      </section></main>;
+  // Signing in from /sign-in lands on the shop the person already has, or on setting one up.
+  else if (path === '/sign-in') page = <Navigate to={context?.state === 'ready' ? '/business' : '/start/individual'} replace/>;
+  else if (context?.state === 'ready') page = <BusinessShell key={controller.runtime.ticket().generation} controller={controller} context={context} select={id => {
         selected.current = id; void controller.load(id, location.pathname);
-      }} profile={profile}/> : <>
-        {context?.state === 'onboarding_required' ? <AccessLayout><Onboarding key={context.user_id} controller={controller} userId={context.user_id} complete={async () => { await refresh(); navigate('/business'); }} /></AccessLayout> :
-          <NoShopYet source={controller.source} busy={busy} check={()=>{void refresh(true);}}/>}
-      </>}
+      }} profile={profile}/>;
+  else page = <NoShopYet source={controller.source} busy={busy} check={()=>{void refresh(true);}}/>;
+  return <div className="operator-root"><SettingsNavigationGuard controller={controller}/>
+    {page}
     {state.notice && <p role="status" className="operator-message">{state.notice}</p>}
-    {!signOutPending && !loading && state.status !== 'signed_out' && context?.state!=='ready' && <footer className="operator-actions">{profile}</footer>}
+    {!signOutPending && !section && !loading && state.status !== 'signed_out' && context?.state!=='ready' && <footer className="operator-actions">{profile}</footer>}
     {message && <p className="operator-message" role="status">{message}</p>}
   </div>;
 }

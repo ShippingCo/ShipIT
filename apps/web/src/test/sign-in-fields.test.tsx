@@ -110,7 +110,9 @@ it('reuses the challenge for another code and clears the countdown on change',as
 it('still offers an email address for a shop enrolled that way',async()=>{
  const source={...createOperatorDataSource(),startSignIn:vi.fn(async()=>({challenge_id:'synthetic-challenge'}))};
  render(<SignIn source={source} complete={vi.fn(async()=>{})}/>);
- fireEvent.click(screen.getByRole('button',{name:'Use an email address instead'}));
+ expect(screen.getByRole('radiogroup',{name:'Sign in with'})).toBeVisible();
+ expect(screen.getByRole('radio',{name:'WhatsApp'})).toHaveAttribute('aria-checked','true');
+ fireEvent.click(screen.getByRole('radio',{name:'Email'}));
  fireEvent.change(screen.getByLabelText('Email'),{target:{value:'operator@example.test'}});
  fireEvent.submit(screen.getByRole('form',{name:'Sign in with an email address'}));
  expect(source.startSignIn).toHaveBeenCalledWith('email','operator@example.test',expect.any(AbortSignal));
