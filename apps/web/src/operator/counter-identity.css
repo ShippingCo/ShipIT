@@ -1,73 +1,115 @@
-/* The pre-sign-in page: the card on the left, what the software is on the right.
+/* The pre-sign-in page: the form on the left, the route a parcel takes on the right.
  *
- * Both halves are quiet on purpose. The panel used to be a magazine cover — masthead, edition
- * number, monospace kicker, a 70px headline and a row of numbered chapters — which left five
- * voices shouting beside a form that only wanted to be filled in. It now holds one scene, one
- * sentence and three thin segments.
+ * The form side is quiet on purpose: white, no card floating in an empty field, one column at
+ * a reading width. All the character lives in the panel, which is the brand's navy ink on a
+ * faint route-map grid, with the drawn scenes and the WhatsApp updates a customer receives.
  *
  * The floors hold here as they do everywhere else in this product: no text a person must read
  * below 15px, nothing tappable below 44px. These screens sit outside `.operator-shell`, so the
  * app-wide readability sheet never reaches them and every size is written out. */
 .access-layout {
   --access-ink:#122943; --access-blue:var(--accent-hover);
+  --panel-text:#eef3f9; --panel-muted:#b6c6db; --panel-quiet:#7f97b8; --panel-line:rgb(255 255 255 / .16);
   min-height:100svh; box-sizing:border-box;
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.04fr); grid-template-rows:auto 1fr;
-  padding:clamp(18px,2.2vw,32px); gap:0 clamp(24px,3.4vw,56px);
-  background:#fcfcfa; color:var(--access-ink);
+  padding:clamp(16px,1.8vw,24px); gap:0 clamp(24px,3.4vw,56px);
+  background:var(--surface); color:var(--access-ink);
 }
-.access-brand { display:flex; align-items:center; gap:10px; padding:12px clamp(4px,2vw,24px); font-size:1.3rem; font-weight:700; letter-spacing:-.04em; }
-.access-task { display:grid; place-items:center; min-width:0; padding:24px 12px 56px; }
+.access-brand { display:flex; align-items:center; gap:10px; justify-self:start; min-height:44px; padding:12px clamp(4px,2vw,24px); font-size:1.3rem; font-weight:700; letter-spacing:-.04em; color:inherit; text-decoration:none; border-radius:12px; }
+.access-task { display:grid; place-items:center; min-width:0; padding:24px clamp(8px,3vw,40px) 56px; }
+/* The form, and under it the one line that leads somewhere else (plans, or back to sign-in). */
+.access-task-stack { display:grid; justify-items:stretch; gap:22px; width:100%; max-width:400px; min-width:0; }
+.access-after { margin:0; padding-top:18px; border-top:1px solid var(--border); font-size:15px; line-height:22px; color:var(--text-secondary); }
+.access-after a { font-weight:600; color:var(--text-link); text-decoration:underline; text-underline-offset:3px; }
 
-/* What the software is. One ground, no frame inside it. */
+/* ---- The panel: a parcel's route ---- */
 .access-panel {
-  grid-area:1 / 2 / 3 / 3; min-width:0; overflow:hidden;
-  display:flex; flex-direction:column; justify-content:center; gap:clamp(20px,3vh,38px);
-  border-radius:20px; padding:clamp(26px,3.6vw,56px);
-  background:var(--text); color:#eef3f9;
+  grid-area:1 / 2 / 3 / 3; min-width:0; overflow:hidden; position:relative;
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(16px,2.6vh,30px);
+  border-radius:24px; padding:clamp(28px,3.4vw,56px) clamp(28px,3.6vw,64px);
+  background-color:var(--access-ink); color:var(--panel-text);
+  /* A faint grid, like the squares of a route map. A pattern, not a wash: one dot per cell. */
+  background-image:radial-gradient(circle, rgb(255 255 255 / .075) 1px, transparent 1.5px);
+  background-size:24px 24px; background-position:12px 12px;
 }
-.panel-stage { position:relative; min-height:0; aspect-ratio:16/11; }
+.panel-stage { position:relative; flex:0 1 auto; width:100%; max-width:440px; aspect-ratio:16/11; max-height:32vh; margin-inline:auto; }
 .panel-slide { position:absolute; inset:0; opacity:0; transition:opacity 700ms ease; }
 .panel-slide.is-on { opacity:1; }
 .access-scene { display:block; width:100%; height:100%; }
-.panel-say { display:grid; gap:7px; max-width:46ch; }
-.panel-name { margin:0; font-size:15px; line-height:21px; font-weight:650; color:#a9c6ec; letter-spacing:.01em; }
-.panel-caption { margin:0; font-size:clamp(19px,1.8vw,26px); line-height:1.32; font-weight:500; letter-spacing:-.018em; text-wrap:balance; }
-
-/* Three segments, not three numbered buttons. The press target is generous; the mark is not. */
-.panel-steps { display:flex; gap:10px; }
-.panel-steps button {
-  flex:0 0 auto; width:46px; min-height:44px; padding:0; border:0; background:none; cursor:pointer;
-  display:flex; align-items:center;
+.panel-headline {
+  margin:0; max-width:24ch; font-size:clamp(24px,2.3vw,32px); line-height:1.18; font-weight:650;
+  letter-spacing:-.025em; text-wrap:balance; color:#fff;
 }
-.panel-steps button::before { content:''; width:100%; height:3px; border-radius:var(--shape-full); background:#49668e; transition:background 220ms ease; }
-.panel-steps button:hover::before { background:#7e9cc4; }
-.panel-steps button.is-on::before { background:var(--amber-500); }
-.panel-steps button:focus-visible { outline:2px solid var(--amber-500); outline-offset:3px; border-radius:6px; }
 
-@media(prefers-reduced-motion:reduce) { .panel-slide { transition:none; } }
+/* The route: three stops on one line, each leg filled in amber once the parcel has passed it. */
+.route { position:relative; list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.route-stop { position:relative; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:4px 16px; }
+/* One leg per stop, from its node down to the next stop's node. */
+.route-stop:not(:last-child)::before, .route-stop:not(:last-child)::after {
+  content:''; position:absolute; left:15px; top:26px; bottom:-16px; width:2px; border-radius:2px;
+}
+.route-stop:not(:last-child)::before { background:var(--panel-line); }
+.route-stop:not(:last-child)::after {
+  background:var(--amber-500); transform:scaleY(0); transform-origin:top;
+  transition:transform 650ms cubic-bezier(.3,.7,.2,1);
+}
+.route-stop.is-passed::after { transform:scaleY(1); }
+.route-pick {
+  flex:1 1 15rem; display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start;
+  min-height:44px; padding:6px 8px 6px 0; border:0; border-radius:12px; background:none;
+  color:inherit; font:inherit; text-align:left; cursor:pointer;
+}
+.route-pick:focus-visible { outline:2px solid var(--amber-500); outline-offset:2px; }
+.route-node {
+  width:14px; height:14px; margin:4px 0 0 9px; box-sizing:border-box; border-radius:999px;
+  border:2px solid var(--panel-quiet); background:var(--access-ink);
+  transition:border-color 300ms ease, background-color 300ms ease, box-shadow 300ms ease;
+}
+.route-stop.is-reached .route-node { border-color:var(--amber-500); }
+.route-stop.is-now .route-node { background:var(--amber-500); box-shadow:0 0 0 6px rgb(240 192 115 / .2); }
+.route-text { display:grid; gap:2px; min-width:0; }
+.route-name { font-size:16px; line-height:22px; font-weight:650; color:var(--panel-muted); transition:color 300ms ease; }
+.route-stop.is-now .route-name { color:#fff; }
+.route-caption { max-width:38ch; font-size:15px; line-height:21px; color:var(--panel-quiet); transition:color 300ms ease; }
+.route-stop.is-now .route-caption { color:var(--panel-muted); }
+.route-pick:hover .route-name { color:#fff; }
+
+/* The update the customer receives at that stop, as a WhatsApp message. It arrives when the
+   parcel reaches the stop, and stays: by the door, all three are on the customer's phone. */
+.route-update {
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; margin:6px 0 0 44px;
+  padding:7px 10px 7px 13px; border-radius:14px 14px 14px 4px;
+  background:#fff; color:var(--text); font-size:15px; line-height:20px; font-weight:600; white-space:nowrap;
+  box-shadow:0 1px 1px rgb(0 0 0 / .18), 0 8px 18px -10px rgb(0 0 0 / .6);
+  transform-origin:left bottom; visibility:hidden;
+}
+.route-stop.is-reached .route-update { visibility:visible; animation:update-arrives 360ms cubic-bezier(.3,.7,.2,1) both; }
+@keyframes update-arrives { from { opacity:0; transform:translateY(6px) scale(.96); } to { opacity:1; transform:none; } }
+.route-ticks { color:var(--blue-400); flex:none; }
+@media(min-width:1180px) { .route-update { margin-left:0; } }
+
+@media(prefers-reduced-motion:reduce) {
+  .panel-slide, .route-stop::after, .route-node, .route-name, .route-caption { transition:none; }
+  .route-update { animation:none; }
+}
+/* On a short laptop screen the stops keep their names and messages; only the current one keeps
+   its sentence, so the route still fits without scrolling. */
+@media(max-height:780px) and (min-width:900px) {
+  .panel-stage { max-height:26vh; }
+  .route-stop:not(.is-now) .route-caption { display:none; }
+}
 
 @media(max-width:899px) {
-  /* On a phone the panel moves under the card rather than disappearing: it is the only thing
+  /* On a phone the panel moves under the form rather than disappearing: it is the only thing
      on the page that says what this software is for. */
-  .access-layout { grid-template-columns:1fr; grid-template-rows:auto auto auto; padding:0 0 28px; gap:0; }
-  .access-brand { padding:18px clamp(20px,5vw,42px); background:var(--text); color:#fff; }
-  .access-task { align-items:start; padding:clamp(26px,6vh,56px) clamp(20px,5vw,42px) 32px; }
-  .access-panel { grid-area:auto; margin:0 clamp(20px,5vw,42px); padding:24px 22px; gap:18px; border-radius:16px; }
-  .panel-stage { aspect-ratio:16/9; }
-  .panel-caption { font-size:19px; }
+  .access-layout { grid-template-columns:1fr; grid-template-rows:auto auto auto; padding:0 0 20px; gap:0; }
+  .access-brand { justify-self:stretch; padding:14px clamp(16px,5vw,42px); border-radius:0; border-bottom:1px solid var(--border); }
+  .access-task { place-items:start center; padding:clamp(24px,5vh,48px) clamp(16px,5vw,42px) 32px; }
+  .access-panel { grid-area:auto; margin:0 clamp(12px,3vw,24px); padding:26px 20px; gap:18px; border-radius:20px; }
+  .panel-stage { max-width:360px; max-height:none; }
+  .panel-headline { font-size:22px; }
+  .route-update { margin-left:44px; }
 }
-@media(max-height:620px) and (min-width:900px) { .access-task { padding-block:18px; } .panel-stage { aspect-ratio:16/8; } }
 
 /* Shop setup still uses the older operator card; keep it legible until it is rebuilt too. */
 .access-layout .operator-auth-card { width:100%; max-width:424px; margin:0; padding:clamp(22px,2.4vw,32px); text-align:start; box-shadow:0 1px 2px rgb(16 40 66 / .04); border:1px solid var(--border); border-radius:16px; background:#fff; }
-.access-layout .operator-auth-card > .workspace-auth-mark { display:none; }
-.access-layout .operator-auth-card h1 { margin:0; color:var(--text); font-size:clamp(26px,2.4vw,32px); font-weight:680; line-height:1.1; letter-spacing:-.032em; text-wrap:balance; }
-.access-layout .operator-auth-card form { margin-top:22px; }
-.access-layout .operator-auth-card > p { margin-top:8px; max-width:44ch; }
-.access-layout .operator-auth-card .verification-code { max-inline-size:none; }
-.access-layout .operator-auth-card .btn-filled { background:var(--access-blue); border-radius:10px; min-height:48px; }
-.access-layout .operator-auth-card .btn-filled:hover { background:var(--accent-on-subtle); }
-.access-stage { display:flex; align-items:center; gap:9px; margin-bottom:18px; font-size:15px; line-height:21px; font-weight:600; color:#365478; }
-.access-stage svg { width:24px; height:24px; }
-.operator-card p,.operator-card .muted { font-size:15px; line-height:21px; }
-.operator-card button span,.operator-auth-card button span { font-size:15px; }

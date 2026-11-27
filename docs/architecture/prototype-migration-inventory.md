@@ -1691,3 +1691,42 @@ would replace this module without changing the screen.
 | apps/web/src/test/sign-in-fields.test.tsx: reuses the challenge for another code and clears the countdown on change | replace | presentation |
 | apps/web/src/test/sign-in-fields.test.tsx: still offers an email address for a shop enrolled that way | replace | presentation |
 | apps/web/src/test/operations.test.tsx: asks for the hub by name, never for a reference the operator cannot know | preserve | parcels |
+
+## Public website and Individual setup — reviewed inventory change
+
+Visitors who are not signed in now see a public website at `/` (and always at `/features`,
+`/how-it-works` and `/pricing`): what ShippingCo does, how the work flows, and two plans.
+Individual is available; Franchise is shown as not configured and offers nothing to choose or
+buy. No plan carries a price, because none is configured anywhere in the project (M8 #77/#78).
+`/sign-in` is the sign-in page, now with a labelled WhatsApp number / email address choice.
+`/start/individual` is Individual setup, which replaces the old three-question setup card
+(`operator/Onboarding.tsx`, removed): plan, verified contact, shop details, review, payment
+and confirmation. It uses the unchanged OTP challenge routes and the unchanged idempotent
+`POST /api/v1/onboarding`, keeps the exact request key and body for an uncertain retry, and
+shows the shop as open only after the server's context says it is ready. The payment step says
+online payment is not connected and charges nothing. A signed-in person without a shop is shown
+the same flow wherever they land, so deep links and invitations still resolve where they were
+opened. Session, scope and authorization handling are unchanged.
+
+Browser effects added or moved:
+
+| Effect | File | Why it is here |
+| --- | --- | --- |
+| `window.localStorage` | `apps/web/src/operator/setup-state.ts` | Save and resume for setup answers. The backend has no draft endpoint, so only this device can keep them. What is kept is shop configuration the owner typed — business name, branch name, branch code and the step — keyed by the verified user, read only after the server names that user, and removed once the server confirms the shop. It never holds a customer, a parcel, an amount or a code, so it does not touch what `safety.no_production_local_writes` protects. |
+| `sessionStorage` | `apps/web/src/operator/setup-state.ts` | The pending onboarding request intent, moved unchanged from the removed `Onboarding.tsx`: same key prefix, same shape, same tab-only lifetime. |
+| `window.setTimeout` | `apps/web/src/operator/IndividualSetup.tsx` | Moves focus to the first refused field after the refusal has rendered, and re-checks answers after an invalid request returns the person to the shop step. |
+
+| Caller | Groups |
+| --- | --- |
+| apps/web/src/test/public-site.test.tsx | seam |
+
+| Declaration | Disposition | Group |
+| --- | --- | --- |
+| apps/web/src/test/public-site.test.tsx: shows a visitor what ShippingCo does, with Individual available and Franchise not configured | preserve | seam |
+| apps/web/src/test/public-site.test.tsx: starts Individual setup with the plan in view and verifies a contact before the shop step | preserve | seam |
+| apps/web/src/test/public-site.test.tsx: keeps shop answers on this device, resumes them, and clears them once the shop is confirmed | preserve | seam |
+| apps/web/src/test/public-site.test.tsx: sends a signed-in owner to the shop they already have instead of a second setup | preserve | seam |
+
+The existing operator and sign-in declarations keep their names and guarantees; their bodies now
+drive the new flow (the shop step, review, payment and the confirmation before the dashboard) and
+start sign-in tests at `/sign-in`, since `/` is the website for a visitor.

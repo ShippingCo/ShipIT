@@ -5,6 +5,7 @@ import {ApiFailure} from '../data-access/errors';
 import {dialCodes,nationalDigits,nationalLength,phoneDisplay} from '../utils/dial-codes';
 import type { OperatorDataSource } from './data-source';
 import {AccessCard, Field} from './access-ui';
+import {ToggleGroup, ToggleGroupItem} from '../components/ui/toggle-group';
 
 const STEPS=['Phone number','Code'] as const;
 const EMAIL_STEPS=['Email','Code'] as const;
@@ -26,7 +27,14 @@ const OFFLINE='Cannot reach ShipIT. Check the shop’s internet and try again.';
 /** After five failures the server will not accept this challenge again, whatever is typed. */
 const SPENT=5;
 
-export default function SignIn({ complete, source }: { complete: () => Promise<void>; source: OperatorDataSource }) {
+/**
+ * `page` is the sign-in screen. `setup` is the same verification inside Individual setup: no
+ * card of its own (the setup page already has one), a heading that says what the step is for,
+ * and room for the note that explains who can receive a code.
+ */
+export default function SignIn({ complete, source, variant='page', note }: {
+  complete: () => Promise<void>; source: OperatorDataSource; variant?: 'page'|'setup'; note?: React.ReactNode;
+}) {
   const active = useRef<AbortController | null>(null);
   useEffect(() => { const abort = new AbortController(); active.current = abort; return () => abort.abort(); }, []);
   const [onEmail,setOnEmail]=useState(false);
@@ -53,7 +61,7 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
   const spent=wrong>=SPENT;
   const sentTo=onEmail?email:phoneDisplay(dial,digits);
 
-  const fieldId=useId(),errorId=fieldId+'-error';
+  const fieldId=useId(),errorId=fieldId+'-error',choiceId=fieldId+'-choice';
   const previous=useRef('');
   useEffect(()=>{
     if(busy)return;
@@ -146,19 +154,24 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
   }
 
   const locked=busy||resending;
-  const title=challenge?'Enter your code':'Sign in to ShippingCo';
-  return <AccessCard title={title}
-    lead={challenge?undefined:onEmail
-      ?'We will send an '+DIGITS+'-digit code to your email.'
-      :'We will send an '+DIGITS+'-digit code on WhatsApp.'}
-    steps={onEmail?EMAIL_STEPS:STEPS} current={challenge?1:0}
-    aside={!challenge?<div className="access-switch">
-      <button type="button" className="access-quiet" disabled={locked}
-        onClick={()=>{setOnEmail(!onEmail);setError('');setField('');}}>
-        {onEmail?'Use a phone number instead':'Use an email address instead'}
-      </button>
-    </div>:undefined}>
-    <form aria-label={challenge?'Enter your code':onEmail?'Sign in with an email address':'Sign in with a phone number'}
+  const setup=variant==='setup';
+  const title=challenge?'Enter your code':setup?'Verify your phone or email':'Sign in to ShippingCo';
+  const lead=challenge?undefined:onEmail
+    ?'We will send an '+DIGITS+'-digit code to your email.'
+    :'We will send an '+DIGITS+'-digit code on WhatsApp.';
+  // The two ways in, named side by side: a choice nobody has to discover behind a quiet link.
+  const choice=!challenge&&<div className="access-field">
+    <span className="access-label" id={choiceId}>{setup?'Verify with':'Sign in with'}</span>
+    <ToggleGroup type="single" value={onEmail?'email':'whatsapp'} aria-labelledby={choiceId} disabled={locked}
+      className="access-choice grid grid-cols-2 gap-1 rounded-xl border border-border bg-[var(--surface-sunken)] p-1" onValueChange={value=>{
+        if(!value)return; // a single choice cannot be cleared
+        setOnEmail(value==='email');setError('');setField('');
+      }}>
+      <ToggleGroupItem value="whatsapp" className="access-choice-item h-11 min-w-0 gap-2 whitespace-nowrap rounded-[9px] px-2 text-[15px] font-semibold text-[var(--text-secondary)] hover:bg-background/70 hover:text-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(16_40_66/.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)] focus-visible:ring-0 [&_.msym]:text-[20px]"><Msym name="call"/>WhatsApp</ToggleGroupItem>
+      <ToggleGroupItem value="email" className="access-choice-item h-11 min-w-0 gap-2 whitespace-nowrap rounded-[9px] px-2 text-[15px] font-semibold text-[var(--text-secondary)] hover:bg-background/70 hover:text-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(16_40_66/.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)] focus-visible:ring-0 [&_.msym]:text-[20px]"><Msym name="mark_email_read"/>Email</ToggleGroupItem>
+    </ToggleGroup>
+  </div>;
+  const form=<form aria-label={challenge?'Enter your code':onEmail?'Sign in with an email address':'Sign in with a phone number'}
       onSubmit={event=>{event.preventDefault();if(challenge)void verify(code);else void sendCode();}} noValidate>
       {!challenge
         ? onEmail
@@ -169,16 +182,16 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
                 aria-invalid={!!(error||field)||undefined} aria-describedby={error?errorId:undefined}
                 disabled={locked}/>
             </Field>
-          : <div className="access-phone">
-              <div className="access-field">
-                <label className="access-label" htmlFor={fieldId+'-dial'}>Country code</label>
-                <select className="access-input access-dial" id={fieldId+'-dial'} value={dial} disabled={locked}
+          : <div className="access-field">
+              <label className="access-label" htmlFor={fieldId}>Phone number</label>
+              {/* The country code and the number are one fact, so they are one control: reading
+                  them apart invites the wrong one. The select keeps its own name for a screen reader. */}
+              <div className={'access-phone-group'+(error||field?' is-invalid':'')}>
+                <select className="access-dial" aria-label="Country code" value={dial} disabled={locked}
                   onChange={event=>{setDial(event.target.value);setField('');}}>
                   {dialCodes.map(entry=><option key={entry.value} value={entry.value}>{entry.label}</option>)}
                 </select>
-              </div>
-              <Field id={fieldId} label="Phone number" error={field||undefined}>
-                <input className="access-input" id={fieldId} type="tel" inputMode="numeric"
+                <input className="access-phone-number" id={fieldId} type="tel" inputMode="numeric"
                   autoComplete="tel-national" spellCheck={false} maxLength={20} placeholder="98765 43210"
                   value={typed} disabled={locked}
                   onChange={event=>{setTyped(event.target.value);setError('');setField('');}}
@@ -188,12 +201,12 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
                     setField(expected!==null&&digits.length!==expected
                       ?'A phone number is '+expected+' digits. This one has '+digits.length+'.':'');
                   }}
-                  aria-invalid={!!(error||field)||undefined} aria-describedby={error?errorId:undefined}/>
-              </Field>
-              {/* The hint is about the pair, not the number alone, so it sits under both
-                  columns instead of wrapping to three lines inside the narrower one — and it
-                  goes away once the field is refused, because the refusal already says it. */}
-              {expected!==null&&!field&&<p className="access-hint access-phone-hint">{expected} digits, the number WhatsApp is on.</p>}
+                  aria-invalid={!!(error||field)||undefined} aria-describedby={error?errorId:field?fieldId+'-error':fieldId+'-hint'}/>
+              </div>
+              {/* The hint goes away once the field is refused, because the refusal already says it. */}
+              {field
+                ? <p id={fieldId+'-error'} role="alert" className="access-error"><Msym name="error" aria-hidden="true"/><span>{field}</span></p>
+                : expected!==null&&<p id={fieldId+'-hint'} className="access-hint">{expected} digits, the number WhatsApp is on.</p>}
             </div>
         : <>
             <div className="access-sent">
@@ -222,14 +235,27 @@ export default function SignIn({ complete, source }: { complete: () => Promise<v
       {waitIn>0&&<p role="status" className="access-wait">Try again in {waitIn}s. Your account is not locked.</p>}
       <button className="access-submit" disabled={locked||(!!challenge&&(spent||waitIn>0))} aria-busy={busy}>
         {busy?(challenge?'Checking the code…':'Sending the code…')
-          :challenge?'Sign in':onEmail?'Send the code by email':'Send the code on WhatsApp'}
+          :challenge?(setup?'Verify and continue':'Sign in'):onEmail?'Send the code by email':'Send the code on WhatsApp'}
       </button>
       {notice&&<p role="status" className="access-notice">{notice}</p>}
+      <p className="access-safety"><Msym name="lock" aria-hidden="true"/><span>The code expires after 10 minutes. Do not share it with anyone.</span></p>
       {challenge && <div className="access-actions">
         <button type="button" className="access-quiet" disabled={locked||spent||resendIn>0} onClick={()=>void resend()}>
           {resending?'Sending another code…':resendIn>0?'Another code in '+resendIn+'s':'Send another code'}
         </button>
       </div>}
-    </form>
+    </form>;
+  if(setup) return <section className="access-embedded" aria-labelledby="signin-title">
+    <div className="access-card-head">
+      <h2 id="signin-title" tabIndex={-1}>{title}</h2>
+      {lead&&<p className="access-lead">{lead} The same {onEmail?'email address':'number'} signs you in next time.</p>}
+    </div>
+    {note}
+    {choice}
+    {form}
+  </section>;
+  return <AccessCard title={title} lead={lead} steps={onEmail?EMAIL_STEPS:STEPS} current={challenge?1:0}>
+    {choice}
+    {form}
   </AccessCard>;
 }

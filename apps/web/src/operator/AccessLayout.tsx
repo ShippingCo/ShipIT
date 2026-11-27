@@ -1,67 +1,93 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react';
+import {Link} from 'react-router-dom';
 import {CounterScene, DispatchScene, HandoverScene} from './access-illustrations';
+import {stages} from '../public/catalog';
 import './counter-identity.css';
 
+/**
+ * The three stages a parcel passes through, and the WhatsApp update the customer gets at each.
+ * The update names are message kinds the product sends (README: booking confirmation,
+ * out-for-delivery, delivery). They are labels for the drawing, not anyone's real messages.
+ */
 const chapters = [
-  {Scene:CounterScene, name:'At the counter', caption:'Every parcel gets one docket, and the customer gets the number.'},
-  {Scene:DispatchScene, name:'On the route', caption:'Loads leave the branch together, and the shop can see where each one is.'},
-  {Scene:HandoverScene, name:'At the door', caption:'A handover is recorded as proof, not remembered as a promise.'},
+  {...stages[0], Scene: CounterScene, update: 'Booking confirmed'},
+  {...stages[1], Scene: DispatchScene, update: 'Out for delivery'},
+  {...stages[2], Scene: HandoverScene, update: 'Delivered'},
 ];
 
-function ParcelMark() {
+export function ParcelMark() {
   return <svg viewBox="0 0 40 40" width="36" height="36" fill="none" aria-hidden="true">
     <rect width="40" height="40" rx="10" fill="#174bb6"/>
     <path d="m8 15 12-6 12 6-12 6zM8 19l12 6 12-6M8 23l12 6 12-6" stroke="white" strokeWidth="2.25" strokeLinejoin="round"/>
   </svg>;
 }
 
+/** WhatsApp's two read ticks, drawn small enough to sit inside a message bubble. */
+function ReadTicks() {
+  return <svg viewBox="0 0 18 12" width="18" height="12" fill="none" aria-hidden="true" className="route-ticks">
+    <path d="m1 6.5 3 3L10.5 3M7 9.5 13.5 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
+
 /**
- * What the software is, shown rather than described.
+ * What the software does, as the route a parcel takes.
  *
- * This used to be a magazine cover: a masthead, an edition number, a monospace kicker, a 70px
- * display headline and a row of numbered chapter buttons — five competing voices beside a
- * sign-in form that only wanted to be quiet. It now holds one scene, one sentence, and three
- * thin segments to move between them.
- *
- * The scene sits directly on the panel with no frame of its own, so there is no box inside a
- * box, and it cross-fades rather than scrolling: a slower, quieter change that needs no
- * smooth-scroll machinery and no second rendering path for reduced motion.
+ * The panel used to be a dark grey slab holding one scene, one sentence and three thin
+ * segments. It is now the brand's own navy, on a faint grid like a route map, and it tells one
+ * story: the parcel moves from the counter to the door, and at every stop the customer gets the
+ * WhatsApp update without anyone at the shop sending it. The route moves only when the stage
+ * changes (on its own every seven seconds, or the moment a person picks a stop, after which it
+ * stays where they put it): the next leg fills in amber and that stop's message arrives. Adapted from the
+ * 21st.dev "Split Login" (login-03) layout and "Vertical How It Works Timeline"
+ * (how-it-works-02) pattern, both used as patterns only.
  */
-function JourneyPanel() {
-  const [chapter,setChapter]=useState(0);
-  const paused=useRef(false);
-  useEffect(()=>{
-    if(typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    // Slow enough to read the sentence twice; stopped for good the moment a person chooses.
-    const timer=window.setInterval(()=>{if(!paused.current)setChapter(index=>(index+1)%chapters.length);},7000);
-    return ()=>window.clearInterval(timer);
-  },[]);
-  const choose=(index:number)=>{paused.current=true;setChapter(index);};
+function RoutePanel() {
+  const [chapter, setChapter] = useState(0);
+  const paused = useRef(false);
+  useEffect(() => {
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => { if (!paused.current) setChapter(index => (index + 1) % chapters.length); }, 7000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const choose = (index: number) => { paused.current = true; setChapter(index); };
   return <aside className="access-panel" aria-label="What ShippingCo does">
     <div className="panel-stage">
-      {chapters.map((item,index)=>
-        <div key={item.name} className={'panel-slide'+(index===chapter?' is-on':'')} aria-hidden={index!==chapter}>
+      {chapters.map((item, index) =>
+        <div key={item.name} className={'panel-slide' + (index === chapter ? ' is-on' : '')} aria-hidden={index !== chapter}>
           <item.Scene/>
         </div>)}
     </div>
-    <div className="panel-say">
-      <p className="panel-name">{chapters[chapter]!.name}</p>
-      <p className="panel-caption">{chapters[chapter]!.caption}</p>
-    </div>
-    <div className="panel-steps" role="group" aria-label="Choose a stage">
-      {chapters.map((item,index)=>
-        <button type="button" key={item.name} className={index===chapter?'is-on':undefined}
-          aria-pressed={index===chapter} onClick={()=>choose(index)}>
-          <span className="workspace-visually-hidden">{item.name}</span>
-        </button>)}
-    </div>
+    <p className="panel-headline">Book it once. Every update after that reaches your customer on WhatsApp.</p>
+    <ol className="route" aria-label="A parcel’s route">
+      {chapters.map((item, index) => {
+        const reached = index <= chapter, now = index === chapter, passed = index < chapter;
+        return <li key={item.name} className={'route-stop' + (reached ? ' is-reached' : '') + (now ? ' is-now' : '') + (passed ? ' is-passed' : '')}>
+          <button type="button" className="route-pick" aria-pressed={now} onClick={() => choose(index)}>
+            <span className="route-node" aria-hidden="true"/>
+            <span className="route-text">
+              <span className="route-name">{item.name}</span>
+              <span className="route-caption">{item.caption}</span>
+            </span>
+          </button>
+          {/* Kept in the layout before it arrives, so the panel never jumps when it does. */}
+          <p className="route-update" aria-hidden={!reached}>
+            <span className="workspace-visually-hidden">The customer gets on WhatsApp: </span>
+            {item.update}<ReadTicks/>
+          </p>
+        </li>;
+      })}
+    </ol>
   </aside>;
 }
 
-export function AccessLayout({children}:{children:ReactNode}) {
+/**
+ * The brand goes back to the public site: a person who reached sign-in by mistake, or whose
+ * session ended, can still find out what ShippingCo is and which plan to choose.
+ */
+export function AccessLayout({children,after}:{children:ReactNode;after?:ReactNode}) {
   return <main className="access-layout">
-    <div className="access-brand"><ParcelMark/><strong>ShippingCo</strong></div>
-    <div className="access-task">{children}</div>
-    <JourneyPanel/>
+    <Link to="/" className="access-brand" aria-label="ShippingCo home"><ParcelMark/><strong>ShippingCo</strong></Link>
+    <div className="access-task"><div className="access-task-stack">{children}{after}</div></div>
+    <RoutePanel/>
   </main>;
 }
